@@ -244,18 +244,28 @@ These were all real bugs found by adversarial probing. Each is now gated by
   transient). Count cropped numerical-alignment query rows and masked key
   columns too. Preserve the original 256-row floor while it fits; there is no
   floor exemption from the product bound. Do not raise
-  `measuredQueryKeyProduct` or the implementation limit without the staged
-  `context-check` qualification recorded in MEASUREMENTS.md, and never quote a
+  `measuredQueryKeyProduct` or add a prefill anchor without a staged
+  `context-check` measurement recorded in MEASUREMENTS.md, and never quote a
   context number the tool did not print (`doctor`, `prefill-schedule`).
-- **Prompt plus completion is capped (`--max-context`, default 32,768).** The
-  model limit, implementation limit, configured window and request cap are
-  distinct. The planner charges actual stepped active capacity, bounded retained
-  state, resident modes and workspace. `Engine.generate` clamps new tokens to
-  the remaining room. Full replacement buffers are charged before releasing
-  their old readers; spare main, draft and indexer buffers cannot credit each
-  other. Qualified MTP and vision limits remain explicit. A larger public
-  limit requires the configurable-context plan's C01–C22 gates, including
-  sampled physical footprint, RSS, swap and a nontrivial reply reaching the cap.
+- **Prompt plus completion is capped (`--max-context`, default `auto`).** Auto
+  takes the largest of 32,768, 65,536, 131,072 and 262,144 whose plan keeps MTP
+  and the lookahead as the 32,768 plan has them, retains one complete
+  conversation and adds at most 10% to the representative request, judged on RAM
+  and working set. A busy start steps the window down instead of dropping the
+  head; `--experts-per-layer` and `--pool-gb` keep 32,768, while `--memory-gb`
+  still gets a window priced inside its target
+  (`records/decisions/automatic-context-window-per-machine`). Frozen allocation
+  fixtures and monotonic sweeps pin an explicit 32,768. The model limit,
+  implementation limit, configured window and request cap are distinct. Carlos
+  opened the implementation and MTP limits to the model's 262,144 on 2026-09-13
+  with native 131,072-token runs with and without the draft head inside their
+  plans and no native 262,144-token run; images stay at 65,536. The planner
+  charges actual stepped active capacity, bounded retained state, resident modes
+  and workspace. `Engine.generate` clamps new tokens to the remaining room. Full
+  replacement buffers are charged before releasing their old readers; spare
+  main, draft and indexer buffers cannot credit each other. The open native
+  gates stay listed in the configurable-context plan; never describe them as
+  passed.
 - **One accepted request owns its guards through preparation and queuing.**
   `--max-prefill-wait` defaults to 30 minutes to the first sampled token; zero
   disables only time. Unknown ETA never disables the wall guard. Concurrent

@@ -113,14 +113,21 @@ and failed experiments behind these results.
 
 ## Context
 
-**Prompt, conversation history, images, and reply share a 32,768-token limit
-by default.** Use `serve --max-context 65536` for the larger 65,536-token
-window, including Hermes. The planner charges extra state and transient memory
-before allocating the expert cache. The pinned model configuration allows 262,144 tokens, but
-slotstream doesn't support that full window. The long-context qualification
-is a capacity and memory check, not a long-context answer-quality benchmark.
+**Prompt, conversation history, images, and reply share one window, which auto
+picks for each Mac.** It takes the largest of 32,768, 65,536, 131,072 and
+262,144 tokens that keeps speculative decoding, retains one complete
+conversation and adds at most 10% to the planner's estimate for a typical
+request. `serve --max-context 65536` fixes the window Hermes uses, and any size
+up to the pinned model's 262,144 tokens is accepted; requests with images stay
+within 65,536. The planner charges extra state and transient memory before
+allocating the expert cache, and the automatic ceiling rises by the window's own
+charge. Native runs on the development Mac cover 65,536 tokens and, since
+0.2.17, 131,072 tokens with and without the draft head, both inside their memory
+plans; 262,144 tokens is planned from the same ledger without a native run. The
+long-context qualification is a capacity and memory check, not a long-context
+answer-quality benchmark.
 
-At the default limit, the estimated wait before the first token is about 3.0 min for
+At 32,768 tokens, the estimated wait before the first token is about 3.0 min for
 the 48 GB M5 Pro plan and 6.4 min for the 16 GB plan. The latter comes from
 the M5 Pro's curve; a slower SSD can take longer. Follow-up turns reuse
 unchanged history while it remains cached.

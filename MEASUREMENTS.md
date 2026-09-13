@@ -4927,3 +4927,12 @@ The largest window the development Mac could hold on 2026-09-13 completed its wh
 **Anchor decision.** A 128-token anchor was not added, although a preregistered rule allowed one. The anchor family is measured on an 8,016-token acceptance prompt at a matched cache and changes only with a complete envelope, and this synthetic filler read short-context 256-token passes at twice that family's rate. Waits above 128,256 tokens stay uncalibrated, and the public guides quote this run's 38 minutes as a measured reference instead.
 
 **Limits.** One cold text rung at one small target on one busy Mac, not the frozen campaign. Larger targets use larger early passes and a bigger cache, so this reading time does not predict a 64 GB Mac. No 262,144-token native run exists: every target from 18 to 24 GB was refused on this Mac at the time. The draft head at this window is recorded separately.
+
+### Automatic context window: the draft head at 131,072 tokens
+With the draft head on, the 131,072-token window completed the same 130,944-token prompt and 128-token reply as the draft-off rung inside an 18 GB plan ([[sources/runs/2026/09/2026-09-13-context-draft-head-131072]]). This is the native evidence behind keeping the draft-head limit at the model limit for the automatic windows above 65,536 ([[records/measurements/automatic-context-window-plans-2026-09-13]]).
+
+**Parity.** The greedy reply matched the draft-off reply from [[records/measurements/automatic-context-window-131072-read-2026-09-13]] token for token. The head drafted 85 tokens and all 85 were accepted over 43 verify passes. The filler's continuation is highly predictable, so that acceptance rate does not describe real text.
+
+**Memory.** The sampled physical footprint peaked at 16.44 GB against the ledger's 17.00 GB expected peak and the 18 GB target, with no abort, pressure cancellation or runtime error. Global swap-ins rose by 229 pages, recorded as diagnostic under [[records/decisions/global-paging-is-diagnostic]].
+
+**Limits.** One window, one small target and a head forced below its floor, so the decode lookahead was off. Reading the prompt took 40.3 minutes. No 262,144-token run exists with or without the draft head.

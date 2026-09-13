@@ -29,6 +29,9 @@ determines which version the installer downloads.
   `--pool-gb` keep 32,768 tokens.
 - Show why `doctor` rejects a memory target in its tier table: too small for
   the window, above the Metal working set, or more than is reclaimable now.
+- Qualify a full 131,072-token window on the development Mac: the prompt and
+  reply fit their memory plans, and speculative decoding produced exactly the
+  same reply. The full 262,144-token window has not run natively yet.
 
 ## 0.2.16 - 2026-09-13
 

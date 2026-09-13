@@ -1354,3 +1354,15 @@ Capacity inside plan at 131,072 tokens; estimates close at 65,536 and about a th
 ## [2026-09-13 17:41] create | records/claims/context-read-38-minutes-at-131072.md
 New measured claim for the 38-minute 131,072-token read
 
+## [2026-09-13 18:20] create | sources/runs/2026/09/2026-09-13-context-draft-head-131072.md
+Draft head on at 131,072 tokens: inside an 18 GB plan with a 16.44 GB sampled peak, reply token-identical to the draft-off run, 85 of 85 drafts accepted
+
+## [2026-09-13 18:20] create | records/measurements/automatic-context-window-draft-head-131072-2026-09-13.md
+Greedy parity and memory for the draft head at 131,072 tokens; keeps the draft-head limit at the model limit
+
+## [2026-09-13 18:20] create | records/decisions/automatic-context-window-per-machine.md
+Standing decision: per-Mac automatic context window up to 262,144 tokens, rules, tradeoffs, overrides, evidence and gates
+
+## [2026-09-13 18:20] update | records/plan/configurable-context-window-2026-09-06.md
+Addendum: automatic context window and full public limit implemented, native 131,072-token evidence, open gates
+
