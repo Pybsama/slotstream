@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-13T18:20:59.495333Z
+updated: 2026-09-13T19:54:32.720848Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-17-published-2026-09-13]] — v0.2.17 published, installed and accepted: 25 of 25 model gates on the exact CI artifact and 31 of 31 installed-release checks
 - [[records/measurements/automatic-context-window-draft-head-131072-2026-09-13]] — Draft head on at 131,072 tokens: inside its 18 GB plan with a reply identical to the draft-off run; the draft-head limit stays at the model limit
 - [[records/measurements/automatic-context-window-131072-read-2026-09-13]] — A 131,072-token window completed inside its 16 GB plan: 14.80 GB sampled peak against 15.00 planned, 38.1-minute read; estimates run optimistic past 65,536
 - [[records/measurements/automatic-context-window-plans-2026-09-13]] — Auto takes 32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB; weights-free checks pass

@@ -5545,6 +5545,8 @@ Carlos asked to enable the full window, finish the remaining work with best gues
 
 **Still open.** The frozen native campaign, including cold and retained 262,144-token capacity; native vision at the new cap; prefill anchors that depend on position and cover passes under 256 tokens; and the installed-client battery at larger windows. The public limit and the automatic windows above 65,536 rest on the ledger arithmetic plus the rungs above, at Carlos's direction.
 
+**Released.** Slotstream 0.2.17 shipped this on 2026-09-13. The exact CI artifact passed 25 of 25 model gates, and the installed release passed 31 of 31 checks with auto choosing 32,768 tokens at a 10 GB target ([[records/measurements/release-0-2-17-published-2026-09-13]]). The open items above are unchanged.
+
 ## Expert Lookahead: local training and exact prefetch experiment
 **Status: ready for execution. Five numbered review passes, two depth-two alignment reviews and a closing consistency review are complete; the fifth pass was a separate code-grounding review that corrected seven items. No predictor has been trained, no performance gain has been demonstrated, and this planning task launches no model or paid job.** This is the local successor experiment requested on September 10. Work is divided into an initial proof and conditional extensions so that a useful negative result is also a complete outcome.
 

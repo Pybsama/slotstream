@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-13T18:20:59.079516Z
+updated: 2026-09-13T19:54:32.747134Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-13-release-0-2-17-published-and-installed]] — v0.2.17 CI-artifact acceptance 25/25 after an environment-only first run, publication with verified attestation, installation and installed-release acceptance 31/31.
 - [[sources/runs/2026/09/2026-09-13-context-draft-head-131072]] — Draft head on at 131,072 tokens: complete prompt and 128-token reply inside an 18 GB plan, 16.44 GB sampled peak against 17.00 planned, reply identical to the draft-off run
 - [[sources/runs/2026/09/2026-09-13-context-capacity-131072-cold]] — 131,072-token window completed inside its 16 GB plan: 14.80 GB sampled peak against 15.00 planned, 38.1-minute read; the frozen driver flagged 200 global swap-ins
 - [[sources/runs/2026/09/2026-09-13-automatic-context-window-tier-plans]] — Automatic context window candidate qualified without weights: 38 of 38 T0 checks, 90 of 90 planner gates; doctor plans from 8 to 192 GB in auto and at 32,768 tokens
@@ -506,9 +507,8 @@ updated: 2026-09-13T18:20:59.079516Z
 - [[sources/runs/2026/09/2026-09-05-optimization-fixed-mtp-serving]] — Fixed-schedule MTP first-entry and GDN recording serving qualification
 - [[sources/runs/2026/09/2026-09-05-optimization-adaptive-speculation-counterexample]] — Adaptive speculation lifecycle and timing-sensitivity counterexample
 - [[sources/runs/2026/09/2026-09-05-optimization-sampler-device-draw]] — Zero-draw sampler correctness and GPU draw qualification
-- [[sources/runs/2026/09/2026-09-05-optimization-duplicate-pool-requests]] — Duplicate pool request ownership and latency non-regression
 
 ## More
 
-This folder has 552 files. The 500 most recent are listed above.
+This folder has 553 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

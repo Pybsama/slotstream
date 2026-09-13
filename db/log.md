@@ -1366,3 +1366,12 @@ Standing decision: per-Mac automatic context window up to 262,144 tokens, rules,
 ## [2026-09-13 18:20] update | records/plan/configurable-context-window-2026-09-06.md
 Addendum: automatic context window and full public limit implemented, native 131,072-token evidence, open gates
 
+## [2026-09-13 19:56] create | sources/runs/2026/09/2026-09-13-release-0-2-17-published-and-installed
+v0.2.17 release acceptance: CI artifact 25/25 after an environment-only first run, publication and attestation, installation, installed e2e 31/31.
+
+## [2026-09-13 19:56] create | records/measurements/release-0-2-17-published-2026-09-13
+v0.2.17 published, installed and accepted; auto chose 32,768 tokens at 10 GB on the public binary.
+
+## [2026-09-13 19:56] update | records/plan/configurable-context-window-2026-09-06
+Released in 0.2.17; added the release acceptance to the 2026-09-13 addendum.
+

@@ -2,7 +2,7 @@
 type: plan
 id: 01m1vgtznvvvt2hm9z1aw6dew2
 created: 2026-09-06T14:09:28.251268+00:00
-updated: 2026-09-13T18:20:59.533538+00:00
+updated: 2026-09-13T19:56:09.219048+00:00
 summary: 'Configurable context through the model limit: shared byte accounting, request guards, bounded prefill and staged qualification'
 date: 2026-09-06
 doc: plan
@@ -942,3 +942,5 @@ Carlos asked to enable the full window, finish the remaining work with best gues
 **Native evidence.** The 131,072-token cold rung completed inside its 16 GB plan ([[records/measurements/automatic-context-window-131072-read-2026-09-13]]). It is not the frozen campaign: that campaign's 22 GB and minimum-target 262,144-token profiles could not run on the development Mac, where every target from 18 to 24 GB was refused. With the draft head on, the same prompt and window stayed inside an 18 GB plan and matched the draft-off reply token for token ([[records/measurements/automatic-context-window-draft-head-131072-2026-09-13]]), which keeps the draft-head limit at the model limit.
 
 **Still open.** The frozen native campaign, including cold and retained 262,144-token capacity; native vision at the new cap; prefill anchors that depend on position and cover passes under 256 tokens; and the installed-client battery at larger windows. The public limit and the automatic windows above 65,536 rest on the ledger arithmetic plus the rungs above, at Carlos's direction.
+
+**Released.** Slotstream 0.2.17 shipped this on 2026-09-13. The exact CI artifact passed 25 of 25 model gates, and the installed release passed 31 of 31 checks with auto choosing 32,768 tokens at a 10 GB target ([[records/measurements/release-0-2-17-published-2026-09-13]]). The open items above are unchanged.
