@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-13T17:07:00.745357Z
+updated: 2026-09-13T17:41:41.129023Z
 ---
 
 # records/measurements
 
+- [[records/measurements/automatic-context-window-131072-read-2026-09-13]] — A 131,072-token window completed inside its 16 GB plan: 14.80 GB sampled peak against 15.00 planned, 38.1-minute read; estimates run optimistic past 65,536
 - [[records/measurements/automatic-context-window-plans-2026-09-13]] — Auto takes 32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB; weights-free checks pass
 - [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/public-documentation-evidence-audit-2026-09-13]] — Public documentation audit: correct performance, memory, simulation and release scope; no new benchmark

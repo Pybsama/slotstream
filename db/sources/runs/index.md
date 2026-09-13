@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-13T17:04:23.269667Z
+updated: 2026-09-13T17:41:40.356960Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-13-context-capacity-131072-cold]] — 131,072-token window completed inside its 16 GB plan: 14.80 GB sampled peak against 15.00 planned, 38.1-minute read; the frozen driver flagged 200 global swap-ins
 - [[sources/runs/2026/09/2026-09-13-automatic-context-window-tier-plans]] — Automatic context window candidate qualified without weights: 38 of 38 T0 checks, 90 of 90 planner gates; doctor plans from 8 to 192 GB in auto and at 32,768 tokens
 - [[sources/runs/2026/09/2026-09-13-public-docs-audit-plans]] — Public documentation audit: default and larger-window planner simulations and published release identity
 - [[sources/runs/2026/09/2026-09-13-decode-lookahead-default-tier-plans]] — 0.2.16 defaults qualified without weights: 50 of 50 checks, 73 of 73 planner gates, static gates; doctor plans from 8 to 192 GB at both context windows
@@ -506,9 +507,8 @@ updated: 2026-09-13T17:04:23.269667Z
 - [[sources/runs/2026/09/2026-09-05-optimization-sampler-device-draw]] — Zero-draw sampler correctness and GPU draw qualification
 - [[sources/runs/2026/09/2026-09-05-optimization-duplicate-pool-requests]] — Duplicate pool request ownership and latency non-regression
 - [[sources/runs/2026/09/2026-09-05-optimization-image-source-admission]] — Image source admission and exact request-local reuse
-- [[sources/runs/2026/09/2026-09-05-optimization-all-hit-compute]] — All-hit compute replay and preserved large-pool calibration failures
 
 ## More
 
-This folder has 550 files. The 500 most recent are listed above.
+This folder has 551 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

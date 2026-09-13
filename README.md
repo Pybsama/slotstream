@@ -142,7 +142,9 @@ reserves more memory, which can shrink the expert cache, and a long prompt
 takes longer to read. Requests with images use at most 65,536 tokens.
 For prompts near 32,768 tokens, the M5 Pro-based estimate is about 3 minutes
 of prefill for simulated plans from 24 GB; near 65,536 it is about 8 minutes.
-Windows above 128,256 tokens have no calibrated estimate yet.
+Windows above 128,256 tokens have no calibrated estimate yet. On the
+development Mac, a full 131,072-token prompt took 38 minutes to read at a
+16 GB target.
 These are estimated prompt-processing times, not measured waits across Macs;
 startup, queueing, images and reasoning before visible answer text can add time.
 

@@ -1345,3 +1345,12 @@ Retitled as the explicit 65,536-token selector Hermes uses; auto may pick it fro
 ## [2026-09-13 17:25] update | records/claims/auto-ceiling-34-6-gb-with-the-head.md
 Scoped to the 32,768-token window; larger automatic windows raise targets to 43.2 and 54.7 GB
 
+## [2026-09-13 17:41] create | sources/runs/2026/09/2026-09-13-context-capacity-131072-cold.md
+131,072-token cold rung at 16 GB: complete prompt and reply, 14.80 GB sampled peak against a 15.00 GB ledger, 38.1-minute read; frozen driver flagged 200 global swap-ins
+
+## [2026-09-13 17:41] create | records/measurements/automatic-context-window-131072-read-2026-09-13.md
+Capacity inside plan at 131,072 tokens; estimates close at 65,536 and about a third short past it; preregistered 128-token anchor not applied
+
+## [2026-09-13 17:41] create | records/claims/context-read-38-minutes-at-131072.md
+New measured claim for the 38-minute 131,072-token read
+

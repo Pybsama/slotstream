@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-13T17:19:07.831327Z
+updated: 2026-09-13T17:41:41.162114Z
 ---
 
 # records/claims
 
+- [[records/claims/context-read-38-minutes-at-131072]] — A 131,072-token prompt took 38 minutes to read at a 16 GB target
 - [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-target-54-7-gb-from-96-gb]] — Auto targets 54.7 GB from 96 GB with the full window
 - [[records/claims/automatic-target-43-2-gb-at-64-gb]] — Auto targets 43.2 GB at 64 GB with its 131,072-token window

@@ -222,8 +222,11 @@ For prompts near 32,768 tokens, the planner estimates about 3 minutes of
 prefill from 24 GB and 6.4 minutes at 16 GB; near 65,536 it estimates
 about 8 minutes from 24 GB. These estimates use the M5 Pro's prefill curve,
 not measurements on those memory sizes. Windows above 128,256 tokens have no
-calibrated estimate yet, because passes shorter than 256 tokens have not
-been timed. Leave room for the reply in the
+calibrated estimate yet. On the development Mac, a full 131,072-token prompt
+took 38 minutes to read at a 16 GB target, and its passes slowed as the prompt
+grew: the planner's estimates, which ignore position, came within a few
+percent of the measured time at 65,536 tokens and fell about a third short of
+it past that. Leave room for the reply in the
 configured window. Startup, queueing, images and reasoning before visible
 answer text add to the user's wait.
 
