@@ -1306,3 +1306,6 @@ Completed the broader README/public-docs evidence audit. Corrected estimate-vs-m
 ## [2026-09-13 16:43] update | records/measurements/hardware-planning-ranges-2026-09-13.md
 Added user-requested best-effort warm-speed ranges: Low 1-6, Medium 6-14, High 12-27 and Ultra 20-32 tok/s. Recorded endpoint construction, mixed releases, manual-target assumptions and unmeasured hardware transfers. README retains estimates separately from actual configurations; hardware guide separates allocation plans. Four estimated claims added, older point-estimate surfaces updated, projections regenerated. Brain gates passed with 185 claim checks, zero errors and the same two historical log warnings; touched tables, local links/anchors, generated parity and whitespace checked. No model benchmark, runtime change, commit or push.
 
+## [2026-09-13 16:46] update | records/design/sevra-maintained-model-integration.md
+Added Carlos-requested Support coming soon indicator to the README Compatibility row, retaining the current model limitation. Aligned hardware and AI-facing docs, recorded the roadmap wording, and regenerated PLAN.md and llms-full.txt. Brain gates and 185 claim checks passed with zero errors and the same two historical log warnings; generated parity and diff whitespace passed. No runtime behavior changed.
+

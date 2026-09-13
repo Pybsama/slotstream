@@ -58,6 +58,14 @@ describe the product direction only with the app's in-development status.
 This section specifies engine/product integration constraints. It is not an
 implementation receipt, a model selection, a benchmark win or a binary release.
 
+## Compatibility-tier support, September 13, 2026
+
+Carlos requested that the public memory table state that Compatibility-tier
+support is coming soon. README.md, the hardware guide and llms.txt now carry
+that roadmap status while retaining the current model limitation. The present
+8 GB plan still does not fit; no runtime support, selected future model,
+release date or performance result is established by this wording change.
+
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the
 design and the estimates it replaces.

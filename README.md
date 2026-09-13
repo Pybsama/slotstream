@@ -59,7 +59,7 @@ and settings, with higher speeds generally requiring a faster chip and SSD.
 
 | Memory tier | Installed RAM | Estimated warm reply speed | Recommended context window |
 |---|---|---|---|
-| Compatibility | 8 GB | Cannot fit the smallest plan | Not applicable |
+| Compatibility | 8 GB | **Support coming soon.** The current model doesn't fit yet. | Not available yet |
 | Low | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
 | Medium | 24–<48 GB | ~6–14 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
 | High | 48–<96 GB | ~12–27 tok/s | 65,536 tokens |

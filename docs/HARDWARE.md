@@ -11,7 +11,8 @@ Choose Apple menu → About This Mac to check your chip and memory. The
 installer has been tested on macOS 14 and 15; model runs have been tested
 on macOS 26. Windows, Linux, and Intel Macs are not supported by this engine.
 
-An 8 GB Mac can't run the model: even the smallest memory plan needs more
+**Compatibility-tier support is coming soon.** An 8 GB Mac can't run the
+current model: even the smallest memory plan needs more
 memory than it has, so Slotstream refuses to start instead of swapping. On
 other Macs, close memory-heavy apps before running the model.
 
