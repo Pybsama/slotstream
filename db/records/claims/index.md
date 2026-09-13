@@ -2,11 +2,20 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-13T16:49:56.403342Z
+updated: 2026-09-13T17:19:07.831327Z
 ---
 
 # records/claims
 
+- [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
+- [[records/claims/automatic-target-54-7-gb-from-96-gb]] — Auto targets 54.7 GB from 96 GB with the full window
+- [[records/claims/automatic-target-43-2-gb-at-64-gb]] — Auto targets 43.2 GB at 64 GB with its 131,072-token window
+- [[records/claims/automatic-context-window-tolerance-10-percent]] — A larger automatic window may add at most 10% to a typical request
+- [[records/claims/automatic-context-window-131072-at-64-gb]] — Auto takes a 131,072-token window at 64 GB
+- [[records/claims/automatic-context-window-262144-from-96-gb]] — Auto takes the full 262,144-token window from 96 GB
+- [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the 32,768-token window
+- [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
+- [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
 - [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
 - [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
@@ -20,9 +29,7 @@ updated: 2026-09-13T16:49:56.403342Z
 - [[records/claims/full-context-wait-about-3-minutes-from-24-gb]] — M5 Pro-based prefill estimate is about 3 minutes near the default window from a 24 GB simulation
 - [[records/claims/context-state-27-kib-per-token]] — Main sequence-cache capacity costs about 27 KiB per allocated token
 - [[records/claims/engine-start-about-2-s]] — Historical engine load is about 2 s; current startup verification is additional
-- [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the default context
 - [[records/claims/mtp-auto-floor-76-per-layer-21-gb-target]] — Auto turns speculative decode on when the cache still reaches 76 experts per layer after the head, a 21 GB target
-- [[records/claims/recommended-context-65536-from-36-gb]] — The recommended context window is 65,536 tokens from 36 GB and 32,768 below
 - [[records/claims/output-byte-identical-across-cache-sizes]] — Greedy output is byte-identical across cache sizes and live resizes
 - [[records/claims/vision-tower-0-9-gb-resident]] — The vision tower costs 0.9 GB, and only when an image arrives
 - [[records/claims/io-queue-depth-flat-from-12-to-32]] — Historical development-Mac I/O concurrency comparison; no universal SSD optimum.
@@ -33,8 +40,6 @@ updated: 2026-09-13T16:49:56.403342Z
 - [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
 - [[records/claims/speculative-decode-x1-24-at-auto-floor]] — Speculative decode multiplied decode by 1.24 at the former auto floor on the dev Mac
 - [[records/claims/full-context-wait-6-4-min-on-16-gb]] — A full 32k prompt waits about 6.4 min on a 16 GB Mac
-- [[records/claims/context-opt-in-65536]] — Opt-in served context of 65536 tokens
-- [[records/claims/context-cap-32768-tokens]] — Prompt plus completion is capped at 32,768 tokens per request
 - [[records/claims/mtp-auto-floor-120-per-layer-28-gb-target]] — Auto turns speculative decode on only when the cache still reaches 120 experts per layer after the head, a 28 GB target
 - [[records/claims/minimum-mac-memory-16-gb]] — Slotstream needs a Mac with at least 16 GB of memory
 - [[records/claims/lookahead-parts-add-about-2-percent-each]] — The router weight cache and the deferred GPU drains each add about 2% over prefetch

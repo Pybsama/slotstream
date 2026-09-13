@@ -186,3 +186,16 @@ machine inputs and runtime allocation controls. It returns the requested plan,
 largest fitting plan and refusal, independently of the time policy. Diagnostic
 qualification is explicit; it never changes the public implementation or
 MTP/vision limits advertised by ordinary serving.
+
+Starting in Slotstream 0.2.17, `Planner.resolveContextWindow(.automatic,
+request:on:mtpAvailable:visionAvailable:)` returns the plan the command-line
+server uses: the automatic window for the machine's memory tier, lowered at
+startup when available memory is short, with an `AutomaticContextWindow` that
+lists every candidate and why it was or wasn't taken. `.tokens(n)` plans an
+explicit window, and `Planner.automaticContextWindow` evaluates the tier
+without planning against live memory. `Planner.plan(_:on:)` still plans the
+request's own `maxContextTokens`, 32,768 unless set. A window above 32,768 now
+retains one complete conversation when its plan can hold one; otherwise the
+plan's notes say how much a follow-up reuses. `ContextPolicy.maxTokens` is the
+model's 262,144 tokens, and requests with images stay within
+`ContextPolicy.visionLimit`.

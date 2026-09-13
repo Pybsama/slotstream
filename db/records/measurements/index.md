@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-13T16:49:56.423367Z
+updated: 2026-09-13T17:07:00.745357Z
 ---
 
 # records/measurements
 
+- [[records/measurements/automatic-context-window-plans-2026-09-13]] — Auto takes 32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB; weights-free checks pass
 - [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/public-documentation-evidence-audit-2026-09-13]] — Public documentation audit: correct performance, memory, simulation and release scope; no new benchmark
 - [[records/measurements/automatic-memory-default-evidence-scope-2026-09-09]] — Automatic memory default: evidence scope and retained policy (2026-09-09)

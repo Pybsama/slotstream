@@ -88,11 +88,11 @@ sampling.
 
 `--mtp auto` enables this when the expert cache can still hold 76 experts per
 layer after allocating 1.6 GB for the head, before the separate lookahead
-reservation, a 21 GB target at the default context. Availability and context
-can change activation. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
+reservation, a 21 GB target at the 32,768-token window. Availability and
+context can change activation. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
 faster than plain decode on the same memory at 76 per layer. The automatic
-ceiling is 34.6 GB with the head enabled at the default context; larger
-windows add draft-context charges. `--mtp off` disables the head.
+ceiling is 34.6 GB with the head enabled at the 32,768-token window; larger
+windows add their context charges. `--mtp off` disables the head.
 
 With the head on, 0.2.16 also runs the decode lookahead. After each layer, the
 router of the layer two ahead runs on the current hidden state, and the experts
@@ -152,8 +152,8 @@ scope and revision criteria; maintaining those choices is part of the engine.
 By default, slotstream chooses a memory target for your Mac and prints it at
 startup. It takes the lowest of 33 GB, 70% of RAM, and 2 GB below the Metal
 working-set limit, then reduces that target if other apps are using memory.
-The draft head raises the base ceiling to 34.6 GB at the default context;
-larger windows add draft-context charges. See [Speed](#speed).
+The draft head raises the base ceiling to 34.6 GB at the 32,768-token window;
+the larger windows auto picks on bigger Macs add their context charges. See [Speed](#speed).
 
 The 33 GB ceiling is a conservative default based on development-Mac
 measurements. Those tests showed diminishing speed gains as

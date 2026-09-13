@@ -18,9 +18,10 @@ The startup command in the [setup guide](HERMES.md#start-slotstream) leaves
 memory planning and speculative decoding on their automatic defaults.
 Slotstream decides whether to enable the MTP draft head from its availability
 and the planned expert cache. Hermes does not require an MTP override.
-Hermes requires a larger context than Slotstream's ordinary default. The
-explicit flag selects the qualified window and charges its extra active state
-and a measured transient reserve before allocating the expert cache. The
+Hermes requires a larger context than the 32,768 tokens auto keeps on Macs
+through 32 GB, so the setup guide fixes 65,536 tokens on every Mac. The
+explicit flag charges that window's extra active state and a measured
+transient reserve before allocating the expert cache. The
 minimum memory target rises with this larger window. If overriding automatic
 planning, inspect `slotstream doctor --max-context 65536` first and choose a
 target that fits your Mac. Long prompts must still be read before the first

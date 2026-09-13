@@ -6,6 +6,30 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## 0.2.17 - 2026-09-13
+
+- Pick the context window for each Mac. Auto now takes the largest of 32,768,
+  65,536, 131,072 and 262,144 tokens that keeps speculative decoding, keeps one
+  complete conversation ready for follow-up turns and adds at most a tenth to
+  the planner's estimate for a typical request. In decimal-GB simulations that
+  is 32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and
+  262,144 from 96 GB. A Mac that is busy at startup gets a smaller window
+  rather than losing speculative decoding, and `doctor` lists every candidate
+  with its reason.
+- Accept `--max-context` up to 262,144, the model's full window, or `auto`.
+  Requests with images still use at most 65,536 tokens. A window above 32,768
+  keeps one complete conversation for follow-ups when the plan can hold it,
+  and says how much a follow-up reuses when it can't.
+- Raise auto's memory target on 64 GB and larger Macs by the chosen window's
+  own charge, to 43.2 GB at 64 GB and 54.7 GB from 96 GB, so the expert cache
+  keeps its size. `--max-context 32768` restores the former plan.
+- With an explicit `--memory-gb`, auto also picks the window inside that
+  target, trading some cache for a larger window within the 10% limit. Add
+  `--max-context 32768` to keep an earlier plan. `--experts-per-layer` and
+  `--pool-gb` keep 32,768 tokens.
+- Show why `doctor` rejects a memory target in its tier table: too small for
+  the window, above the Metal working set, or more than is reclaimable now.
+
 ## 0.2.16 - 2026-09-13
 
 - Generate replies 1.11x faster with speculative decoding. The new decode

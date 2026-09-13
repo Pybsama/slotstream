@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-13T14:46:51.030083Z
+updated: 2026-09-13T17:04:23.269667Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-13-automatic-context-window-tier-plans]] — Automatic context window candidate qualified without weights: 38 of 38 T0 checks, 90 of 90 planner gates; doctor plans from 8 to 192 GB in auto and at 32,768 tokens
 - [[sources/runs/2026/09/2026-09-13-public-docs-audit-plans]] — Public documentation audit: default and larger-window planner simulations and published release identity
 - [[sources/runs/2026/09/2026-09-13-decode-lookahead-default-tier-plans]] — 0.2.16 defaults qualified without weights: 50 of 50 checks, 73 of 73 planner gates, static gates; doctor plans from 8 to 192 GB at both context windows
 - [[sources/runs/2026/09/2026-09-13-cohort-rescoring-true-medians]] — Held-out cohort rescoring with true medians: B1 replication 1.124 to 1.114, B1 first run 1.116 to 1.106, B0 1.120 to 1.105; every verdict unchanged
@@ -506,9 +507,8 @@ updated: 2026-09-13T14:46:51.030083Z
 - [[sources/runs/2026/09/2026-09-05-optimization-duplicate-pool-requests]] — Duplicate pool request ownership and latency non-regression
 - [[sources/runs/2026/09/2026-09-05-optimization-image-source-admission]] — Image source admission and exact request-local reuse
 - [[sources/runs/2026/09/2026-09-05-optimization-all-hit-compute]] — All-hit compute replay and preserved large-pool calibration failures
-- [[sources/runs/2026/09/2026-09-05-optimization-terminal-prefill-demand]] — Terminal prefill demand exact state, bounded lifecycle and subthreshold serving improvement
 
 ## More
 
-This folder has 549 files. The 500 most recent are listed above.
+This folder has 550 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

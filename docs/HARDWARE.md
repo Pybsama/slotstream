@@ -167,15 +167,14 @@ guidance, independently of reply speed.
 
 ### Automatic memory plans
 
-The target and speculative-decoding columns describe 0.2.16 source plans at
-the default 32,768-token window, with the draft file available and no other
-apps holding memory. Simulated RAM is in decimal GB; a Mac's marketed memory
-capacity can produce a different decimal-GB device reading and target.
-The recommended window is a separate planning suggestion. Selecting it
-recalculates the target, cache and speculative-decoding decision. The guidance
-is 32,768 tokens through 32 GB of simulated RAM, and 65,536 from 36 GB.
+The columns describe 0.2.17 source plans in auto mode, which picks the
+context window along with the target and speculative decoding. The draft file
+is available and no other apps hold memory. Simulated RAM is in decimal GB; a
+Mac's marketed memory capacity can produce a different decimal-GB device
+reading and target. Auto picks 32,768 tokens through 32 GB of simulated RAM,
+65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB.
 
-| Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Recommended context window |
+| Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Automatic context window |
 |---|---|---|---|
 | 8 GB | No plan fits | Not applicable | Not applicable |
 | 16 GB | 10 GB | Off | 32,768 |
@@ -184,7 +183,8 @@ is 32,768 tokens through 32 GB of simulated RAM, and 65,536 from 36 GB.
 | 32 GB | 22 GB | On | 32,768 |
 | 36 GB | 25 GB | On | 65,536 |
 | 48 GB | 33.6 GB | On | 65,536 |
-| 64, 96 or 128 GB | 34.6 GB | On | 65,536 |
+| 64 GB | 43.2 GB | On | 131,072 |
+| 96 or 128 GB | 54.7 GB | On | 262,144 |
 
 Speculative decoding in the source plans includes 0.2.16's decode lookahead.
 These are allocation plans, not measured performance tiers. The matching
@@ -200,32 +200,44 @@ not a prediction for larger caches. Larger caches have not been timed with
 demonstrates gains beyond auto with an earlier release. Do not apply the
 development Mac's release speedup to those community figures.
 
-**Auto mode picks the memory target, cache size, and speculative decoding.** It
-doesn't pick the context window yet: every Mac starts with 32,768 tokens, and
-`--max-context 65536` selects the larger window. Automatic context sizing is
-planned. The recommendations follow `slotstream doctor --sim-ram <GB>
---max-context 65536`: in the 16 GB simulation, the larger window shrinks the
-cache by a third; the 32 GB simulation cannot retain enough experts after
-charging the draft head, while the 36 GB simulation keeps it enabled.
-Real available memory and Metal limits can change these decisions.
+**Auto mode picks the memory target, cache size, speculative decoding and
+context window.** It takes the largest window of 32,768, 65,536, 131,072 or
+262,144 tokens that keeps speculative decoding and the decode lookahead as the
+32,768-token plan has them, keeps one complete conversation of that length for
+follow-up turns, and adds at most 10% to the planner's estimate for a typical
+request of 2,000 prompt tokens and a 400-token reply. `slotstream doctor
+--sim-ram <GB>` shows every candidate and its reason. At 24 GB a 65,536-token
+window would add 18%, and at 32 GB it would turn speculative decoding off.
+At 36 GB it adds 9%, as the cache drops from 96 to 75 experts per layer.
+At 48 GB, 131,072 tokens would add 15%; at 64 GB, 262,144 would add 18%.
+From 64 GB the larger window's memory comes from room the 32,768-token plan
+leaves unused, so the cache keeps its size and the target rises above that
+plan's 34.6 GB, to 43.2 GB at 64 GB and 54.7 GB from 96 GB. Real available
+memory and Metal limits can change these decisions; a busy start lowers the
+window before it gives up speculative decoding. `--max-context N` fixes any
+window up to 262,144; on a 32 GB Mac, `--max-context 65536` gives the larger
+window without speculative decoding.
 
 For prompts near 32,768 tokens, the planner estimates about 3 minutes of
 prefill from 24 GB and 6.4 minutes at 16 GB; near 65,536 it estimates
 about 8 minutes from 24 GB. These estimates use the M5 Pro's prefill curve,
-not measurements on those memory sizes. Leave room for the reply in the
+not measurements on those memory sizes. Windows above 128,256 tokens have no
+calibrated estimate yet, because passes shorter than 256 tokens have not
+been timed. Leave room for the reply in the
 configured window. Startup, queueing, images and reasoning before visible
 answer text add to the user's wait.
 
-The repeated target on larger Macs is the intentional conservative default,
-based on development-Mac measurements. Auto does not currently increase its
-ceiling for the M5 Max's demonstrated larger-cache gains. These simulated plans
+The repeated target from 96 GB is the intentional conservative default: the
+33 GB base ceiling plus the draft head and the full window's charge. Auto does
+not increase its ceiling for the M5 Max's demonstrated larger-cache gains. These simulated plans
 describe allocation policy; they do not measure speed. See
 [memory defaults and overrides](../README.md#why-doesnt-slotstream-use-all-of-my-ram).
 
 ## How to measure
 
-Context is a startup choice, with a 32,768-token default. Slotstream 0.2.14
-adds the feasibility report and request-wait controls described here.
+Context is a startup choice. Since 0.2.17 auto picks it for each Mac and
+`--max-context` fixes it; 0.2.14 added the feasibility report and request-wait
+controls described here.
 Use `doctor --json` with the intended `--max-context` and memory policy to inspect the feasible
 window before loading. A memory-feasible window does not promise a short wait:
 the request-to-first-token budget defaults to 30 minutes, including preparation

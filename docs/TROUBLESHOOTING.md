@@ -132,6 +132,16 @@ The installer is tested on these versions; the runtime still needs testing.
 [Open an issue](https://github.com/carloslfu/slotstream/issues/new) with the
 error and your `slotstream doctor` output.
 
+## The context window is smaller than `doctor` showed
+
+Auto picks the window from your Mac's memory, then plans it against the
+memory available when the server starts. If other apps hold too much then,
+Slotstream starts with a smaller window and says so in its startup lines,
+instead of turning speculative decoding off. The window stays for that
+server's lifetime. Close memory-heavy apps and restart the server to get the
+larger window, or pass `--max-context N` for a specific size; a window that
+doesn't fit is refused with the largest one that does.
+
 ## A long request is refused or interrupted
 
 The feasibility report and request deadlines below are available starting

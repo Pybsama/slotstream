@@ -1312,3 +1312,36 @@ Added Carlos-requested Support coming soon indicator to the README Compatibility
 ## [2026-09-13 16:50] update | records/measurements/hardware-planning-ranges-2026-09-13.md
 Used the preserved corrected B1 replication medians, 11.79 and 13.47 tok/s, at Carlos request. Highlighted the 48 GB development Mac and 20 GB process target in both public hardware tables; labeled the older 0.2.3 result historical. High now estimates 13-27 tok/s using the latest measured lower reference, without guaranteeing a minimum across hardware. Updated three claims, current documentation and generated projections. Confirmed v0.2.16 is published and distinguished its adopted configuration from the pre-release benchmark. 186 claim checks and brain gates passed with zero errors and the same two historical log warnings; table structure, generated parity and whitespace passed. No model run or runtime change.
 
+## [2026-09-13 17:25] create | sources/runs/2026/09/2026-09-13-automatic-context-window-tier-plans.md
+Weights-free checks and doctor plans for the per-Mac automatic context window candidate 3626ba67: T0 38/38, planner gates 90/90, plans from 8 to 192 GB in auto and at 32,768 tokens
+
+## [2026-09-13 17:25] create | records/measurements/automatic-context-window-plans-2026-09-13.md
+Automatic window by simulated memory: 32,768 through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB, 262,144 from 96 GB; this Mac picks 65,536 and rejects 131,072 at 10.4%
+
+## [2026-09-13 17:25] create | records/claims/automatic-context-window-262144-from-96-gb.md
+New claim for the full automatic window from 96 GB
+
+## [2026-09-13 17:25] create | records/claims/automatic-context-window-131072-at-64-gb.md
+New claim for the 131,072-token automatic window at 64 GB
+
+## [2026-09-13 17:25] create | records/claims/automatic-context-window-tolerance-10-percent.md
+New claim for the 10% request-time tolerance of larger automatic windows
+
+## [2026-09-13 17:25] create | records/claims/automatic-target-43-2-gb-at-64-gb.md
+New claim for the 43.2 GB automatic target at 64 GB
+
+## [2026-09-13 17:25] create | records/claims/automatic-target-54-7-gb-from-96-gb.md
+New claim for the 54.7 GB automatic target from 96 GB
+
+## [2026-09-13 17:25] update | records/claims/recommended-context-65536-from-36-gb.md
+Recommendation became the automatic choice; supported by the automatic window plans
+
+## [2026-09-13 17:25] update | records/claims/context-cap-32768-tokens.md
+32,768 is now the automatic window through 32 GB and with a fixed cache; a fixed memory target still gets an automatic window
+
+## [2026-09-13 17:25] update | records/claims/context-opt-in-65536.md
+Retitled as the explicit 65,536-token selector Hermes uses; auto may pick it from 36 GB
+
+## [2026-09-13 17:25] update | records/claims/auto-ceiling-34-6-gb-with-the-head.md
+Scoped to the 32,768-token window; larger automatic windows raise targets to 43.2 and 54.7 GB
+

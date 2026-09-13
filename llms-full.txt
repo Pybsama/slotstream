@@ -66,13 +66,13 @@ These are rough planning ranges, combining community reports with estimates
 from the development Mac. They describe warm replies across different Macs
 and settings, with higher speeds generally requiring a faster chip and SSD.
 
-| Memory tier | Installed RAM | Estimated warm reply speed | Recommended context window |
+| Memory tier | Installed RAM | Estimated warm reply speed | Automatic context window |
 |---|---|---|---|
 | Compatibility | 8 GB | **Support coming soon.** The current model doesn't fit yet. | Not available yet |
 | Low | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
 | Medium | 24–<48 GB | ~6–14 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
-| High | 48–<96 GB | ~13–27 tok/s | 65,536 tokens |
-| Ultra | 96 GB+ | ~20–32 tok/s | 65,536 tokens |
+| High | 48–<96 GB | ~13–27 tok/s | 65,536 at 48 GB; 131,072 at 64 GB |
+| Ultra | 96 GB+ | ~20–32 tok/s | 262,144 tokens, the model's full window |
 
 The High range now uses our latest **13.47 tok/s measured on a 48 GB M5 Pro**
 as its lower reference, rounded to a whole token for the estimate. Older
@@ -131,16 +131,26 @@ An 8 GB Mac cannot fit the model's smallest plan. More RAM can leave room
 for a larger expert cache or conversation, subject to the engine's limits
 and the memory available while other apps are running.
 
-**Auto mode picks the memory target, cache size, and speculative decoding for
-your Mac.** It doesn't pick the context window yet: every Mac starts with
-32,768 tokens, and `--max-context 65536` selects the larger window. Automatic
-context sizing is planned. The [hardware guide](docs/HARDWARE.md#speed-estimates)
-recommends 32,768 tokens for simulated RAM sizes through 32 GB and
-65,536 from 36 GB. These are decimal-GB planning simulations;
-available memory, the Metal limit and draft-head availability can change the
-result. Preview your Mac with `slotstream doctor --max-context 65536`.
+**Auto mode picks the memory target, cache size, speculative decoding and
+context window for your Mac.** It takes the largest window of 32,768, 65,536,
+131,072 or 262,144 tokens that keeps speculative decoding, keeps one complete
+conversation ready for follow-up turns, and adds at most a tenth to the
+planner's estimate for a typical request. In decimal-GB simulations that is
+32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and the
+model's full 262,144 from 96 GB. Available memory, the Metal limit and
+draft-head availability can change the result. A Mac that is busy at startup
+gets a smaller window rather than losing speculative decoding. Run
+`slotstream doctor` to see the choice and why each larger window was or wasn't
+taken, and see the [hardware guide](docs/HARDWARE.md#automatic-memory-plans)
+for every plan.
+
+**You can set the window yourself.** `--max-context 65536` fixes a
+65,536-token window, and any size up to 262,144 is accepted. A larger window
+reserves more memory, which can shrink the expert cache, and a long prompt
+takes longer to read. Requests with images use at most 65,536 tokens.
 For prompts near 32,768 tokens, the M5 Pro-based estimate is about 3 minutes
 of prefill for simulated plans from 24 GB; near 65,536 it is about 8 minutes.
+Windows above 128,256 tokens have no calibrated estimate yet.
 These are estimated prompt-processing times, not measured waits across Macs;
 startup, queueing, images and reasoning before visible answer text can add time.
 
@@ -257,8 +267,9 @@ their settings determine what those tools send.
 ### Why doesn't Slotstream use all of my RAM?
 
 Auto has a **33 GB** base memory ceiling, or **34.6 GB** with speculative
-decoding at the default context. Larger windows also charge draft context
-state, so that ceiling can rise. RAM-share and available-memory bounds still
+decoding at the 32,768-token window. The larger windows auto picks from 36 GB
+add their own context state and retained conversation, so that ceiling can
+rise. RAM-share and available-memory bounds still
 apply. This conservative default comes from the development Mac's measurements
 and leaves memory for
 other apps. It is not a limit on how much memory can improve performance:
@@ -590,11 +601,11 @@ sampling.
 
 `--mtp auto` enables this when the expert cache can still hold 76 experts per
 layer after allocating 1.6 GB for the head, before the separate lookahead
-reservation, a 21 GB target at the default context. Availability and context
-can change activation. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
+reservation, a 21 GB target at the 32,768-token window. Availability and
+context can change activation. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
 faster than plain decode on the same memory at 76 per layer. The automatic
-ceiling is 34.6 GB with the head enabled at the default context; larger
-windows add draft-context charges. `--mtp off` disables the head.
+ceiling is 34.6 GB with the head enabled at the 32,768-token window; larger
+windows add their context charges. `--mtp off` disables the head.
 
 With the head on, 0.2.16 also runs the decode lookahead. After each layer, the
 router of the layer two ahead runs on the current hidden state, and the experts
@@ -654,8 +665,8 @@ scope and revision criteria; maintaining those choices is part of the engine.
 By default, slotstream chooses a memory target for your Mac and prints it at
 startup. It takes the lowest of 33 GB, 70% of RAM, and 2 GB below the Metal
 working-set limit, then reduces that target if other apps are using memory.
-The draft head raises the base ceiling to 34.6 GB at the default context;
-larger windows add draft-context charges. See [Speed](#speed).
+The draft head raises the base ceiling to 34.6 GB at the 32,768-token window;
+the larger windows auto picks on bigger Macs add their context charges. See [Speed](#speed).
 
 The 33 GB ceiling is a conservative default based on development-Mac
 measurements. Those tests showed diminishing speed gains as
@@ -797,9 +808,10 @@ The startup command in the [setup guide](HERMES.md#start-slotstream) leaves
 memory planning and speculative decoding on their automatic defaults.
 Slotstream decides whether to enable the MTP draft head from its availability
 and the planned expert cache. Hermes does not require an MTP override.
-Hermes requires a larger context than Slotstream's ordinary default. The
-explicit flag selects the qualified window and charges its extra active state
-and a measured transient reserve before allocating the expert cache. The
+Hermes requires a larger context than the 32,768 tokens auto keeps on Macs
+through 32 GB, so the setup guide fixes 65,536 tokens on every Mac. The
+explicit flag charges that window's extra active state and a measured
+transient reserve before allocating the expert cache. The
 minimum memory target rises with this larger window. If overriding automatic
 planning, inspect `slotstream doctor --max-context 65536` first and choose a
 target that fits your Mac. Long prompts must still be read before the first
@@ -1018,7 +1030,7 @@ it actually reads the file and returns its contents.
 | Connection refused or the wrong model appears | Keep the Slotstream server running and copy the address and model name exactly. Check for [port conflicts](TROUBLESHOOTING.md#the-server-cant-listen-on-port-11434). |
 | Tools don't work | Use OpenAI Chat Completions with Slotstream 0.2.8 or later. The Ollama connection does not support tools. |
 | The app calls `/v1/responses` | Select Chat Completions mode. Responses-only apps are unsupported. |
-| The conversation is too long | The ordinary limit is 32,768 tokens, including instructions, history, and reply. Hermes needs the larger `--max-context 65536` setup in its guide. |
+| The conversation is too long | The window includes instructions, history, and reply. Auto picks 32,768 tokens through 32 GB of RAM and more on larger Macs; `slotstream doctor` shows yours. Hermes needs the `--max-context 65536` setup in its guide. |
 | The first answer times out | Check progress in the Slotstream window. Long prompts can take minutes. See your agent's guide for its timeout settings. |
 | Summaries stop early or use a cloud model | Check the separate summary-provider and reply-length settings. Use the full configuration in the Hermes guide; fx has known summary limitations. |
 | The app requires strict structured output | JSON-schema constrained output and strict tool schemas are unsupported. The app needs a mode that works without that requirement. |
@@ -1086,7 +1098,7 @@ Generate once from a prompt, with no server.
 | Flag | Meaning |
 |---|---|
 | `--prompt <text>` | The prompt (default: "Why is the sky blue?"). |
-| `--max-context <n>` | Window shared by the final templated input and reply; uses the same planning and bounds as `serve`. |
+| `--max-context <auto or n>` | Window shared by the final templated input and reply. Default `auto`; the same planning and bounds as `serve`. |
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including preparation. Default 30 minutes; `0` disables only the time policy. |
 | `--max-tokens <n>` | Tokens to generate; `<= 0` means as many as the context allows (default 128). |
 | `--greedy` | Deterministic greedy sampling. |
@@ -1104,7 +1116,7 @@ and OpenAI endpoints and the [fx guide](FX.md) for the AI SDK gateway.
 | Flag | Meaning |
 |---|---|
 | `--port <n>` | Listen port on 127.0.0.1 (default 11434). |
-| `--max-context <n>` | Maximum tokens shared by prompt and reply. Default: 32768; ceiling: 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Main sequence-cache capacity costs about 27 KiB per token, plus recurrent, retained, draft and transient allocations. |
+| `--max-context <auto or n>` | Maximum tokens shared by prompt and reply. Default `auto`: the largest of 32768, 65536, 131072 and 262144 tokens that keeps speculative decoding, retains one complete conversation and adds at most 10% to a typical request on this Mac; `doctor` shows the choice. A number fixes the window, from 1 to 262144, the model's limit. Requests with images stay within 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Main sequence-cache capacity costs about 27 KiB per token, plus recurrent, retained, draft and transient allocations. |
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including queueing, tokenization and images. Default 30 minutes; `0` disables only time. |
 | `--no-elastic` | Pin the cache at its startup size. By default an auto-sized cache resizes between requests as memory pressure changes; explicit sizes are always pinned. |
 | `--no-prefix-cache` | Process each prompt from scratch. Useful for reproducibility comparisons. |
@@ -1143,9 +1155,9 @@ never loads the model and can run while the server is working.
 | `--sim-ram <gb>` | Preview this much RAM in decimal GB. Simulates memory capacity, not another chip or SSD. Assumes no other apps are using memory unless `--sim-available` is set; working set defaults to 75% of RAM. |
 | `--sim-working-set <gb>` | Use this Metal working-set limit in the simulation. |
 | `--sim-available <gb>` | Use this much available memory in the simulation. |
-| `--max-context <n>` | Preview the same allocation and report the largest memory-feasible window under these inputs. |
+| `--max-context <auto or n>` | Default `auto` reports the automatic window, every candidate and the reason it was or wasn't taken. A number previews that window's allocation and reports the largest memory-feasible window under these inputs. |
 | `--max-prefill-wait <minutes>` | Preview the request deadline separately from memory feasibility; default 30 minutes, `0` disables only time. |
-| `--json` | The resolved plan as JSON, with estimates unrounded (`max_context_tokens`, `est_prefill_s_at_max_context`). |
+| `--json` | The resolved plan as JSON, with estimates unrounded (`max_context_tokens`, `est_prefill_s_at_max_context`), plus `context_window_source` and, in auto mode, `automatic_context_window`. |
 
 Plus the memory options, so `doctor --memory-gb 16` shows exactly what
 `serve --memory-gb 16` would plan under the same conditions. Its estimated
@@ -1194,7 +1206,7 @@ With no sizing override, auto sizes the process to the machine (see
 | Flag | Meaning |
 |---|---|
 | `--model <name or dir>` | Model name (resolves to `~/.slotstream/models`, or a dev checkout's `models/`) or a directory path. |
-| `--memory-gb <gb>` | Total process memory target, in decimal GB. The cache gets what remains after fixed allocations and a 1 GB margin. Minimum 8.1 for the default context; larger context windows raise the minimum. Use this option for a manual target. |
+| `--memory-gb <gb>` | Total process memory target, in decimal GB. The cache gets what remains after fixed allocations and a 1 GB margin. Minimum 8.1 for the 32,768-token window; larger windows raise the minimum. Use this option for a manual target. Auto still picks the context window inside this target unless `--max-context` is given; add `--max-context 32768` to reproduce a plan from before 0.2.17. |
 | `--experts-per-layer <n>` | Expert cache size directly, 1…512. Each of the 48 layers has 512 experts of 2.76 MB and the cache holds `n × 48` of them, so the pool is `n × 0.133 GB`: 30/layer is 4 GB, 181 is 24 GB, 226 is 30 GB. The pool is one global cache; hot layers borrow slots from cold ones. |
 | `--pool-gb <gb>` | Raw expert-pool size (1 GB is about 7.5 experts per layer). |
 | `--vision auto\|on\|off` | Accept images (default `auto`). `auto` loads the image encoder on first use; `on` also requires the checkpoint to contain vision weights; `off` rejects images. |
@@ -1599,7 +1611,7 @@ It rejects `http://`, `https://`, and `file://` URLs. It applies EXIF
 orientation, composites transparency onto white, and rejects truncated files.
 
 Each resized image uses one token per 32×32 pixels, up to 2,304 tokens, from
-the shared context (32,768 tokens by default). The decoded image file must be at most
+the shared context, which a request with images may fill up to 65,536 tokens. The decoded image file must be at most
 24 MiB, with an aspect ratio no greater than 200:1.
 
 The vision tower uses 0.9 GB and loads on the first image request. For auto
@@ -1633,10 +1645,12 @@ Ollama errors use `{"error": "message"}`. OpenAI errors use
 A query string doesn't affect routing. `HEAD` returns 200 or 404 for the
 requested path.
 
-Prompt plus completion is capped at 32,768 tokens by default. Use
-`serve --max-context 65536` for a 65,536-token window, or select a smaller
-limit. The planner charges extra state and transient memory before allocating
-the pool.
+Prompt plus completion is capped by the served window. By default the server
+picks it for the Mac: 32,768 tokens through 32 GB of RAM, 65,536 from 36 GB,
+131,072 at 64 GB and 262,144 from 96 GB, or less on a Mac that is busy at
+startup. Use `serve --max-context 65536` to fix a 65,536-token window, or any
+size from 1 to 262,144. Requests with images stay within 65,536 tokens. The
+planner charges extra state and transient memory before allocating the pool.
 A prompt over the configured cap returns 400 with the actual limit. A known
 prefill estimate can also refuse work that exceeds the remaining wait budget. `/v1/models` and `/api/show` report the actual served window;
 the model's training window must not be used as the request limit.
@@ -1877,6 +1891,19 @@ largest fitting plan and refusal, independently of the time policy. Diagnostic
 qualification is explicit; it never changes the public implementation or
 MTP/vision limits advertised by ordinary serving.
 
+Starting in Slotstream 0.2.17, `Planner.resolveContextWindow(.automatic,
+request:on:mtpAvailable:visionAvailable:)` returns the plan the command-line
+server uses: the automatic window for the machine's memory tier, lowered at
+startup when available memory is short, with an `AutomaticContextWindow` that
+lists every candidate and why it was or wasn't taken. `.tokens(n)` plans an
+explicit window, and `Planner.automaticContextWindow` evaluates the tier
+without planning against live memory. `Planner.plan(_:on:)` still plans the
+request's own `maxContextTokens`, 32,768 unless set. A window above 32,768 now
+retains one complete conversation when its plan can hold one; otherwise the
+plan's notes say how much a follow-up reuses. `ContextPolicy.maxTokens` is the
+model's 262,144 tokens, and requests with images stay within
+`ContextPolicy.visionLimit`.
+
 
 <!-- ===== docs/FX.md ===== -->
 
@@ -2063,7 +2090,9 @@ Wait until you see `slotstream listening on http://127.0.0.1:11434`.
 
 The larger context gives Hermes room for its instructions, tools, and conversation
 history. Slotstream chooses its memory plan and whether to use speculative
-decoding automatically. This context uses more memory than ordinary chat.
+decoding automatically. Auto already picks 65,536 tokens or more from 36 GB of
+RAM; the flag keeps the window Hermes is configured for on every Mac. This
+context uses more memory than ordinary chat.
 If startup fails, see [Troubleshooting](#troubleshooting) below.
 
 ## Configure Hermes
@@ -2568,7 +2597,11 @@ diagnostic unless the machine and network conditions qualify as a benchmark.
 
 `Tools/context_gates.py --report result.json` compares frozen default allocation
 fields and validates CLI bounds, metadata, complete schedules and strict tool
-termination without loading weights. `Tools/consumer_smoke.sh` compiles the
+termination without loading weights. The frozen allocation is pinned at an
+explicit 32,768-token window, and the automatic window for the frozen tiers is
+checked against `Tools/fixtures/context-automatic-v1.json`.
+`Tools/planner_gates.sh` also checks each tier's automatic window, quiet and
+busy starts, fixed caches and explicit windows. `Tools/consumer_smoke.sh` compiles the
 original public function signatures as an external package.
 
 The native `optimization-state-check --variant context-serving --json` injects
@@ -2809,6 +2842,16 @@ installed version; the [changelog](../CHANGELOG.md) lists the fixes in each rele
 The installer is tested on these versions; the runtime still needs testing.
 [Open an issue](https://github.com/carloslfu/slotstream/issues/new) with the
 error and your `slotstream doctor` output.
+
+## The context window is smaller than `doctor` showed
+
+Auto picks the window from your Mac's memory, then plans it against the
+memory available when the server starts. If other apps hold too much then,
+Slotstream starts with a smaller window and says so in its startup lines,
+instead of turning speculative decoding off. The window stays for that
+server's lifetime. Close memory-heavy apps and restart the server to get the
+larger window, or pass `--max-context N` for a specific size; a window that
+doesn't fit is refused with the largest one that does.
 
 ## A long request is refused or interrupted
 
@@ -3239,15 +3282,14 @@ guidance, independently of reply speed.
 
 ### Automatic memory plans
 
-The target and speculative-decoding columns describe 0.2.16 source plans at
-the default 32,768-token window, with the draft file available and no other
-apps holding memory. Simulated RAM is in decimal GB; a Mac's marketed memory
-capacity can produce a different decimal-GB device reading and target.
-The recommended window is a separate planning suggestion. Selecting it
-recalculates the target, cache and speculative-decoding decision. The guidance
-is 32,768 tokens through 32 GB of simulated RAM, and 65,536 from 36 GB.
+The columns describe 0.2.17 source plans in auto mode, which picks the
+context window along with the target and speculative decoding. The draft file
+is available and no other apps hold memory. Simulated RAM is in decimal GB; a
+Mac's marketed memory capacity can produce a different decimal-GB device
+reading and target. Auto picks 32,768 tokens through 32 GB of simulated RAM,
+65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB.
 
-| Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Recommended context window |
+| Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Automatic context window |
 |---|---|---|---|
 | 8 GB | No plan fits | Not applicable | Not applicable |
 | 16 GB | 10 GB | Off | 32,768 |
@@ -3256,7 +3298,8 @@ is 32,768 tokens through 32 GB of simulated RAM, and 65,536 from 36 GB.
 | 32 GB | 22 GB | On | 32,768 |
 | 36 GB | 25 GB | On | 65,536 |
 | 48 GB | 33.6 GB | On | 65,536 |
-| 64, 96 or 128 GB | 34.6 GB | On | 65,536 |
+| 64 GB | 43.2 GB | On | 131,072 |
+| 96 or 128 GB | 54.7 GB | On | 262,144 |
 
 Speculative decoding in the source plans includes 0.2.16's decode lookahead.
 These are allocation plans, not measured performance tiers. The matching
@@ -3272,32 +3315,44 @@ not a prediction for larger caches. Larger caches have not been timed with
 demonstrates gains beyond auto with an earlier release. Do not apply the
 development Mac's release speedup to those community figures.
 
-**Auto mode picks the memory target, cache size, and speculative decoding.** It
-doesn't pick the context window yet: every Mac starts with 32,768 tokens, and
-`--max-context 65536` selects the larger window. Automatic context sizing is
-planned. The recommendations follow `slotstream doctor --sim-ram <GB>
---max-context 65536`: in the 16 GB simulation, the larger window shrinks the
-cache by a third; the 32 GB simulation cannot retain enough experts after
-charging the draft head, while the 36 GB simulation keeps it enabled.
-Real available memory and Metal limits can change these decisions.
+**Auto mode picks the memory target, cache size, speculative decoding and
+context window.** It takes the largest window of 32,768, 65,536, 131,072 or
+262,144 tokens that keeps speculative decoding and the decode lookahead as the
+32,768-token plan has them, keeps one complete conversation of that length for
+follow-up turns, and adds at most 10% to the planner's estimate for a typical
+request of 2,000 prompt tokens and a 400-token reply. `slotstream doctor
+--sim-ram <GB>` shows every candidate and its reason. At 24 GB a 65,536-token
+window would add 18%, and at 32 GB it would turn speculative decoding off.
+At 36 GB it adds 9%, as the cache drops from 96 to 75 experts per layer.
+At 48 GB, 131,072 tokens would add 15%; at 64 GB, 262,144 would add 18%.
+From 64 GB the larger window's memory comes from room the 32,768-token plan
+leaves unused, so the cache keeps its size and the target rises above that
+plan's 34.6 GB, to 43.2 GB at 64 GB and 54.7 GB from 96 GB. Real available
+memory and Metal limits can change these decisions; a busy start lowers the
+window before it gives up speculative decoding. `--max-context N` fixes any
+window up to 262,144; on a 32 GB Mac, `--max-context 65536` gives the larger
+window without speculative decoding.
 
 For prompts near 32,768 tokens, the planner estimates about 3 minutes of
 prefill from 24 GB and 6.4 minutes at 16 GB; near 65,536 it estimates
 about 8 minutes from 24 GB. These estimates use the M5 Pro's prefill curve,
-not measurements on those memory sizes. Leave room for the reply in the
+not measurements on those memory sizes. Windows above 128,256 tokens have no
+calibrated estimate yet, because passes shorter than 256 tokens have not
+been timed. Leave room for the reply in the
 configured window. Startup, queueing, images and reasoning before visible
 answer text add to the user's wait.
 
-The repeated target on larger Macs is the intentional conservative default,
-based on development-Mac measurements. Auto does not currently increase its
-ceiling for the M5 Max's demonstrated larger-cache gains. These simulated plans
+The repeated target from 96 GB is the intentional conservative default: the
+33 GB base ceiling plus the draft head and the full window's charge. Auto does
+not increase its ceiling for the M5 Max's demonstrated larger-cache gains. These simulated plans
 describe allocation policy; they do not measure speed. See
 [memory defaults and overrides](../README.md#why-doesnt-slotstream-use-all-of-my-ram).
 
 ## How to measure
 
-Context is a startup choice, with a 32,768-token default. Slotstream 0.2.14
-adds the feasibility report and request-wait controls described here.
+Context is a startup choice. Since 0.2.17 auto picks it for each Mac and
+`--max-context` fixes it; 0.2.14 added the feasibility report and request-wait
+controls described here.
 Use `doctor --json` with the intended `--max-context` and memory policy to inspect the feasible
 window before loading. A memory-feasible window does not promise a short wait:
 the request-to-first-token budget defaults to 30 minutes, including preparation
@@ -3333,6 +3388,30 @@ release; anything under **Unreleased** is on `main` only.
 Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
+
+## 0.2.17 - 2026-09-13
+
+- Pick the context window for each Mac. Auto now takes the largest of 32,768,
+  65,536, 131,072 and 262,144 tokens that keeps speculative decoding, keeps one
+  complete conversation ready for follow-up turns and adds at most a tenth to
+  the planner's estimate for a typical request. In decimal-GB simulations that
+  is 32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and
+  262,144 from 96 GB. A Mac that is busy at startup gets a smaller window
+  rather than losing speculative decoding, and `doctor` lists every candidate
+  with its reason.
+- Accept `--max-context` up to 262,144, the model's full window, or `auto`.
+  Requests with images still use at most 65,536 tokens. A window above 32,768
+  keeps one complete conversation for follow-ups when the plan can hold it,
+  and says how much a follow-up reuses when it can't.
+- Raise auto's memory target on 64 GB and larger Macs by the chosen window's
+  own charge, to 43.2 GB at 64 GB and 54.7 GB from 96 GB, so the expert cache
+  keeps its size. `--max-context 32768` restores the former plan.
+- With an explicit `--memory-gb`, auto also picks the window inside that
+  target, trading some cache for a larger window within the 10% limit. Add
+  `--max-context 32768` to keep an earlier plan. `--experts-per-layer` and
+  `--pool-gb` keep 32,768 tokens.
+- Show why `doctor` rejects a memory target in its tier table: too small for
+  the window, above the Metal working set, or more than is reclaimable now.
 
 ## 0.2.16 - 2026-09-13
 

@@ -58,13 +58,13 @@ These are rough planning ranges, combining community reports with estimates
 from the development Mac. They describe warm replies across different Macs
 and settings, with higher speeds generally requiring a faster chip and SSD.
 
-| Memory tier | Installed RAM | Estimated warm reply speed | Recommended context window |
+| Memory tier | Installed RAM | Estimated warm reply speed | Automatic context window |
 |---|---|---|---|
 | Compatibility | 8 GB | **Support coming soon.** The current model doesn't fit yet. | Not available yet |
 | Low | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
 | Medium | 24–<48 GB | ~6–14 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
-| High | 48–<96 GB | ~13–27 tok/s | 65,536 tokens |
-| Ultra | 96 GB+ | ~20–32 tok/s | 65,536 tokens |
+| High | 48–<96 GB | ~13–27 tok/s | 65,536 at 48 GB; 131,072 at 64 GB |
+| Ultra | 96 GB+ | ~20–32 tok/s | 262,144 tokens, the model's full window |
 
 The High range now uses our latest **13.47 tok/s measured on a 48 GB M5 Pro**
 as its lower reference, rounded to a whole token for the estimate. Older
@@ -123,16 +123,26 @@ An 8 GB Mac cannot fit the model's smallest plan. More RAM can leave room
 for a larger expert cache or conversation, subject to the engine's limits
 and the memory available while other apps are running.
 
-**Auto mode picks the memory target, cache size, and speculative decoding for
-your Mac.** It doesn't pick the context window yet: every Mac starts with
-32,768 tokens, and `--max-context 65536` selects the larger window. Automatic
-context sizing is planned. The [hardware guide](docs/HARDWARE.md#speed-estimates)
-recommends 32,768 tokens for simulated RAM sizes through 32 GB and
-65,536 from 36 GB. These are decimal-GB planning simulations;
-available memory, the Metal limit and draft-head availability can change the
-result. Preview your Mac with `slotstream doctor --max-context 65536`.
+**Auto mode picks the memory target, cache size, speculative decoding and
+context window for your Mac.** It takes the largest window of 32,768, 65,536,
+131,072 or 262,144 tokens that keeps speculative decoding, keeps one complete
+conversation ready for follow-up turns, and adds at most a tenth to the
+planner's estimate for a typical request. In decimal-GB simulations that is
+32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and the
+model's full 262,144 from 96 GB. Available memory, the Metal limit and
+draft-head availability can change the result. A Mac that is busy at startup
+gets a smaller window rather than losing speculative decoding. Run
+`slotstream doctor` to see the choice and why each larger window was or wasn't
+taken, and see the [hardware guide](docs/HARDWARE.md#automatic-memory-plans)
+for every plan.
+
+**You can set the window yourself.** `--max-context 65536` fixes a
+65,536-token window, and any size up to 262,144 is accepted. A larger window
+reserves more memory, which can shrink the expert cache, and a long prompt
+takes longer to read. Requests with images use at most 65,536 tokens.
 For prompts near 32,768 tokens, the M5 Pro-based estimate is about 3 minutes
 of prefill for simulated plans from 24 GB; near 65,536 it is about 8 minutes.
+Windows above 128,256 tokens have no calibrated estimate yet.
 These are estimated prompt-processing times, not measured waits across Macs;
 startup, queueing, images and reasoning before visible answer text can add time.
 
@@ -249,8 +259,9 @@ their settings determine what those tools send.
 ### Why doesn't Slotstream use all of my RAM?
 
 Auto has a **33 GB** base memory ceiling, or **34.6 GB** with speculative
-decoding at the default context. Larger windows also charge draft context
-state, so that ceiling can rise. RAM-share and available-memory bounds still
+decoding at the 32,768-token window. The larger windows auto picks from 36 GB
+add their own context state and retained conversation, so that ceiling can
+rise. RAM-share and available-memory bounds still
 apply. This conservative default comes from the development Mac's measurements
 and leaves memory for
 other apps. It is not a limit on how much memory can improve performance:

@@ -46,7 +46,7 @@ Generate once from a prompt, with no server.
 | Flag | Meaning |
 |---|---|
 | `--prompt <text>` | The prompt (default: "Why is the sky blue?"). |
-| `--max-context <n>` | Window shared by the final templated input and reply; uses the same planning and bounds as `serve`. |
+| `--max-context <auto or n>` | Window shared by the final templated input and reply. Default `auto`; the same planning and bounds as `serve`. |
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including preparation. Default 30 minutes; `0` disables only the time policy. |
 | `--max-tokens <n>` | Tokens to generate; `<= 0` means as many as the context allows (default 128). |
 | `--greedy` | Deterministic greedy sampling. |
@@ -64,7 +64,7 @@ and OpenAI endpoints and the [fx guide](FX.md) for the AI SDK gateway.
 | Flag | Meaning |
 |---|---|
 | `--port <n>` | Listen port on 127.0.0.1 (default 11434). |
-| `--max-context <n>` | Maximum tokens shared by prompt and reply. Default: 32768; ceiling: 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Main sequence-cache capacity costs about 27 KiB per token, plus recurrent, retained, draft and transient allocations. |
+| `--max-context <auto or n>` | Maximum tokens shared by prompt and reply. Default `auto`: the largest of 32768, 65536, 131072 and 262144 tokens that keeps speculative decoding, retains one complete conversation and adds at most 10% to a typical request on this Mac; `doctor` shows the choice. A number fixes the window, from 1 to 262144, the model's limit. Requests with images stay within 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Main sequence-cache capacity costs about 27 KiB per token, plus recurrent, retained, draft and transient allocations. |
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including queueing, tokenization and images. Default 30 minutes; `0` disables only time. |
 | `--no-elastic` | Pin the cache at its startup size. By default an auto-sized cache resizes between requests as memory pressure changes; explicit sizes are always pinned. |
 | `--no-prefix-cache` | Process each prompt from scratch. Useful for reproducibility comparisons. |
@@ -103,9 +103,9 @@ never loads the model and can run while the server is working.
 | `--sim-ram <gb>` | Preview this much RAM in decimal GB. Simulates memory capacity, not another chip or SSD. Assumes no other apps are using memory unless `--sim-available` is set; working set defaults to 75% of RAM. |
 | `--sim-working-set <gb>` | Use this Metal working-set limit in the simulation. |
 | `--sim-available <gb>` | Use this much available memory in the simulation. |
-| `--max-context <n>` | Preview the same allocation and report the largest memory-feasible window under these inputs. |
+| `--max-context <auto or n>` | Default `auto` reports the automatic window, every candidate and the reason it was or wasn't taken. A number previews that window's allocation and reports the largest memory-feasible window under these inputs. |
 | `--max-prefill-wait <minutes>` | Preview the request deadline separately from memory feasibility; default 30 minutes, `0` disables only time. |
-| `--json` | The resolved plan as JSON, with estimates unrounded (`max_context_tokens`, `est_prefill_s_at_max_context`). |
+| `--json` | The resolved plan as JSON, with estimates unrounded (`max_context_tokens`, `est_prefill_s_at_max_context`), plus `context_window_source` and, in auto mode, `automatic_context_window`. |
 
 Plus the memory options, so `doctor --memory-gb 16` shows exactly what
 `serve --memory-gb 16` would plan under the same conditions. Its estimated
@@ -154,7 +154,7 @@ With no sizing override, auto sizes the process to the machine (see
 | Flag | Meaning |
 |---|---|
 | `--model <name or dir>` | Model name (resolves to `~/.slotstream/models`, or a dev checkout's `models/`) or a directory path. |
-| `--memory-gb <gb>` | Total process memory target, in decimal GB. The cache gets what remains after fixed allocations and a 1 GB margin. Minimum 8.1 for the default context; larger context windows raise the minimum. Use this option for a manual target. |
+| `--memory-gb <gb>` | Total process memory target, in decimal GB. The cache gets what remains after fixed allocations and a 1 GB margin. Minimum 8.1 for the 32,768-token window; larger windows raise the minimum. Use this option for a manual target. Auto still picks the context window inside this target unless `--max-context` is given; add `--max-context 32768` to reproduce a plan from before 0.2.17. |
 | `--experts-per-layer <n>` | Expert cache size directly, 1…512. Each of the 48 layers has 512 experts of 2.76 MB and the cache holds `n × 48` of them, so the pool is `n × 0.133 GB`: 30/layer is 4 GB, 181 is 24 GB, 226 is 30 GB. The pool is one global cache; hot layers borrow slots from cold ones. |
 | `--pool-gb <gb>` | Raw expert-pool size (1 GB is about 7.5 experts per layer). |
 | `--vision auto\|on\|off` | Accept images (default `auto`). `auto` loads the image encoder on first use; `on` also requires the checkpoint to contain vision weights; `off` rejects images. |

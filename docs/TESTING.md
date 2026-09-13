@@ -346,7 +346,11 @@ diagnostic unless the machine and network conditions qualify as a benchmark.
 
 `Tools/context_gates.py --report result.json` compares frozen default allocation
 fields and validates CLI bounds, metadata, complete schedules and strict tool
-termination without loading weights. `Tools/consumer_smoke.sh` compiles the
+termination without loading weights. The frozen allocation is pinned at an
+explicit 32,768-token window, and the automatic window for the frozen tiers is
+checked against `Tools/fixtures/context-automatic-v1.json`.
+`Tools/planner_gates.sh` also checks each tier's automatic window, quiet and
+busy starts, fixed caches and explicit windows. `Tools/consumer_smoke.sh` compiles the
 original public function signatures as an external package.
 
 The native `optimization-state-check --variant context-serving --json` injects
