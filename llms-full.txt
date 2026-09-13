@@ -3167,6 +3167,28 @@ time, memory use, and the methods behind the performance claims.
 What each release changed, newest first. `curl | sh` installs the latest
 release; anything under **Unreleased** is on `main` only.
 
+## 0.2.16 - 2026-09-13
+
+- Generate replies 1.11x faster with speculative decoding. The new decode
+  lookahead runs the router of the layer two ahead on the current hidden state,
+  reads the experts it picks from the SSD straight into cache slots, keeps FP32
+  router weights and drains the GPU every four layers instead of every layer.
+  Output is unchanged. On twelve held-out prompts at a 20 GB target the
+  development Mac went from 11.8 to 13.5 tok/s median. The memory plan charges
+  its 373 MiB, and `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns it off.
+- Use speculative decoding from 32 GB Macs. Auto now turns the draft head on
+  when the cache keeps 76 experts per layer, down from 120, a 21 GB target.
+  Two drafts measured faster than plain decode at that size.
+- Drain the GPU after every layer whenever a pass could not keep several layers
+  of experts pinned, and let the memory governor re-plan with the running
+  engine's lookahead decision and memory.
+- Correct the benchmark report's medians, which took the upper middle value
+  over an even count. Recorded cohorts score slightly lower, and every verdict
+  stands.
+- Document speed estimates and recommended context windows for each memory
+  tier, and correct the 8 GB guidance: the smallest plan doesn't fit, so
+  Slotstream refuses to start.
+
 ## 0.2.15 - 2026-09-11
 
 - Stop treating system-wide macOS paging as a failed correctness or memory-budget
