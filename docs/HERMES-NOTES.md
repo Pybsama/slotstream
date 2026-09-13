@@ -33,9 +33,11 @@ The explicit context setting is reproducible; the server also exposes the
 same runtime window through model discovery, so automatic discovery works.
 Vision discovery also reflects whether this server accepts images. With the
 vision weights available and vision enabled, Hermes can send image attachments.
-The first image loads the vision tower in addition to the announced text
-plan. Image admission checks available memory and can refuse the additional
-load when there is not enough headroom.
+The first image reserves the vision tower inside the automatic process
+target, reducing expert capacity as needed. Image admission also checks
+attention workspace and real headroom; it can refuse an image even when
+text fits. Explicit pool-size overrides retain their pool and add the tower
+to the expected footprint.
 The local stream timeout allows a long cold prefill to finish; it remains
 bounded and should be adjusted to measurements on slower hardware.
 The auxiliary task timeouts are configured separately from the main stream

@@ -84,14 +84,6 @@ original-file verification; an immediate second `verify()` is unnecessary.
 `status()` reports remaining reconstructed model bytes, not compressed wire
 bytes, and permits an absent optional draft head.
 
-The default uses the compressed CDN and tunes connection count. Explicit
-`connections` fixes that count. `transport: .raw` selects raw mirrors;
-setting `sources` also selects raw mirrors in automatic mode. Existing raw
-partial downloads continue automatically. Download returns only after final
-original-file verification; an immediate second `verify()` is unnecessary.
-`status()` reports remaining reconstructed model bytes, not compressed wire
-bytes, and permits an absent optional draft head.
-
 <a id="what-will-it-do-on-this-mac"></a>
 
 ## Plan memory
@@ -104,8 +96,9 @@ print(plan.expertsPerLayerCached, "experts per layer,",
       plan.expectedPeakGB, "GB expected peak")
 ```
 
-`Machine.simulated(ramGB: 16)` previews another memory size, like
-`slotstream doctor --sim-ram 16`. `Engine.load` rejects simulated plans;
+`Machine.simulated(ramGB: 16)` previews a decimal-GB memory size, like
+`slotstream doctor --sim-ram 16`; it does not simulate another chip or SSD.
+`Engine.load` rejects simulated plans;
 use `Machine.current()` for a plan that will allocate memory.
 
 <a id="pricing-a-prompt-before-you-send-it"></a>

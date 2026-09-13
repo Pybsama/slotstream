@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-13T13:51:16.221312Z
+updated: 2026-09-13T14:46:51.030083Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-13-public-docs-audit-plans]] — Public documentation audit: default and larger-window planner simulations and published release identity
 - [[sources/runs/2026/09/2026-09-13-decode-lookahead-default-tier-plans]] — 0.2.16 defaults qualified without weights: 50 of 50 checks, 73 of 73 planner gates, static gates; doctor plans from 8 to 192 GB at both context windows
 - [[sources/runs/2026/09/2026-09-13-cohort-rescoring-true-medians]] — Held-out cohort rescoring with true medians: B1 replication 1.124 to 1.114, B1 first run 1.116 to 1.106, B0 1.120 to 1.105; every verdict unchanged
 - [[sources/runs/2026/09/2026-09-13-decode-path-serialization-closing-profiles]] — Decode serialization closing profiles: macOS sample of B0 prefetch and the combined candidate on r0206, model thread merged across its dispatch-queue blocks; round 1 profiles re-parsed
@@ -506,9 +507,8 @@ updated: 2026-09-13T13:51:16.221312Z
 - [[sources/runs/2026/09/2026-09-05-optimization-image-source-admission]] — Image source admission and exact request-local reuse
 - [[sources/runs/2026/09/2026-09-05-optimization-all-hit-compute]] — All-hit compute replay and preserved large-pool calibration failures
 - [[sources/runs/2026/09/2026-09-05-optimization-terminal-prefill-demand]] — Terminal prefill demand exact state, bounded lifecycle and subthreshold serving improvement
-- [[sources/runs/2026/09/2026-09-05-optimization-selected-attention-rejection]] — D256 selected attention component passes, full-state failure and component slowdown
 
 ## More
 
-This folder has 548 files. The 500 most recent are listed above.
+This folder has 549 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

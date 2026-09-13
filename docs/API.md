@@ -237,9 +237,11 @@ Each resized image uses one token per 32×32 pixels, up to 2,304 tokens, from
 the shared context (32,768 tokens by default). The decoded image file must be at most
 24 MiB, with an aspect ratio no greater than 200:1.
 
-The vision tower uses 0.9 GB and loads on the first image request. That
-reservation stays inside the original process memory target, reducing expert
-capacity as needed. Image attention and decoded pixels also need workspace;
+The vision tower uses 0.9 GB and loads on the first image request. For auto
+and `--memory-gb` plans, that reservation stays inside the original process
+target, reducing expert capacity as needed. Explicit pool-size settings retain
+their pool and add the resident cost to the expected footprint.
+Image attention and decoded pixels also need workspace;
 a request is rejected before dispatch if its budget or real headroom is insufficient.
 `serve --vision off` disables images. Follow-up turns reuse image state while
 the matching conversation remains cached; image identity is checked by a

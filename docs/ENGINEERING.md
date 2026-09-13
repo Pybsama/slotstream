@@ -45,13 +45,16 @@ On the 48 GB M5 Pro:
 |---|---|
 | Reply generation after the cache warms up | ~12 tok/s |
 | Reply generation with speculative decoding and the 0.2.16 decode lookahead, 20 GB target | 13.5 tok/s, 1.11x faster than without the lookahead |
-| Engine start, before processing the prompt | ~2 s |
+| Engine load in the original experiment, before processing the prompt | ~2 s (historical) |
 | Planned memory with automatic sizing | 32 GB (estimate) |
 
 That memory figure is the historical planner estimate, not a measurement of
 the corrected kernel lifetime peak. Older reported values can miss GPU memory
 freed before the observation. Current usage, lifetime peaks and request samples
 are explained in the [memory controls](CLI.md#memory-options).
+The engine-load timing also comes from an early measurement; it excludes the
+current CLI's full weight-verification step and is not a current cold-start
+or first-answer estimate.
 
 **Long prompts take time before the first reply token.** Processing the prompt
 is called *prefill*. The estimates for this Mac are about 9 s for 2,000 tokens
@@ -84,10 +87,12 @@ by ×1.24 (10.3 → 12.8 tok/s); the improvement was ×1.18 with default server
 sampling.
 
 `--mtp auto` enables this when the expert cache can still hold 76 experts per
-layer after allocating 1.6 GB for the head, a 21 GB target at the default
-context. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
+layer after allocating 1.6 GB for the head, before the separate lookahead
+reservation, a 21 GB target at the default context. Availability and context
+can change activation. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
 faster than plain decode on the same memory at 76 per layer. The automatic
-ceiling is 34.6 GB with the head enabled. `--mtp off` disables it.
+ceiling is 34.6 GB with the head enabled at the default context; larger
+windows add draft-context charges. `--mtp off` disables the head.
 
 With the head on, 0.2.16 also runs the decode lookahead. After each layer, the
 router of the layer two ahead runs on the current hidden state, and the experts
@@ -96,9 +101,10 @@ for them. FP32 copies of the router weights save a conversion on every routing
 call, and the GPU is drained every four layers instead of every layer, with
 each forecast riding the next routing readback. On twelve held-out prompts at a
 20 GB target with two drafts, decode was 1.11x faster than the previous default
-(11.8 to 13.5 tok/s median) with identical output. On the tuning prompts most
-of the gain is the prefetch; the router copies and the fewer drains add about
-2% each. The
+(11.8 to 13.5 tok/s median) with identical output. In separate attribution
+runs on the tuning prompts, the router copies and fewer drains added
+about 2% each over prefetch alone. Those component results are specific to
+that workload and are not separate held-out speedups. The
 [decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
 records its 373 MiB charge, overrides and limits.
 
@@ -119,9 +125,12 @@ the 48 GB M5 Pro plan and 6.4 min for the 16 GB plan. The latter comes from
 the M5 Pro's curve; a slower SSD can take longer. Follow-up turns reuse
 unchanged history while it remains cached.
 
-Context state uses about 27 KiB per token. The larger cost of a long prompt
-is processing time. slotstream reduces the prefill batch size as context grows
-to keep temporary memory within the measured range.
+The main sequence cache uses about 27 KiB per allocated token of capacity,
+rounded to allocation steps. Recurrent state, retained conversations, draft
+state and transient workspace are additional charges, so this is not the
+whole process cost per input token. Long prompts also cost processing time.
+Slotstream reduces the prefill batch size as context grows to keep temporary
+memory within the measured range.
 
 To measure a long prompt on your Mac, stop any running server, then run:
 
@@ -143,10 +152,11 @@ scope and revision criteria; maintaining those choices is part of the engine.
 By default, slotstream chooses a memory target for your Mac and prints it at
 startup. It takes the lowest of 33 GB, 70% of RAM, and 2 GB below the Metal
 working-set limit, then reduces that target if other apps are using memory.
-The draft head can raise the ceiling to 34.6 GB as described in [Speed](#speed).
+The draft head raises the base ceiling to 34.6 GB at the default context;
+larger windows add draft-context charges. See [Speed](#speed).
 
-The 33 GB ceiling is our current best-supported balance of speed and memory
-use for this model. Development-Mac tests showed diminishing speed gains as
+The 33 GB ceiling is a conservative default based on development-Mac
+measurements. Those tests showed diminishing speed gains as
 the expert cache grew. This supports a conservative default; it does not
 establish an optimum for every Mac or workload. We'll adjust the default as
 real measurements show a better tradeoff. The historical larger-target sweep
@@ -155,13 +165,20 @@ it was not a benchmark of those larger allocations. See the
 [cache measurements](../db/records/measurements/warm-decode-re-anchored-and-the-live-governor-finally-observed-2026-08.md)
 and [sizing interpretation](../db/records/measurements/automatic-memory-default-evidence-scope-2026-09-09.md).
 
+The [community M5 Max cache sweep](HARDWARE.md#does-more-memory-help) reports
+faster replies with larger manual targets on the same machine. Auto has not
+been calibrated to that hardware, and its fixed ceiling must not be read as
+the maximum useful allocation.
+
 The chip and SSD still matter. The plan uses decimal GB, so a Mac sold as
 48 GB appears as about 52 GB in its device line.
 
 While the server runs, it checks memory pressure every 15 s and resizes its
 cache between requests. It gives memory back under pressure and grows again
-when space is available. Greedy output stays byte-identical across cache
-sizes and resizes.
+when space is available. The cache-size and resize gates check byte-identical
+greedy output with the other generation settings fixed. Changing the total
+memory target can also change prefill grouping or enable speculative decoding;
+those are separate changes, not part of that equality claim.
 
 To set a memory target yourself:
 
@@ -170,9 +187,11 @@ slotstream doctor --memory-gb 16
 slotstream serve --memory-gb 16
 ```
 
-`--memory-gb` sets the total process target, with a minimum of 8.1 GB. An
-explicit size stays fixed and bypasses automatic availability checks, so
-check that it fits before starting. See the [memory options](CLI.md#memory-options)
+`--memory-gb` sets the total process target, with a minimum of 8.1 GB for the
+default text context; larger windows and resident components need more room.
+An explicit target disables automatic cache resizing, while loading and
+request-memory safeguards remain active. Preview it before starting.
+See the [memory options](CLI.md#memory-options)
 for the other controls and their precedence.
 
 ## Status and limits
@@ -233,9 +252,12 @@ The chart is updated weekly by this repository's
 ## Image memory and measurements
 
 Each resized image uses up to 2,304 tokens of the conversation's context.
-The image encoder, or *vision tower*, loads on the first image and adds
-0.9 GB to the text memory plan. The server rejects the request if there isn't
-room. Use `slotstream serve --vision off` to disable images.
+The image encoder, or *vision tower*, loads on the first image and reserves
+0.9 GB inside an auto or `--memory-gb` process target, reducing expert capacity
+as needed. An explicit pool-size setting retains its pool and adds the tower
+to the expected footprint. Image pixels and attention also need workspace;
+the server rejects the request if the budget or real headroom is insufficient.
+Use `slotstream serve --vision off` to disable images.
 
 In a measured conversation, the first image turn took 15.4 s and the
 follow-up took 1.8 s because its image state was reused. This tests the image

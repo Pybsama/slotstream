@@ -64,7 +64,7 @@ and OpenAI endpoints and the [fx guide](FX.md) for the AI SDK gateway.
 | Flag | Meaning |
 |---|---|
 | `--port <n>` | Listen port on 127.0.0.1 (default 11434). |
-| `--max-context <n>` | Maximum tokens shared by prompt and reply. Default: 32768; ceiling: 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Context state uses about 27 KiB per token. |
+| `--max-context <n>` | Maximum tokens shared by prompt and reply. Default: 32768; ceiling: 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Main sequence-cache capacity costs about 27 KiB per token, plus recurrent, retained, draft and transient allocations. |
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including queueing, tokenization and images. Default 30 minutes; `0` disables only time. |
 | `--no-elastic` | Pin the cache at its startup size. By default an auto-sized cache resizes between requests as memory pressure changes; explicit sizes are always pinned. |
 | `--no-prefix-cache` | Process each prompt from scratch. Useful for reproducibility comparisons. |
@@ -100,7 +100,7 @@ never loads the model and can run while the server is working.
 
 | Flag | Meaning |
 |---|---|
-| `--sim-ram <gb>` | Preview a Mac with this much RAM. Assumes no other apps are using memory unless `--sim-available` is set; working set defaults to 75% of RAM. |
+| `--sim-ram <gb>` | Preview this much RAM in decimal GB. Simulates memory capacity, not another chip or SSD. Assumes no other apps are using memory unless `--sim-available` is set; working set defaults to 75% of RAM. |
 | `--sim-working-set <gb>` | Use this Metal working-set limit in the simulation. |
 | `--sim-available <gb>` | Use this much available memory in the simulation. |
 | `--max-context <n>` | Preview the same allocation and report the largest memory-feasible window under these inputs. |
@@ -108,9 +108,10 @@ never loads the model and can run while the server is working.
 | `--json` | The resolved plan as JSON, with estimates unrounded (`max_context_tokens`, `est_prefill_s_at_max_context`). |
 
 Plus the memory options, so `doctor --memory-gb 16` shows exactly what
-`serve --memory-gb 16` would do. The report ends with the wait before the
-first token by prompt length at that plan, and the tier table carries the
-wait for a prompt filling the whole context.
+`serve --memory-gb 16` would plan under the same conditions. Its estimated
+prefill times use M5 Pro measurements; they exclude startup, queueing,
+image preparation and reasoning before visible answer text. The full-window
+estimate is a planning reference; actual requests also need room for a reply.
 
 ### `slotstream context-check`
 
@@ -147,8 +148,8 @@ does not make that window supported by `serve` or `run`.
 ## Memory options
 
 Shared by `run`, `serve`, `doctor`, and every check that loads the model.
-With none of them, auto sizes the process to the machine (see the README's
-Memory section).
+With no sizing override, auto sizes the process to the machine (see
+[memory defaults](../README.md#why-doesnt-slotstream-use-all-of-my-ram)).
 
 | Flag | Meaning |
 |---|---|
@@ -158,7 +159,7 @@ Memory section).
 | `--pool-gb <gb>` | Raw expert-pool size (1 GB is about 7.5 experts per layer). |
 | `--vision auto\|on\|off` | Accept images (default `auto`). `auto` loads the image encoder on first use; `on` also requires the checkpoint to contain vision weights; `off` rejects images. |
 | `--mtp auto\|on\|off` | Speculative decode (default `auto`); see [Speculative decode](#speculative-decode). |
-| `--max-ram-percent <p>` | Auto only: the largest share of RAM auto may target (default 70). Lowers the target for other apps; cannot raise it past the ~33 GB ceiling. Ignored when an explicit size is given. |
+| `--max-ram-percent <p>` | Auto only: the largest share of RAM auto may target (default 70). Cannot raise it past the 33 GB base ceiling plus any enabled draft-head and draft-context charges. Ignored when an explicit size is given. |
 
 Precedence when several are given: `--experts-per-layer` beats `--pool-gb`,
 which beats `--memory-gb`. An explicit size keeps its expert-pool policy. Physical headroom is still
@@ -211,11 +212,11 @@ conditional. Enabling every switch is not the selected configuration.
 report the tested workloads and limits; [the unified plan](../PLAN.md) retains
 the disposition of each candidate.
 
-The automatic ceiling is an intentional default for this model, based on the
-best speed/memory tradeoff supported by development-Mac measurements so far.
-It is separate from the RAM-share and physical-memory bounds. Defaults can
-change as comparable real measurements justify better choices; extra RAM
-alone is not evidence that the current choice is wrong. See
+The automatic ceiling is a conservative default based on development-Mac
+measurements, separate from RAM-share and physical-memory bounds. The
+[M5 Max community sweep](HARDWARE.md#does-more-memory-help) demonstrates gains
+from larger manual targets; auto is not calibrated to every hardware profile.
+See
 [why auto retains a ceiling](ENGINEERING.md#memory) and the
 [operating-policy contract](../db/records/design/measured-operating-policies.md).
 
@@ -229,9 +230,9 @@ alone is not evidence that the current choice is wrong. See
 | `SLOTSTREAM_PULL_CONNECTIONS` | `pull` | Fixes parallel connections, capped at 32; the CLI flag takes precedence. |
 | `SLOTSTREAM_PREFIX_CACHE` | engine | `0` disables conversation prefix reuse, like `--no-prefix-cache`. |
 | `SLOTSTREAM_PREFILL_CHUNK` | engine | Override the largest prefill pass in tokens instead of taking it from the memory plan; the schedule still shrinks it as the context grows. Measurement work only. |
-| `SLOTSTREAM_IO_QUEUE_DEPTH` | engine | Expert read parallelism, 1…128 (default 12; measured flat from 12 to 32, worse above). |
+| `SLOTSTREAM_IO_QUEUE_DEPTH` | engine | Expert read parallelism, 1…128 (default 12). The development-Mac sweep found little benefit from 12 to 32; other SSDs and workloads can differ. |
 | `SLOTSTREAM_EXPERT_LOAD_BATCH` | engine | Expert records staged at once during prefill, 1…512 (default 32): the sweep's group size on a pass of 256 tokens or more, the pool's load slice below that. Bounds peak memory on long prompts. |
-| `SLOTSTREAM_SWEEP` | engine | `0` runs every prefill pass through the slot pool the way 0.2.2 and earlier did, instead of the sweep. A/B work only; slower. |
+| `SLOTSTREAM_SWEEP` | engine | `0` selects the older pool path instead of the prefill sweep when ordinary prefill is used. A/B work only; slower in the recorded development-Mac comparisons. Other optimization controls can select a different qualified path. |
 | `SLOTSTREAM_SWEEP_ADMIT` | engine | `0` stops the last pass of a prompt from admitting the prompt's hottest experts into the pool, so decode starts cold. A/B work only. |
 | `SLOTSTREAM_SWEEP_TRACE` | engine | `1` prints, after each prefill, where the sweep's time went: reads, waiting for the GPU, sorting rows, copies out of the pool, and MLX's peak and cache. |
 | `SLOTSTREAM_PREFILL_CACHE_MB` | engine | MLX buffer-cache cap while a prompt is read. The plan sets 512 at targets of 12 GB and under (the sweep's varying array sizes otherwise fill the 2 GB cache, 1.7 GB of peak at the floor) and no cap above, where it costs ~6% of prefill; this forces a value at any target. |
@@ -279,8 +280,10 @@ See [Testing](TESTING.md) for the full suites.
   model's draft head, `mtp.safetensors`, which `pull` fetches with the
   weights. The file is optional; downloads can complete without it. `on`
   without the file is an error; `auto`, the default, turns it on when the
-  cache still reaches 76 experts per layer after the head's 1.6 GB, a 21 GB
-  target at the default context, so 32 GB Macs and up. Before 0.2.16 the floor
+  cache reaches 76 experts per layer after the head's 1.6 GB and context
+  charges, before the separate lookahead reservation. A 21 GB target qualifies
+  at the default context; actual availability and the selected window can
+  keep the head off on a larger Mac. Before 0.2.16 the floor
   was 120; two drafts later measured 31.7% faster than plain decode on the same
   memory at 76 per layer
   ([decision](../db/records/decisions/draft-head-auto-floor-76-per-layer.md)).
@@ -301,8 +304,9 @@ See [Testing](TESTING.md) for the full suites.
 
 ### Decode lookahead
 
-From 0.2.16 the decode lookahead is on by default whenever the draft head runs
-on a cache that reaches the same 76-per-layer floor. After each layer, the
+From 0.2.16 the decode lookahead runs by default with the draft head when
+the cache reaches the same 76-per-layer floor before the lookahead's own
+reservation. The final printed cache can therefore be smaller. After each layer, the
 engine runs the router of the layer two ahead on the current hidden state and
 reads the experts it picks from the SSD straight into cache slots, before that
 layer asks for them. It also keeps FP32 copies of the router weights and drains

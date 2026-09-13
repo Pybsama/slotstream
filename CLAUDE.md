@@ -459,8 +459,11 @@ still quoted in commit history and both are wrong.
   machine with 7 GB made the governor take a real 25.4 GB pool and drove swap
   from 13 to 39 GB. Anything using that seam must bound the simulated value by
   `deviceAvailableGB()`.
-- **Warm decode estimates are measured, not extrapolated.** 6.0 / 8.2 / 11.2 /
-  11.6 tok/s at 30 / 60 / 120 / 150 experts per layer, flat by 120. An older
+- **Warm decode estimates use development-Mac anchors.** 6.0 / 8.2 / 11.2 /
+  11.6 tok/s at 30 / 60 / 120 / 150 experts per layer show diminishing gains
+  over that measured range, not a universal plateau. Community M5 Max runs
+  demonstrate gains at larger manual targets; see `docs/HARDWARE.md`.
+  An older
   20.0 at 181/layer has never reproduced; the estimator holds flat above the
   verified points rather than extrapolating to it.
 - **A speculative rejection rolls back, it never re-runs.** The verify pass
@@ -475,15 +478,17 @@ still quoted in commit history and both are wrong.
   depth.** `mtp-bench` on 0.2.0 (four drafts) read ×0.55 / 0.69 / 0.88 / 0.96
   at 20 / 29 / 42 / 57 experts per layer and ×0.88 at 122, all below
   break-even; depths 1 and 2 read ×1.13 / ×1.12 at 57 and ×1.17 / ×1.13 at
-  122, the size auto enables the head at, which explained the former default
+  122, near the former automatic activation floor, which explained the former default
   of 1; with the rebuild eliminated depth 1 reads
   ×1.20 at 57 and ×1.24 at 122 (×1.18 sampled). The "×1.5–1.9" once written here assumed a
   five-token verify pass costs one token's pass; `mtp-passcost` measured
   1.65 with every expert resident (a sixth of a pass per extra token), so
   the ceiling is ×1.4 at depth 1 and the estimate is withdrawn. Quote the
   ladder and the ceiling, never the launch-bound arithmetic. Carlos adopted
-  **two drafts as the default on 2026-09-11**; the 120/layer activation floor
-  remains unchanged. The automatic-40%-RAM study found two and three effectively
+  **two drafts as the default on 2026-09-11**. Version 0.2.16 lowers the
+  activation floor to 76/layer after the head and context charges, before
+  the separate lookahead reservation; older studies retain their original floor.
+  The automatic-40%-RAM study found two and three effectively
   tied overall and did not qualify a universal optimum. Keep the adoption
   decision separate from those measurement limits:
   [current draft-depth policy](db/records/decisions/draft-depth-defaults-to-two.md).

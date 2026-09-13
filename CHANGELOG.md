@@ -2,6 +2,9 @@
 
 What each release changed, newest first. `curl | sh` installs the latest
 release; anything under **Unreleased** is on `main` only.
+Version headings can be prepared before publication. The
+[Releases page](https://github.com/carloslfu/slotstream/releases/latest)
+determines which version the installer downloads.
 
 ## 0.2.16 - 2026-09-13
 

@@ -2,11 +2,15 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-13T13:52:00.579893Z
+updated: 2026-09-13T16:42:28.626985Z
 ---
 
 # records/measurements
 
+- [[records/measurements/public-documentation-evidence-audit-2026-09-13]] — Public documentation audit: correct performance, memory, simulation and release scope; no new benchmark
+- [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
+- [[records/measurements/automatic-memory-default-evidence-scope-2026-09-09]] — Automatic memory default: evidence scope and retained policy (2026-09-09)
+- [[records/measurements/c2-macbook-pro-m5-max-128gb-community]] — C2: MacBook Pro M5 Max, 128 GB (community, 2026-09-03)
 - [[records/measurements/decode-lookahead-default-2026-09-13]] — 0.2.16 defaults pass every weights-free check; auto runs the draft head and decode lookahead from a 21 GB target, 32 GB Macs and up; 8 GB plans are refused
 - [[records/measurements/decode-path-serialization-attribution-2026-09-13]] — Attribution on one binary: router weight cache 1.021 and barrier period 4 1.022 over B0 prefetch, together 1.046 with all 15 pairs above 1; B0 prefetch 1.090 over shipped; exact
 - [[records/measurements/decode-path-serialization-b1-cohort-replication-2026-09-13]] — B1 replication passes every gate: combined candidate 1.114 against shipped (bootstrap 1.104 to 1.121), families 1.064 or above, outputs identical; rescored from 1.124 with true medians
@@ -39,11 +43,9 @@ updated: 2026-09-13T13:52:00.579893Z
 - [[records/measurements/optimization-final-composition-2026-09-09]] — Completed and locally activated integration: scoped preview gains, lower process peaks, flat plain TPS and slower fixed-MTP TPS within the original acceptance allowance
 - [[records/measurements/user-server-throughput-2026-09-10]] — Eight clean user-server timings: observed decode rate 10.28 to 15.80 tokens/sec, separate planner estimates, exact repeats, interruptions and limits
 - [[records/measurements/the-auto-memory-target-70-of-ram-was-the-wrong-shape-2026-08-31]] — The auto memory target: 70% of RAM was the wrong shape (2026-08-31)
-- [[records/measurements/automatic-memory-default-evidence-scope-2026-09-09]] — Automatic memory default: evidence scope and retained policy (2026-09-09)
 - [[records/measurements/hermes-configuration-hardening-2026-09-08]] — Hermes configuration correction and regression checks
 - [[records/measurements/hermes-context-and-openai-integration-2026-09-05]] — Hermes integration: context qualification and OpenAI agent protocol
 - [[records/measurements/c3-macbook-air-m5-32gb-community]] — C3: MacBook Air M5, 32 GB (community, 2026-09-07)
-- [[records/measurements/c2-macbook-pro-m5-max-128gb-community]] — C2: MacBook Pro M5 Max, 128 GB (community, 2026-09-03)
 - [[records/measurements/configurable-context-component-contracts-2026-09-06]] — Configurable context component and interface contracts
 - [[records/measurements/lossless-model-download-2026-09-05]] — Historical v0.2.10 lossless package and deployment qualification; the codec remains unchanged and current Hugging Face hosting is recorded separately.
 - [[records/measurements/hugging-face-lossless-download-2026-09-06]] — v0.2.11 publishes the free Hugging Face default; complete public reconstruction, installed acceptance and model-only R2 retirement are verified.

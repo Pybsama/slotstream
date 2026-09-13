@@ -2,13 +2,32 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-13T13:47:38.154924Z
+updated: 2026-09-13T16:42:28.609838Z
 ---
 
 # records/claims
 
-- [[records/claims/auto-floor-76-experts-per-layer]] — The draft head's automatic floor is 76 experts per layer
+- [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
+- [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
+- [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Small-memory planner estimates use the M5 Pro curve; README has broader ranges
+- [[records/claims/hardware-planning-range-ultra]] — Estimated warm reply range for 96 GB or more Macs
+- [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
+- [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
+- [[records/claims/hardware-planning-range-low]] — Estimated warm reply range for 16 to less than 24 GB Macs
+- [[records/claims/full-context-wait-about-8-minutes-at-65536]] — M5 Pro-based prefill estimate is about 8 minutes near the larger window from a 24 GB simulation
+- [[records/claims/full-context-wait-about-3-minutes-from-24-gb]] — M5 Pro-based prefill estimate is about 3 minutes near the default window from a 24 GB simulation
+- [[records/claims/context-state-27-kib-per-token]] — Main sequence-cache capacity costs about 27 KiB per allocated token
+- [[records/claims/engine-start-about-2-s]] — Historical engine load is about 2 s; current startup verification is additional
+- [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the default context
 - [[records/claims/mtp-auto-floor-76-per-layer-21-gb-target]] — Auto turns speculative decode on when the cache still reaches 76 experts per layer after the head, a 21 GB target
+- [[records/claims/recommended-context-65536-from-36-gb]] — The recommended context window is 65,536 tokens from 36 GB and 32,768 below
+- [[records/claims/output-byte-identical-across-cache-sizes]] — Greedy output is byte-identical across cache sizes and live resizes
+- [[records/claims/vision-tower-0-9-gb-resident]] — The vision tower costs 0.9 GB, and only when an image arrives
+- [[records/claims/io-queue-depth-flat-from-12-to-32]] — Historical development-Mac I/O concurrency comparison; no universal SSD optimum.
+- [[records/claims/warm-decode-m5-max-73gb-target-community]] — M5 Max community report: 31.5 tok/s at a 73 GB target
+- [[records/claims/warm-decode-m5-max-48gb-target-community]] — M5 Max community report: 26.9 tok/s at a 48 GB target
+- [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.5 tok/s with the decode lookahead at a 20 GB target on the dev Mac
+- [[records/claims/auto-floor-76-experts-per-layer]] — The draft head's automatic floor is 76 experts per layer
 - [[records/claims/decode-lookahead-charges-373-mib]] — The decode lookahead charges 373 MiB to the memory plan
 - [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.8 to 13.5 tok/s with the decode lookahead on the dev Mac
 - [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
@@ -16,30 +35,21 @@ updated: 2026-09-13T13:47:38.154924Z
 - [[records/claims/full-context-wait-6-4-min-on-16-gb]] — A full 32k prompt waits about 6.4 min on a 16 GB Mac
 - [[records/claims/context-opt-in-65536]] — Opt-in served context of 65536 tokens
 - [[records/claims/context-cap-32768-tokens]] — Prompt plus completion is capped at 32,768 tokens per request
-- [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Tier rows without speculative decoding are estimates from the 48 GB curve
 - [[records/claims/mtp-auto-floor-120-per-layer-28-gb-target]] — Auto turns speculative decode on only when the cache still reaches 120 experts per layer after the head, a 28 GB target
-- [[records/claims/full-context-wait-about-8-minutes-at-65536]] — A full 65,536-token prompt waits about 8 minutes before its first token from 24 GB
-- [[records/claims/full-context-wait-about-3-minutes-from-24-gb]] — A full 32,768-token prompt waits about 3 minutes before its first token from 24 GB
 - [[records/claims/minimum-mac-memory-16-gb]] — Slotstream needs a Mac with at least 16 GB of memory
-- [[records/claims/recommended-context-65536-from-36-gb]] — The recommended context window is 65,536 tokens from 36 GB and 32,768 below
-- [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
 - [[records/claims/lookahead-parts-add-about-2-percent-each]] — The router weight cache and the deferred GPU drains each add about 2% over prefetch
 - [[records/claims/draft-head-31-7-percent-faster-at-76-per-layer]] — Two drafts decoded 31.7% faster than plain decode on the same memory at 76 experts per layer
-- [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.5 tok/s with the decode lookahead at a 20 GB target on the dev Mac
 - [[records/claims/peak-memory-32-gb-at-auto]] — The 32 GB automatic-plan figure is an estimate, not a measured lifetime footprint peak
 - [[records/claims/draft-depth-default-two]] — The adopted speculative draft-chain default is two tokens
 - [[records/claims/auto-memory-target-ceiling-33-gb]] — Automatic sizing has an intentional 33 GB base target ceiling, with explicit overrides and measurement-led revisions.
-- [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling becomes 34.6 GB with the draft head on
 - [[records/claims/hermes-auxiliary-timeout]] — Hermes guide sets explicit auxiliary timeouts
 - [[records/claims/hermes-title-output-budget]] — Hermes guide bounds local title output
 - [[records/claims/hermes-explicit-output-budget]] — Hermes guide sends a 4096-token output ceiling
-- [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/warm-decode-m5-max-128gb-community]] — M5 Max community report: 21 to 22 tok/s
 - [[records/claims/warm-decode-m5-air-32gb-community]] — M5 Air community report: 6.22 tok/s
 - [[records/claims/warm-decode-1-41-tok-s-on-a-16-gb-mac-mini-m2]] — Warm decode 1.41 tok/s on a base-storage Mac mini M2, 16 GB — the first community measurement of a tier row.
 - [[records/claims/warm-decode-12-tok-s-on-48-gb]] — Warm decode is about 12 tok/s on the 48 GB dev Mac
 - [[records/claims/weights-on-disk-105-3-gb]] — The weights are 105.3 GB across 25 files
-- [[records/claims/vision-tower-0-9-gb-resident]] — The vision tower costs 0.9 GB, and only when an image arrives
 - [[records/claims/vision-follow-up-turn-reuses-the-state]] — A follow-up turn about the same picture takes 1.8 s where the first took 15.4 s
 - [[records/claims/pull-verify-re-hashes-in-8-s]] — pull --verify re-hashes the whole copy in about 8 s on the dev Mac
 - [[records/claims/prefix-cache-flat-time-to-first-token]] — Time to first token stays flat across a conversation: 6.0 s at turn eight against 25.8 s uncached
@@ -48,7 +58,6 @@ updated: 2026-09-13T13:47:38.154924Z
 - [[records/claims/prefill-8k-prompt-91-to-184-tok-s-at-16-gb]] — The sweep reads the 8k acceptance prompt at 184 tok/s at a 16 GB target, against 91 for the 0.2.2 code
 - [[records/claims/prefill-220-tok-s-at-a-4096-pass]] — Prefill at a 4096-token pass is about 220 tok/s on the dev Mac (estimated from the sweep's ladder)
 - [[records/claims/prefill-125-tok-s-at-a-4096-pass]] — Prefill at a 4096-token pass is about 125 tok/s on the dev Mac
-- [[records/claims/output-byte-identical-across-cache-sizes]] — Greedy output is byte-identical across cache sizes and live resizes
 - [[records/claims/only-the-48-gb-row-is-measured-on-real-hardware]] — Only the 48 GB row is measured on real hardware
 - [[records/claims/one-picture-at-most-2304-tokens]] — A picture costs at most 2,304 tokens
 - [[records/claims/one-connection-about-70-mb-s-from-a-datacenter]] — One connection alone is bounded near 70 MB/s from a datacenter
@@ -59,10 +68,8 @@ updated: 2026-09-13T13:47:38.154924Z
 - [[records/claims/full-context-wait-5-5-min-on-48-gb]] — A full 32k prompt waits about 5.5 min before its first token on a 48 GB Mac
 - [[records/claims/full-context-wait-3-0-min-on-48-gb]] — A full 32k prompt waits about 3.0 min before its first token on a 48 GB Mac
 - [[records/claims/full-context-wait-13-7-min-on-16-gb]] — A full 32k prompt waits about 13.7 min on a 16 GB Mac
-- [[records/claims/engine-start-about-2-s]] — Engine start is about 2 s because only the 3.8 GB trunk loads
 - [[records/claims/draft-head-accept-rate-86-percent]] — The draft head predicts the next token 86% of the time
 - [[records/claims/dense-trunk-3-8-gb]] — The dense trunk is 3.8 GB and stays resident
-- [[records/claims/context-state-27-kib-per-token]] — Context state costs about 27 KiB per token
 - [[records/claims/full-vision-verification-preflight]] — Full image verification requires six GB spare before loading
 - [[records/claims/full-vision-verification-prefill]] — Full image verification reserves its image attention workspace
 - [[records/claims/full-vision-verification-target]] — Full original image verification uses an explicit 14.5 GB target
@@ -74,4 +81,3 @@ updated: 2026-09-13T13:47:38.154924Z
 - [[records/claims/openai-tool-sampling-defaults]] — OpenAI tool requests reuse the native agent sampler
 - [[records/claims/request-body-cap-32-mib]] — A request body over 32 MiB is refused with 413
 - [[records/claims/expert-cache-0-133-gb-per-expert-per-layer]] — Each expert per layer costs 0.133 GB of cache
-- [[records/claims/io-queue-depth-flat-from-12-to-32]] — Expert read parallelism measured flat from queue depth 12 to 32 and worse above

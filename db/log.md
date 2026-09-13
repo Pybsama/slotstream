@@ -1297,3 +1297,12 @@ Addendum: shipped as the 0.2.16 default
 ## [2026-09-13 13:52] update | records/plan/configurable-context-window-2026-09-06.md
 Addendum: automatic context window by memory tier planned
 
+## [2026-09-13 14:30] update | records/measurements/c2-macbook-pro-m5-max-128gb-community.md
+Rechecked live issue #6 and surfaced the preserved 0.2.3 M5 Max manual-target sweep: 26.9 tok/s at 48 GB and 31.5 at 73 GB versus 21-22 auto. Corrected README tier table, hardware results/estimates and memory FAQ; added two claims, clarified scope records, regenerated MEASUREMENTS.md and llms-full.txt. No runtime/default change or new model benchmark. Brain gates passed (179 claim checks, zero errors, two pre-existing historical-log warnings); generated docs, local link anchors, table columns and diff whitespace checked.
+
+## [2026-09-13 14:49] update | records/measurements/public-documentation-evidence-audit-2026-09-13.md
+Completed the broader README/public-docs evidence audit. Corrected estimate-vs-measurement wording, candidate-vs-release status, default-vs-larger-window budgets, decimal-GB simulations, draft activation scope, image admission accounting, cache-only equality, historical startup scope and build/T0 prerequisites. Updated claims and canonical review policy; preserved historical sources. 73 planner gates, 179 claim checks, 160 local links and 35 table structures passed; generated docs current and diff clean. Full store: zero errors, the same two pre-existing log warnings. No model benchmark or runtime change from this task; changes remain local.
+
+## [2026-09-13 16:43] update | records/measurements/hardware-planning-ranges-2026-09-13.md
+Added user-requested best-effort warm-speed ranges: Low 1-6, Medium 6-14, High 12-27 and Ultra 20-32 tok/s. Recorded endpoint construction, mixed releases, manual-target assumptions and unmeasured hardware transfers. README retains estimates separately from actual configurations; hardware guide separates allocation plans. Four estimated claims added, older point-estimate surfaces updated, projections regenerated. Brain gates passed with 185 claim checks, zero errors and the same two historical log warnings; touched tables, local links/anchors, generated parity and whitespace checked. No model benchmark, runtime change, commit or push.
+

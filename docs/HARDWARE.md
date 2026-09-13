@@ -39,11 +39,13 @@ These results were measured on real Macs, using different releases and settings:
 
 | Mac | Memory | Reply speed |
 |---|---|---|
-| MacBook Pro, M5 Pro, 0.2.16 at a 20 GB target | 48 GB | 13.5 tok/s |
+| MacBook Pro, M5 Pro, 0.2.16 candidate at a 20 GB target | 48 GB | 13.5 tok/s |
 | MacBook Pro, M5 Pro | 48 GB | ~12 tok/s |
 | Mac mini, M2 (base storage) | 16 GB | 1.41 tok/s |
 | MacBook Air, M5 | 32 GB | 6.22 tok/s |
-| MacBook Pro, M5 Max | 128 GB | ~21–22 tok/s |
+| MacBook Pro, M5 Max, 0.2.3, auto (34.6 GB target) | 128 GB | ~21–22 tok/s |
+| Same M5 Max, 0.2.3, 48 GB target | 128 GB | ~26.9 tok/s |
+| Same M5 Max, 0.2.3, 73 GB target | 128 GB | ~31.5 tok/s |
 
 The M5 Pro results are from the author; the others are community reports.
 The 18, 24 and 36 GB sizes still need reports, and 8 GB Macs don't run the
@@ -59,6 +61,8 @@ model. Open the details below for versions, settings, and credits.
 | Mac mini, M2 | 16 GB | internal, 256 GB | 26.6.2 | 0.2.2 | auto: 10.2 GB target, ~21 experts/layer | **1.41 tok/s** | not measured; `context-check` postdates 0.2.2 | 6.1 GB | [@flol's report](https://github.com/carloslfu/slotstream/issues/5), 2026-09-02 |
 | MacBook Air, M5 | 32 GB | 1 TB; location not specified | 26.6.2 | 0.2.11 | 22 GB target, ~75 experts/layer planned | **6.22 tok/s** | 126.28 tok/s for 8192 tokens, 2048-token passes | 17.75 GB RSS on the long prompt | [@arczhi's report](https://github.com/carloslfu/slotstream/issues/12), 2026-09-07 |
 | MacBook Pro 16", M5 Max | 128 GB | internal, 2 TB | 26.6.2 | 0.2.3 | auto: 34.6 GB target, ~152 experts/layer | ~21–22 tok/s with speculative decoding | not measured | not measured; server path only | [@waterliu1981's update](https://github.com/carloslfu/slotstream/issues/6#issuecomment-5520489176), 2026-09-03 |
+| Same M5 Max | 128 GB | internal, 2 TB | 26.6.2 | 0.2.3 | manual: 48 GB target, ~253 experts/layer | ~26.9 tok/s with speculative decoding | not measured | not measured | same report |
+| Same M5 Max | 128 GB | internal, 2 TB | 26.6.2 | 0.2.3 | manual: 73 GB target, ~401–441 experts/layer as reported | ~31.5 tok/s with speculative decoding | not measured | not measured | same report |
 
 The historical memory values retain their original measurement limits. The
 M5 Pro figure is a planner estimate, and older reported values do not establish
@@ -100,40 +104,119 @@ the M5 Pro throughout, the M2 in C1, the M5 Max in C2, and the M5 Air in C3.
 
 </details>
 
+## Does more memory help?
+
+Yes, a larger expert cache can reduce SSD reads and improve reply speed.
+The clearest community evidence is
+[@waterliu1981's cache sweep](https://github.com/carloslfu/slotstream/issues/6#issuecomment-5520489176)
+on the same M5 Max, using Slotstream 0.2.3 with speculative decoding enabled:
+
+| Total-process memory target | Reported warm reply speed |
+|---|---|
+| 34.6 GB (auto) | ~21–22 tok/s |
+| 48 GB (manual) | ~26.9 tok/s |
+| 73 GB (manual) | ~31.5 tok/s |
+
+All three runs used the same Mac with 128 GB installed memory. The targets
+are decimal GB budgets, not measured process peaks or installed-memory
+requirements. This comparison supports a gain from allocating more memory
+on that machine; comparing its auto result with the M5 Pro alone would not
+isolate the effect of memory.
+
+The manual rows are the reporter's warm-speed summaries, without the repeated
+per-run timings supplied for auto. They have not been independently rerun or
+remeasured on 0.2.16. The report does not establish a universal scaling curve,
+a best automatic target, or a larger qualified context window. See
+[memory defaults and overrides](../README.md#why-doesnt-slotstream-use-all-of-my-ram)
+to try a larger target while leaving room for macOS and other apps.
+
 ## Speed estimates
 
-These estimates come from the 48 GB M5 Pro and can differ substantially
-from results on other Macs. In particular, the 16 GB M2 above ran much
-slower than its estimate. Use the measured results when available.
+### Planning ranges
 
-| Tier | Mac RAM | Automatic memory target | Speculative decoding | Estimated generation speed | Recommended context window |
-|---|---|---|---|---|---|
-| Compatibility | 8–<16 GB | none fits an 8 GB Mac | not applicable | doesn't run | not applicable |
-| Low | 16–<24 GB | 10 GB at 16 GB, 11.5 GB at 18 GB | off | ~4 tok/s at 16 GB, ~5.5 tok/s at 18 GB | 32,768 |
-| Medium | 24–<48 GB | 16 GB at 24 GB, 22 GB at 32 GB, 25 GB at 36 GB | off at 24 GB, on from 32 GB | ~8 tok/s at 24 GB, ~10 tok/s at 32 GB, 13.5 tok/s at 36 GB | 32,768 up to 32 GB, 65,536 from 36 GB |
-| High | 48–<96 GB | 33.6 GB at 48 GB, 34.6 GB at 64 GB | on | 13.5 tok/s | 65,536 |
-| Ultra | 96 GB+ | 34.6 GB | on | 13.5 tok/s | 65,536 |
+The README's estimates combine the real reports above with the development
+Mac's measured configurations and planner curve. They are rough expectations
+across hardware and settings, not a fitted scaling model or statistical
+confidence intervals. Endpoints are rounded outward to whole tok/s.
 
-Speculative decoding here includes 0.2.16's decode lookahead, which runs with
-it. Without speculative decoding the speed column is the planner's warm-decode
-curve for the M5 Pro's SSD. With it the column uses measurements instead: about
-10 tok/s with two drafts at 76 experts per layer on 0.2.14, and 13.5 tok/s with
-the lookahead at about 88 per layer. Larger caches stay at 13.5 rather than
-extrapolate; they are likely faster but aren't measured with 0.2.16 yet.
+| Installed RAM | Estimated warm reply speed | Basis and main inference |
+|---|---|---|
+| 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
+| 24–<48 GB | ~6–14 tok/s | The 32 GB M5 Air reported 6.22 tok/s; the M5 Pro achieved 13.5 tok/s at a 20 GB process target. The upper end assumes a comparable chip and SSD with enough memory for that configuration; it has not been timed on a Mac in this band. |
+| 48–<96 GB | ~12–27 tok/s | The 48 GB M5 Pro measured about 12 to 13.5 tok/s. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
+| 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. |
+
+The Ultra lower endpoint allows for the same reporter's roughly 20 tok/s
+warm auto runs on 0.2.1; the main results table uses the updated 0.2.3 report.
+The upper ends of High and Ultra assume an M5 Max-class chip, fast internal
+SSD, speculative decoding and manual targets that leave room for macOS and
+other apps. A 48 GB process target cannot consume all of a Mac's installed
+48 GB; it needs a larger machine. These ranges mix releases, so they are not
+predictions for a single current build. No release-speedup multiplier was
+applied to community reports.
+
+A slow SSD, older chip, different prompt, draft acceptance or memory pressure
+can produce results outside the ranges. More RAM helps only when the engine
+can use it to reduce a bottleneck; the band labels do not establish a causal
+speed ranking. In particular, there is no measured performance boundary at
+96 GB. The shared context recommendation reflects the current planning
+guidance, independently of reply speed.
+
+### Automatic memory plans
+
+The target and speculative-decoding columns describe 0.2.16 source plans at
+the default 32,768-token window, with the draft file available and no other
+apps holding memory. Simulated RAM is in decimal GB; a Mac's marketed memory
+capacity can produce a different decimal-GB device reading and target.
+The recommended window is a separate planning suggestion. Selecting it
+recalculates the target, cache and speculative-decoding decision. The guidance
+is 32,768 tokens through 32 GB of simulated RAM, and 65,536 from 36 GB.
+
+| Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Recommended context window |
+|---|---|---|---|
+| 8 GB | No plan fits | Not applicable | Not applicable |
+| 16 GB | 10 GB | Off | 32,768 |
+| 18 GB | 11.5 GB | Off | 32,768 |
+| 24 GB | 16 GB | Off | 32,768 |
+| 32 GB | 22 GB | On | 32,768 |
+| 36 GB | 25 GB | On | 65,536 |
+| 48 GB | 33.6 GB | On | 65,536 |
+| 64, 96 or 128 GB | 34.6 GB | On | 65,536 |
+
+Speculative decoding in the source plans includes 0.2.16's decode lookahead.
+These are allocation plans, not measured performance tiers. The matching
+M5 Pro-based warm-decode estimates without speculative decoding are
+~4 tok/s at 16 GB, ~5.5 tok/s at 18 GB and ~8 tok/s at 24 GB of simulated
+RAM. The estimate of ~10 tok/s at 32 GB instead uses the two-draft
+measurement at 76 experts per layer on 0.2.14. It assumes the M5 Pro's chip
+and SSD; the real M5 Air result above was slower.
+
+The 13.5 tok/s result with lookahead at about 88 experts per layer is a measured reference,
+not a prediction for larger caches. Larger caches have not been timed with
+0.2.16 yet; the M5 Max sweep above
+demonstrates gains beyond auto with an earlier release. Do not apply the
+development Mac's release speedup to those community figures.
 
 **Auto mode picks the memory target, cache size, and speculative decoding.** It
 doesn't pick the context window yet: every Mac starts with 32,768 tokens, and
 `--max-context 65536` selects the larger window. Automatic context sizing is
 planned. The recommendations follow `slotstream doctor --sim-ram <GB>
---max-context 65536`: at 65,536 tokens a 16 GB Mac's cache shrinks by a third,
-a 32 GB Mac's cache falls below the speculative-decoding floor, and a 36 GB Mac
-keeps it. A prompt that fills 32,768 tokens waits about 3 minutes before its
-first token from 24 GB and 6.4 minutes at 16 GB; one that fills 65,536 waits
-about 8 minutes from 24 GB.
+--max-context 65536`: in the 16 GB simulation, the larger window shrinks the
+cache by a third; the 32 GB simulation cannot retain enough experts after
+charging the draft head, while the 36 GB simulation keeps it enabled.
+Real available memory and Metal limits can change these decisions.
 
-The repeated target on larger Macs is the intentional default for this model,
-based on the best measured tradeoff supported so far. These simulated rows do
-not establish that larger allocations cannot help another Mac. See
+For prompts near 32,768 tokens, the planner estimates about 3 minutes of
+prefill from 24 GB and 6.4 minutes at 16 GB; near 65,536 it estimates
+about 8 minutes from 24 GB. These estimates use the M5 Pro's prefill curve,
+not measurements on those memory sizes. Leave room for the reply in the
+configured window. Startup, queueing, images and reasoning before visible
+answer text add to the user's wait.
+
+The repeated target on larger Macs is the intentional conservative default,
+based on development-Mac measurements. Auto does not currently increase its
+ceiling for the M5 Max's demonstrated larger-cache gains. These simulated plans
+describe allocation policy; they do not measure speed. See
 [memory defaults and overrides](../README.md#why-doesnt-slotstream-use-all-of-my-ram).
 
 ## How to measure

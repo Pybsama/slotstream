@@ -1484,6 +1484,17 @@ A better comparable hardware/workload result can justify changing the default. U
 
 Controlling decision: [[records/decisions/auto-target-is-the-33-gb-knee-not-70-percent-of-ram]]. General engineering contract: [[records/design/measured-operating-policies]].
 
+## Community evidence incorporated on 2026-09-13
+
+[[records/measurements/c2-macbook-pro-m5-max-128gb-community]] now explicitly
+surfaces the larger-target sweep already preserved in its original source.
+The same M5 Max reportedly ran faster as its manual memory target increased
+beyond auto. This is positive evidence that a larger allocation can help;
+the conservative development-Mac default is not established as the best
+tradeoff on that machine. The public tables and memory FAQ now make this
+scope explicit. Runtime defaults remain unchanged, pending qualification of
+a hardware-specific allocation policy. No new model run was performed.
+
 ### The --memory-gb promise did not hold on real prompts (2026-08-31; resolved below)
 
 `--memory-gb 10` **peaked at 12.4 GB** on a 7,960-token prompt. Characterised
@@ -2494,12 +2505,47 @@ speculative decoding. Two longer warm runs returned 22.83 and 22.10 tok/s.
 The current surface uses the reported range instead of a best run.
 
 The report's prefill and peak figures were planner estimates, not measured
-long-prompt speed or process RSS. Keep both columns unmeasured. Cache-size
-sweeps in the source use manual settings and are not the automatic result.
+long-prompt speed or process RSS. Keep both columns unmeasured. The manual
+cache-size sweep is reported separately below so its gains are visible
+without attributing them to automatic sizing.
 
 This is one community report, not an independent rerun or a comparison made
 under the same conditions as the M5 Pro and M2 measurements. It supports a
 machine-specific row, not a promise for all Macs with that memory capacity.
+
+## Larger-cache results surfaced on 2026-09-13
+
+Rechecked issue #6 and its follow-up through the live GitHub API on
+2026-09-13. The existing immutable source already preserves the complete
+sweep. The public tables had retained only auto, omitting evidence that more
+allocated memory helped on this same machine.
+
+| Total-process target | Experts per layer, as reported | Slotstream 0.2.3 warm decode |
+|---|---|---|
+| 34.6 GB (auto) | ~152 | ~21–22 tok/s |
+| 48 GB (manual) | ~253 | ~26.9 tok/s |
+| 73 GB (manual) | ~401–441 | ~31.5 tok/s |
+
+All rows are the same 128 GB M5 Max, internal 2 TB SSD, with speculative
+decoding enabled. Targets are decimal GB budgets, not observed peaks or
+requirements for installed memory. Preserve the reporter's approximate
+expert-count range rather than replace it with today's planner output.
+The original 0.2.1 sweep also reported gains at larger targets; the current
+public comparison uses only the follow-up's 0.2.3 values.
+
+This within-machine comparison is evidence of a benefit from increasing the
+memory target, beyond the different-chip comparison against the M5 Pro.
+The manual rows are approximate summaries without the individual repeated
+request timings supplied for auto. They are not an independently reproduced,
+interleaved benchmark or a universal throughput curve. No new process-memory,
+long-context, correctness, or 0.2.16 performance qualification is established.
+Do not multiply these figures by the development Mac's later release speedup.
+
+The README's earlier flat 13.5 tok/s values extrapolated the *scope* of a
+20 GB-target development-Mac measurement while holding its numerical value
+constant. Replace them with named measured configurations and explicit gaps.
+Retaining the conservative automatic target does not negate this community
+result or establish an optimum on larger Macs.
 
 ## C3: MacBook Air M5, 32 GB (community, 2026-09-07)
 Reported by `@arczhi` in [issue #12](https://github.com/carloslfu/slotstream/issues/12),
@@ -4682,3 +4728,148 @@ At the 65,536-token window a 32 GB Mac's cache falls below the floor and runs wi
 **Limits.** Planner arithmetic on simulated machines; estimates use the M5 Pro curve and do not include speculative decoding. No model process ran: a functional run of the automatic path needs a target of at least 21 GB, which the host's reclaimable memory did not allow while another application's virtual machine held about 9.7 GB. Public speed figures come from the B1 measurement, the 0.2.14 depth study and the claims that cite them.
 
 Commands, build identities, per-size plans and hashes: [[sources/runs/2026/09/2026-09-13-decode-lookahead-default-tier-plans]].
+
+## Public documentation evidence and scope audit
+This is a documentation and evidence-scope audit, not a new model benchmark
+or a release qualification. It follows the README memory-tier correction in
+[[records/measurements/c2-macbook-pro-m5-max-128gb-community]].
+
+## Scope and evidence
+
+Read README.md, all Markdown guides under docs/, llms.txt, CONTRIBUTING.md,
+SECURITY.md and the current release-preparation notes. Checked the related
+claims, supersession notes, planner and context accounting, vision admission,
+CLI behavior, package/build instructions and published release metadata.
+Generated MEASUREMENTS.md and PLAN.md remain projections of the canonical
+records; historical source/run bytes and past release entries are preserved.
+
+[[sources/runs/2026/09/2026-09-13-public-docs-audit-plans]] captures the exact
+binary identity, eighteen default/larger-context simulations and the latest
+published release at audit time. They are planner observations only. The
+working tree concurrently contained unrelated source edits, so neither these
+observations nor the planner gates qualify those edits.
+
+## Corrections
+
+- Kept the positive same-Mac larger-cache evidence visible. The old flat
+  development-Mac number does not establish a larger-memory speed ceiling.
+- Labeled prompt-processing waits as M5 Pro-based estimates. They exclude
+  startup, queues, image preparation and reasoning before visible answers.
+  Near-full requests must leave reply room.
+- Distinguished decimal-GB simulations from marketed Mac memory and showed
+  that the auto-target/MTP columns use the default window. Recommendations
+  are separate simulations whose actual fit depends on available memory,
+  Metal capacity, selected context and draft weights.
+- Limited the draft-enabled automatic ceiling to its default-context scope;
+  larger windows add draft-context charges. The draft activation threshold
+  is evaluated before the separate lookahead reservation.
+- Corrected image memory on the engineering, Hermes and AI-facing pages:
+  auto/total-target plans reserve the tower inside the target; explicit
+  pool-size settings preserve the pool and add resident bytes to the expected
+  footprint. Both need real headroom and image workspace.
+- Clarified that main sequence-cache bytes per allocated token exclude
+  recurrent, retained, draft and transient allocations. Manual targets keep
+  request-memory safeguards despite disabling automatic resizing.
+- Scoped cache equality to fixed generation settings; total-target changes
+  may also change prefill or MTP. Labeled the early engine-load figure
+  historical and excluded current full-file verification from that timing.
+- Scoped queue-depth observations to their historical development-Mac run.
+  Preserved the separate attribution study's supported component results
+  after checking its newer evidence; they describe tuning prompts, not
+  independent held-out improvements.
+- Distinguished candidate measurements and prepared version headings from
+  a published installer release. Removed the stale unreleased label from
+  features delivered earlier.
+- Corrected build-versus-T0 network requirements, removed a duplicated
+  library paragraph, repaired the stale README memory reference, and
+  updated stale contributor activation/plateau language.
+
+The claim records carry the refined scopes. The semantic review requirement
+is canonical in [[records/design/measured-operating-policies]] and projected
+into CONTRIBUTING.md. It supplements the existing text-match gate.
+
+## Verification and limits
+
+All 73 existing planner gates passed against the available binary, and all
+179 claim-to-surface checks passed. A local-link scan found all 160 checked
+links and fragments resolvable. Generated-doc parity, full-store validation,
+Markdown table-column checks and diff whitespace are checked after the final
+edits. The store has two unchanged historical-log warnings; no log history
+is rewritten to silence them.
+
+The direct sources support the corrections. This audit did not rerun real
+model performance, every client integration or other hardware, and does not
+certify a future client/library version. It does not assert that every
+possible documentation error has been ruled out. No runtime defaults changed
+in this task; no public release or push was performed.
+
+## Follow-up: useful estimates, 2026-09-13
+
+The user requested best-effort estimates after questioning High/Ultra again.
+README now presents broad ranges separately from measured configurations.
+[[records/measurements/hardware-planning-ranges-2026-09-13]] owns the endpoint
+construction and explicitly unmeasured hardware transfers. Installed RAM,
+process target and software version have separate measured-table columns.
+The hardware guide's allocation table no longer mixes allocation, measured
+speeds and larger-cache estimates in the same column. Old section anchors
+remain usable. Existing source bytes are unchanged.
+
+## Hardware speed planning ranges and inference limits
+These are editorial planning estimates requested by the user, not a new
+benchmark. The following range rationale is projected manually into the
+hardware guide; the canonical evidence and revision scope live here.
+
+## Estimate construction
+
+The README's estimates combine the real reports above with the development
+Mac's measured configurations and planner curve. They are rough expectations
+across hardware and settings, not a fitted scaling model or statistical
+confidence intervals. Endpoints are rounded outward to whole tok/s.
+
+| Installed RAM | Estimated warm reply speed | Basis and main inference |
+|---|---|---|
+| 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
+| 24–<48 GB | ~6–14 tok/s | The 32 GB M5 Air reported 6.22 tok/s; the M5 Pro achieved 13.5 tok/s at a 20 GB process target. The upper end assumes a comparable chip and SSD with enough memory for that configuration; it has not been timed on a Mac in this band. |
+| 48–<96 GB | ~12–27 tok/s | The 48 GB M5 Pro measured about 12 to 13.5 tok/s. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
+| 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. |
+
+The Ultra lower endpoint allows for the same reporter's roughly 20 tok/s
+warm auto runs on 0.2.1; the main results table uses the updated 0.2.3 report.
+The upper ends of High and Ultra assume an M5 Max-class chip, fast internal
+SSD, speculative decoding and manual targets that leave room for macOS and
+other apps. A 48 GB process target cannot consume all of a Mac's installed
+48 GB; it needs a larger machine. These ranges mix releases, so they are not
+predictions for a single current build. No release-speedup multiplier was
+applied to community reports.
+
+A slow SSD, older chip, different prompt, draft acceptance or memory pressure
+can produce results outside the ranges. More RAM helps only when the engine
+can use it to reduce a bottleneck; the band labels do not establish a causal
+speed ranking. In particular, there is no measured performance boundary at
+96 GB. The shared context recommendation reflects the current planning
+guidance, independently of reply speed.
+
+## Supporting evidence
+
+- [[records/measurements/c1-mac-mini-m2-16gb-base-storage-community-2026-09-02]]
+- [[records/measurements/c3-macbook-air-m5-32gb-community]]
+- [[records/measurements/c2-macbook-pro-m5-max-128gb-community]], including the preserved original report and updated sweep
+- [[records/measurements/decode-path-serialization-b1-cohort-replication-2026-09-13]]
+- [[records/measurements/decode-lookahead-default-2026-09-13]], for the simulated small-memory curve, not timing on those Macs
+
+Low rounds outward from 1.41 and 5.54; Medium from 6.22 and 13.5;
+High from roughly 12 and 26.9; Ultra from roughly 20 and 31.5 tok/s.
+The endpoints are approximate anchors, not calibrated minima, maxima or
+probabilities. Hardware transfers remain unmeasured. The two M5 Pro
+configurations also change software/settings with the target and cannot
+isolate the effect of memory.
+
+## Revision and implementation scope
+
+README.md keeps a compact estimate table separately from actual reported
+configurations. docs/HARDWARE.md gives the full rationale and a separate
+automatic-allocation table. Revise the ranges as comparable hardware reports
+arrive; preserve the original evidence and keep inference explicit. Doctor
+can check a memory plan but cannot validate a speed or qualify hardware.
+No automatic target, runtime behavior, model benchmark, commit or push is
+part of this estimate update.
