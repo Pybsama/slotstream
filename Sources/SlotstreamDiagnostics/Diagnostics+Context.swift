@@ -558,7 +558,9 @@ extension Diagnostics {
         governor.maxContextTokens = ContextPolicy.modelLimit; governor.contextQualification = true
         governor.ownedAdditionalBytes = 0
         c.expect("infeasible governor plan is explicit", GovernorPolicy.desiredPlan(governor) == nil)
-        for cap in [1, 1024, ContextPolicy.defaultTokens, ContextPolicy.mtpLimit] {
+        // Ordinary windows through the Hermes 65,536 recover inside 10 GB; the
+        // governor matrix below covers larger windows and their refusals.
+        for cap in [1, 1024, ContextPolicy.defaultTokens, 65_536] {
             for mtp in [false, true] {
                 let exhausted = GovernorPolicy.Inputs(currentSlots: Geometry.floorSlots,
                     availableGB: 0, ramGB: 51.5, workingSetGB: 40.2,

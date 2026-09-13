@@ -70,8 +70,8 @@ extension Catalogue {
             "the refusal names the ceiling",
             msg.contains("\(ContextPolicy.maxTokens)"), msg)
         c.expect(
-            "the refusal distinguishes model configuration from implementation qualification",
-            msg.contains("model limit") && msg.contains("implementation limit"), msg)
+            "the refusal names the model limit and the automatic choice",
+            msg.contains("pinned model") && msg.contains("pass auto"), msg)
         c.expect(
             "the refusal does not promise capacity or quality",
             msg.contains("memory fit or answer quality"), msg)
