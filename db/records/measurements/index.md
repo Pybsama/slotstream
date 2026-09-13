@@ -2,13 +2,13 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-13T16:42:28.626985Z
+updated: 2026-09-13T16:49:56.423367Z
 ---
 
 # records/measurements
 
-- [[records/measurements/public-documentation-evidence-audit-2026-09-13]] — Public documentation audit: correct performance, memory, simulation and release scope; no new benchmark
 - [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
+- [[records/measurements/public-documentation-evidence-audit-2026-09-13]] — Public documentation audit: correct performance, memory, simulation and release scope; no new benchmark
 - [[records/measurements/automatic-memory-default-evidence-scope-2026-09-09]] — Automatic memory default: evidence scope and retained policy (2026-09-09)
 - [[records/measurements/c2-macbook-pro-m5-max-128gb-community]] — C2: MacBook Pro M5 Max, 128 GB (community, 2026-09-03)
 - [[records/measurements/decode-lookahead-default-2026-09-13]] — 0.2.16 defaults pass every weights-free check; auto runs the draft head and decode lookahead from a 21 GB target, 32 GB Macs and up; 8 GB plans are refused

@@ -2,9 +2,11 @@
 
 > Local inference for Qwen3.8-Flash-Next (a 125B-parameter mixture-of-experts,
 > 105 GB on disk at 4-bit) on Apple Silicon Macs with far less RAM than the
-> model: measured at ~12 tok/s on a 48 GB M5 Pro, and 13.5 tok/s at a 20 GB
-> target in the 0.2.16 candidate with decode lookahead enabled. The ~4 tok/s estimate for
-> 16 GB overstates the measured 1.41 tok/s on a base-storage Mac mini M2.
+> model: measured at 13.47 tok/s on the development Mac, a 48 GB M5 Pro, at a
+> 20 GB target in the pre-release benchmark of the configuration shipped in
+> 0.2.16 with decode lookahead enabled. The older 0.2.3 result was ~12 tok/s.
+> The ~4 tok/s estimate for 16 GB overstates the measured 1.41 tok/s on a
+> base-storage Mac mini M2.
 > Experts stream from SSD through a fixed slot cache; one Swift binary serves
 > Ollama- and OpenAI-compatible chat APIs on 127.0.0.1:11434.
 

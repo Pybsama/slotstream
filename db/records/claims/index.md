@@ -2,16 +2,18 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-13T16:42:28.609838Z
+updated: 2026-09-13T16:49:56.403342Z
 ---
 
 # records/claims
 
+- [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
+- [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
+- [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
 - [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
 - [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Small-memory planner estimates use the M5 Pro curve; README has broader ranges
 - [[records/claims/hardware-planning-range-ultra]] — Estimated warm reply range for 96 GB or more Macs
-- [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
 - [[records/claims/hardware-planning-range-low]] — Estimated warm reply range for 16 to less than 24 GB Macs
 - [[records/claims/full-context-wait-about-8-minutes-at-65536]] — M5 Pro-based prefill estimate is about 8 minutes near the larger window from a 24 GB simulation
@@ -26,10 +28,8 @@ updated: 2026-09-13T16:42:28.609838Z
 - [[records/claims/io-queue-depth-flat-from-12-to-32]] — Historical development-Mac I/O concurrency comparison; no universal SSD optimum.
 - [[records/claims/warm-decode-m5-max-73gb-target-community]] — M5 Max community report: 31.5 tok/s at a 73 GB target
 - [[records/claims/warm-decode-m5-max-48gb-target-community]] — M5 Max community report: 26.9 tok/s at a 48 GB target
-- [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.5 tok/s with the decode lookahead at a 20 GB target on the dev Mac
 - [[records/claims/auto-floor-76-experts-per-layer]] — The draft head's automatic floor is 76 experts per layer
 - [[records/claims/decode-lookahead-charges-373-mib]] — The decode lookahead charges 373 MiB to the memory plan
-- [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.8 to 13.5 tok/s with the decode lookahead on the dev Mac
 - [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
 - [[records/claims/speculative-decode-x1-24-at-auto-floor]] — Speculative decode multiplied decode by 1.24 at the former auto floor on the dev Mac
 - [[records/claims/full-context-wait-6-4-min-on-16-gb]] — A full 32k prompt waits about 6.4 min on a 16 GB Mac

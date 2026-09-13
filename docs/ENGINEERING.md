@@ -44,7 +44,7 @@ On the 48 GB M5 Pro:
 | Measurement | Result |
 |---|---|
 | Reply generation after the cache warms up | ~12 tok/s |
-| Reply generation with speculative decoding and the 0.2.16 decode lookahead, 20 GB target | 13.5 tok/s, 1.11x faster than without the lookahead |
+| Reply generation with speculative decoding and the 0.2.16 decode lookahead, 20 GB target | 13.47 tok/s, 1.11x faster than without the lookahead |
 | Engine load in the original experiment, before processing the prompt | ~2 s (historical) |
 | Planned memory with automatic sizing | 32 GB (estimate) |
 
@@ -101,7 +101,7 @@ for them. FP32 copies of the router weights save a conversion on every routing
 call, and the GPU is drained every four layers instead of every layer, with
 each forecast riding the next routing readback. On twelve held-out prompts at a
 20 GB target with two drafts, decode was 1.11x faster than the previous default
-(11.8 to 13.5 tok/s median) with identical output. In separate attribution
+(11.79 to 13.47 tok/s median) with identical output. In separate attribution
 runs on the tuning prompts, the router copies and fewer drains added
 about 2% each over prefetch alone. Those component results are specific to
 that workload and are not separate held-out speedups. The

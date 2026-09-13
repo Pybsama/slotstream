@@ -2,7 +2,7 @@
 type: measurement
 id: 01m2dtc5nvwg0t0jfr4fra1nx6
 created: 2026-09-13T16:42:28.411325+00:00
-updated: 2026-09-13T16:42:28.411325+00:00
+updated: 2026-09-13T16:49:56.423367+00:00
 summary: Hardware speed planning ranges and inference limits
 date: 2026-09-13
 doc: measurements
@@ -25,8 +25,8 @@ confidence intervals. Endpoints are rounded outward to whole tok/s.
 | Installed RAM | Estimated warm reply speed | Basis and main inference |
 |---|---|---|
 | 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
-| 24–<48 GB | ~6–14 tok/s | The 32 GB M5 Air reported 6.22 tok/s; the M5 Pro achieved 13.5 tok/s at a 20 GB process target. The upper end assumes a comparable chip and SSD with enough memory for that configuration; it has not been timed on a Mac in this band. |
-| 48–<96 GB | ~12–27 tok/s | The 48 GB M5 Pro measured about 12 to 13.5 tok/s. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
+| 24–<48 GB | ~6–14 tok/s | The 32 GB M5 Air reported 6.22 tok/s; the M5 Pro achieved 13.47 tok/s at a 20 GB process target. The upper end assumes a comparable chip and SSD with enough memory for that configuration; it has not been timed on a Mac in this band. |
+| 48–<96 GB | ~13–27 tok/s | The latest 48 GB M5 Pro result is 13.47 tok/s, rounded down for this estimate; its older ~12 tok/s result remains historical evidence. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
 | 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. |
 
 The Ultra lower endpoint allows for the same reporter's roughly 20 tok/s
@@ -53,8 +53,8 @@ guidance, independently of reply speed.
 - [[records/measurements/decode-path-serialization-b1-cohort-replication-2026-09-13]]
 - [[records/measurements/decode-lookahead-default-2026-09-13]], for the simulated small-memory curve, not timing on those Macs
 
-Low rounds outward from 1.41 and 5.54; Medium from 6.22 and 13.5;
-High from roughly 12 and 26.9; Ultra from roughly 20 and 31.5 tok/s.
+Low rounds outward from 1.41 and 5.54; Medium from 6.22 and 13.47;
+High from 13.47 and 26.9; Ultra from roughly 20 and 31.5 tok/s.
 The endpoints are approximate anchors, not calibrated minima, maxima or
 probabilities. Hardware transfers remain unmeasured. The two M5 Pro
 configurations also change software/settings with the target and cannot
@@ -69,3 +69,20 @@ arrive; preserve the original evidence and keep inference explicit. Doctor
 can check a memory plan but cannot validate a speed or qualify hardware.
 No automatic target, runtime behavior, model benchmark, commit or push is
 part of this estimate update.
+
+## Latest development-Mac reference, 2026-09-13
+
+At the user's request, High now uses the latest development-Mac median of
+13.47 tok/s as its lower reference, giving an estimated 13 to 27 tok/s range.
+The previous 12 to 27 range used the historical 0.2.3 result near 12 tok/s.
+That historical result remains public with its version. Medium still rounds
+its upper endpoint to 14. All transfer assumptions and uncertainty above
+remain in force; this is a revision to the editorial reference, not new
+performance evidence or a guaranteed minimum for all Macs in the band.
+
+The public current-result surfaces use the reported two-decimal medians
+11.79 and 13.47 from
+[[sources/runs/2026/09/2026-09-13-cohort-rescoring-true-medians]].
+No source bytes, model benchmark or runtime policy changed. The configuration
+was measured before release and adopted in 0.2.16; public wording distinguishes
+that benchmark from a rerun of the downloaded release binary.

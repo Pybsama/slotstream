@@ -13,7 +13,7 @@ determines which version the installer downloads.
   reads the experts it picks from the SSD straight into cache slots, keeps FP32
   router weights and drains the GPU every four layers instead of every layer.
   Output is unchanged. On twelve held-out prompts at a 20 GB target the
-  development Mac went from 11.8 to 13.5 tok/s median. The memory plan charges
+  development Mac went from 11.79 to 13.47 tok/s median. The memory plan charges
   its 373 MiB, and `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns it off.
 - Use speculative decoding from 32 GB Macs. Auto now turns the draft head on
   when the cache keeps 76 experts per layer, down from 120, a 21 GB target.
