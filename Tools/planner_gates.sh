@@ -125,10 +125,29 @@ run_binary doctor $M --sim-ram 17.2 --sim-working-set 11.8 --sim-available 12.5 
 check "MTP auto stays off on a 16GB machine"            "! grep -q 'draft head on' $T/mtp16 && grep -q 'target: 9.8' $T/mtp16"
 run_binary doctor $M --sim-ram 137.4 --memory-gb 30 > "$T/mtp30" 2>&1
 check "MTP auto on at --memory-gb 30 (137/layer after the charge)" "grep -q 'draft head on' $T/mtp30"
-run_binary doctor $M --sim-ram 137.4 --memory-gb 20 > "$T/mtp20" 2>&1
-check "MTP auto off at --memory-gb 20 (below the 120/layer floor)" "! grep -q 'draft head on' $T/mtp20"
+run_binary doctor $M --sim-ram 137.4 --memory-gb 22 > "$T/mtp22" 2>&1
+check "MTP auto on at --memory-gb 22 (above the 76/layer floor after the charge)" "grep -q 'draft head on' $T/mtp22"
+check "decode lookahead rides the head at --memory-gb 22" "grep -q 'lookahead: on' $T/mtp22"
+run_binary doctor $M --sim-ram 32 > "$T/mtp32mac" 2>&1
+check "32 GB Mac: auto runs the head and the lookahead" "grep -q 'draft head on' $T/mtp32mac && grep -q 'lookahead: on' $T/mtp32mac"
+run_binary doctor $M --sim-ram 24 > "$T/mtp24mac" 2>&1
+check "24 GB Mac: auto runs neither" "! grep -q 'draft head on' $T/mtp24mac && ! grep -q 'lookahead: on' $T/mtp24mac"
+run_binary doctor $M --sim-ram 32 --max-context 65536 > "$T/mtp32ctx" 2>&1
+check "32 GB Mac at 65,536 tokens runs without the head" "! grep -q 'draft head on' $T/mtp32ctx"
+run_binary doctor $M --sim-ram 36 --max-context 65536 > "$T/mtp36ctx" 2>&1
+check "36 GB Mac at 65,536 tokens keeps the head and the lookahead" \
+      "grep -q 'draft head on' $T/mtp36ctx && grep -q 'lookahead: on' $T/mtp36ctx"
+run_binary doctor $M --sim-ram 137.4 --memory-gb 16 > "$T/mtp16t" 2>&1
+check "MTP auto off at --memory-gb 16 (below the 76/layer floor)" \
+      "! grep -q 'draft head on' $T/mtp16t && ! grep -q 'lookahead: on' $T/mtp16t"
+SLOTSTREAM_OPT_EXPERT_PREFETCH=0 "$BIN" doctor $M --sim-ram 137.4 --memory-gb 22 > "$T/mtp22off" 2>&1
+check "SLOTSTREAM_OPT_EXPERT_PREFETCH=0 keeps the head without the lookahead" \
+      "grep -q 'draft head on' $T/mtp22off && ! grep -q 'lookahead:' $T/mtp22off"
+check "decode lookahead charge visible in json" \
+      "run_binary doctor $M --sim-ram 137.4 --memory-gb 22 --json | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d[\"decode_lookahead\"] and d[\"lookahead_reserve_bytes\"] > 0 and d[\"memory_ledger\"][\"lookahead_reserve_bytes\"] == d[\"lookahead_reserve_bytes\"], d'"
 run_binary doctor $M --mtp on --sim-ram 17.2 --sim-working-set 11.8 --sim-available 12.5 > "$T/mtpforce" 2>&1
 check "--mtp on forces the head onto a small machine"   "grep -q 'draft head on' $T/mtpforce"
+check "a head forced below the floor runs without the lookahead" "! grep -q 'lookahead: on' $T/mtpforce"
 run_binary doctor $M --mtp off --sim-ram 137.4 > "$T/mtpoff" 2>&1
 check "--mtp off suppresses it everywhere"              "! grep -q 'draft head on' $T/mtpoff && grep -q 'target: 33.0' $T/mtpoff"
 check "--mtp on without mtp.safetensors is a clean error" \

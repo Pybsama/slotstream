@@ -24,22 +24,60 @@ as Hermes. Developers can connect their own apps through its APIs or Swift libra
 
 ## Will it run on my Mac?
 
-You need an **Apple Silicon Mac, macOS 14 or later, and about 110 GB of free
-SSD space**. Choose Apple menu → About This Mac to check your chip and memory.
+You need an **Apple Silicon Mac with at least 16 GB of memory, macOS 14 or
+later, and about 110 GB of free SSD space**. Choose Apple menu → About This Mac
+to check your chip and memory.
 
-Smaller Macs can run the model too, but speed depends on the chip, SSD, and
-available memory. An 8 GB Mac needs swap and can slow down the whole computer.
-The installer has been tested on macOS 14 and 15; model runs have been tested
-on macOS 26. Windows, Linux, and Intel Macs are not currently supported.
+On an 8 GB Mac even the smallest memory plan doesn't fit, so Slotstream refuses
+to start instead of swapping. On larger Macs, speed depends on the chip, SSD,
+and available memory. The installer has been tested on macOS 14 and 15; model
+runs have been tested on macOS 26. Windows, Linux, and Intel Macs are not
+currently supported.
 
 ## Speed
 
+`tok/s` means tokens per second; a token is a small piece of text, often part
+of a word. Speeds describe replies after the model has warmed up.
+
+**Version 0.2.16 generates replies 1.11x faster with speculative decoding.**
+It predicts which parts of the model the next layers will need and reads them
+from the SSD before they're requested, keeps a faster copy of the routing
+weights, and waits for the GPU less often. On prompts it was never tuned on,
+the development Mac went from 11.8 to 13.5 tok/s at a 20 GB memory target,
+with identical output.
+
+<a id="speed-by-memory"></a>
+
+### Speed by Mac memory
+
+| Tier | Mac memory | Estimated reply speed | Recommended context window |
+|---|---|---|---|
+| Compatibility | 8–<16 GB | Doesn't run: the smallest plan needs more memory | Not applicable |
+| Low | 16–<24 GB | ~4 tok/s at 16 GB, ~5.5 tok/s at 18 GB | 32,768 tokens (default) |
+| Medium | 24–<48 GB | ~8 tok/s at 24 GB, ~10 tok/s at 32 GB, 13.5 tok/s from 36 GB | 32,768 up to 32 GB, 65,536 from 36 GB |
+| High | 48–<96 GB | 13.5 tok/s | 65,536 tokens |
+| Ultra | 96 GB+ | 13.5 tok/s; [more memory doesn't raise the target](#why-doesnt-slotstream-use-all-of-my-ram) | 65,536 tokens |
+
+The estimates assume the development Mac's M5 Pro chip and SSD; a 16 GB Mac
+mini with base storage measured well below its row. With speculative decoding
+they come from measured runs and stay flat above the largest cache measured
+instead of extrapolating, so Macs with more memory are likely faster than
+shown. The [hardware guide](docs/HARDWARE.md#speed-estimates) lists each plan.
+
+**Auto mode picks the memory target, cache size, and speculative decoding for
+your Mac.** It doesn't pick the context window yet: every Mac starts with
+32,768 tokens, and `--max-context 65536` selects the larger window. Automatic
+context sizing is planned. A prompt that fills 32,768 tokens waits about
+3 minutes before its first token on Macs from 24 GB; one that fills 65,536 waits
+about 8 minutes, and a 32 GB Mac runs it without speculative decoding.
+
+### Measured on real Macs
+
 These reply speeds were measured on real Macs after the model warmed up.
-`tok/s` means tokens per second; a token is a small piece of text, often
-part of a word.
 
 | Mac | Memory | Reply speed |
 |---|---|---|
+| MacBook Pro, M5 Pro, 0.2.16 at a 20 GB target | 48 GB | 13.5 tok/s |
 | MacBook Pro, M5 Pro | 48 GB | ~12 tok/s |
 | Mac mini, M2 (base storage) | 16 GB | 1.41 tok/s |
 | MacBook Air, M5 | 32 GB | 6.22 tok/s |
@@ -48,14 +86,14 @@ part of a word.
 The M5 Pro is the development Mac; the other rows are community reports.
 They use different releases and settings, including speculative decoding on
 the M5 Max. See [hardware results and test conditions](docs/HARDWARE.md) for
-credits, methods, and separate estimates for other Macs.
+credits and methods.
 
 **Starting a reply takes additional time.** Slotstream must first process
 your question and conversation history. Long prompts can take minutes;
 follow-up turns can reuse unchanged history. Terminal shows progress while
 you wait.
 
-The latest optimization work improves prompt reuse and reduces runtime memory.
+The 0.2.14 optimization work improves prompt reuse and reduces runtime memory.
 The [integrated measurements](MEASUREMENTS.md#final-integrated-optimization-results)
 separate time to the first token, sustained generation, and process memory.
 The benefit depends on your workload; sustained generation did not improve
@@ -135,7 +173,8 @@ covers the implementation.
 
 - **One generation at a time:** connected apps share the same running model.
 - **Conversation length is limited:** longer histories take more memory and
-  time. The Hermes guide includes the larger conversation window it needs.
+  time. [Speed by Mac memory](#speed-by-memory) recommends a window for each
+  memory size, and the Hermes guide includes the larger window it needs.
 - **Testing:** image input and tool calling have
   integration tests, but there is no broad image-accuracy benchmark or
   completed comparison with other models on the same Mac.

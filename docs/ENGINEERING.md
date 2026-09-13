@@ -44,6 +44,7 @@ On the 48 GB M5 Pro:
 | Measurement | Result |
 |---|---|
 | Reply generation after the cache warms up | ~12 tok/s |
+| Reply generation with speculative decoding and the 0.2.16 decode lookahead, 20 GB target | 13.5 tok/s, 1.11x faster than without the lookahead |
 | Engine start, before processing the prompt | ~2 s |
 | Planned memory with automatic sizing | 32 GB (estimate) |
 
@@ -78,13 +79,28 @@ model to verify. The current operating choice is two drafts (default 2).
 The [adoption decision](../db/records/decisions/draft-depth-defaults-to-two.md)
 records the workload tradeoff and the limits of the recent comparison.
 In the historical one-draft test, the draft was accepted 86% of the time.
-At a 28 GB target, that one-draft configuration improved greedy decode by ×1.24
-(10.3 → 12.8 tok/s); the improvement was ×1.18 with default server sampling.
+At a 28 GB memory target, that one-draft configuration improved greedy decode
+by ×1.24 (10.3 → 12.8 tok/s); the improvement was ×1.18 with default server
+sampling.
 
-`--mtp auto` enables this when the expert cache can still hold 120 experts
-per layer after allocating 1.6 GB for the head. Below that threshold it stays
-off under the existing conservative activation policy. The automatic ceiling is
-34.6 GB with the head enabled. `--mtp off` disables it.
+`--mtp auto` enables this when the expert cache can still hold 76 experts per
+layer after allocating 1.6 GB for the head, a 21 GB target at the default
+context. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
+faster than plain decode on the same memory at 76 per layer. The automatic
+ceiling is 34.6 GB with the head enabled. `--mtp off` disables it.
+
+With the head on, 0.2.16 also runs the decode lookahead. After each layer, the
+router of the layer two ahead runs on the current hidden state, and the experts
+it picks are read from the SSD straight into cache slots before that layer asks
+for them. FP32 copies of the router weights save a conversion on every routing
+call, and the GPU is drained every four layers instead of every layer, with
+each forecast riding the next routing readback. On twelve held-out prompts at a
+20 GB target with two drafts, decode was 1.11x faster than the previous default
+(11.8 to 13.5 tok/s median) with identical output. On the tuning prompts most
+of the gain is the prefetch; the router copies and the fewer drains add about
+2% each. The
+[decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
+records its 373 MiB charge, overrides and limits.
 
 [MEASUREMENTS.md](../MEASUREMENTS.md) includes the configurations, comparisons,
 and failed experiments behind these results.

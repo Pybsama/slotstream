@@ -2,16 +2,16 @@
 type: claim
 id: 01m1hhwp6pvmv6ewjddfjm9xmc
 created: 2026-09-02T17:15:28.342139+00:00
-updated: 2026-09-08T22:35:06.757083+00:00
-summary: The 8, 16, 24, and 32 GB tier rows are estimates from the 48 GB curve
+updated: 2026-09-13T13:44:49.687325+00:00
+summary: Tier rows without speculative decoding are estimates from the 48 GB curve
 basis: estimated
 gate: Tools/planner_gates.sh
 needle: ~4 tok/s
 supported_by:
 - '[[records/measurements/warm-decode-re-anchored-and-the-live-governor-finally-observed-2026-08]]'
 - '[[records/measurements/the-auto-memory-target-70-of-ram-was-the-wrong-shape-2026-08-31]]'
-surfaces: llms.txt, docs/HARDWARE.md
-title: The 8, 16, 24, and 32 GB tier rows are estimates from the 48 GB curve
+surfaces: README.md, llms.txt, docs/HARDWARE.md
+title: Tier rows without speculative decoding are estimates from the 48 GB curve
 status: current
 ---
 The rows come from `slotstream doctor --sim-ram N`, which interpolates the re-anchored decode curve and the 33 GB knee. Every surface must keep calling them estimates. planner_gates.sh checks the simulated plans, not the tok/s.
@@ -32,3 +32,4 @@ on real hardware"; that clause is removed rather than preserved because it
 duplicated the separately withdrawn claim
 [[records/claims/only-the-48-gb-row-is-measured-on-real-hardware]], now
 replaced by [[records/claims/two-tier-rows-are-measured-on-real-macs]].
+**Updated 2026-09-13.** The tables follow five memory tiers and README.md carries them too. The 8 GB row is gone because every 8 GB plan is refused ([[records/claims/minimum-mac-memory-16-gb]]). Rows with speculative decoding use measurements instead of the curve: [[records/claims/tier-estimate-10-tok-s-at-32-gb]] and [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]].

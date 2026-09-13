@@ -18,6 +18,7 @@ struct Slotstream: ParsableCommand {
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
             ContextCheck.self, PrefillScheduleCommand.self, SweepCheck.self,
             VisionParity.self, OptimizationStateCheck.self, PackExperts.self,
+            ExpertLookaheadCapture.self, ExpertLookaheadBench.self, ExpertLookaheadCheck.self, ExpertLookaheadPredict.self,
         ]
     )
 }
@@ -164,7 +165,7 @@ struct ModelOptions: ParsableArguments {
             mtp: requireMTP ? .on : requestedMTP, mtpAvailable: MTPWeights.present(modelDir: modelURL),
             vision: visionMode(), visionAvailable: visionAvailable(),
             maxContextTokens: maxContext, qualification: qualification,
-            runtimePolicy: policy)
+            runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment())
         let plan = try runtimePlan(base, prefixCacheEnabled: prefixCacheEnabled).withRequestPolicy(configuration)
         FileHandle.standardError.write((plan.banner() + "\n").data(using: .utf8)!)
         return plan
@@ -692,9 +693,11 @@ struct Doctor: ParsableCommand {
         let request = PlanRequest(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
             memoryGB: model.memoryGB, maxRAMPercent: model.maxRAMPercent,
             mtp: try model.mtpMode(), vision: try model.visionMode(), maxContextTokens: maxContext)
+        let lookahead = DecodeLookaheadPlanning.environment()
         let feasibility = Planner.contextFeasibility(request, on: device,
             mtpAvailable: MTPWeights.present(modelDir: model.modelURL),
-            visionAvailable: model.visionAvailable(), runtimePolicy: try model.runtimePolicy())
+            visionAvailable: model.visionAvailable(), runtimePolicy: try model.runtimePolicy(),
+            decodeLookahead: lookahead)
         let advisory: MemoryPlan?
         if feasibility.requestedPlan == nil, maxContext <= ContextPolicy.defaultTokens,
            model.expertsPerLayer != nil || model.poolGB != nil {
@@ -703,7 +706,8 @@ struct Doctor: ParsableCommand {
                 availableGB: device.availableGB, ramPercent: model.maxRAMPercent,
                 mtp: model.mtpMode(), mtpAvailable: MTPWeights.present(modelDir: model.modelURL),
                 vision: model.visionMode(), visionAvailable: model.visionAvailable(),
-                maxContextTokens: maxContext, simulated: device.isSimulated, runtimePolicy: model.runtimePolicy())
+                maxContextTokens: maxContext, simulated: device.isSimulated, qualification: false,
+                runtimePolicy: model.runtimePolicy(), decodeLookahead: lookahead)
         } else { advisory = nil }
         guard let requestedPlan = feasibility.requestedPlan ?? advisory else {
             if asJSON {

@@ -195,7 +195,8 @@ runtime state and n-gram rows, bounded prompt-read grouping, committed prompt
 checkpoints, bounded output buffering and memory-governor response. Long
 prompt grouping is admitted only when its additional workspace fits; ordinary
 chronological passes remain the fallback. Explicit prefill and optimization
-controls retain their precedence and validation.
+controls retain their precedence and validation. With the draft head, the
+[decode lookahead](#decode-lookahead) is on by default too.
 
 Prompt checkpoints help only when the token and image history actually
 matches. Use `--no-prefix-cache` for comparisons that require fresh prompt
@@ -234,6 +235,9 @@ alone is not evidence that the current choice is wrong. See
 | `SLOTSTREAM_SWEEP_ADMIT` | engine | `0` stops the last pass of a prompt from admitting the prompt's hottest experts into the pool, so decode starts cold. A/B work only. |
 | `SLOTSTREAM_SWEEP_TRACE` | engine | `1` prints, after each prefill, where the sweep's time went: reads, waiting for the GPU, sorting rows, copies out of the pool, and MLX's peak and cache. |
 | `SLOTSTREAM_PREFILL_CACHE_MB` | engine | MLX buffer-cache cap while a prompt is read. The plan sets 512 at targets of 12 GB and under (the sweep's varying array sizes otherwise fill the 2 GB cache, 1.7 GB of peak at the floor) and no cap above, where it costs ~6% of prefill; this forces a value at any target. |
+| `SLOTSTREAM_OPT_EXPERT_PREFETCH` | engine | `0` turns off the decode lookahead and its 373 MiB charge. `1` selects an experimental prefetch configuration from the `SLOTSTREAM_EXPERT_PREFETCH_*` tuning variables instead; for comparisons only. |
+| `SLOTSTREAM_OPT_ROUTER_WEIGHTS` | engine | `0` or `1` overrides the FP32 router weight cache that the decode lookahead turns on. |
+| `SLOTSTREAM_DECODE_BARRIER_LAYERS` | engine | Layers between GPU drains, 1…48. The decode lookahead uses 4; `1` drains after every layer. A pass that could not keep that many layers of experts pinned drains after every layer anyway. |
 | `SLOTSTREAM_ROOT_DIR` | installer | Install somewhere other than `~/.slotstream`. |
 | `SLOTSTREAM_RELEASE_BASE` | installer | Fetch the release from another base URL (CI uses it to test unpublished builds). |
 
@@ -275,10 +279,14 @@ See [Testing](TESTING.md) for the full suites.
   model's draft head, `mtp.safetensors`, which `pull` fetches with the
   weights. The file is optional; downloads can complete without it. `on`
   without the file is an error; `auto`, the default, turns it on when the
-  cache still reaches 120 experts per layer after the head's 1.6 GB (a 28 GB
-  target). This conservative activation floor is separate from draft depth.
-  The historical one-draft measurement at that size was ×1.24 decode;
-  MEASUREMENTS.md M9 preserves its configuration, ladder and ceiling.
+  cache still reaches 76 experts per layer after the head's 1.6 GB, a 21 GB
+  target at the default context, so 32 GB Macs and up. Before 0.2.16 the floor
+  was 120; two drafts later measured 31.7% faster than plain decode on the same
+  memory at 76 per layer
+  ([decision](../db/records/decisions/draft-head-auto-floor-76-per-layer.md)).
+  The floor is separate from draft depth. The historical one-draft measurement
+  at the former 28 GB memory target was ×1.24 decode; MEASUREMENTS.md M9
+  preserves its configuration, ladder and ceiling.
 - `mtp-parity`, `mtp-accept`, `mtp-check`: the draft head's parity with the
   Python reference, its measured accept rate (`--depth`, default 4), and the
   speculative-decode gates.
@@ -290,3 +298,20 @@ See [Testing](TESTING.md) for the full suites.
   back to the default. See the [decision and evidence](../db/records/decisions/draft-depth-defaults-to-two.md).
   This changes draft depth when MTP is enabled, not the automatic activation
   floor or the RAM-share default.
+
+### Decode lookahead
+
+From 0.2.16 the decode lookahead is on by default whenever the draft head runs
+on a cache that reaches the same 76-per-layer floor. After each layer, the
+engine runs the router of the layer two ahead on the current hidden state and
+reads the experts it picks from the SSD straight into cache slots, before that
+layer asks for them. It also keeps FP32 copies of the router weights and drains
+the GPU every four layers instead of every layer. Output is unchanged.
+
+The memory plan charges 373 MiB for it before sizing the expert cache, and
+`doctor` prints `lookahead: on`. On twelve held-out prompts at a 20 GB target
+with two drafts, decode was 1.11x faster than without it. A head forced onto a
+smaller cache runs without it. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns it off,
+and the two variables above override its router cache and drain period. The
+[decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
+records the evidence and limits.

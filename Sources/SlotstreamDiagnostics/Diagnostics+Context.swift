@@ -726,13 +726,15 @@ extension Diagnostics {
                         let physical = whole - initial.poolGB - Planner.fixedFootprintGB
                             - (mode == 1 ? Planner.mtpResidentGB : 0)
                             - (mode == 2 ? Planner.visionResidentGB : 0) - Double(owned) / 1e9
+                            - Double(initial.lookaheadReserveBytes) / 1e9
                         guard physical >= 0 else { continue }
                         governorCaps.insert(cap)
                         var input = GovernorPolicy.Inputs(currentSlots: initial.slots, availableGB: physical,
                             ramGB: 51.5, workingSetGB: 40.2, mtpEnabled: mode == 1,
                             visionEnabled: mode == 2, visionResidentReserved: mode == 2,
                             maxContextTokens: cap, runtimeAllocationPolicy: policy,
-                            ownedAdditionalBytes: owned, contextQualification: true)
+                            ownedAdditionalBytes: owned, contextQualification: true,
+                            decodeLookahead: initial.decodeLookahead, lookaheadReserveBytes: initial.lookaheadReserveBytes)
                         let settled = GovernorPolicy.desiredPlan(input)
                         let physicalBudget = min(input.workingSetGB,
                             whole - Planner.availabilitySlackGB(ramGB: input.ramGB))

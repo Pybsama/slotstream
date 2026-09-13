@@ -37,8 +37,8 @@ Close memory-heavy apps and check `slotstream doctor` for memory warnings.
 Stop Slotstream with **Control+C** and restart it without custom memory
 settings so it can choose a size that fits.
 
-An 8 GB Mac needs swap, which uses disk space as extra memory, even at the
-minimum setting. It may remain slow with other apps closed. See
+An 8 GB Mac can't run the model: even the minimum setting needs more memory
+than it has, so Slotstream refuses to start. See
 [hardware and speed](HARDWARE.md) for the limits of smaller Macs.
 
 For manual adjustments, read the [memory settings](CLI.md#memory-options).
