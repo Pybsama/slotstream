@@ -8,17 +8,22 @@ import Foundation
 ///
 /// Evidence: the held-out B1 cohort ran this exact configuration against the
 /// shipped path at a 20 GB target with two drafts: 1.114 decode throughput
-/// (bootstrap 1.105 to 1.122), outputs identical in every pair. The attribution
+/// (bootstrap 1.104 to 1.121), outputs identical in every pair. The attribution
 /// sweep apportions it: prefetch 1.090, router cache 1.021, barrier 1.022.
 /// Scope: one M5 Pro, text decode with the draft head, caches of about 76 to 88
 /// experts per layer. Revision: a clean paired loss at a cache size it runs at.
 /// db/records/decisions/decode-lookahead-default-with-the-draft-head.md
+///
+/// Planner policy only, with no MLX or environment dependency, so
+/// Tools/context_proxy.py compiles it beside the other pure planner sources.
+/// The environment parsing and the prefetch configuration it selects are in
+/// DecodeLookahead+Configuration.swift.
 public enum DecodeLookahead {
     /// FP32 copies of the 49 router projections (48 layers and the draft head),
     /// 512 x 2560 values each, kept beside the BF16 originals.
     public static let routerCacheBytes = 49 * 512 * 2560 * MemoryLayout<Float32>.size
     /// The prefetch scheduler's staging reserve; its 32 in-flight records fit inside.
-    public static let stagingReserveBytes = ExpertPrefetchConfiguration.defaultReserveBytes
+    public static let stagingReserveBytes = 128 << 20
     /// The whole incremental charge, taken from the expert pool before it is sized.
     public static let reserveBytes = stagingReserveBytes + routerCacheBytes
     /// Layers between GPU barriers in the qualified configuration.
@@ -53,46 +58,4 @@ public enum DecodeLookaheadPlanning: Sendable, Equatable {
     case reserved(bytes: Int)
     /// Re-planning a loaded engine: keep its decision and its charge.
     case retained(enabled: Bool, bytes: Int)
-
-    /// `automatic` unless the environment names a prefetch switch or an explicit
-    /// reserve. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns the default off; `=1`
-    /// selects the experimental configuration its tuning variables describe.
-    public static func environment(_ env: [String: String] = ProcessInfo.processInfo.environment) -> Self {
-        guard ExpertPrefetchConfiguration.explicitlyConfigured(env) else { return .automatic }
-        let bytes = ExpertPrefetchConfiguration.plannedReserveBytes(env)
-        return bytes > 0 ? .reserved(bytes: bytes) : .off
-    }
-}
-
-extension ExpertPrefetchConfiguration {
-    /// Exactly the configuration the B1 cohort ran ("combined" in the decode
-    /// serialization attribution configs). A T0 check parses that environment and
-    /// requires equality, so the default cannot drift from what was measured.
-    package static var qualifiedDecode: Self {
-        var c = Self()
-        c.enabled = true
-        c.policy = .router
-        c.strides = [2]
-        c.windowLayers = 2
-        c.topPerLayer = 24
-        c.issueCapPerTarget = 32
-        c.threshold = 0.062
-        c.capRecords = 32
-        c.lanes = 16
-        c.adoption = .slot
-        c.slotCap = 64
-        c.device = .gpu
-        c.memoLayers = 0
-        c.readShape = .piece
-        c.reserveBytes = defaultReserveBytes
-        return c
-    }
-
-    /// True when the environment selects an experimental lookahead instead of
-    /// the qualified default: either prefetch switch, or an explicit reserve
-    /// (the capacity control). Tuning variables alone do not change the default.
-    package static func explicitlyConfigured(_ env: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        env["SLOTSTREAM_OPT_EXPERT_PREFETCH"] != nil || env["SLOTSTREAM_OPT_EXPERT_PREFETCH_SHADOW"] != nil
-            || env["SLOTSTREAM_EXPERT_LOOKAHEAD_RESERVE_MIB"] != nil
-    }
 }

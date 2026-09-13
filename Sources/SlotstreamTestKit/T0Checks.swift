@@ -36,6 +36,7 @@ extension Catalogue {
             // T1: touches MLX, so it needs the Metal library beside the runner.
             Check("sampler-behaviour", tier: .t1) { try Diagnostics.samplerBehaviour() },
             Check("expert-lookahead-adoption", tier: .t1) { try Diagnostics.expertLookaheadAdoption() },
+            Check("expert-lookahead-routing-readback", tier: .t1) { try Diagnostics.expertLookaheadRoutingReadback() },
             Check("compact-indexer", tier: .t1) { Diagnostics.optimizationCompactIndexer() },
             Check("slot-slices", tier: .t1) { Diagnostics.optimizationSlotSlices() },
             Check("slot-words", tier: .t1) { Diagnostics.optimizationSlotSlices(wordWrites: true) },

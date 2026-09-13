@@ -579,7 +579,7 @@ package struct ExpertPrefetchConfiguration: Equatable {
     /// Incremental runtime reservation charged before expert capacity is solved.
     package var reserveBytes = 0
 
-    package static let defaultReserveBytes = 128 << 20
+    package static let defaultReserveBytes = DecodeLookahead.stagingReserveBytes
     package static let maximumCapRecords = 32
 
     package init() {}
