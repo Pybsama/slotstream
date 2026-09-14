@@ -6,7 +6,7 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## Unreleased
+## 0.2.18 - 2026-09-14
 
 - Keep long conversations on disk with `serve --prefix-cache-dir <dir>`. A
   restarted server, or a conversation longer than the in-memory prefix cache
