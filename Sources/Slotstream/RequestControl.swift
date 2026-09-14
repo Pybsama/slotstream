@@ -171,6 +171,16 @@ public final class RequestController: @unchecked Sendable {
     }
     public var failure: RequestFailure? { lock.withLock { failureValue } }
     public var mayRetainState: Bool { failure == nil }
+    private var persistsValue = true
+    /// Whether this request's committed state may be written to the persistent
+    /// prefix tier. Set false before generating to keep a conversation off disk,
+    /// for example an incognito thread. The written state covers the whole
+    /// conversation, so turn this off for every request of such a thread.
+    /// Memory retention and restoring states written earlier are unchanged.
+    public var persistsPrefixState: Bool {
+        get { lock.withLock { persistsValue } }
+        set { lock.withLock { persistsValue = newValue } }
+    }
     @discardableResult public func fail(_ error: RequestFailure) -> RequestFailure {
         lock.withLock {
             if failureValue == nil { failureValue = error }

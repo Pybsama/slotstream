@@ -150,8 +150,9 @@ startup, queueing, images and reasoning before visible answer text can add time.
 
 **Starting a reply takes additional time.** Slotstream must first process
 your question and conversation history. Long prompts can take minutes;
-follow-up turns can reuse unchanged history. Terminal shows progress while
-you wait.
+follow-up turns can reuse unchanged history, and `serve --prefix-cache-dir`
+keeps long conversations on disk so that history survives a restart.
+Terminal shows progress while you wait.
 
 The 0.2.14 optimization work improves prompt reuse and reduces runtime memory.
 The [integrated measurements](MEASUREMENTS.md#final-integrated-optimization-results)

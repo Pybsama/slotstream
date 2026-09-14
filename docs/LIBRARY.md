@@ -118,6 +118,45 @@ before starting a long prompt.
 The library exposes the same `Server` used by the CLI. It listens on loopback
 and provides the [Ollama/OpenAI endpoints](API.md) and [AI SDK gateway](FX.md).
 
+## Persistent prefix cache
+
+`Engine.enablePersistentPrefixCache(_:)` adds a disk tier under
+`prefixCache`. A restarted process, or a conversation longer than in-memory
+retention allows, restores the longest persisted state its prompt extends
+instead of processing that prompt again, and continues exactly as the saved
+state would have.
+
+```swift
+let tier = try engine.enablePersistentPrefixCache(
+    PersistentPrefixConfiguration(directory: URL(fileURLWithPath: "/path/to/prefix-states")))
+tier.onEvent = { print("prefix cache disk:", $0) }
+```
+
+A state is written after its reply completes, for text requests of at least
+`minimumTokens`. A later turn of the same conversation writes its recurrent
+state and only the tokens added since, keeps the previous turn's state for
+regenerating or editing the last reply, and removes older ones. `maxBytes`
+bounds the directory: when it is full, states nobody continued go first, then
+kept previous turns, then conversations, least recently used first. `maxAge`
+(30 days by default, `nil` to keep states until the quota needs room) removes
+unused states. Opening the directory removes files from other binaries, models
+or settings, expired and damaged files, and anything over the quota;
+`tier.maintenance` reports what it removed.
+
+The directory is created owner-only and holds conversation token ids and model
+state. To keep a conversation off disk, set `persistsPrefixState = false` on the
+controller of each of its requests and pass it to `generate`:
+
+```swift
+let request = try engine.beginRequest()
+request.persistsPrefixState = false
+```
+
+`tier.removeStates(overlapping: ids)` removes the states of a conversation being
+deleted, given its latest prompt ids, and `tier.clear()` removes everything.
+Each request's `GenStats.persistentPrefix` reports what it restored, wrote and
+reused, and `prefixCache.json()["persistent"]` holds the tier's totals.
+
 ## Diagnostics
 
 `SlotstreamDiagnostics` returns structured `CheckReport` values that an app

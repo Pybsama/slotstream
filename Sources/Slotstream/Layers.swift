@@ -334,6 +334,31 @@ package final class IndexerCache {
     package func diagnosticValues() -> MLXArray? {
         buf.map { $0[0..., 0 ..< (offset - rawBase), 0...] }
     }
+
+    /// The complete committed representation, for PersistentPrefixCache.
+    /// Buffers keep their allocated capacity; rows past the live ranges
+    /// (`offset - rawBase` raw rows, `pooledCount` pooled rows) are dead.
+    package struct PersistedStorage {
+        package var raw: MLXArray?
+        package var pooled: MLXArray?
+        package var offset: Int
+        package var rawBase: Int
+        package var pooledCount: Int
+        package var pooledRatio: Int
+    }
+
+    package func persistedStorage() -> PersistedStorage {
+        PersistedStorage(raw: buf, pooled: pooledBuf, offset: offset, rawBase: rawBase,
+                         pooledCount: pooledCount, pooledRatio: pooledRatio)
+    }
+
+    /// Adopt a restored representation whose ranges the caller validated.
+    package func restorePersisted(_ storage: PersistedStorage) {
+        buf = storage.raw; pooledBuf = storage.pooled
+        offset = storage.offset; rawBase = storage.rawBase
+        pooledCount = storage.pooledCount; pooledRatio = storage.pooledRatio
+        preserveRaw = false
+    }
 }
 
 final class LinearCache {

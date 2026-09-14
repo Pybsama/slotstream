@@ -250,6 +250,9 @@ public struct GenStats: Codable {
     /// Pressure-to-observed-safe-boundary latency, not GPU preemption time.
     public var memoryPressureCancelled = false
     public var memoryPressureBoundarySeconds: Double?
+    /// Persistent prefix tier activity for this request; nil when no tier is
+    /// attached or it had nothing to do.
+    public var persistentPrefix: PersistentPrefixObservation?
 
     public var prefillTPS: Double { prefillSeconds > 0 ? Double(prefillTokens) / prefillSeconds : 0 }
     public var prefixHit: Bool { reusedPrefixTokens > 0 }
@@ -585,12 +588,23 @@ public final class Generator {
         let completeKey = model.optimizations.completePromptCheckpoint
             ? PromptCheckpointKey(model: model.promptCheckpointIdentity, optimizations: model.optimizations,
                 prefillChunk: prefillChunk, mtp: speculationEnabled && model.mtpHead != nil) : nil
-        let hit = cache?.takeForGeneration(
-            matching: promptIds, images: images,
-            reserveTokens: promptIds.count + params.maxTokens,
-            reserveSequenceBytes: model.sequenceCapacityBytes(tokens: promptIds.count + params.maxTokens,
-                mtp: speculationEnabled && model.mtpHead != nil), completePromptKey: completeKey,
-            modelIdentity: model.promptCheckpointIdentity)
+        let reserveSequenceBytes = model.sequenceCapacityBytes(tokens: promptIds.count + params.maxTokens,
+            mtp: speculationEnabled && model.mtpHead != nil)
+        // The persistent tier answers first only when it holds a longer state
+        // than memory does, and makes room exactly like a miss before reading.
+        let restored = restorePersistentPrefix(cache: cache, promptIds: promptIds, images: images,
+            completePromptKey: completeKey, reserveTokens: promptIds.count + params.maxTokens,
+            reserveSequenceBytes: reserveSequenceBytes, request: request, stats: &stats)
+        let hit: (state: Qwen4ExpModel.State, reused: Int, logits: MLXArray?)?
+        if let restored {
+            hit = (restored.state, restored.tokens, nil)
+        } else {
+            hit = cache?.takeForGeneration(
+                matching: promptIds, images: images,
+                reserveTokens: promptIds.count + params.maxTokens,
+                reserveSequenceBytes: reserveSequenceBytes, completePromptKey: completeKey,
+                modelIdentity: model.promptCheckpointIdentity)
+        }
         let state = hit?.state ?? model.makeState()
         let reused = hit?.reused ?? 0
         let stateKnowsMTP = hit == nil || state.hasValidMTP
@@ -758,6 +772,8 @@ public final class Generator {
                             hash: image.hash, preparationIdentity: image.preparationIdentity)
                     }
                     cache?.store(state: state, tokens: Array(promptIds.prefix(i)), images: committedImages)
+                    persistPrefix(cache: cache, state: state, tokens: Array(promptIds.prefix(i)),
+                        images: committedImages, request: request, stats: &stats)
                 }
                 stats.terminalQueryRowsSkipped = model.terminalQueryRowsSkipped - terminalQueryStart
             stats.terminalMoERowsSkipped = model.terminalMoERowsSkipped - terminalMoEStart
@@ -1088,7 +1104,10 @@ public final class Generator {
             discardFailedState(error)
             reason = "error"
         }
-        if stats.runtimeError == nil, request?.mayRetainState != false { cache?.store(state: state, tokens: consumed, images: images) }
+        if stats.runtimeError == nil, request?.mayRetainState != false {
+            cache?.store(state: state, tokens: consumed, images: images)
+            persistPrefix(cache: cache, state: state, tokens: consumed, images: images, request: request, stats: &stats)
+        }
         stats.finishReason = reason
         stats.decodeTokens = out.count
         stats.decodeSeconds = RuntimeClock.seconds(since: t0)

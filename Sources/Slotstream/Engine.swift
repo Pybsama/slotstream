@@ -193,6 +193,22 @@ public final class Engine {
         withExclusive { prefixCache.drop() }
     }
 
+    /// Keep long conversation states on disk as well (PersistentPrefixCache),
+    /// so a restart, or a conversation longer than memory retains, resumes
+    /// from its last committed state instead of re-reading its prompt.
+    /// Replaces any attached tier. Takes the generation lock, so never call it
+    /// from inside `generate`.
+    @discardableResult
+    public func enablePersistentPrefixCache(_ configuration: PersistentPrefixConfiguration) throws -> PersistentPrefixCache {
+        try withExclusive {
+            prefixCache.attachPersistent(nil)
+            let identity = try PersistentPrefixIdentity.make(model: model, modelDirectory: modelDir)
+            let tier = try PersistentPrefixCache(configuration: configuration, identity: identity)
+            prefixCache.attachPersistent(tier)
+            return tier
+        }
+    }
+
     /// nil when `promptTokens` fits, otherwise the message to return to the client.
     ///
     /// The message names the cap for what it is. It used to tell people to

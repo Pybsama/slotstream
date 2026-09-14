@@ -218,12 +218,14 @@ network code is no longer represented only by weights-free catalogue coverage.
 
 | Suite | What it covers | Weights | Where |
 |---|---|---|---|
-| `slotstream-checks` (T0/T1) | prefill schedule, context policy, runtime and cache bounds, governor policy, pull integrity, machine planning, HTTP framing and routing, vision geometry, request shaping and the embedding splice, sampler behaviour | no | CI + local |
+| `slotstream-checks` (T0/T1) | prefill schedule, context policy, runtime and cache bounds, governor policy, pull integrity, machine planning, HTTP framing and routing, vision geometry, request shaping and the embedding splice, sampler behaviour, persistent prefix policy, state files, rows shared across turns, eviction and directory maintenance | no | CI + local |
 | `Tools/static_gates.sh` | shell and python syntax, doc parity, fixture digests, manifest digests, planner gates, installer gates | no | CI |
 | `Tools/sampler_gates.sh` | the sampler against a numpy reference, and the governor's branches | no | CI |
 | `Tools/consumer_smoke.sh` | a package outside the repository can import and use the library | no | CI |
 | `Tools/verify.sh` | the acceptance battery: provenance, goldens, byte-equality across cache sizes and live resizes, MTP, the memory promise, long context | **yes** | dev Mac |
 | `Tools/api_robustness.sh` | Serving regressions against a live server | **yes** | dev Mac |
+| `optimization-state-check --variant persistent-prefix[-mtp]` | a persisted state restores with the saved representation; a disk hit continues exactly like a memory hit; that continuation, written as reused plus new rows, restores exactly; a regenerated reply resumes the kept parent; a request that keeps its state off disk writes nothing; draft cache included | **yes** | dev Mac |
+| `Tools/persistent_prefix_e2e.py` | the disk prefix cache through `serve` over three turns: later turns write only their new rows; a restarted server must restore the turn-2 state from its segments and match the first server's turn-3 prompt and output ids exactly; another restarted server regenerating turn 3 must restore the kept parent and match again; `prefix-cache` lists and clears copies; a cold server shows the prompt cost it saves | **yes** | dev Mac |
 | `Tools/vision_ref.py` | the vision tower against an independent float32 implementation of the reference | tower only (0.9 GB) | dev Mac |
 | `Tools/vision_serving.py` | every dialect with a real picture, against a live server | **yes** | dev Mac |
 | `Tools/e2e_release.sh` | the installed release, end to end | **yes** | dev Mac, per release |

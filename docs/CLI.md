@@ -68,8 +68,27 @@ and OpenAI endpoints and the [fx guide](FX.md) for the AI SDK gateway.
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including queueing, tokenization and images. Default 30 minutes; `0` disables only time. |
 | `--no-elastic` | Pin the cache at its startup size. By default an auto-sized cache resizes between requests as memory pressure changes; explicit sizes are always pinned. |
 | `--no-prefix-cache` | Process each prompt from scratch. Useful for reproducibility comparisons. |
+| `--prefix-cache-dir <dir>` | Also keep conversation states on disk, so a restarted server, or a conversation longer than the in-memory cache holds, resumes from its last committed state instead of processing its prompt again. Off unless set. A state is written after its reply completes. The first write stores the fixed recurrent state and every cached token; each later turn writes the recurrent state plus only the tokens it added, keeps the previous turn's state so that reply can still be regenerated after a restart, and removes older states of the conversation. Files hold the conversation's token ids and model state and are used only by the same binary, model files and settings that wrote them; starting the server removes files from other builds. Requests with images are not written. `slotstream prefix-cache` lists or clears the directory. |
+| `--prefix-cache-disk-gb <gb>` | Disk quota for `--prefix-cache-dir` (default 20), applied at startup and before each write. When it is full, states nobody continued go first, then previous-turn states kept for regenerating, then conversations, least recently used first within each. |
+| `--prefix-cache-min-tokens <n>` | Shortest conversation written to `--prefix-cache-dir` (default 2048 tokens). |
+| `--prefix-cache-max-age-days <days>` | Remove states in `--prefix-cache-dir` unused for this many days (default 30), at startup and before writes. `0` keeps them until the quota needs room. |
 
 Plus the memory options.
+
+### `slotstream prefix-cache`
+
+Show what a `serve --prefix-cache-dir` directory holds, or clear it. Nothing is
+loaded, so this works while no server runs; listing also works while one does.
+
+| Flag | Meaning |
+|---|---|
+| `--dir <path>` | The directory given to `--prefix-cache-dir`. |
+| `--clear` | Remove every state file. Refused while a server or app holds the directory. |
+| `--json` | Print JSON instead of text. |
+
+Each state is listed with the build that wrote it, its token count, the size of
+its own file and when it was last used. Cached tokens that several states share
+are stored once and reported as one total.
 
 ### `slotstream pull [model]`
 

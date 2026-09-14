@@ -562,6 +562,21 @@ present an editorial range as a calibrated confidence interval or speed bound.
 [[records/measurements/hardware-planning-ranges-2026-09-13]] records the memory
 range example and its revision conditions.
 
+## Persistent prefix cache defaults
+`serve --prefix-cache-dir` is off unless a directory is named, so none of these values changes a default server. They are provisional engineering choices for an opt-in tier, not measured optima.
+
+| Value | Kind | Purpose and tradeoff | Override and revision |
+|---|---|---|---|
+| 20 GB quota (`PersistentPrefixConfiguration.defaultMaxBytes`) | Operating default | Bounds every head and row segment in the directory, applied when the directory opens and before each write. When it is full, states nobody continued go first, then previous-turn states kept for regenerating, then continued conversations, least recently used first within each; files from other builds do not survive opening. A conversation costs one recurrent-state head per kept turn plus its rows once, so a larger quota keeps more long conversations at more disk. | `--prefix-cache-disk-gb`. Revise from measured restart hit rates and real conversation sizes. |
+| 2,048-token minimum (`defaultMinimumTokens`) | Operating default | Every write stores the fixed recurrent state; a conversation's first write also stores every cached row, and later turns add only their new rows. Shorter conversations save less prefill for the same fixed write, and each write adds disk wear. | `--prefix-cache-min-tokens`. Revise from measured save cost against prefill time across hardware. |
+| 30-day maximum age (`defaultMaxAgeDays`) | Operating default | Conversation contents should not stay on disk indefinitely just because the quota has room. A state neither written nor restored for this long is removed when the directory opens and before writes; a longer age keeps older conversations resumable. | `--prefix-cache-max-age-days`; `0` disables. Revise from how long real users return to conversations. |
+| Previous turn kept, older turns removed | Operating default | The kept state restores a regenerated or edited last reply after a restart without re-reading the conversation, for one more recurrent-state head; earlier turns are rarely resumed. | None. Revise if measured use shows edits further back. |
+| 32 segments per head (`PersistentPrefixCache.maximumSegments`) | Operating default | Bounds the files one restore reads and how long replaced rows stay referenced; past it a write stores every row again. | None. Revise from measured restore cost and disk use on long conversations. |
+| 2 GB free-volume margin (`PersistentPrefixCache.minimumFreeBytes`) | Safety bound | A save is skipped rather than filling the volume. | None. Not a performance value. |
+| Identity: executable image digest, config digest, first and last 4 MiB of every weight file, cache geometry, optimization settings | Correctness bound | A state is restored only by the computation that wrote it; sampled weight content survives a copied model but rejects a different checkpoint with the same file sizes. | None. A cheaper identity needs evidence that it still rejects every changed computation. |
+| CRC-32 per payload and header, rename without fsync | Correctness bound | A torn or corrupted head or segment fails its checksum and is removed with every state that uses it; it is never restored. Durability after a crash is best effort. | None. |
+| Rows reused only through lineage (`State.persistedLineage`) | Correctness bound | A write references earlier rows only when its state descends from that persisted head without a rewind below it. Equal token ids never qualify: a re-prefill of the same ids produces other bits. | None. |
+
 ## 5. The configuration space (the tradeoffs to test)
 
 Axes — every named preset is a point in this space:

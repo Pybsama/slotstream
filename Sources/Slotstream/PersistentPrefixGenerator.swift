@@ -1,0 +1,172 @@
+// Generator glue for the persistent prefix tier, and the weights-free state
+// fixture its round-trip check builds through the real cache update paths.
+
+import Foundation
+import MLX
+
+/// What the disk tier did for one request. Nil in GenStats when no tier is
+/// attached, so statistics saved before this field existed still decode.
+public struct PersistentPrefixObservation: Codable, Equatable, Sendable {
+    public var restoredTokens = 0
+    public var restoreSeconds = 0.0
+    public var restoreBytes: Int64 = 0
+    public var restoreFailure: String?
+    public var saveOutcome: String?
+    public var savedTokens = 0
+    public var saveSeconds = 0.0
+    /// Bytes written: heads plus new segments.
+    public var saveBytes: Int64 = 0
+    /// Row bytes the written heads reference in segments already on disk.
+    public var reusedBytes: Int64?
+    public var removedFiles = 0
+    public init() {}
+}
+
+extension Generator {
+    /// The attached tier, when this request may use it: text only, and run
+    /// under the exact settings the tier's identity captured.
+    private func persistentTier(_ cache: PrefixCache?, images: [ImageSegment]) -> PersistentPrefixCache? {
+        guard let cache, cache.enabled, images.isEmpty, let tier = cache.persistent,
+              tier.identity.optimizations == nil || tier.identity.optimizations == model.optimizations
+        else { return nil }
+        return tier
+    }
+
+    /// Restore the longest persisted state this prompt extends when memory
+    /// retains nothing as long. Room is made first, exactly as for a miss, and
+    /// the whole read is priced against reclaimable memory. Any failure falls
+    /// back to the ordinary in-memory take.
+    func restorePersistentPrefix(cache: PrefixCache?, promptIds: [Int], images: [ImageSegment],
+                                 completePromptKey: PromptCheckpointKey?, reserveTokens: Int,
+                                 reserveSequenceBytes: Int, request: RequestController?,
+                                 stats: inout GenStats) -> PersistentPrefixCache.RestoreResult? {
+        guard let cache, let tier = persistentTier(cache, images: images) else { return nil }
+        let draft = speculationEnabled && model.mtpHead != nil
+        let retained = cache.retainedMatchLength(matching: promptIds, images: images,
+            completePromptKey: completePromptKey, modelIdentity: model.promptCheckpointIdentity)
+        guard let entry = tier.candidate(extending: promptIds, longerThan: retained, requireDraft: draft)
+        else { return nil }
+        var observation = stats.persistentPrefix ?? PersistentPrefixObservation()
+        defer { stats.persistentPrefix = observation }
+        cache.reserveForRestore(promptTokens: promptIds.count, reserveTokens: reserveTokens,
+            reserveSequenceBytes: reserveSequenceBytes, restoredSequenceBytes: entry.sequenceBytes)
+        do {
+            if let request, try request.chooseAllocation(preferredBytes: entry.residentBytes, fallbackBytes: 0,
+                    phase: "persistent prefix restore") == false {
+                observation.restoreFailure = "insufficient memory for a \(entry.residentBytes)-byte state"
+                return nil
+            }
+            let result = try tier.restore(entry, layout: PersistentPrefixLayout(model: model),
+                modelIdentity: model.promptCheckpointIdentity, includeDraft: draft)
+            cache.recordRestore()
+            observation.restoredTokens = result.tokens
+            observation.restoreSeconds = result.seconds
+            observation.restoreBytes = result.bytes
+            return result
+        } catch {
+            observation.restoreFailure = "\(error)"
+            return nil
+        }
+    }
+
+    /// Write the committed state of a text request long enough to be worth
+    /// it, unless its controller keeps the conversation off disk.
+    func persistPrefix(cache: PrefixCache?, state: Qwen4ExpModel.State, tokens: [Int], images: [ImageSegment],
+                       request: RequestController?, stats: inout GenStats) {
+        guard let tier = persistentTier(cache, images: images),
+              tokens.count >= tier.configuration.minimumTokens else { return }
+        var observation = stats.persistentPrefix ?? PersistentPrefixObservation()
+        defer { stats.persistentPrefix = observation }
+        guard request?.persistsPrefixState != false else {
+            observation.saveOutcome = PersistentPrefixCache.SaveOutcome
+                .skipped("this request does not persist its state").description
+            return
+        }
+        let result = tier.save(state: state, tokens: tokens)
+        observation.saveOutcome = result.outcome.description
+        observation.savedTokens = result.outcome == .saved ? result.tokens : 0
+        observation.saveSeconds += result.seconds
+        observation.saveBytes += result.bytes
+        observation.reusedBytes = (observation.reusedBytes ?? 0) + result.reusedBytes
+        observation.removedFiles += result.removedFiles
+    }
+}
+
+extension Qwen4ExpModel.State {
+    /// A weights-free state for `persistent-prefix-round-trip`: two attention
+    /// layers with compacting indexers, three recurrent layers (one sliced
+    /// window, one PLE window) and an aligned draft cache, grown through the
+    /// real update paths in 256-token passes. Values are small integers.
+    package static func persistenceFixture(tokens: Int, compactRaw: Bool = true,
+                                           draft: Bool = true) -> Qwen4ExpModel.State {
+        let state = Qwen4ExpModel.State()
+        state.modelIdentity = UUID()
+        state.compactStateWindows = true
+        for layer in [0, 1, 2] {
+            let cache = LinearCache()
+            cache.ngramCtx = [Int64(layer), 7]
+            state.linear[layer] = cache
+        }
+        for layer in [3, 7] {
+            state.kv[layer] = KVCache()
+            state.indexer[layer] = IndexerCache(compactRaw: compactRaw)
+        }
+        if draft { state.mtp = MTPState() }
+        state.extendPersistenceFixture(to: tokens)
+        return state
+    }
+
+    /// Grow the fixture. `seed` changes every new row, so two branches grown
+    /// from one state to the same length hold different values.
+    package func extendPersistenceFixture(to tokens: Int, seed: Int = 0) {
+        func rows(_ shape: [Int], _ value: Int) -> MLXArray {
+            let count = shape.reduce(1, *)
+            let offset = value + seed * 7
+            return MLXArray((0 ..< count).map { Float(($0 * 31 + offset * 17) % 251) - 125 }).reshaped(shape)
+        }
+        func appendIndexer(_ cache: IndexerCache, _ values: MLXArray) {
+            let raw = cache.update(values), base = cache.rawBase
+            let blocks = cache.offset / 4
+            if blocks > 0 {
+                let pooled = cache.completedBlocks(count: blocks, ratio: 4) { lo, hi in
+                    raw[0..., (lo * 4 - base) ..< (hi * 4 - base), 0...].reshaped([1, hi - lo, 4, 16])
+                        .asType(.float32).mean(axis: 2).asType(.bfloat16)
+                }
+                eval(pooled)
+            }
+            cache.materializeStorage()
+        }
+        while tokenCount < tokens {
+            let start = tokenCount, count = min(256, tokens - start)
+            for layer in kv.keys.sorted() {
+                let cache = kv[layer]!
+                _ = cache.updateAndFetch(rows([1, 2, count, 8], layer * 100 + start).asType(.bfloat16),
+                                         rows([1, 2, count, 8], layer * 101 + start).asType(.bfloat16))
+                eval(cache.keys!, cache.values!)
+                appendIndexer(indexer[layer]!, rows([1, count, 16], layer * 103 + start).asType(.bfloat16))
+            }
+            for layer in linear.keys.sorted() {
+                let cache = linear[layer]!
+                // A window sliced out of a larger activation, as prefill leaves it.
+                cache.convState = rows([1, 5, 24], layer * 107 + start).asType(.bfloat16)[0..., 1 ..< 4, 0...]
+                cache.ssmState = rows([1, 4, 8, 8], layer * 109 + start)
+                if layer == 1 { cache.pleConvState = rows([1, 3, 12], layer * 113 + start).asType(.bfloat16) }
+                eval([cache.convState, cache.ssmState, cache.pleConvState].compactMap { $0 })
+            }
+            if let mtp {
+                // The draft cache holds one entry per consumed token except the first.
+                let draftRows = start == 0 ? count - 1 : count
+                if draftRows > 0 {
+                    _ = mtp.kv.updateAndFetch(rows([1, 2, draftRows, 8], 997 + start).asType(.bfloat16),
+                                              rows([1, 2, draftRows, 8], 991 + start).asType(.bfloat16))
+                    appendIndexer(mtp.indexer, rows([1, draftRows, 16], 983 + start).asType(.bfloat16))
+                    mtp.materialize()
+                }
+                lastMulti = rows([1, 1, 32], 977 + start).asType(.bfloat16)
+                eval(lastMulti!)
+            }
+            ngramCtx = [Int64(start), Int64(start + count)]
+            tokenCount = start + count
+        }
+    }
+}

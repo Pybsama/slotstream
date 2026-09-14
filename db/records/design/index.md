@@ -2,13 +2,13 @@
 type: index
 scope: type-folder
 folder: records/design
-updated: 2026-09-13T16:46:13.392450Z
+updated: 2026-09-14T13:38:59.335425Z
 ---
 
 # records/design
 
-- [[records/design/sevra-maintained-model-integration]] — Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.
 - [[records/design/measured-operating-policies]] — Measured operating policies and revision criteria
+- [[records/design/sevra-maintained-model-integration]] — Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.
 - [[records/design/m9-addendum-built-and-measured-2026-09-01]] — M9 addendum — built and measured (2026-09-01)
 - [[records/design/vision-how-a-picture-becomes-tokens]] — The vision path: one placeholder becomes a run, Rust-free splicing by contiguous spans, inline bytes only, and a conditional memory charge.
 - [[records/design/13-references]] — 13. References

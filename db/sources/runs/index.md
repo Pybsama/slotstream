@@ -2,11 +2,17 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-13T19:54:32.747134Z
+updated: 2026-09-14T16:43:46.205561Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-long-conversation-e2e]] — 15,514-token serve e2e at 10 GB: turns beyond memory retention restored from disk in under 0.1 s and wrote 117.7 MB reusing about 431 MB of rows; restart and regenerate matched ids.
+- [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-e2e]] — Three-turn serve e2e at 10 GB: later turns wrote 117 MB each reusing about 108 MB of rows; a restart and a regenerated turn 3 restored from disk with identical ids; 12 of 12 checks.
+- [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-exactness]] — Persistent prefix exactness with rows shared across turns at 2051 tokens, with and without the draft head: restores, continuations, branches and opt-out all exact.
+- [[sources/runs/2026/09/2026-09-14-persistent-prefix-restart-e2e]] — Persistent prefix cache through serve at 10 GB: a restarted server restored a 3,896-token state and matched the first server's turn-2 ids; a cold server re-read the prompt.
+- [[sources/runs/2026/09/2026-09-14-persistent-prefix-long-conversation-e2e]] — Persistent prefix cache through serve at 10 GB, 15,671-token first turn beyond memory retention: disk resume in the same server and after restart with identical turn-2 ids.
+- [[sources/runs/2026/09/2026-09-14-persistent-prefix-exactness]] — Persistent prefix exactness at 2051 tokens with and without the draft head: restored state equals the saved one and a disk hit continues exactly like a memory hit.
 - [[sources/runs/2026/09/2026-09-13-release-0-2-17-published-and-installed]] — v0.2.17 CI-artifact acceptance 25/25 after an environment-only first run, publication with verified attestation, installation and installed-release acceptance 31/31.
 - [[sources/runs/2026/09/2026-09-13-context-draft-head-131072]] — Draft head on at 131,072 tokens: complete prompt and 128-token reply inside an 18 GB plan, 16.44 GB sampled peak against 17.00 planned, reply identical to the draft-off run
 - [[sources/runs/2026/09/2026-09-13-context-capacity-131072-cold]] — 131,072-token window completed inside its 16 GB plan: 14.80 GB sampled peak against 15.00 planned, 38.1-minute read; the frozen driver flagged 200 global swap-ins
@@ -501,14 +507,8 @@ updated: 2026-09-13T19:54:32.747134Z
 - [[sources/runs/2026/09/2026-09-05-optimization-default-acceptance]] — Default-path acceptance V68 and targeted delivery corrections V69
 - [[sources/runs/2026/09/2026-09-05-optimization-compact-indexer-history]] — Compact main indexer history, long restore, MTP and failed resource qualification V64–V67
 - [[sources/runs/2026/09/2026-09-05-optimization-responsive-governor]] — Responsive governor cancellation, resize and serving overhead V61–V63
-- [[sources/runs/2026/09/2026-09-05-optimization-native-floor-cache]] — Native floor cache correctness and serving qualification V59–V60
-- [[sources/runs/2026/09/2026-09-05-optimization-cache-policy-screen]] — Causal cache-policy replay and fresh floor-only confirmation
-- [[sources/runs/2026/09/2026-09-05-optimization-runtime-budget]] — Runtime reservation reallocation and safe vision loading qualification
-- [[sources/runs/2026/09/2026-09-05-optimization-fixed-mtp-serving]] — Fixed-schedule MTP first-entry and GDN recording serving qualification
-- [[sources/runs/2026/09/2026-09-05-optimization-adaptive-speculation-counterexample]] — Adaptive speculation lifecycle and timing-sensitivity counterexample
-- [[sources/runs/2026/09/2026-09-05-optimization-sampler-device-draw]] — Zero-draw sampler correctness and GPU draw qualification
 
 ## More
 
-This folder has 553 files. The 500 most recent are listed above.
+This folder has 559 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

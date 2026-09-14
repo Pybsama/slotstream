@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-14T13:50:37.752340Z
+updated: 2026-09-14T16:29:42.880372Z
 ---
 
 # records/claims
 
+- [[records/claims/persistent-prefix-default-max-age]] — The opt-in persistent prefix cache removes states unused for 30 days by default
+- [[records/claims/persistent-prefix-default-minimum-tokens]] — The opt-in persistent prefix cache writes states of 2048 tokens or more by default
+- [[records/claims/persistent-prefix-default-disk-quota]] — The opt-in persistent prefix cache disk quota defaults to 20 GB
 - [[records/claims/expert-lookahead-guide-b1-benchmark-scope]] — The final expert lookahead benchmark scope is one M5 Pro and twelve held-out prompts
 - [[records/claims/expert-lookahead-default-four-layer-drain]] — The qualified decode lookahead normally drains GPU work every four layers
 - [[records/claims/expert-lookahead-default-two-layer-forecast]] — The qualified expert lookahead forecasts two layers ahead

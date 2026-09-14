@@ -57,6 +57,9 @@ extension Qwen4ExpModel.State {
     }
 
     func invalidateCheckpoints(after tokens: Int, mtpOffset: Int?) {
+        // Every rewind passes through here; rows it may rewrite no longer
+        // equal the persisted head this state descends from.
+        dropPersistedLineage(below: tokens, draftRows: mtpOffset)
         checkpointLifetimes.removeAll { entry in
             guard let value = entry.value else { return true }
             if value.tokens > tokens || (mtpOffset.map { value.mtpOffset > $0 } ?? false) {

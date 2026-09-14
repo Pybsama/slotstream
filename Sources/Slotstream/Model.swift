@@ -178,6 +178,10 @@ public final class Qwen4ExpModel {
                 + (mtp.map { $0.kv.allocatedBytes + $0.indexer.allocatedBytes } ?? 0)
         }
         var compactStateWindows = false
+        /// The persisted head whose rows this state's committed rows equal,
+        /// set when a persistent prefix tier writes or restores the state.
+        /// A rewind below its boundary clears it (PersistentPrefixCache).
+        package var persistedLineage: PersistentPrefixLineage?
         public init() {}
     }
 

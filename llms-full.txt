@@ -158,8 +158,9 @@ startup, queueing, images and reasoning before visible answer text can add time.
 
 **Starting a reply takes additional time.** Slotstream must first process
 your question and conversation history. Long prompts can take minutes;
-follow-up turns can reuse unchanged history. Terminal shows progress while
-you wait.
+follow-up turns can reuse unchanged history, and `serve --prefix-cache-dir`
+keeps long conversations on disk so that history survives a restart.
+Terminal shows progress while you wait.
 
 The 0.2.14 optimization work improves prompt reuse and reduces runtime memory.
 The [integrated measurements](MEASUREMENTS.md#final-integrated-optimization-results)
@@ -1197,8 +1198,27 @@ and OpenAI endpoints and the [fx guide](FX.md) for the AI SDK gateway.
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including queueing, tokenization and images. Default 30 minutes; `0` disables only time. |
 | `--no-elastic` | Pin the cache at its startup size. By default an auto-sized cache resizes between requests as memory pressure changes; explicit sizes are always pinned. |
 | `--no-prefix-cache` | Process each prompt from scratch. Useful for reproducibility comparisons. |
+| `--prefix-cache-dir <dir>` | Also keep conversation states on disk, so a restarted server, or a conversation longer than the in-memory cache holds, resumes from its last committed state instead of processing its prompt again. Off unless set. A state is written after its reply completes. The first write stores the fixed recurrent state and every cached token; each later turn writes the recurrent state plus only the tokens it added, keeps the previous turn's state so that reply can still be regenerated after a restart, and removes older states of the conversation. Files hold the conversation's token ids and model state and are used only by the same binary, model files and settings that wrote them; starting the server removes files from other builds. Requests with images are not written. `slotstream prefix-cache` lists or clears the directory. |
+| `--prefix-cache-disk-gb <gb>` | Disk quota for `--prefix-cache-dir` (default 20), applied at startup and before each write. When it is full, states nobody continued go first, then previous-turn states kept for regenerating, then conversations, least recently used first within each. |
+| `--prefix-cache-min-tokens <n>` | Shortest conversation written to `--prefix-cache-dir` (default 2048 tokens). |
+| `--prefix-cache-max-age-days <days>` | Remove states in `--prefix-cache-dir` unused for this many days (default 30), at startup and before writes. `0` keeps them until the quota needs room. |
 
 Plus the memory options.
+
+### `slotstream prefix-cache`
+
+Show what a `serve --prefix-cache-dir` directory holds, or clear it. Nothing is
+loaded, so this works while no server runs; listing also works while one does.
+
+| Flag | Meaning |
+|---|---|
+| `--dir <path>` | The directory given to `--prefix-cache-dir`. |
+| `--clear` | Remove every state file. Refused while a server or app holds the directory. |
+| `--json` | Print JSON instead of text. |
+
+Each state is listed with the build that wrote it, its token count, the size of
+its own file and when it was last used. Cached tokens that several states share
+are stored once and reported as one total.
 
 ### `slotstream pull [model]`
 
@@ -1899,6 +1919,45 @@ before starting a long prompt.
 The library exposes the same `Server` used by the CLI. It listens on loopback
 and provides the [Ollama/OpenAI endpoints](API.md) and [AI SDK gateway](FX.md).
 
+## Persistent prefix cache
+
+`Engine.enablePersistentPrefixCache(_:)` adds a disk tier under
+`prefixCache`. A restarted process, or a conversation longer than in-memory
+retention allows, restores the longest persisted state its prompt extends
+instead of processing that prompt again, and continues exactly as the saved
+state would have.
+
+```swift
+let tier = try engine.enablePersistentPrefixCache(
+    PersistentPrefixConfiguration(directory: URL(fileURLWithPath: "/path/to/prefix-states")))
+tier.onEvent = { print("prefix cache disk:", $0) }
+```
+
+A state is written after its reply completes, for text requests of at least
+`minimumTokens`. A later turn of the same conversation writes its recurrent
+state and only the tokens added since, keeps the previous turn's state for
+regenerating or editing the last reply, and removes older ones. `maxBytes`
+bounds the directory: when it is full, states nobody continued go first, then
+kept previous turns, then conversations, least recently used first. `maxAge`
+(30 days by default, `nil` to keep states until the quota needs room) removes
+unused states. Opening the directory removes files from other binaries, models
+or settings, expired and damaged files, and anything over the quota;
+`tier.maintenance` reports what it removed.
+
+The directory is created owner-only and holds conversation token ids and model
+state. To keep a conversation off disk, set `persistsPrefixState = false` on the
+controller of each of its requests and pass it to `generate`:
+
+```swift
+let request = try engine.beginRequest()
+request.persistsPrefixState = false
+```
+
+`tier.removeStates(overlapping: ids)` removes the states of a conversation being
+deleted, given its latest prompt ids, and `tier.clear()` removes everything.
+Each request's `GenStats.persistentPrefix` reports what it restored, wrote and
+reused, and `prefixCache.json()["persistent"]` holds the tier's totals.
+
 ## Diagnostics
 
 `SlotstreamDiagnostics` returns structured `CheckReport` values that an app
@@ -2546,12 +2605,14 @@ network code is no longer represented only by weights-free catalogue coverage.
 
 | Suite | What it covers | Weights | Where |
 |---|---|---|---|
-| `slotstream-checks` (T0/T1) | prefill schedule, context policy, runtime and cache bounds, governor policy, pull integrity, machine planning, HTTP framing and routing, vision geometry, request shaping and the embedding splice, sampler behaviour | no | CI + local |
+| `slotstream-checks` (T0/T1) | prefill schedule, context policy, runtime and cache bounds, governor policy, pull integrity, machine planning, HTTP framing and routing, vision geometry, request shaping and the embedding splice, sampler behaviour, persistent prefix policy, state files, rows shared across turns, eviction and directory maintenance | no | CI + local |
 | `Tools/static_gates.sh` | shell and python syntax, doc parity, fixture digests, manifest digests, planner gates, installer gates | no | CI |
 | `Tools/sampler_gates.sh` | the sampler against a numpy reference, and the governor's branches | no | CI |
 | `Tools/consumer_smoke.sh` | a package outside the repository can import and use the library | no | CI |
 | `Tools/verify.sh` | the acceptance battery: provenance, goldens, byte-equality across cache sizes and live resizes, MTP, the memory promise, long context | **yes** | dev Mac |
 | `Tools/api_robustness.sh` | Serving regressions against a live server | **yes** | dev Mac |
+| `optimization-state-check --variant persistent-prefix[-mtp]` | a persisted state restores with the saved representation; a disk hit continues exactly like a memory hit; that continuation, written as reused plus new rows, restores exactly; a regenerated reply resumes the kept parent; a request that keeps its state off disk writes nothing; draft cache included | **yes** | dev Mac |
+| `Tools/persistent_prefix_e2e.py` | the disk prefix cache through `serve` over three turns: later turns write only their new rows; a restarted server must restore the turn-2 state from its segments and match the first server's turn-3 prompt and output ids exactly; another restarted server regenerating turn 3 must restore the kept parent and match again; `prefix-cache` lists and clears copies; a cold server shows the prompt cost it saves | **yes** | dev Mac |
 | `Tools/vision_ref.py` | the vision tower against an independent float32 implementation of the reference | tower only (0.9 GB) | dev Mac |
 | `Tools/vision_serving.py` | every dialect with a real picture, against a live server | **yes** | dev Mac |
 | `Tools/e2e_release.sh` | the installed release, end to end | **yes** | dev Mac, per release |
@@ -3468,6 +3529,23 @@ release; anything under **Unreleased** is on `main` only.
 Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
+
+## Unreleased
+
+- Keep long conversations on disk with `serve --prefix-cache-dir <dir>`. A
+  restarted server, or a conversation longer than the in-memory prefix cache
+  holds, restores its last committed state instead of processing the whole
+  prompt again, and continues exactly as it would have from memory. Each later
+  turn writes only the tokens it added, and the previous turn's state stays so a
+  reply can be regenerated after a restart. Off by default;
+  `--prefix-cache-disk-gb`, `--prefix-cache-min-tokens` and
+  `--prefix-cache-max-age-days` bound what is kept, and states nobody continued
+  are removed before conversations. Files are checksummed, used only by the
+  binary, model files and settings that wrote them, and hold conversation token
+  ids: `slotstream prefix-cache --dir <dir> --clear` erases them. Library
+  callers use `Engine.enablePersistentPrefixCache(_:)`, keep a request off disk
+  with `RequestController.persistsPrefixState = false`, and remove a deleted
+  conversation's states with `removeStates(overlapping:)`.
 
 ## 0.2.17 - 2026-09-13
 

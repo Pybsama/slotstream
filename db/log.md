@@ -1378,3 +1378,33 @@ Released in 0.2.17; added the release acceptance to the 2026-09-13 addendum.
 ## [2026-09-14 13:51] update | records/claims
 Added the concise docs/EXPERT-LOOKAHEAD.md guide, linked it from engineering and agent documentation, registered four claims and extended four existing claim surfaces, and annotated B0 public use. Documentation generation, projection checks, 213 claim checks, local links and whitespace pass. Store validation has zero errors and the two unchanged historical log warnings.
 
+## [2026-09-14 14:01] update | records/design/measured-operating-policies
+Added the persistent prefix cache defaults section: disk quota, minimum state length, free-space margin, identity and integrity bounds, each with its kind, tradeoff and revision criterion.
+
+## [2026-09-14 14:01] create | records/measurements/persistent-prefix-cache-2026-09-14
+Persistent prefix cache (serve --prefix-cache-dir): exact restore at 2051 tokens (680 and 713 assertions with and without the draft head), restart resume through serve at 10 GB with identical turn-2 ids, and a 15,671-token conversation beyond memory retention resumed from disk. Three runs under sources/runs/2026/09/2026-09-14-persistent-prefix-*.
+
+## [2026-09-14 14:01] create | records/claims
+Two claims for the opt-in persistent prefix defaults on docs/CLI.md, the 20 GB disk quota and the 2048-token minimum, gated by persistent-prefix-policy.
+
+## [2026-09-14 16:36] update | records/design/measured-operating-policies
+Persistent prefix cache defaults now cover rows shared across turns: 30-day maximum age, previous turn kept, 32 segments per head, eviction classes in the quota row, and the lineage correctness bound.
+
+## [2026-09-14 16:36] create | records/claims/persistent-prefix-default-max-age
+Claim for the opt-in 30-day maximum age of --prefix-cache-dir states on docs/CLI.md, gated by persistent-prefix-policy.
+
+## [2026-09-14 16:36] update | records/claims/persistent-prefix-default-minimum-tokens
+Rationale corrected: every write stores the recurrent arrays and only a conversation's first write stores every row.
+
+## [2026-09-14 16:36] create | sources/runs/2026/09/2026-09-14-persistent-prefix-segments-exactness
+Real-weights persistent prefix checks with shared rows at 2051 tokens: 1134 and 1190 assertions passed with and without the draft head, including continued, branched and opt-out requests.
+
+## [2026-09-14 16:38] create | sources/runs/2026/09/2026-09-14-persistent-prefix-segments-e2e
+Persistent prefix e2e with shared rows at 10 GB: turns 2 and 3 wrote 117.7 and 117.0 MB reusing 107.7 and 109.7 MB; restarted and regenerated turn 3 restored the 3,968-token state in 0.04 s with identical ids; 12 of 12 checks.
+
+## [2026-09-14 16:43] create | sources/runs/2026/09/2026-09-14-persistent-prefix-segments-long-conversation-e2e
+Persistent prefix e2e over 15,514 prompt tokens at 10 GB, beyond memory retention: turns 2 and 3 restored from disk in 0.08 and 0.07 s and wrote 117.7 MB each reusing 430.2 and 432.2 MB; restart and regenerate matched ids; 12 of 12 checks.
+
+## [2026-09-14 16:45] update | records/measurements/persistent-prefix-cache-2026-09-14
+Rewritten for rows shared across turns: real-weights exactness (1,134 and 1,190 assertions), a three-turn serve run with restart and regenerate, and a 15,514-token run where later turns wrote 117.7 MB reusing about 431 MB; the earlier whole-state runs are kept as an earlier build.
+

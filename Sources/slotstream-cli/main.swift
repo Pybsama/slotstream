@@ -12,7 +12,7 @@ struct Slotstream: ParsableCommand {
         abstract: "Qwen3.8-Flash-Next on Apple Silicon via SSD-streamed experts + cache slots.",
         version: SlotstreamBuild.version,
         subcommands: [
-            Run.self, Serve.self, Pull.self, Doctor.self, Parity.self, ElasticCheck.self,
+            Run.self, Serve.self, Pull.self, Doctor.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
             PrefixCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
@@ -528,9 +528,48 @@ struct Serve: ParsableCommand {
     @Flag(name: .customLong("no-prefix-cache"),
           help: "Re-prefill every request from scratch. Default: the state of one request is reused by the next when that request's prompt extends it, so a chat turn only prefills what is new.")
     var noPrefixCache = false
+    @Option(name: .customLong("prefix-cache-dir"),
+            help: ArgumentHelp(
+                "Also keep conversation states on disk in this directory, so a restart or a conversation too long to keep in memory resumes without re-reading its prompt.",
+                discussion: """
+                    Off unless a directory is named. Files hold each conversation's token ids \
+                    and model state; delete the directory to erase them. A file is used only \
+                    by the same binary, model files and settings that wrote it.
+                    """))
+    var prefixCacheDir: String?
+    @Option(name: .customLong("prefix-cache-disk-gb"),
+            help: "Disk quota for --prefix-cache-dir in GB. When it is full, files of other builds go first, then states nobody continued, then parents kept for regenerating a reply, then conversations, least recently used first.")
+    var prefixCacheDiskGB = Double(PersistentPrefixConfiguration.defaultMaxBytes) / 1e9
+    @Option(name: .customLong("prefix-cache-min-tokens"),
+            help: "Shortest conversation state written to --prefix-cache-dir, in tokens.")
+    var prefixCacheMinTokens = PersistentPrefixConfiguration.defaultMinimumTokens
+    @Option(name: .customLong("prefix-cache-max-age-days"),
+            help: "Remove states in --prefix-cache-dir unused for this many days; 0 keeps them until the quota needs room.")
+    var prefixCacheMaxAgeDays = Double(PersistentPrefixConfiguration.defaultMaxAgeDays)
 
     func run() throws {
         if let tokens = maxContext.tokens, let why = ContextPolicy.validationError(tokens) { throw PlanError(why) }
+        var persistentConfiguration: PersistentPrefixConfiguration?
+        if let dir = prefixCacheDir {
+            guard !noPrefixCache else {
+                throw PlanError("--prefix-cache-dir needs the in-memory prefix cache; remove --no-prefix-cache")
+            }
+            guard prefixCacheDiskGB.isFinite, prefixCacheDiskGB > 0, prefixCacheDiskGB < 1e9 else {
+                throw PlanError("--prefix-cache-disk-gb must be a positive number of GB")
+            }
+            guard (1 ... ContextPolicy.modelLimit).contains(prefixCacheMinTokens) else {
+                throw PlanError("--prefix-cache-min-tokens must be between 1 and \(ContextPolicy.modelLimit)")
+            }
+            guard prefixCacheMaxAgeDays.isFinite, prefixCacheMaxAgeDays >= 0, prefixCacheMaxAgeDays <= 36_500 else {
+                throw PlanError("--prefix-cache-max-age-days must be between 0 and 36500")
+            }
+            let url = URL(fileURLWithPath: (dir as NSString).expandingTildeInPath, isDirectory: true)
+            // Fail before the model loads, not after.
+            try PersistentPrefixCache.prepareDirectory(url)
+            persistentConfiguration = PersistentPrefixConfiguration(directory: url,
+                maxBytes: Int64(prefixCacheDiskGB * 1e9), minimumTokens: prefixCacheMinTokens,
+                maxAge: prefixCacheMaxAgeDays > 0 ? prefixCacheMaxAgeDays * 86_400 : nil)
+        }
         let plan = try model.announcedPlan(window: maxContext, prefixCacheEnabled: !noPrefixCache, maxPrefillWait: maxPrefillWait)
         // Claim the port first: failing here after a full model load wastes
         // half a minute and used to be a fatalError.
@@ -564,6 +603,36 @@ struct Serve: ParsableCommand {
             FileHandle.standardError.write(
                 "prefix cache: off — every request re-prefills its whole prompt\n"
                     .data(using: .utf8)!)
+        }
+        if let persistentConfiguration {
+            let tier = try engine.enablePersistentPrefixCache(persistentConfiguration)
+            tier.onEvent = { line in
+                let stamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+                FileHandle.standardError.write("[\(stamp)] prefix cache disk: \(line)\n".data(using: .utf8)!)
+            }
+            let held = String(format: "%.2f", Double(tier.storedBytes) / 1e9)
+            let quota = String(format: "%.2f", Double(persistentConfiguration.maxBytes) / 1e9)
+            let states = tier.storedStates
+            let forget = persistentConfiguration.maxAge.map {
+                "; forgets states unused for \(String(format: "%g", $0 / 86_400)) days"
+            } ?? "; keeps states until the quota needs room"
+            // Opening the directory removes what this build cannot use or the
+            // limits exclude, before this callback exists, so report it here.
+            let opened = tier.maintenance
+            var removed: [String] = []
+            if opened.otherBuilds > 0 { removed.append("\(opened.otherBuilds) from other builds") }
+            if opened.expired > 0 { removed.append("\(opened.expired) expired") }
+            if opened.overQuota > 0 { removed.append("\(opened.overQuota) over the quota") }
+            if opened.unreadable + opened.incomplete > 0 {
+                removed.append("\(opened.unreadable + opened.incomplete) unreadable or incomplete")
+            }
+            if opened.orphanSegments > 0 { removed.append("\(opened.orphanSegments) unused row segments") }
+            FileHandle.standardError.write(("prefix cache disk: \(persistentConfiguration.directory.path) holds "
+                + "\(states) state\(states == 1 ? "" : "s") (\(held) GB of \(quota) GB); writes states of "
+                + "\(persistentConfiguration.minimumTokens) tokens or more" + forget
+                + (removed.isEmpty ? "" : "; removed " + removed.joined(separator: ", ")
+                    + String(format: " (%.2f GB)", Double(opened.bytes) / 1e9))
+                + "\n").data(using: .utf8)!)
         }
         var governor: MemoryGovernor?
         if plan.source == .auto, !noElastic {

@@ -216,7 +216,15 @@ public final class PrefixCache {
     private var _checkpointHits = 0
     private var _checkpointStores = 0
     private var _checkpointForkFailures = 0
+    private var _persistentHits = 0
+    private var _persistent: PersistentPrefixCache?
     public var hits: Int { lock.withLock { _hits } }
+    /// Hits served by restoring a state from the persistent tier.
+    public var persistentHits: Int { lock.withLock { _persistentHits } }
+    /// The disk tier consulted when memory retains nothing as long as the
+    /// incoming prompt's persisted prefix (see PersistentPrefixCache).
+    public var persistent: PersistentPrefixCache? { lock.withLock { _persistent } }
+    public func attachPersistent(_ tier: PersistentPrefixCache?) { lock.withLock { _persistent = tier } }
     public var misses: Int { lock.withLock { _misses } }
     public var evictions: Int { lock.withLock { _evictions } }
     public var checkpointHits: Int { lock.withLock { _checkpointHits } }
@@ -283,16 +291,8 @@ public final class PrefixCache {
         lock.lock()
         defer { lock.unlock() }
         guard _enabled else { entries.removeAll(); return nil }
-        var best: Int?
-        for (i, e) in entries.enumerated()
-        where (modelIdentity == nil || e.state.modelIdentity == modelIdentity)
-            && (promptIds.count > e.tokens.count || (completePromptKey != nil
-                && e.promptKey == completePromptKey && e.lastLogits != nil
-                && promptIds.count == e.tokens.count)) && promptIds.starts(with: e.tokens)
-            && Self.imagesAgree(entry: e.images, prompt: images, upTo: e.tokens.count) {
-            if best == nil || e.tokens.count > entries[best!].tokens.count { best = i }
-        }
-        guard let i = best else {
+        guard let i = bestEntry(matching: promptIds, images: images, completePromptKey: completePromptKey,
+                modelIdentity: modelIdentity) else {
             _misses += 1
             // The caller is about to allocate a new state. Make room first so
             // four retained states plus a fifth active state never coexist.
@@ -337,6 +337,47 @@ public final class PrefixCache {
         return (e.state, e.tokens.count, logits)
     }
 
+    /// Called with the lock held: the entry `takeForGeneration` would use.
+    private func bestEntry(matching promptIds: [Int], images: [ImageSegment],
+                           completePromptKey: PromptCheckpointKey?, modelIdentity: UUID?) -> Int? {
+        var best: Int?
+        for (i, e) in entries.enumerated()
+        where (modelIdentity == nil || e.state.modelIdentity == modelIdentity)
+            && (promptIds.count > e.tokens.count || (completePromptKey != nil
+                && e.promptKey == completePromptKey && e.lastLogits != nil
+                && promptIds.count == e.tokens.count)) && promptIds.starts(with: e.tokens)
+            && Self.imagesAgree(entry: e.images, prompt: images, upTo: e.tokens.count) {
+            if best == nil || e.tokens.count > entries[best!].tokens.count { best = i }
+        }
+        return best
+    }
+
+    /// Prompt tokens the equivalent `takeForGeneration` would reuse, without
+    /// taking, touching or evicting anything.
+    package func retainedMatchLength(matching promptIds: [Int], images: [ImageSegment] = [],
+                                     completePromptKey: PromptCheckpointKey?, modelIdentity: UUID?) -> Int {
+        lock.withLock {
+            guard _enabled, let i = bestEntry(matching: promptIds, images: images,
+                completePromptKey: completePromptKey, modelIdentity: modelIdentity) else { return 0 }
+            return entries[i].tokens.count
+        }
+    }
+
+    /// Make room for a state about to be restored from disk, exactly as a miss
+    /// makes room before its caller allocates: retained plus active states
+    /// stay inside both the four-state and the shared-token ceilings.
+    package func reserveForRestore(promptTokens: Int, reserveTokens: Int, reserveSequenceBytes: Int,
+                                   restoredSequenceBytes: Int) {
+        lock.withLock {
+            guard _enabled else { return }
+            reserveActiveTokens(max(promptTokens, reserveTokens, Self.tokenUnits(reserveSequenceBytes),
+                Self.tokenUnits(restoredSequenceBytes)))
+        }
+    }
+
+    /// A restored state is a hit, served by the persistent tier.
+    package func recordRestore() { lock.withLock { _hits += 1; _persistentHits += 1 } }
+
     private static func tokenUnits(_ bytes: Int) -> Int {
         if bytes == Int.max { return Int.max }
         let bytes = max(0, bytes)
@@ -369,19 +410,24 @@ public final class PrefixCache {
     /// entry does not describe the turn the client sent, and the entry is then
     /// wanted for the ordinary `take` that follows.
     public func peek(extending prefix: [Int]) -> [Int]? {
-        lock.lock()
-        defer { lock.unlock() }
-        guard _enabled else { return nil }
-        var best: [Int]?
-        // Vision entries are skipped: the caller splices these ids into a
-        // text-only render that carries no images, and the resulting prompt
-        // would claim placeholder tokens it has no embeddings for.
-        for e in entries
-        where !e.reusable && e.images.isEmpty && e.tokens.count > prefix.count
-            && e.tokens.starts(with: prefix) {
-            if best == nil || e.tokens.count > best!.count { best = e.tokens }
+        let (retained, tier) = lock.withLock { () -> ([Int]?, PersistentPrefixCache?) in
+            guard _enabled else { return (nil, nil) }
+            var best: [Int]?
+            // Vision entries are skipped: the caller splices these ids into a
+            // text-only render that carries no images, and the resulting prompt
+            // would claim placeholder tokens it has no embeddings for.
+            for e in entries
+            where !e.reusable && e.images.isEmpty && e.tokens.count > prefix.count
+                && e.tokens.starts(with: prefix) {
+                if best == nil || e.tokens.count > best!.count { best = e.tokens }
+            }
+            return (best, _persistent)
         }
-        return best
+        // After a restart, or for a conversation longer than memory retains,
+        // the previous turn's exact ids exist only in the persistent tier.
+        guard let stored = tier?.longestExtension(of: prefix), stored.count > (retained?.count ?? 0)
+        else { return retained }
+        return stored
     }
 
     /// Retain `state` as the consumer of exactly `tokens`, evicting
@@ -557,6 +603,7 @@ public final class PrefixCache {
         _checkpointHits = 0
         _checkpointStores = 0
         _checkpointForkFailures = 0
+        _persistentHits = 0
     }
 
     public func json() -> [String: Any] {
@@ -570,8 +617,9 @@ public final class PrefixCache {
         let (checkpointHits, checkpointStores, forkFailures) = (_checkpointHits, _checkpointStores, _checkpointForkFailures)
         let (h, m, e, enabled, maxTokens) =
             (_hits, _misses, _evictions, _enabled, _maxTokens)
+        let (persistentHits, persistent) = (_persistentHits, _persistent)
         lock.unlock()
-        return [
+        var result: [String: Any] = [
             "enabled": enabled,
             "conversations": n,
             "max_conversations": Self.maxEntries,
@@ -589,6 +637,9 @@ public final class PrefixCache {
             "hits": h,
             "misses": m,
             "evictions": e,
+            "persistent_hits": persistentHits,
         ]
+        if let persistent { result["persistent"] = persistent.json() }
+        return result
     }
 }

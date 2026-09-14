@@ -361,6 +361,24 @@ These were all real bugs found by adversarial probing. Each is now gated by
   every time. Any client that decorates a conversation (titles, tags,
   suggestions) breaks a one-slot cache. Because several held states are
   additive, the retention ceiling is charged against the memory budget.
+- **The disk tier restores the saved representation; it never rebuilds.**
+  `--prefix-cache-dir` (`PersistentPrefixCache`) writes a committed text state
+  after its reply (live rows only, original buffer shapes) and restores it into
+  buffers of those shapes, so offsets, allocated bytes and continuation match
+  the saved state exactly. `optimization-state-check --variant
+  persistent-prefix[-mtp]` gates that against a memory hit, and
+  `Tools/persistent_prefix_e2e.py` gates identical ids across real restarts.
+  Rows live in immutable segments; a state descended from a persisted head
+  (`State.persistedLineage`) writes only the rows added since. Every rewind
+  clears that lineage through `invalidateCheckpoints`, so a new path that lowers
+  `tokenCount` must go through it, and rows are never matched by token equality
+  alone: a re-prefill of the same ids produces other bits. Memory answers
+  first; disk is read only for a longer state, after making room like a miss.
+  A file belongs to one executable image, sampled weight content, geometry and
+  optimization settings, so every rebuild starts fresh; do not loosen that key
+  without a check that rejects changed arithmetic. A speculating request takes
+  only states with the draft cache, or every later save of that conversation
+  would lack it.
 
 ## Prefill
 

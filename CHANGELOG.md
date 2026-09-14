@@ -6,6 +6,23 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+- Keep long conversations on disk with `serve --prefix-cache-dir <dir>`. A
+  restarted server, or a conversation longer than the in-memory prefix cache
+  holds, restores its last committed state instead of processing the whole
+  prompt again, and continues exactly as it would have from memory. Each later
+  turn writes only the tokens it added, and the previous turn's state stays so a
+  reply can be regenerated after a restart. Off by default;
+  `--prefix-cache-disk-gb`, `--prefix-cache-min-tokens` and
+  `--prefix-cache-max-age-days` bound what is kept, and states nobody continued
+  are removed before conversations. Files are checksummed, used only by the
+  binary, model files and settings that wrote them, and hold conversation token
+  ids: `slotstream prefix-cache --dir <dir> --clear` erases them. Library
+  callers use `Engine.enablePersistentPrefixCache(_:)`, keep a request off disk
+  with `RequestController.persistsPrefixState = false`, and remove a deleted
+  conversation's states with `removeStates(overlapping:)`.
+
 ## 0.2.17 - 2026-09-13
 
 - Pick the context window for each Mac. Auto now takes the largest of 32,768,

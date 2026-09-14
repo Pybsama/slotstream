@@ -63,6 +63,9 @@ extension Qwen4ExpModel.State {
         result.tokenCount = tokenCount
         result.committedBoundaryValid = committedBoundaryValid
         result.compactStateWindows = compactStateWindows
+        // The fork's committed rows are the source's, so its later saves can
+        // reference the same persisted segments.
+        result.persistedLineage = persistedLineage
         result.mtp = mtp?.forkForPrefix()
         result.lastMulti = lastMulti.map { contiguous($0).reshaped($0.shape) }
         if let row = result.lastMulti { eval(row) }
