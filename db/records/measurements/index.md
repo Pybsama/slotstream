@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-13T19:54:32.720848Z
+updated: 2026-09-14T13:50:59.998466Z
 ---
 
 # records/measurements
 
+- [[records/measurements/expert-lookahead-2-b0-cohort-2026-09-12]] — Slot-adoption prefetch passes the held-out B0 gate: aggregate 1.105x, lower bound 1.090, every family faster, 36 of 36 pairs eligible, outputs exact; rescored from 1.120x with true medians
 - [[records/measurements/release-0-2-17-published-2026-09-13]] — v0.2.17 published, installed and accepted: 25 of 25 model gates on the exact CI artifact and 31 of 31 installed-release checks
 - [[records/measurements/automatic-context-window-draft-head-131072-2026-09-13]] — Draft head on at 131,072 tokens: inside its 18 GB plan with a reply identical to the draft-off run; the draft-head limit stays at the model limit
 - [[records/measurements/automatic-context-window-131072-read-2026-09-13]] — A 131,072-token window completed inside its 16 GB plan: 14.80 GB sampled peak against 15.00 planned, 38.1-minute read; estimates run optimistic past 65,536
@@ -21,7 +22,6 @@ updated: 2026-09-13T19:54:32.720848Z
 - [[records/measurements/decode-path-serialization-b1-cohort-2026-09-13]] — B1 cohort: combined candidate 1.106 against shipped, lower bound 1.073, families 1.033 or above, identical outputs; not a pass (r0245 kept one clean pair); rescored from 1.116
 - [[records/measurements/expert-lookahead-2-slot-adoption-screen-2026-09-12]] — Slot adoption turns the router-reuse prefetch into a measured 1.138x on the 12-pair validation screen (every pair faster, outputs exact); the held-out cohort is blocked by a host I/O stall
 - [[records/measurements/decode-path-serialization-combination-screen-2026-09-13]] — Combined candidate (B0 prefetch, barrier period 4 on the routing readback, router weight cache) is exact and screens at 1.104 against shipped, 1.018 over B0 prefetch, five of six pairs above 1
-- [[records/measurements/expert-lookahead-2-b0-cohort-2026-09-12]] — Slot-adoption prefetch passes the held-out B0 gate: aggregate 1.105x, lower bound 1.090, every family faster, 36 of 36 pairs eligible, outputs exact; rescored from 1.120x with true medians
 - [[records/measurements/decode-path-serialization-round-1-2026-09-12]] — Deferring the per-layer GPU drain with multi-generation pins gains 3.8% to 5.1% with exact outputs; record reads and nine flags are null; profiles close compilation
 - [[records/measurements/decode-path-serialization-closing-profiles-2026-09-13]] — Whole-thread profiles: B0 prefetch waits 36% on reads and 40% on the GPU; the combination cuts GPU-wait samples 18% and adds 9% reads; round 1's split covered one thread block
 - [[records/measurements/decode-path-serialization-round-3b-2026-09-13]] — Forecasts on the routing readback remove round 3's loss and stay exact; the rule picks period 4 at 1.087, but without two slow reference cells it reads 1.014, a gain of about 1%

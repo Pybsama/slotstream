@@ -13,6 +13,7 @@ for Slotstream. For installation and a first reply, start with
 | Embedding in an app | [Swift library](LIBRARY.md) |
 | Build, test, and contribute | [Testing](TESTING.md), [Contributing](../CONTRIBUTING.md) |
 | Download internals | [Slotpack format](DOWNLOAD-FORMAT.md) |
+| Expert lookahead | [How it works, experiments and results](EXPERT-LOOKAHEAD.md) |
 | Design and evidence | [Design and plan](../PLAN.md), [Measurements](../MEASUREMENTS.md), [Hardware reports](HARDWARE.md) |
 | Security and releases | [Security](../SECURITY.md), [Changelog](../CHANGELOG.md), [Latest release](https://github.com/carloslfu/slotstream/releases/latest) |
 
@@ -107,6 +108,8 @@ about 2% each over prefetch alone. Those component results are specific to
 that workload and are not separate held-out speedups. The
 [decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
 records its 373 MiB charge, overrides and limits.
+The short [expert lookahead guide](EXPERT-LOOKAHEAD.md) explains the mechanism
+and the experiments that led to it.
 
 [MEASUREMENTS.md](../MEASUREMENTS.md) includes the configurations, comparisons,
 and failed experiments behind these results.

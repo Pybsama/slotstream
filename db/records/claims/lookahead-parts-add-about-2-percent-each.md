@@ -2,13 +2,13 @@
 type: claim
 id: 01m2dg6wjh8sq1bp6vx8jpk67e
 created: 2026-09-13T13:44:49.489008+00:00
-updated: 2026-09-13T13:44:49.489008+00:00
+updated: 2026-09-14T13:50:37.675426+00:00
 summary: The router weight cache and the deferred GPU drains each add about 2% over prefetch
 basis: measured
 gate: none
 needle: about 2% each
 supported_by: '[[records/measurements/decode-path-serialization-attribution-2026-09-13]]'
-surfaces: docs/ENGINEERING.md
+surfaces: docs/ENGINEERING.md, docs/EXPERT-LOOKAHEAD.md
 title: The router weight cache and the deferred GPU drains each add about 2% over prefetch
 status: current
 ---

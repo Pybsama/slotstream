@@ -2,13 +2,13 @@
 type: claim
 id: 01m2dg6wgbw82za1ync5maf1hn
 created: 2026-09-13T13:44:49.419628+00:00
-updated: 2026-09-13T13:47:38.117026+00:00
+updated: 2026-09-14T13:50:37.632694+00:00
 summary: The decode lookahead charges 373 MiB to the memory plan
 basis: derived
 gate: slotstream-checks decode-lookahead-defaults and Tools/planner_gates.sh
 needle: 373 MiB
 supported_by: '[[records/measurements/decode-lookahead-default-2026-09-13]]'
-surfaces: docs/CLI.md, docs/ENGINEERING.md, llms.txt
+surfaces: docs/CLI.md, docs/ENGINEERING.md, llms.txt, docs/EXPERT-LOOKAHEAD.md
 title: The decode lookahead charges 373 MiB to the memory plan
 status: current
 ---

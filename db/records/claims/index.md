@@ -2,11 +2,19 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-13T17:41:41.162114Z
+updated: 2026-09-14T13:50:37.752340Z
 ---
 
 # records/claims
 
+- [[records/claims/expert-lookahead-guide-b1-benchmark-scope]] — The final expert lookahead benchmark scope is one M5 Pro and twelve held-out prompts
+- [[records/claims/expert-lookahead-default-four-layer-drain]] — The qualified decode lookahead normally drains GPU work every four layers
+- [[records/claims/expert-lookahead-default-two-layer-forecast]] — The qualified expert lookahead forecasts two layers ahead
+- [[records/claims/expert-lookahead-prefetch-b0-1-105x]] — Slot-adoption prefetch achieved 1.105x decode throughput in the B0 cohort
+- [[records/claims/lookahead-parts-add-about-2-percent-each]] — The router weight cache and the deferred GPU drains each add about 2% over prefetch
+- [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
+- [[records/claims/decode-lookahead-charges-373-mib]] — The decode lookahead charges 373 MiB to the memory plan
+- [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
 - [[records/claims/context-read-38-minutes-at-131072]] — A 131,072-token prompt took 38 minutes to read at a 16 GB target
 - [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-target-54-7-gb-from-96-gb]] — Auto targets 54.7 GB from 96 GB with the full window
@@ -18,7 +26,6 @@ updated: 2026-09-13T17:41:41.162114Z
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
 - [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
-- [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
 - [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
 - [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
@@ -37,13 +44,10 @@ updated: 2026-09-13T17:41:41.162114Z
 - [[records/claims/warm-decode-m5-max-73gb-target-community]] — M5 Max community report: 31.5 tok/s at a 73 GB target
 - [[records/claims/warm-decode-m5-max-48gb-target-community]] — M5 Max community report: 26.9 tok/s at a 48 GB target
 - [[records/claims/auto-floor-76-experts-per-layer]] — The draft head's automatic floor is 76 experts per layer
-- [[records/claims/decode-lookahead-charges-373-mib]] — The decode lookahead charges 373 MiB to the memory plan
-- [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
 - [[records/claims/speculative-decode-x1-24-at-auto-floor]] — Speculative decode multiplied decode by 1.24 at the former auto floor on the dev Mac
 - [[records/claims/full-context-wait-6-4-min-on-16-gb]] — A full 32k prompt waits about 6.4 min on a 16 GB Mac
 - [[records/claims/mtp-auto-floor-120-per-layer-28-gb-target]] — Auto turns speculative decode on only when the cache still reaches 120 experts per layer after the head, a 28 GB target
 - [[records/claims/minimum-mac-memory-16-gb]] — Slotstream needs a Mac with at least 16 GB of memory
-- [[records/claims/lookahead-parts-add-about-2-percent-each]] — The router weight cache and the deferred GPU drains each add about 2% over prefetch
 - [[records/claims/draft-head-31-7-percent-faster-at-76-per-layer]] — Two drafts decoded 31.7% faster than plain decode on the same memory at 76 experts per layer
 - [[records/claims/peak-memory-32-gb-at-auto]] — The 32 GB automatic-plan figure is an estimate, not a measured lifetime footprint peak
 - [[records/claims/draft-depth-default-two]] — The adopted speculative draft-chain default is two tokens

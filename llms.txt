@@ -50,6 +50,7 @@ The README, user guides, engineering notes, and changelog are combined in
 
 - [docs/GETTING-STARTED.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/GETTING-STARTED.md): installation, first reply, model download, pictures, updates, and common questions
 - [docs/ENGINEERING.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/ENGINEERING.md): developer index, performance, context and memory, architecture, project history, and credits
+- [docs/EXPERT-LOOKAHEAD.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/EXPERT-LOOKAHEAD.md): a short explanation of expert lookahead, the experiments, measured results and limits
 - [docs/HERMES-NOTES.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/HERMES-NOTES.md): Hermes protocol, configuration rationale, discovery, images, summary fallback, and integration checks
 
 - [docs/CLIENTS.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CLIENTS.md): connection settings for OpenAI and Ollama clients, Hermes and fx setup links, integration checks, troubleshooting, and issue evidence

@@ -2,13 +2,13 @@
 type: measurement
 id: 01m2c4qtbndan96wvqtdx8pgbc
 created: 2026-09-13T01:05:06.932874+00:00
-updated: 2026-09-13T13:17:58.308031+00:00
+updated: 2026-09-14T13:50:59.998466+00:00
 summary: 'Slot-adoption prefetch passes the held-out B0 gate: aggregate 1.105x, lower bound 1.090, every family faster, 36 of 36 pairs eligible, outputs exact; rescored from 1.120x with true medians'
 date: 2026-09-12
 doc: measurements
 level: '3'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
-note: Held-out B0 cohort at the 20 GB profile, 36 of 36 pairs eligible under process-pageins-v1; the validation screen is in the slot-adoption record; no public claim.
+note: Held-out B0 cohort at the 20 GB profile, 36 of 36 pairs eligible under process-pageins-v1; the validation screen is in the slot-adoption record. The corrected 1.105x is summarized in docs/EXPERT-LOOKAHEAD.md through records/claims/expert-lookahead-prefetch-b0-1-105x.
 order: '1250'
 runs: '[[sources/runs/2026/09/2026-09-12-expert-lookahead-2-b0-cohort]]'
 title: 'Expert Lookahead 2, slot adoption: the held-out B0 cohort passes the plan gate at 1.105x'

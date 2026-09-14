@@ -1375,3 +1375,6 @@ v0.2.17 published, installed and accepted; auto chose 32,768 tokens at 10 GB on 
 ## [2026-09-13 19:56] update | records/plan/configurable-context-window-2026-09-06
 Released in 0.2.17; added the release acceptance to the 2026-09-13 addendum.
 
+## [2026-09-14 13:51] update | records/claims
+Added the concise docs/EXPERT-LOOKAHEAD.md guide, linked it from engineering and agent documentation, registered four claims and extended four existing claim surfaces, and annotated B0 public use. Documentation generation, projection checks, 213 claim checks, local links and whitespace pass. Store validation has zero errors and the two unchanged historical log warnings.
+

@@ -2,13 +2,13 @@
 type: claim
 id: 01m2dg6wek75wr51nxh7qe9vrd
 created: 2026-09-13T13:44:49.363261+00:00
-updated: 2026-09-13T13:47:38.081926+00:00
+updated: 2026-09-14T13:50:37.606060+00:00
 summary: The decode lookahead makes decode 1.11x faster on held-out prompts
 basis: measured
 gate: none
 needle: 1.11x
 supported_by: '[[records/measurements/decode-path-serialization-b1-cohort-replication-2026-09-13]]'
-surfaces: README.md, docs/CLI.md, docs/ENGINEERING.md, llms.txt
+surfaces: README.md, docs/CLI.md, docs/ENGINEERING.md, llms.txt, docs/EXPERT-LOOKAHEAD.md
 title: The decode lookahead makes decode 1.11x faster on held-out prompts
 status: current
 ---
