@@ -1414,3 +1414,6 @@ v0.2.18 release acceptance: CI artifact 25/25 after a headroom-only first run, p
 ## [2026-09-15 00:02] create | records/measurements/release-0-2-18-published-2026-09-14
 v0.2.18 published, installed and accepted; after a restart the installed binary restores a conversation from disk with identical output ids.
 
+## [2026-09-15 00:20] update | sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed
+Corrected the commit that dropped Tools/verify.sh's executable bit: d813bcf (2026-09-02), not 0f7aae1, which only last touched the file.
+

@@ -2,7 +2,7 @@
 type: run
 id: 01m2h5wvcsjrydjkg73ggvb3d8
 created: 2026-09-15T00:01:32.568731+00:00
-updated: 2026-09-15T00:03:16.515669+00:00
+updated: 2026-09-15T00:20:20.871446+00:00
 summary: 'v0.2.18 acceptance: CI artifact 25/25 after a headroom-only first run, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary.'
 binary: e8c77934be16007df99c8199163c0a3963f69b27dce01b70cf33793aeb04af4f
 captured_at: 2026-09-14
@@ -18,7 +18,7 @@ Five phases ran in order against the exact CI artifact for commit `829126e7b52c7
 
 **Waiting for headroom.** Reclaimable memory stayed between 9.2 and 11.9 GB for about two hours after the candidate was verified, below the suite's 13 GB start guard and the 20.5 GB its vision serving section requires, so acceptance did not start. It started once other work released memory and reclaimable memory read 21.8 GB with no other Slotstream process and no holder of the model lock. This run closed or paused no application.
 
-**Invocation.** `Tools/verify.sh` is stored with mode `100644` (since `0f7aae1`), so the first invocation stopped with `permission denied` before any gate or model process ran. Every acceptance run below used `bash Tools/verify.sh` with `SLOTSTREAM_TEST_BINARY` set to the downloaded CI binary.
+**Invocation.** `Tools/verify.sh` is stored with mode `100644` (since `d813bcf` on 2026-09-02), so the first invocation stopped with `permission denied` before any gate or model process ran. Every acceptance run below used `bash Tools/verify.sh` with `SLOTSTREAM_TEST_BINARY` set to the downloaded CI binary.
 
 **First acceptance run: a headroom skip.** The first complete run (2026-09-14T23:13:01Z to 23:31:58Z) ended `passed 24, failed 1` after 1,137 seconds. The failure was the elastic drill: `ELASTIC DRILL SKIP: needs ~14 GB reclaimable to leave room for a shrink, machine has 13.9 GB`. The suite counts a skipped required gate as a failure. Every other gate passed, including vision tower parity and the vision serving suite.
 
