@@ -66,7 +66,9 @@ starts replying. The terminal shows progress during long requests.
 For a full conversation at the default limit, the estimated wait is about
 3.0 min for the 48 GB M5 Pro plan and 6.4 min for the 16 GB plan. These
 estimates come from the M5 Pro; slower SSDs can take longer. Follow-up turns
-reuse unchanged history while it stays in memory.
+reuse unchanged history while it stays in memory. To keep long conversations
+across server restarts as well, start the server with
+`--prefix-cache-dir <folder>`; see the [command reference](CLI.md#slotstream-serve).
 
 If Hermes or fx gives up before Slotstream replies, check the timeout
 settings in the [Hermes guide](HERMES.md#troubleshooting) or
@@ -113,6 +115,10 @@ Stop Slotstream first. In Finder, choose **Go → Go to Folder** and enter
 
 Delete the `models` folder there to remove the downloaded model and keep
 the program. This frees about 105 GB after a full download.
+
+If you started the server with `--prefix-cache-dir`, that folder holds saved
+conversations. Run `slotstream prefix-cache --dir <folder> --clear` to empty
+it, or delete the folder.
 
 To remove both, delete `~/.slotstream`. Also remove the
 `/usr/local/bin/slotstream` wrapper or the PATH entry the installer added to

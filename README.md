@@ -296,7 +296,9 @@ for macOS and other apps and watch memory pressure. See the
 
 Generation reads the model files without rewriting them. macOS swap adds
 writes when memory runs short. Automatic memory sizing helps, but a small
-Mac or an oversized manual setting can still swap heavily.
+Mac or an oversized manual setting can still swap heavily. With
+`serve --prefix-cache-dir`, Slotstream also saves long conversations to that
+folder after each reply, within a disk quota.
 
 ### Can I run it on Linux or Windows?
 

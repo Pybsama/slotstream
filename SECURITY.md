@@ -17,6 +17,9 @@ Please do not open a public issue for anything exploitable.
 - The engine makes no network calls. Only the download path does, to the
   pinned Hugging Face mirror with the original repo as fallback.
 - No telemetry, no analytics, no update checks.
+- `serve --prefix-cache-dir` (off by default) saves conversation state to
+  disk: token ids and model state, in files only your user account can read.
+  `slotstream prefix-cache --dir <folder> --clear` removes them.
 
 ## Supply chain
 
