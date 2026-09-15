@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-14T16:46:00Z
+updated: 2026-09-15T00:03:16.542860Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-18-published-2026-09-14]] — v0.2.18 published, installed and accepted: 25 of 25 model gates on the CI artifact, 31 of 31 installed-release checks, and a disk prefix restore on the installed binary
 - [[records/measurements/persistent-prefix-cache-2026-09-14]] — Persistent prefix cache at 10 GB: exact restore, later turns write only new rows (118 MB per turn at 15.5K tokens), and restarts and regenerated replies resume with identical ids
 - [[records/measurements/expert-lookahead-2-b0-cohort-2026-09-12]] — Slot-adoption prefetch passes the held-out B0 gate: aggregate 1.105x, lower bound 1.090, every family faster, 36 of 36 pairs eligible, outputs exact; rescored from 1.120x with true medians
 - [[records/measurements/release-0-2-17-published-2026-09-13]] — v0.2.17 published, installed and accepted: 25 of 25 model gates on the exact CI artifact and 31 of 31 installed-release checks

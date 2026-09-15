@@ -4978,3 +4978,29 @@ No clean-timing or throughput qualification is claimed; the acceptance interval 
 **An earlier build.** [[sources/runs/2026/09/2026-09-14-persistent-prefix-exactness]], [[sources/runs/2026/09/2026-09-14-persistent-prefix-restart-e2e]] and [[sources/runs/2026/09/2026-09-14-persistent-prefix-long-conversation-e2e]] measured the same tier before rows were shared, when every save rewrote the whole state and replaced the previous turn's file. They passed the same exactness and restart checks: 3,896- and 15,718-token states were written as 223.4 and 550.3 MB, restarted servers produced ids identical to the first servers', and first tokens came at 1.60 and 1.62 s against 50.62 and 210.53 s for servers with empty directories.
 
 **Limits.** These are single runs, neither paired nor interleaved, with every user application open. Reclaimable memory before each model process ranged from 24.9 to 29.6 GB. Timings describe this Mac's SSD and the fixture prompts. Every write still stores the fixed recurrent state, so a turn writes at least one head. The 20 GB quota, 2,048-token minimum and 30-day maximum age are provisional opt-in defaults, not measured optima. Removal order and maximum age are checked with synthetic states (`persistent-prefix-round-trip`), not under real traffic. Not covered here: requests with images (never written), many concurrent conversations, crash recovery, and other hardware.
+
+### v0.2.18 published, installed and accepted
+**v0.2.18 is published, installed and functionally accepted.** It ships the persistent prefix cache: with `serve --prefix-cache-dir` a conversation's state is kept on disk, so a restarted server continues the conversation by restoring it instead of reading the whole prompt again ([[records/measurements/persistent-prefix-cache-2026-09-14]]). The exact CI artifact passed all twenty-five model gates on its second complete run, the published archive matched that artifact with a valid attestation, the installer replaced 0.2.17 on this machine, and the installed binary passed all thirty-one end-to-end release checks and the persistent prefix end-to-end check.
+
+Release: [v0.2.18](https://github.com/carloslfu/slotstream/releases/tag/v0.2.18), tagged on `829126e7b52c77981f5f02d6f7497d27262fe940`, published 2026-09-14T23:52:30Z. Archive SHA-256 `0e30342623f7140eba02046b6731699699d1f9c78f50b541dafe0f0e41113911`; binary SHA-256 `e8c77934be16007df99c8199163c0a3963f69b27dce01b70cf33793aeb04af4f`. The CI candidate, the re-downloaded public archive and the installed binary are byte-identical.
+
+## What qualified
+
+| Phase | Result |
+|---|---|
+| Main CI 34894580252, commit `829126e` | Coverage, weights-free and public-library jobs all succeeded |
+| Candidate verification | Archive and binary digests recorded; 172 source files match the checkout |
+| Model acceptance on the downloaded CI binary | 25 of 25 gates, 0 failures, 1,131 seconds (second complete run) |
+| Release workflow 34910745261 | Succeeded; the public archive matches the CI artifact |
+| Provenance | `gh attestation verify` confirmed the archive, built by `release.yml` from `v0.2.18` at `829126e` |
+| Installation | 0.2.17 replaced by 0.2.18, exit code 0, binary digest re-checked; 0.2.17 kept beside it |
+| Installed-release end-to-end | 31 of 31 checks, 0 failures, 73 seconds |
+| Persistent prefix cache, installed binary | 11 of 11 checks; a restarted server restored 3,968 tokens from disk and matched the first server's prompt and output ids |
+
+## The first acceptance run did not count
+
+The first complete run on the same artifact ended at 24 passed and 1 failed: the elastic drill read 13.9 GB reclaimable where it needs about 14 GB to demonstrate a shrink, so it skipped, and the suite counts a skipped required gate as a failure. No product gate failed. The complete suite ran again on the same artifact and passed all twenty-five gates. Both runs are in [[sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed]].
+
+## Limits
+
+No clean-timing or throughput qualification is claimed; acceptance shared the machine with ordinary work and waited for memory headroom before it started. The installed-release checks ran at a 32,768-token window and a 10 GB target. The installed persistent prefix check used a 10 GB target and skipped its cold baseline, which the development measurement covers.

@@ -1408,3 +1408,9 @@ Persistent prefix e2e over 15,514 prompt tokens at 10 GB, beyond memory retentio
 ## [2026-09-14 16:45] update | records/measurements/persistent-prefix-cache-2026-09-14
 Rewritten for rows shared across turns: real-weights exactness (1,134 and 1,190 assertions), a three-turn serve run with restart and regenerate, and a 15,514-token run where later turns wrote 117.7 MB reusing about 431 MB; the earlier whole-state runs are kept as an earlier build.
 
+## [2026-09-15 00:02] create | sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed
+v0.2.18 release acceptance: CI artifact 25/25 after a headroom-only first run, publication and attestation, installation, installed e2e 31/31, persistent prefix e2e 11/11 on the installed binary.
+
+## [2026-09-15 00:02] create | records/measurements/release-0-2-18-published-2026-09-14
+v0.2.18 published, installed and accepted; after a restart the installed binary restores a conversation from disk with identical output ids.
+

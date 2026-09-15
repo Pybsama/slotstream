@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-14T16:43:46.205561Z
+updated: 2026-09-15T00:03:16.515669Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed]] — v0.2.18 acceptance: CI artifact 25/25 after a headroom-only first run, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-long-conversation-e2e]] — 15,514-token serve e2e at 10 GB: turns beyond memory retention restored from disk in under 0.1 s and wrote 117.7 MB reusing about 431 MB of rows; restart and regenerate matched ids.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-e2e]] — Three-turn serve e2e at 10 GB: later turns wrote 117 MB each reusing about 108 MB of rows; a restart and a regenerated turn 3 restored from disk with identical ids; 12 of 12 checks.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-exactness]] — Persistent prefix exactness with rows shared across turns at 2051 tokens, with and without the draft head: restores, continuations, branches and opt-out all exact.
@@ -506,9 +507,8 @@ updated: 2026-09-14T16:43:46.205561Z
 - [[sources/runs/2026/09/2026-09-05-optimization-actual-expert-layout]] — Actual-offset expert layout: cache calibration and cold component qualification V70–V72
 - [[sources/runs/2026/09/2026-09-05-optimization-default-acceptance]] — Default-path acceptance V68 and targeted delivery corrections V69
 - [[sources/runs/2026/09/2026-09-05-optimization-compact-indexer-history]] — Compact main indexer history, long restore, MTP and failed resource qualification V64–V67
-- [[sources/runs/2026/09/2026-09-05-optimization-responsive-governor]] — Responsive governor cancellation, resize and serving overhead V61–V63
 
 ## More
 
-This folder has 559 files. The 500 most recent are listed above.
+This folder has 560 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
