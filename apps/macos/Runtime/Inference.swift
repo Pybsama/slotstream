@@ -1,0 +1,314 @@
+import Foundation
+import Slotstream
+
+public struct EngineTurn: Sendable {
+    public var text: String
+    public var calls: [ProposedTool]
+    public var finishReason: String
+    /// Recorded with the run when the turn thought first. Never the thought itself.
+    public var thinking: ThinkingReceipt?
+    public init(text: String, calls: [ProposedTool] = [], finishReason: String = "stop") { self.text = text; self.calls = calls; self.finishReason = finishReason }
+    public func validate() throws {
+        guard finishReason == "stop" || finishReason == "tool_calls" else {
+            throw SevraError.refused("The model response ended before a successful completion (\(finishReason)). Proposed actions were not executed.")
+        }
+        guard text.utf8.count <= 262144, calls.count <= 6, Set(calls.map(\.id)).count == calls.count else {
+            throw SevraError.refused("The response exceeded its bounds or reused a tool-call ID.")
+        }
+        guard finishReason != "tool_calls" || !calls.isEmpty else { throw SevraError.refused("The model declared tool calls but returned none. No actions were executed.") }
+        guard !calls.contains(where: { $0.name == "artifact.propose" }) || calls.count == 1 else {
+            throw SevraError.refused("Propose one document for review in its own response. No actions from this response were executed.")
+        }
+        var correction: ToolSchemaError?
+        for call in calls {
+            do { try call.validate() }
+            catch let error as ToolSchemaError { if correction == nil { correction = error } }
+            catch { throw error }
+        }
+        if let correction { throw correction }
+    }
+}
+/// Latest-state observation is bounded independently from the authoritative
+/// completion. Slow views cannot block generation or enqueue token tasks.
+public final class TurnBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var text = ""
+    private var status = "Preparing"
+    private var thoughts = ""
+    private var thoughtBytes = 0
+    private var thoughtTokens = 0
+    private var thoughtEnding: ThinkingReceipt.Ending?
+    private var thinkingStarted: TimeInterval?
+    private var thinkingEnded: TimeInterval?
+    public init() {}
+    public func append(_ delta: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard text.utf8.count + delta.utf8.count <= 262144 else { return false }
+        text += delta; return true
+    }
+    public func stage(_ s: String) { lock.lock(); status = s; lock.unlock() }
+    public func snapshot() -> (String, String) { lock.lock(); defer { lock.unlock() }; return (text, status) }
+    /// The visible thought is bounded; tokens past the bound still count.
+    /// One call is one thought token. The visible text is bounded; tokens past
+    /// the bound still count.
+    public func appendThought(_ delta: String) {
+        lock.lock(); defer { lock.unlock() }
+        if thinkingStarted == nil { thinkingStarted = ProcessInfo.processInfo.systemUptime }
+        thoughtTokens += 1
+        guard thoughtBytes + delta.utf8.count <= 65536 else { return }
+        thoughts += delta; thoughtBytes += delta.utf8.count
+    }
+    public func beginThinking() { lock.lock(); if thinkingStarted == nil { thinkingStarted = ProcessInfo.processInfo.systemUptime }; lock.unlock() }
+    public func endThinking(_ ending: ThinkingReceipt.Ending) {
+        lock.lock(); defer { lock.unlock() }
+        if thinkingStarted == nil { thinkingStarted = ProcessInfo.processInfo.systemUptime }
+        if thinkingEnded == nil { thinkingEnded = ProcessInfo.processInfo.systemUptime; thoughtEnding = ending }
+    }
+    public var thinkingSeconds: Double { thinking()?.seconds ?? 0 }
+    public func thinking() -> (text: String, seconds: Double, active: Bool)? {
+        lock.lock(); defer { lock.unlock() }
+        guard let started = thinkingStarted else { return nil }
+        let end = thinkingEnded ?? ProcessInfo.processInfo.systemUptime
+        return (thoughts, max(0, end - started), thinkingEnded == nil)
+    }
+    /// The receipt as far as this buffer can tell: exact when the thought
+    /// ended normally, `stopped` when the run ended first. Nil if no thought ran.
+    public func thinkingReceipt(level: String, budgetTokens: Int) -> ThinkingReceipt? {
+        lock.lock(); defer { lock.unlock() }
+        guard let started = thinkingStarted else { return nil }
+        let end = thinkingEnded ?? ProcessInfo.processInfo.systemUptime
+        return ThinkingReceipt(level: level, budgetTokens: budgetTokens, tokens: thoughtTokens, seconds: max(0, end - started), ending: thoughtEnding ?? .stopped)
+    }
+}
+public protocol Inference: Sendable {
+    var simulated: Bool { get }
+    var performanceTelemetry: PerformanceTelemetry? { get }
+    func configure(_ preferences: PerformancePreferences) async throws
+    func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn
+    /// A turn that may think first. `thinking` is nil for tool turns; `control`
+    /// carries Answer now. Engines without thinking answer directly.
+    func turn(history: [ChatMessage], tools: Bool, thinking: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn
+    func unload() async
+}
+public extension Inference {
+    func turn(history: [ChatMessage], tools: Bool, thinking: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        try await turn(history: history, tools: tools, cancellation: cancellation, buffer: buffer)
+    }
+}
+
+private final class InferenceExecutor: SerialExecutor, @unchecked Sendable {
+    private let queue = DispatchQueue(label: "sevra.inference", qos: .userInitiated, autoreleaseFrequency: .workItem)
+    func enqueue(_ job: consuming ExecutorJob) {
+        let job = UnownedJob(job)
+        queue.async { job.runSynchronously(on: self.asUnownedSerialExecutor()) }
+    }
+}
+
+public actor LocalInference: Inference {
+    private nonisolated let executor = InferenceExecutor()
+    public nonisolated var unownedExecutor: UnownedSerialExecutor { executor.asUnownedSerialExecutor() }
+    public nonisolated let simulated = false
+    public nonisolated let performanceTelemetry: PerformanceTelemetry? = PerformanceTelemetry()
+    private var engine: Engine?
+    private var governor: MemoryGovernor?
+    private let model: URL
+    private var preferences: PerformancePreferences
+    private var inTurn = false
+    public init(model: URL = WeightStore.default.modelDirectory, preferences: PerformancePreferences = .init()) {
+        self.model = model; self.preferences = preferences
+    }
+    /// Explicit bounded configuration for existing callers and real checks.
+    public init(model: URL = WeightStore.default.modelDirectory, memoryGB: Double) {
+        self.model = model; self.preferences = .init(budget: .custom, customGB: memoryGB)
+    }
+    public func configure(_ preferences: PerformancePreferences) async throws {
+        try PerformancePolicy.validate(preferences, on: .current())
+        guard !inTurn else { throw SevraError.refused("Memory settings apply after the current response.") }
+        if self.preferences.budget != preferences.budget ||
+            (preferences.budget == .custom && self.preferences.customGB != preferences.customGB) {
+            await unload()
+            performanceTelemetry?.update(state: "Model not loaded", detail: "Your new budget applies to the next message.")
+        }
+        self.preferences = preferences
+    }
+    public func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        try await turn(history: history, tools: tools, thinking: nil, control: ThinkingControl(), cancellation: cancellation, buffer: buffer)
+    }
+    public func turn(history: [ChatMessage], tools: Bool, thinking requested: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        guard !inTurn else { throw SevraError.refused("The local model is already in use.") }
+        inTurn = true
+        let started = ProcessInfo.processInfo.systemUptime
+        var prepared = false
+        defer {
+            inTurn = false
+            performanceTelemetry?.update(state: self.engine == nil ? "Model not loaded" : "Ready",
+                detail: self.engine == nil ? "Loads when you send a message." : "Ready for your next message.", engine: self.engine)
+        }
+        try cancellation.check()
+        if engine == nil {
+            performanceTelemetry?.update(state: "Loading", detail: "Preparing the local model.")
+            buffer.stage("Verifying the local model")
+            let store = WeightStore(modelDirectory: model)
+            let status: WeightStatus
+            do { status = try store.status(shouldContinue: { !cancellation.isCancelled }) }
+            catch { try cancellation.check(); throw error }
+            guard status.isReady else { throw SevraError.unavailable("The local model is missing or incomplete. Set up the model before sending.") }
+            try cancellation.check()
+            let machine = Machine.current()
+            let plan = try PerformancePolicy.plan(preferences, on: machine)
+            buffer.stage("Loading the local model")
+            engine = try await Engine(modelDir: model, plan: plan)
+            if let engine {
+                governor = MemoryGovernor(engine: engine)
+                governor?.start()
+            }
+            try cancellation.check()
+        }
+        guard let engine else { throw SevraError.unavailable("Model is unavailable.") }
+        performanceTelemetry?.update(state: "In use", detail: "Responding on your Mac.", engine: engine)
+        var request = try engine.beginRequest(connected: { !cancellation.isCancelled })
+        let definitions = tools ? ProposedTool.definitions : []
+        // Thinking never joins a tool turn in this version: tool-call
+        // reliability was measured with it off, and the combination has not been.
+        let thinking = definitions.isEmpty ? requested : nil
+        let replyTokens = thinking?.replyTokens ?? 1024
+        buffer.stage("Reading the conversation")
+        // Spliced: an assistant turn the engine itself produced, thought block
+        // included, is re-encoded from its held ids so the prefix state matches.
+        let ids = try engine.encodeChatSpliced(history, tools: definitions, thinking: thinking != nil, effort: thinking?.level)
+        try cancellation.check()
+        guard ids.count + (thinking?.budgetTokens ?? 0) + replyTokens <= engine.maxContextTokens else { throw SevraError.refused("This request is too large for the current context. Start a new thread or use a smaller source.") }
+        let splitter = ToolCallSplitter(tools: definitions.map(\.schema))
+        var calls: [ProposedTool] = []
+        var malformed = false
+        var text = ""
+        var tooLarge = false
+        func consume(_ events: [ToolStreamEvent]) {
+            for event in events {
+                switch event {
+                case .text(let part): text += part; if !buffer.append(part) { tooLarge = true }
+                case .toolCall(let call): calls.append(ProposedTool(id: call.id, name: call.name, arguments: call.arguments))
+                case .malformed: malformed = true
+                default: break
+                }
+            }
+        }
+        var params = SampleParams.greedy; params.maxTokens = replyTokens
+        var promptIds = ids
+        var receipt: ThinkingReceipt?
+        engine.generator.onPrefillProgressAbsolute = { done, total, _, reused in buffer.stage("Reading context: \(done + reused) of \(total + reused) tokens") }
+        defer { engine.generator.onPrefillProgressAbsolute = nil }
+        func markPrepared() {
+            if !prepared {
+                prepared = true
+                performanceTelemetry?.prepared(in: ProcessInfo.processInfo.systemUptime - started)
+            }
+        }
+        if let thinking {
+            // The template opens the thought block itself. The thought ends at the
+            // model's close tag, at the budget, or when the person asks for the
+            // answer; in the last two cases the documented closure is appended and
+            // the answer continues from the held prefix state.
+            let closeIDs = engine.tokenizer.encode(text: ThinkingPolicy.closeTag, addSpecialTokens: false)
+            guard closeIDs.count == 1, let closeID = closeIDs.first else { throw SevraError.unavailable("This model does not expose a single thinking close token.") }
+            var thoughtParams = SampleParams.thinking; thoughtParams.seed = thinking.seed; thoughtParams.maxTokens = thinking.budgetTokens
+            var closed = false, answerNow = false, thoughtTokens = 0
+            // The clock starts at the first thought token, after prefill, so the
+            // receipt and the live counter measure thinking and nothing else.
+            buffer.stage("Thinking")
+            let thought = engine.generate(promptIds: ids, params: thoughtParams, shouldContinue: { !cancellation.isCancelled }, onToken: { tok, delta in
+                markPrepared()
+                if tok == closeID { closed = true; return false }
+                if let tag = delta.range(of: ThinkingPolicy.closeTag) {
+                    buffer.appendThought(String(delta[..<tag.lowerBound])); closed = true; return false
+                }
+                thoughtTokens += 1
+                buffer.appendThought(delta)
+                if control.answerRequested { answerNow = true; return false }
+                return !cancellation.isCancelled && thoughtTokens < thinking.budgetTokens
+            }, request: request)
+            let ending: ThinkingReceipt.Ending = cancellation.isCancelled ? .stopped : closed ? .closed : answerNow ? .answerNow : .budget
+            buffer.endThinking(ending)
+            try cancellation.check()
+            if let error = thought.stats.runtimeError { throw SevraError.refused(error) }
+            promptIds += thought.ids
+            let separator = engine.tokenizer.encode(text: "\n\n", addSpecialTokens: false)
+            if closed { promptIds += separator }
+            else { promptIds += engine.tokenizer.encode(text: ThinkingPolicy.closure, addSpecialTokens: false) + [closeID] + separator }
+            receipt = ThinkingReceipt(level: thinking.level, budgetTokens: thinking.budgetTokens, tokens: thoughtTokens, seconds: buffer.thinkingSeconds, ending: ending)
+            // The thought samples so it cannot loop; the answer stays greedy like
+            // every other answer in this app, within the same reply cap.
+            request = try engine.beginRequest(connected: { !cancellation.isCancelled })
+            buffer.stage("Responding")
+        }
+        let result = engine.generate(promptIds: promptIds, params: params, shouldContinue: { !cancellation.isCancelled && !tooLarge }, onToken: { _, delta in
+            markPrepared()
+            buffer.stage("Responding")
+            consume(splitter.push(delta)); return !cancellation.isCancelled && !tooLarge
+        }, request: request)
+        consume(splitter.flush())
+        try cancellation.check()
+        if let error = result.stats.runtimeError { throw SevraError.refused(error) }
+        guard !malformed, !tooLarge else { throw SevraError.refused("The model produced an incomplete or oversized response. No proposed actions were executed.") }
+        var turn = EngineTurn(text: text, calls: calls, finishReason: result.stats.finishReason)
+        turn.thinking = receipt
+        try turn.validate()
+        return turn
+    }
+    public func unload() async {
+        while inTurn { try? await Task.sleep(nanoseconds: 20_000_000) }
+        performanceTelemetry?.update(state: "Releasing memory", detail: "Returning model memory to your Mac.")
+        await governor?.stopAndWait(); governor = nil
+        autoreleasepool {
+            engine?.dropPrefixCache(); engine = nil
+            Engine.releaseUnusedMemory()
+        }
+        performanceTelemetry?.update(state: "Model not loaded", detail: "Loads when you send a message.")
+    }
+}
+
+/// Explicit test dependency. Production never silently falls back to it.
+public actor ScriptedInference: Inference {
+    public nonisolated let simulated = true
+    private var turns: [EngineTurn]
+    private var traces: [String]
+    private let delay: UInt64
+    public private(set) var calls = 0
+    public private(set) var observedContexts: [[ChatMessage]] = []
+    public private(set) var observedThinking: [ThinkingRequest?] = []
+    public init(turns: [EngineTurn], delayNanoseconds: UInt64 = 0, thinkingTraces: [String] = []) { self.turns = turns; delay = delayNanoseconds; traces = thinkingTraces }
+    public func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        try await turn(history: history, tools: tools, thinking: nil, control: ThinkingControl(), cancellation: cancellation, buffer: buffer)
+    }
+    public func turn(history: [ChatMessage], tools: Bool, thinking requested: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        calls += 1
+        observedContexts.append(history)
+        let thinking = tools ? nil : requested
+        observedThinking.append(thinking)
+        guard !turns.isEmpty else { throw SevraError.unavailable("The scripted test has no further responses.") }
+        var turn = turns.removeFirst()
+        if let thinking {
+            // One scripted word stands for one thought token.
+            let trace = traces.isEmpty ? "Scripted reasoning." : traces.removeFirst()
+            var tokens = 0
+            var ending = ThinkingReceipt.Ending.closed
+            buffer.beginThinking(); buffer.stage("Thinking")
+            for word in trace.split(separator: " ") {
+                try cancellation.check()
+                if delay > 0 { try await Task.sleep(nanoseconds: delay) }
+                buffer.appendThought(String(word) + " "); tokens += 1
+                if control.answerRequested { ending = .answerNow; break }
+                if tokens >= thinking.budgetTokens { ending = .budget; break }
+            }
+            buffer.endThinking(ending)
+            turn.thinking = ThinkingReceipt(level: thinking.level, budgetTokens: thinking.budgetTokens, tokens: tokens, seconds: buffer.thinkingSeconds, ending: ending)
+        }
+        for character in turn.text {
+            try cancellation.check()
+            if delay > 0 { try await Task.sleep(nanoseconds: delay) }
+            _ = buffer.append(String(character)); buffer.stage("Simulated response")
+        }
+        try cancellation.check(); return turn
+    }
+    public func unload() {}
+}

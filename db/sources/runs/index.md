@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-16T19:50:35.681990Z
+updated: 2026-09-16T20:19:29.944945Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]] — Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing
 - [[sources/runs/2026/09/2026-09-16-release-0-2-19-published-and-installed]] — v0.2.19 acceptance: CI artifact 25/25, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary, doctor at 22 GB shows the corrected forecast.
 - [[sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb]] — 0.2.19 release benchmark at 22 GB: the shipping build's default 1.108 over the 0.2.18 forecast (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-b1-cohort-20gb]] — Taps B1 at 20 GB: aggregate 1.058 (bootstrap 1.031 to 1.088), families 1.019 to 1.105, 36 of 36 outputs identical; r0033 kept one counted pair, so the pairs condition fails
@@ -23,10 +24,27 @@ updated: 2026-09-16T19:50:35.681990Z
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-confirmation-20gb]] — Learned confirmation at 20 GB: aggregate 1.031 (bootstrap 1.013 to 1.041), kinds 1.025 to 1.055, 30 of 30 pairs counted with identical outputs; passes every registered condition
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-screen-20gb]] — Learned screen at 20 GB: 32 cells with identical outputs; corrected over attention 1.036 on the first twelve counted pairs (9 above 1); the confirmation runs
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-coroute-prior]] — Co-routing prior: leave-one-request-out top-10 agreement +0.0032 and matched-traffic twin coverage +0.0094 against bars of 0.03; negative, no native diagnostic
+- [[sources/runs/2026/09/2026-09-15-sevra-contextual-latest]] — Contextual Latest navigation with native viewport regression tests, light/dark UI checks and verified development bundle
+- [[sources/runs/2026/09/2026-09-15-sevra-mac-controls-and-help]] — Native control help, paging and split Find corrections with exact copy/export checks and verified development bundle
+- [[sources/runs/2026/09/2026-09-15-sevra-mac-adversarial-fixes]] — Adversarial fixes with real model replay, native recovery, bounded context, passing regressions and verified development bundle
+- [[sources/runs/2026/09/2026-09-15-sevra-mac-adversarial-review]] — Adversarial Mac app review, corrected durability and tool boundaries, passing regressions, real-model failures and remaining qualification
+- [[sources/runs/2026/09/2026-09-15-sevra-native-ux-settings-audit]] — Native Settings and UX audit with keyboard, accessibility, privacy wording, scoped visual checks and exact delivered bundle
+- [[sources/runs/2026/09/2026-09-15-sevra-home-continuation]] — Home continuation correction, exact context, repeat-click and draft safety, persistence and native real-model verification
+- [[sources/runs/2026/09/2026-09-15-sevra-layout-final-bundle]] — Final layout bundle with corrected source-to-binary mapping after concurrent app edits
+- [[sources/runs/2026/09/2026-09-15-sevra-native-layout-refinement]] — Native layout refinement with aligned toolbar, shared content gutters, consistent sidebar rows and scoped native verification
+- [[sources/runs/2026/09/2026-09-15-sevra-adaptive-memory]] — Native adaptive memory, deferred settings, safe lifecycle, real-model handoff and scoped UI verification
+- [[sources/runs/2026/09/2026-09-15-sevra-unified-native-toolbar]] — Unified native toolbar, compact title sizing, native actions menu and scoped Light/Dark interaction verification
+- [[sources/runs/2026/09/2026-09-15-sevra-draft-coordination-regressions]] — Native draft race correction, adversarial composer scenarios, real persistence and scoped UI checks; broader release gates remain open
 - [[sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed]] — v0.2.18 acceptance: CI artifact 25/25 after a headroom-only first run, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary.
+- [[sources/runs/2026/09/2026-09-14-sevra-rich-markdown-native-polish]] — Native rich Markdown, document affordances, responsive layout and bounded regression evidence; full UI and release qualification remains open
+- [[sources/runs/2026/09/2026-09-14-sevra-native-brand-ui-audit]] — Native Observer branding, appearance, Save/reopen, document viewing and bounded runtime checks; full UI qualification remains open
+- [[sources/runs/2026/09/2026-09-14-sevra-mac-static-regressions]] — Engine static regressions pass after native Mac integration; no release or native UI qualification claim
+- [[sources/runs/2026/09/2026-09-14-sevra-runtime-recovery-and-bundle]] — Native Mac runtime, draft races, privacy, authenticated IPC, process-crash recovery and development bundle checks
+- [[sources/runs/2026/09/2026-09-14-sevra-real-workspace-brief-complete]] — Real local Mac runtime completes cited Workspace Brief, exact reviewed artifact commit and reopened Home
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-long-conversation-e2e]] — 15,514-token serve e2e at 10 GB: turns beyond memory retention restored from disk in under 0.1 s and wrote 117.7 MB reusing about 431 MB of rows; restart and regenerate matched ids.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-e2e]] — Three-turn serve e2e at 10 GB: later turns wrote 117 MB each reusing about 108 MB of rows; a restart and a regenerated turn 3 restored from disk with identical ids; 12 of 12 checks.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-exactness]] — Persistent prefix exactness with rows shared across turns at 2051 tokens, with and without the draft head: restores, continuations, branches and opt-out all exact.
+- [[sources/runs/2026/09/2026-09-14-sevra-first-native-tool-loop]] — Native Mac UI drove a real local model through source reads to an uncommitted cited briefing
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-restart-e2e]] — Persistent prefix cache through serve at 10 GB: a restarted server restored a 3,896-token state and matched the first server's turn-2 ids; a cold server re-read the prompt.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-long-conversation-e2e]] — Persistent prefix cache through serve at 10 GB, 15,671-token first turn beyond memory retention: disk resume in the same server and after restart with identical turn-2 ids.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-exactness]] — Persistent prefix exactness at 2051 tokens with and without the draft head: restored state equals the saved one and a disk hit continues exactly like a memory hit.
@@ -489,26 +507,8 @@ updated: 2026-09-16T19:50:35.681990Z
 - [[sources/runs/2026/09/2026-09-05-hermes-release-context-and-gates]] — Hermes clean release candidate: full context and local gates
 - [[sources/runs/2026/09/2026-09-05-optimization-combined-first-pass]] — First combined-runtime correctness pass V103
 - [[sources/runs/2026/09/2026-09-05-optimization-output-queue-confirmation]] — Bounded-output latency nonregression qualification V102
-- [[sources/runs/2026/09/2026-09-05-download-compression-artifact-inspection]] — Both complete shard archives save 16% and restore the pinned hash; 106-window weighted estimate is 105.264 GB to 88.455 GB; no accepted runtime-speed claim
-- [[sources/runs/2026/09/2026-09-05-download-aggressive-lossless-experiments]] — Raw aggressive compression experiments with exact source; runtime timings discarded for concurrent load, deterministic artifact properties independently verified
-- [[sources/runs/2026/09/2026-09-05-optimization-tcp-serving-and-pressure-errors]] — Real TCP serving lifecycle and explicit pressure errors V99-V102
-- [[sources/runs/2026/09/2026-09-05-optimization-larger-prefill-feasibility]] — Larger-prefill-scope reference warmup exclusion V98
-- [[sources/runs/2026/09/2026-09-05-optimization-embedding-resource-serving]] — Embedding serving resource qualification and TCP checks V98
-- [[sources/runs/2026/09/2026-09-05-download-existing-compression-check]] — Actual file-header checks: raw quantized safetensors, gzip installer, Deflate wheels, and BG4-LZ4 Xet storage chunks
-- [[sources/runs/2026/09/2026-09-05-hermes-local-install-verified]] — Verified Hermes source build installed locally
-- [[sources/runs/2026/09/2026-09-05-hermes-final-integration-acceptance]] — Final Hermes integration acceptance
-- [[sources/runs/2026/09/2026-09-05-optimization-embedding-runtime-integration]] — Checked embedding row runtime integration V96 V97
-- [[sources/runs/2026/09/2026-09-05-hermes-adapter-regressions-and-vision-discovery]] — Hermes adapter regressions and vision discovery counterexample
-- [[sources/runs/2026/09/2026-09-05-optimization-prefix-serving-confirmation]] — Repeated-prefix serving confirmation V95
-- [[sources/runs/2026/09/2026-09-05-download-first-principles-audit]] — Download audit: current transport probes, complete Xet byte metadata, tensor inventory and lossless compression samples
-- [[sources/runs/2026/09/2026-09-05-optimization-prefix-committed-boundaries]] — Committed prefix boundary and recovery qualification V95
-- [[sources/runs/2026/09/2026-09-05-hermes-context-qualified]] — Full long-context prefill and reply fit the reserved physical-memory envelope
-- [[sources/runs/2026/09/2026-09-05-optimization-lookup-embedding-rows]] — Optimization exact packed lookup embedding row component V93 V94
-- [[sources/runs/2026/09/2026-09-05-hermes-planned-context-counterexample]] — Full long-context prefill completes but its sampled process peak exceeds the planned envelope
-- [[sources/runs/2026/09/2026-09-05-hermes-openai-real-client-gates]] — Released and current Hermes complete real local tool loops, title fallback and bounded compaction; OpenAI and gateway gates pass
-- [[sources/runs/2026/09/2026-09-05-optimization-prefix-client-and-vision-integration]] — Optimization prefix divergent-client and real-image integration V92
 
 ## More
 
-This folder has 576 files. The 500 most recent are listed above.
+This folder has 594 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

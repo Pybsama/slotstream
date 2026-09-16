@@ -28,6 +28,11 @@ The README, user guides, engineering notes, and changelog are combined in
 - One model process per user (`/tmp/slotstream-model-<uid>.lock`). The server binds 127.0.0.1 only, accepts browser origins from loopback only, and has no auth.
 - Hardware reports include a 48 GB M5 Pro, a 16 GB M2, a 32 GB M5 Air, and a 128 GB M5 Max. The latter three are community reports with different settings. The README gives rough planning ranges separately from actual tested configurations with installed RAM, release and process memory target. The upper High/Ultra estimates assume M5 Max-class hardware, a fast internal SSD and larger manual targets. They are extrapolations across machines and releases, not measured limits or confidence intervals. Larger manual targets improved the reported M5 Max speed; installed RAM alone does not define a performance tier. The hardware guide explains each range and keeps simulated allocation plans separate. The 18, 24 and 36 GB sizes still need reports; 8 GB Macs are refused because the smallest plan doesn't fit. Compatibility-tier support is coming soon; it is not available in the current release. Runtime testing on macOS 14/15 is still needed. Ollama CLI and symlinked-weight-directory bugs in 0.2.0 were fixed in 0.2.1.
 
+Sevra for Mac is under development in `apps/macos`, using SwiftUI/AppKit and a
+Swift-owned runtime with in-process Slotstream. Product behavior is shared as
+text specifications; platform implementations are independent. This is a local
+development app, not a published desktop release.
+
 ## Commands
 
 - `slotstream doctor [--memory-gb G] [--sim-ram N] [--sim-available N] [--json]`: device report and the plan any flags would produce. Loads nothing, takes no lock.
@@ -61,6 +66,7 @@ The README, user guides, engineering notes, and changelog are combined in
 - [docs/HERMES.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/HERMES.md): first-time Hermes setup, complete tested configuration, file-reading example, and troubleshooting
 - [docs/CODEX.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CODEX.md): first-time Codex setup with the model catalog, provider configuration, a file-editing example, and troubleshooting
 - [README.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/README.md): project overview, requirements, measured speed, quick start, guides, a plain explanation, limitations, FAQs, community, and star history
+- [docs/SEVRA-MAC.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/SEVRA-MAC.md): native philosophy, development build, local workflow, tests, internal CLI and unpassed release gates
 - [docs/CLI.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CLI.md): everyday commands, common diagnostics, memory-option precedence, environment variables, file locations, the diagnostic checks
 - [docs/API.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/API.md): every endpoint, accepted field, sampling default, streaming and error shapes
 - [docs/LIBRARY.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/LIBRARY.md): using slotstream as a Swift package — the two products, the Metal library requirement, weights, planning, serving

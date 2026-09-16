@@ -1,0 +1,170 @@
+---
+type: native-spec
+meta-type: operational
+id: 01m2gb63bjf3kzznf6ta8jp920
+created: 2026-09-14T16:14:44.082480+00:00
+updated: 2026-09-16T20:19:00.539192+00:00
+summary: Mac application implementation progress and unpassed release gates
+---
+# Mac implementation status
+
+Implementation started September 14, 2026, at Carlos's request. A functional native Mac development app and its Swift-owned runtime now exist. This is a scoped implementation receipt, not completion of the full Mac plan, public alpha, stable release or another platform.
+
+| Area | Implemented and observed | Remaining qualification |
+| --- | --- | --- |
+| Native application | SwiftUI/AppKit window, native TextKit composer/document, Home and threads, attachments, review, memory/journal/settings, menus and window lifecycle. The first bundle launched through native UI, accepted a folder and prompt, opened Settings during model preparation, and reached real-model review. | The later native audit verified the Observer/sidebar/About icon, Light/Dark and System resolution, native Save, clean relaunch, in-app saved-document viewing, large content text, narrow layout, draft continuity through appearance changes and scoped Find. Live OS appearance changes, complete IME/focus/selection continuity, assistive technologies and long-document budgets remain pending. The later rich-document pass adds native Markdown, code, tables, citations, bounded history, resizable navigation, a growing composer and responsive artifact review. Its source receipt below owns the exact observed scope. |
+| Swift runtime | Direct in-process Slotstream inference, bounded successful-turn tool gating, serial queue, durable acceptance/nonces, stop signalling, drafts with revision checks, explicit memory admission/correction/Forget, thread scopes and Incognito. Combined context and save-race fixtures pass. | Strict load/stop quiescence, idle/pressure lifecycle, event cursor/replay completeness, large-Home scaling and longitudinal personal-loop fixtures remain open. |
+| First complete job | Real local model read both public Cedar fixtures, produced a cited briefing satisfying the frozen rubric, stopped for review, then the synthetic reviewer committed the exact proposed bytes. Reopening recovered the artifact and completed thread. Source excerpts are preserved for new runs. | The separate native audit subsequently verified Save and reopening its earlier real-model proposal. Neither run certifies broad task reliability, model comparisons or arbitrary source types. The receipt identifies the exact tested binary; later draft/memory changes have separate targeted checks. |
+| Persistence | Official dbmd mutations, compact Home index, independent thread/draft records, immutable conversation/excerpt events, native hash/recovery ledger, create-only artifact publication. Actual process termination at intent/documents/artifact/record seams recovers idempotently. External edits pause writes and preserve bytes. | Complete export and inert restore, interactive reconciliation, cross-implementation schema conformance, full source-folder closure and power-loss proof remain pending. A process-crash test is not a storage power-loss test. |
+| Local CLI | Separate sevra-local consumer uses the same runtime. Authenticated bounded Unix IPC, same-user peers, long Home paths, ephemeral capability, duplicate acceptance and detached completion pass; unbound Incognito access is refused. The CLI can reopen the completed real-test Home. | Full CLI grammar, historical event replay and the optional authenticated network server are not complete. |
+| Model setup | Settings is wired to explicit pinned WeightStore inspection/download/resume/repair; model maintenance excludes inference. Startup does not download. Existing verified model inference was exercised. | Fresh acquisition/repair/cancellation, automatic maintained hardware selection and the same-hardware model-value comparison remain unqualified. |
+| Build and brand | Independent apps/macos package preserves the root engine package. Local source/dependency hashes stay identical across the app build; dbmd, Metal and licensed Inter/Poppins resources are bundled and ad-hoc signature verification passes. Native Observer geometry and a multiresolution bundled ICNS are included, with the same image in About. The Xcode project is now explicitly included despite the general ignore rule. App/CLI/check products compile; Xcode project and Info.plist parse. | Full Xcode is absent on this host, so its app target has not been built. Modern layered-icon and Finder/Dock-shell appearance qualification remain open. Developer ID, notarization, installed updater/rollback, clean-machine compatibility, voluntary feedback, external users and all release gates remain pending. |
+
+## Evidence
+
+- [[sources/runs/2026/09/2026-09-14-sevra-first-native-tool-loop]] records the first real app interaction and pending proposal. No file was committed by that UI run.
+- [[sources/runs/2026/09/2026-09-14-sevra-real-workspace-brief-complete]] preserves the real-model complete fixture, full proposal/citations, fixed rubric and exact reviewed commit/reopen result.
+- [[sources/runs/2026/09/2026-09-14-sevra-runtime-recovery-and-bundle]] preserves the latest targeted checks and the tested executable, helper, resource and bundle input hashes.
+
+The synthetic Home used for native QA now holds the completed real-model proposal, committed through native Save and reopened through the final in-app document viewer. It is separate from the disposable real-check Home, where the harness committed its own document. No app has been published, no installed release is claimed, and no unrelated engine work was reverted.
+
+## Brand and Mac practice audit
+
+[[sources/runs/2026/09/2026-09-14-sevra-native-brand-ui-audit]] records the later native walkthrough, exact final build, fixes and unpassed requirements. The saved-document reader now opens current artifact bytes inside Sevra with bounded UTF-8/no-follow file access; its targeted checks and the runtime regression suite pass. Opening no longer depends on a separate Markdown editor. The icon packaging, warm Settings canvas, secondary text/boundary contrast, transcript spacing and compact document composer were corrected during the review.
+
+## Rich Markdown and native polish
+
+[[sources/runs/2026/09/2026-09-14-sevra-rich-markdown-native-polish]] captures the follow-up implementation, exact final bundle and native walkthrough. Swift Markdown now parses off the UI thread with completed-message reuse, source positions and late-reference updates. AppKit renders headings, nested/task lists, quotes, syntax-colored code and native tables. Its compatible text engine supports NSTextTable deliberately; this is not an all-TextKit-2 claim. Raw HTML and remote images remain inert, links require destination review, and citations resolve only to owner-supplied excerpts. Source mode and complete Markdown copy/export preserve the original text.
+
+The UI adds code-copy actions, a document outline and native heading/table/code accessibility rotors, bounded history paging, a resizable rail with scrollable compact overlay, growing composer, recent editor-state cache, split artifact review, explicit source inspection, persistent error states and a single keyboard-command map. Focus and unnecessary system context actions were corrected during actual use. Native controls, warm Light/Dark/System palettes, Inter content, Poppins wordmark and the Observer icon remain coherent.
+
+Observed in the running app: rich formatting and tables in Light/Dark, large reading/writing text, compact navigation with both threads reachable, focused Search/Settings and return commands, exact Unicode code copy with Undo, native artifact Find, split resizing, source excerpt/hash/byte details, reviewed Save and reopen, safe link review/cancel, full Markdown export and individual-file attachment. Saved and exported bytes matched their full expected source. The synthetic UI fixture is labeled and archived; it is separate from the real-model Cedar evidence. The complete runtime suite and standalone presentation checks pass.
+
+Still unqualified: the full sustained fake/real-load performance matrix, complete VoiceOver/table-cell and IME behavior, live OS accessibility transitions, cross-page selection continuity and external-user sessions. The native split divider reports disabled through AX even though mouse resizing works. A bounded recent editor cache does not preserve Undo after its older views are evicted. These limits stay visible; no full UI-D, alpha, stable or installed-release gate is accepted. Model acquisition, rich extraction containment, full Home export/inert restore and extensions remain plan work.
+
+## Repository validation
+
+The existing engine static gates pass across the recorded invocations. Newly
+authored evidence metadata was completed after the first validation stopped;
+the raw outputs were preserved. The engine brain has no validation errors and
+retains its two historical log warnings. This work does not claim a warning-free brain cleanup.
+
+[[sources/runs/2026/09/2026-09-14-sevra-mac-static-regressions]]
+
+## Resume order
+Start with the latest adversarial review's unresolved gates: replay the unchanged real Cedar fixture using the final corrected candidate when the other model experiment has finished, then recheck the last Queue/archive-filter/Find-focus/quiet-cancel fixes when the Mac is unlocked. Preserve failure evidence and exact executable/source identity. The prior scoped native pass is not a full final-binary UI qualification.
+
+Next qualify long-context/Home behavior and complete interactive external-edit recovery plus Home export/inert restore. Continue native focus/IME/selection, accessibility, live System appearance, sustained performance, fresh model acquisition and hardware/lifecycle qualification. Complete the signed installed-release gates before public release. Skills, mini-app isolation/data/version lifecycle and the rest of stable scope remain future implementation.
+
+[[records/design/sevra-spec/overview]]
+[[sources/runs/2026/09/2026-09-15-sevra-mac-adversarial-review]]
+## Draft coordination correction
+[[sources/runs/2026/09/2026-09-15-sevra-draft-coordination-regressions]] records the draft race correction and exact tested bundles. Draft saving now uses one production ComposerSession with acknowledged revisions, coalesced writes, coordinated navigation and shutdown, and atomic Send/draft updates. Real conflicts preserve both versions for an explicit choice. Save failures retain text, offer Retry Save and Copy Draft, block unsafe close, and clear on recovery. Send retries preserve acceptance identity. Incognito removal drains pending writes; new text views retain focus intent until attached to their window.
+
+The production coordinator's delayed/failing-storage scenarios, mixed operation sequence, real-dbmd draft/reopen checks, and existing runtime/Markdown regressions pass. Native checks cover exact multiline Unicode, Undo/Redo, navigation, quit/relaunch, oversized-draft refusal/recovery, a real local-model response with typing during acceptance, Incognito cleanup, repeated new-thread focus, and the final error controls in Dark/System appearance. The receipt distinguishes the real-inference bundle from the final wording/focus build. These targeted passes do not close the remaining UI, model lifecycle, data portability or release gates above.
+
+## Unified native toolbar
+The Mac window now uses one AppKit toolbar for its traffic lights, sidebar toggle, current-page/thread heading, memory/lifecycle status, Search and contextual More menu. The extra SwiftUI header is removed. Native buttons/menus follow appearance and activation state; noninteractive title text has no button backing. Long titles truncate with a full accessible value and tooltip. Control-Command-S controls wide or compact navigation, with the same command-map entry in View and Settings.
+
+[[sources/runs/2026/09/2026-09-15-sevra-unified-native-toolbar]] records the successful bundle build, scoped Light/Dark and compact layout checks, Search/back/sidebar interactions and final Incognito menu round trip. No broader UI-D or release gate is accepted by this change.
+
+## Adaptive memory and readiness
+The Mac app now defaults to automatic memory planning, with native custom
+ceilings that retain elasticity and pressure protection. Settings separates
+budget, current physical usage and model readiness. Preferences persist;
+ordinary changes defer to the end of the complete job, and new messages queue
+through the resource handoff. Idle release, keep-ready, explicit release,
+sleep admission/cancellation and wake without replay are wired. Engine teardown
+drains the governor and temporary Metal objects. Metadata avoids the generation
+lock. Oversized conversation history is refused instead of silently trimmed.
+
+Verification: the complete native composer/presentation/runtime regression
+suite passes, including resource-policy sweeps, malformed settings, deferred
+changes, controlled handoff, sleep/wake and context-overflow cases. The bounded
+real-model sequence passes lazy loading, warm reuse, setting changes while
+active, lower-budget reload, automatic idle release and draft preservation.
+A first real run exposed a handoff refusal and is preserved with its corrected
+regression. The final native walkthrough verified persisted settings, numeric
+validation, accessibility slider increment, System/Light/Dark rendering, a
+pending setting change during real inference and Incognito cleanup. The app is
+left on Automatic memory, Automatic readiness and System appearance.
+
+Evidence and exact build identities:
+[[sources/runs/2026/09/2026-09-15-sevra-adaptive-memory]].
+Operating policy and scope: [[records/design/sevra-spec/mac-platform]].
+
+This closes the scoped development memory-control integration gap. The full
+physical sleep/wake, OS-pressure/thermal and supported-hardware matrix, clean
+paired latency/model-value measurements, complete assistive-technology review
+and installed public-release gates remain open. Idle delays and the inherited
+model-specific operating ceiling are not claimed to be universally optimal.
+
+## Native layout refinement
+The follow-up layout pass aligns the toolbar heading with the detail-pane gutter through sidebar resizing and native navigation grouping. Compact and split layouts remove the spacer entirely. Conversation, composer, run status, document controls and panels share a readable column; artifact chrome and text share edge insets. Sidebar icon columns, row heights, interaction states and document control sizes are consistent. Journal removes its duplicate page heading; transcript speaker and section gaps are more compact without changing source copy/export.
+
+[[sources/runs/2026/09/2026-09-15-sevra-native-layout-refinement]] records the final build identity and scoped native Light/Dark, compact, large-text, sidebar-resize, split-document, full-screen document and menu checks. The presentation regression checks pass. The app was left on Home with System appearance and default reading/sidebar sizes. Existing drafts and independent runtime work were preserved. Complete native accessibility, sustained-load and installed-release gates remain open.
+Final bundle and source-mapping correction after concurrent app edits: [[sources/runs/2026/09/2026-09-15-sevra-layout-final-bundle]]. Its manifest owns the exact final source identity; final Home/Search checks passed.
+
+## Home continuation correction
+The native Continue in thread action now resolves and visibly labels the exact selected Home exchange by event reference. New titles derive from the selected user message; repeated actions reopen the same continuation. Home offers Open thread, while View in Home returns to the original stream. Search, copy/export and paging include quoted history. Navigation coordinates both drafts and publishes the destination before activating its composer. Source access and approval authority remain thread-scoped.
+
+[[sources/runs/2026/09/2026-09-15-sevra-home-continuation]] records the reproduced empty-view defect, passing runtime/composer/Markdown regressions, exact context and permission checks, a real native local-model continuation, restart and independent draft verification. The final app bundle was rebuilt and its input manifest verified. This corrects the latest completed Home exchange action; arbitrary earlier-turn selection and the complete historical link-card UI remain broader plan work. No complete app or release gate is accepted by this scoped check.
+
+## Native UX and Settings audit
+Settings now groups General, Model and Keyboard behind a native category control. Related memory/readiness settings stay together, optional diagnostics use a disclosure, and file status distinguishes unchecked from missing. Keyboard shortcuts and meaningful model/budget values have explicit accessible labels and values. Search supports visible Up/Down selection and Return; marked input retains arrow ownership. Escape closes native Find first, then the panel, restoring the conversation and its draft. Memory choices show their scope clearly, Incognito omits unavailable changes, and Knowledge explains save/forget and length restrictions.
+
+[[sources/runs/2026/09/2026-09-15-sevra-native-ux-settings-audit]] preserves the native walkthrough, final bundle identity and raw scripted regression output. Scoped native checks cover Light/Dark, compact and 24-point reading text, settings input validation, model-file checking, Search, document Find/Escape, Incognito cleanup and draft preservation. The complete scripted composer/presentation/runtime suite passed before later independent engine edits; the receipt separates that scope from final build and native checks. System appearance, default text/sidebar sizes, Automatic memory/readiness and Home were restored. Full assistive-technology, live IME, sustained-load, hardware and installed-release gates remain open.
+
+## Adversarial Mac app review
+The corrected development app passes the complete composer, Markdown and runtime regression suite. The final real-model Cedar replay also passes the unchanged rubric, exact approval and reopened-artifact checks. It reproduced the tool spelling error, rejected it without executing an alias, and accepted the corrected response. Earlier failed attempts remain evidence; they are superseded by this scoped replay, not erased.
+
+[[sources/runs/2026/09/2026-09-15-sevra-mac-adversarial-fixes]] records the failures, multiple correction passes, final passing logs, native observations, source manifests and installed development identity. The earlier whole-feature inventory remains in [[sources/runs/2026/09/2026-09-15-sevra-mac-adversarial-review]].
+
+| Area | Corrected and verified | Still open |
+| --- | --- | --- |
+| Durable user work | Historical documents/citations; coordinated journal/draft revisions and nonces; invalid-save recovery; canonical paths; shutdown guards; exact external-draft review, version preservation and restart reconciliation; verified Home backup and inert restore with explicit privacy activation | Arbitrary owned-evidence edits, large-Home scale, complete portability and physical power-loss qualification |
+| Model and tools | Full call-set validation; correction in the leading system message supported by the pinned model template; successful final real cited document; exact approval/rejection; cancellable model-file hashing | Broad task reliability, fresh acquisition/repair and complete load/stop/hardware qualification |
+| Memory and context | Deterministic bounded memory ranking; full selected memory text; complete recent exchanges and labeled partial earlier excerpts; inspectable exact message selection; Forget lineage; old strict thread-only privacy retained until opt-in | Semantic recall quality, source-heavy token-bound recovery and longitudinal/multi-hardware qualification |
+| Native UI | Find/Escape returns focus to the searched document; Queue labeling, archive/new-thread visibility; recovery inspection and dated restore review; visible backup feedback; Light/Dark/System; native Check/Stop; positive toolbar sizing without the sampled startup warning | Full VoiceOver/IME, live OS transitions, sustained-load/latency and hardware matrix |
+| Local runtime/CLI | Composer races, FIFO/cancel/sleep fixtures, source boundaries, current-run IPC, Incognito isolation and process-crash recovery | Full CLI grammar/event replay/network adapter and complete storage interoperability |
+| Remaining product plan | Missing features stay explicit and are not counted as tested | Rich extraction containment, skills/mini-app sandbox/version/data lifecycle, signed installer/notarization/updater/rollback, voluntary feedback and external-user qualification |
+
+The final Mac source matches the tested isolated snapshot. Independent engine changes in the root checkout were preserved and are not implicitly qualified by this app receipt. The development app at `.build/Sevra.app` now contains the tested executable and manifest, keeps its normal identity/resources, and verifies with ad-hoc signing. A rollback copy was retained, the existing Home reopened, and its canonical data stayed exact. Private contents were excluded from the public evidence. All audit/model processes were closed; the ordinary development app remains on Home. No public release or push occurred.
+
+These results close the earlier real-replay and locked-screen blockers. They do not establish bug freedom or completion of the Mac stable-release plan.
+
+## Native control help and document actions
+The conversation icons and related controls expose native hit-target tooltips
+and accessibility help. Unavailable actions explain their prerequisite.
+Conversation and artifact Find target their own views, and their Markdown
+source toggles are independent. Outline actions guard against obsolete render
+ranges; the outline appears only when a rendered view has useful destinations.
+Empty-state attachment and File menu commands follow current admission guards.
+
+[[sources/runs/2026/09/2026-09-15-sevra-mac-controls-and-help]] records the prior
+native paging, outline, split Find, keyboard/source, exact copy/export,
+attachment/detachment, new-thread and settings checks. Its permanent toolbar
+Latest and explanatory empty outlines were subsequently refined by the
+contextual navigation pass below. Native tooltip properties and AX help are
+verified; sustained hover-bubble capture and the complete accessibility/OS
+matrix remain untested.
+
+## Contextual conversation navigation
+Latest is now a round down-arrow above the composer, visible only when newer
+content is below or an earlier page is loaded. It returns to the exact latest
+page after layout, with a native tooltip, accessible name and Control-Command-
+Down shortcut in the View menu and Keyboard settings. Streaming preserves a
+reader's position and text selection; following resumes when the reader
+returns to the bottom. Sending a message shows the latest page without
+stealing composer focus. Resizing and text-size changes preserve following.
+
+[[sources/runs/2026/09/2026-09-15-sevra-contextual-latest]] preserves a reproduced
+resize failure and the passing native production-view regression probe,
+composer/Markdown reruns, click/keyboard/paging and light/dark UI observations,
+matched source/input manifests and final bundle identity. The updated app
+reopened the unchanged Home, and the test process was closed. No model was
+loaded. These scoped checks do not close the broader product, sustained-load,
+IME/VoiceOver or signed-release gates, or qualify concurrent root engine work.
+
+## Thinking before answers
+Opt-in thinking is implemented as specified in [[records/design/sevra-spec/runtime-contract]] and [[records/design/sevra-spec/ui-contract]]: a sticky per-thread "Think longer" switch, off by default and off for tool turns; an explicit `low` effort with a 768-token thought ceiling and forced closure; Answer now; a live clock and working-notes disclosure; a per-run receipt with no persisted thought text; Incognito isolation; local endpoint and internal CLI intents. The scripted suite gained `--thinking` and the check runner gained `--real-thinking`. Full scripted suite and the real-model check pass on the development Mac at the bounded 10 GB plan: in the final run all four phases completed: a 96-token forced close answered correctly after 20.9 s of thought, Answer now ended a thought at 8.2 s and the answer followed, the app's own budget closed naturally after 34 tokens, a plain turn followed in the same thread, three receipts persisted and no thought text reached any Home file. Earlier runs found and fixed a clock that included prompt reading, a misleading receipt after a failed answer phase, and a sampled answer phase that outran the reply cap. Visual and screen-reader review of the new controls, thinking in tool loops, a heavier level and an automatic mode remain open. Evidence: [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]].

@@ -11,6 +11,7 @@ for Slotstream. For installation and a first reply, start with
 | Commands and configuration | [Command reference](CLI.md) |
 | HTTP integration | [API reference](API.md), [Hermes notes](HERMES-NOTES.md), [fx protocol](FX.md#protocol-reference) |
 | Embedding in an app | [Swift library](LIBRARY.md) |
+| Sevra native application | [Mac development and native philosophy](SEVRA-MAC.md) |
 | Build, test, and contribute | [Testing](TESTING.md), [Contributing](../CONTRIBUTING.md) |
 | Download internals | [Slotpack format](DOWNLOAD-FORMAT.md) |
 | Expert lookahead | [How it works, experiments and results](EXPERT-LOOKAHEAD.md) |

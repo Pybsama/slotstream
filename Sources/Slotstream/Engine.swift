@@ -193,6 +193,10 @@ public final class Engine {
         withExclusive { prefixCache.drop() }
     }
 
+    /// Return allocator-held reusable buffers after the embedding owner has
+    /// drained and released its engine. Does not free any live model buffers.
+    public static func releaseUnusedMemory() { MLX.Memory.clearCache() }
+
     /// Keep long conversation states on disk as well (PersistentPrefixCache),
     /// so a restart, or a conversation longer than memory retains, resumes
     /// from its last committed state instead of re-reading its prompt.

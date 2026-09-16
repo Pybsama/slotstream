@@ -1,0 +1,143 @@
+import Foundation
+import Slotstream
+
+public struct PerformancePreferences: Codable, Equatable, Sendable {
+    public enum Budget: String, Codable, CaseIterable, Sendable { case automatic, custom }
+    public enum Readiness: String, Codable, CaseIterable, Sendable { case automatic, keepReady }
+    public var budget: Budget
+    public var customGB: Double
+    public var readiness: Readiness
+    public init(budget: Budget = .automatic, customGB: Double = 10, readiness: Readiness = .automatic) {
+        self.budget = budget; self.customGB = customGB; self.readiness = readiness
+    }
+    public static func restore(_ data: Data?) -> Self {
+        guard let data, let value = try? JSONDecoder().decode(Self.self, from: data),
+              value.customGB.isFinite, value.customGB >= PerformancePolicy.minimumGB,
+              value.customGB <= Planner.usefulCeilingGB else { return .init() }
+        return value
+    }
+}
+
+/// Product policy for the currently supported text model. It reuses the
+/// engine's measured operating ceiling and preserves its independent CLI.
+public enum PerformancePolicy {
+    // Round the engine floor UP to a half GB for an accessible native control.
+    public static let minimumGB = ceil(Planner.minMemoryGB * 2) / 2
+    public static func maximumGB(on machine: Machine) -> Double {
+        max(0, floor(min(Planner.usefulCeilingGB, machine.workingSetGB - 2,
+                         machine.ramGB - Planner.availabilitySlackGB(ramGB: machine.ramGB)) * 2) / 2)
+    }
+    public static func validate(_ preferences: PerformancePreferences, on machine: Machine) throws {
+        guard preferences.customGB.isFinite, preferences.customGB >= minimumGB,
+              preferences.customGB <= Planner.usefulCeilingGB else {
+            throw SevraError.refused("Choose a memory limit within the supported range.")
+        }
+        if preferences.budget == .custom, preferences.customGB > maximumGB(on: machine) {
+            throw SevraError.refused("This memory limit exceeds the supported budget on this Mac. Choose Automatic or a lower limit.")
+        }
+    }
+    public static func plan(_ preferences: PerformancePreferences, on machine: Machine) throws -> MemoryPlan {
+        try validate(preferences, on: machine)
+        guard let available = machine.availableGB, available.isFinite, available > 0,
+              machine.ramGB.isFinite, machine.ramGB > 0, machine.workingSetGB.isFinite else {
+            throw SevraError.unavailable("Sevra cannot read available memory right now. Try again in a moment.")
+        }
+        // A custom ceiling stays auto-sized: the governor retains the same
+        // RAM-share bound, pressure cancellation and shrink/grow policy.
+        let percent = preferences.budget == .custom ? preferences.customGB / machine.ramGB * 100 : nil
+        let plan = try Planner.plan(PlanRequest(maxRAMPercent: percent, mtp: .off, vision: .off,
+                                               maxContextTokens: 8192), on: machine)
+        let limit = preferences.budget == .custom ? preferences.customGB : Planner.usefulCeilingGB
+        let feasible = min(limit, machine.workingSetGB - 2,
+                           available - Planner.availabilitySlackGB(ramGB: machine.ramGB))
+        // The CLI's historical advisory floor is not permission for Desktop
+        // to load a profile that cannot fit. Never force it or shorten context.
+        guard let target = plan.targetGB, target <= feasible + 0.0001,
+              plan.expectedPeakGB <= feasible + 0.0001 else {
+            throw SevraError.refused("There isn’t enough memory available for this model. Close a large app and try again. Your conversation is preserved.")
+        }
+        return plan
+    }
+    /// Conservative development idle policy in seconds, not a measured optimum.
+    /// Amortize observed preparation cost without keeping a large model forever.
+    /// Revisit after paired cold/warm workflow measurements on supported Macs.
+    public static func idleDelay(preparationSeconds: Double, conservingPower: Bool) -> TimeInterval {
+        let cost = preparationSeconds.isFinite ? max(0, preparationSeconds) : 0
+        return min(1800, max(conservingPower ? 300 : 600, cost * 4))
+    }
+    public static func shouldRelease(idleSeconds: Double, preparationSeconds: Double,
+                                     preferences: PerformancePreferences, pressure: Bool,
+                                     conservingPower: Bool) -> Bool {
+        pressure || (preferences.readiness == .automatic && idleSeconds >= idleDelay(
+            preparationSeconds: preparationSeconds, conservingPower: conservingPower))
+    }
+}
+
+public struct PerformanceSnapshot: Sendable, Equatable {
+    public var preferences: PerformancePreferences
+    public var pending: Bool
+    public var state: String
+    public var loaded: Bool
+    public var busy: Bool
+    public var usedGB: Double?
+    public var budgetGB: Double?
+    public var recommendationGB: Double?
+    public var maximumGB: Double
+    public var detail: String
+    public var idleMinutes: Int
+}
+
+/// Metadata has its own lock and never waits for the inference actor or the
+/// generation lock. CPU and GPU allocations share one physical-footprint count.
+public final class PerformanceTelemetry: @unchecked Sendable {
+    private let lock = NSLock()
+    private weak var engine: Engine?
+    private var state = "Model not loaded"
+    private var detail = "Loads when you send a message."
+    private var preparationSeconds: Double = 0
+    private var pressure = false
+    private var monitor: DispatchSourceMemoryPressure?
+    public init() {
+        let source = DispatchSource.makeMemoryPressureSource(eventMask: [.normal, .warning, .critical],
+            queue: DispatchQueue(label: "sevra.memory-status", qos: .utility))
+        source.setEventHandler { [weak self, weak source] in
+            guard let self, let source else { return }
+            self.lock.lock(); self.pressure = !source.data.contains(.normal); self.lock.unlock()
+        }
+        source.resume(); monitor = source
+    }
+    deinit { monitor?.cancel() }
+    public var underPressure: Bool { lock.lock(); defer { lock.unlock() }; return pressure }
+    public var lastPreparationSeconds: Double { lock.lock(); defer { lock.unlock() }; return preparationSeconds }
+    public var isLoaded: Bool { lock.lock(); defer { lock.unlock() }; return engine != nil }
+    func update(state: String, detail: String, engine: Engine? = nil) {
+        lock.lock(); defer { lock.unlock() }
+        self.state = state; self.detail = detail; self.engine = engine
+    }
+    func prepared(in seconds: Double) { lock.lock(); preparationSeconds = max(preparationSeconds, seconds); lock.unlock() }
+    public func snapshot(preferences: PerformancePreferences, pending: Bool, busy: Bool) -> PerformanceSnapshot {
+        lock.lock()
+        let current = engine, state = self.state, detail = self.detail, seconds = preparationSeconds, pressure = self.pressure
+        lock.unlock()
+        let machine = Machine.current()
+        // Credit only Sevra's physical footprint, never RSS plus GPU memory.
+        let bytes = ProcessMemory.residentBytes()
+        var credited = machine
+        if let available = machine.availableGB { credited.availableGB = min(machine.ramGB, available + Double(bytes) / 1e9) }
+        let recommendation = try? PerformancePolicy.plan(.init(), on: credited)
+        let plan = current?.currentPlan
+        let conditions = ProcessMemory.operatingConditions()
+        let conserving = conditions.lowPowerModeEnabled || ["serious", "critical"].contains(conditions.thermalState)
+        return PerformanceSnapshot(preferences: preferences, pending: pending, state: state,
+            loaded: current != nil, busy: busy, usedGB: bytes == 0 ? nil : Double(bytes) / 1e9,
+            budgetGB: plan?.expectedPeakGB, recommendationGB: recommendation?.targetGB,
+            maximumGB: PerformancePolicy.maximumGB(on: machine),
+            detail: pressure ? "Giving memory back to your Mac." : detail,
+            idleMinutes: Int(ceil(PerformancePolicy.idleDelay(preparationSeconds: seconds, conservingPower: conserving) / 60)))
+    }
+}
+
+public extension Inference {
+    var performanceTelemetry: PerformanceTelemetry? { nil }
+    func configure(_ preferences: PerformancePreferences) async throws {}
+}

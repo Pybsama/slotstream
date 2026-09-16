@@ -121,6 +121,32 @@ public struct WeightStore: Sendable {
             freeDiskBytes: free)
     }
 
+    /// Cancellable native-app verification. The existing no-argument API keeps
+    /// its behavior; UI Stop and owner shutdown can interrupt the hashing loop.
+    public func status(shouldContinue: @escaping @Sendable () -> Bool) throws -> WeightStatus {
+        guard shouldContinue() else { throw DownloadCancelled() }
+        let free = Self.freeDiskBytes(near: modelDirectory)
+        let remaining = Self.remainingBytes(at: modelDirectory)
+        if remaining > 0 {
+            return PinnedModel.requiredBytes > remaining
+                ? .incomplete(remainingBytes: remaining, freeDiskBytes: free)
+                : .missing(needBytes: remaining, freeDiskBytes: free)
+        }
+        let lock = NSLock()
+        var bad: [PinnedModel.File] = []
+        DispatchQueue.concurrentPerform(iterations: PinnedModel.files.count) { index in
+            guard shouldContinue() else { return }
+            let file = PinnedModel.files[index]
+            let url = modelDirectory.appendingPathComponent(file.path).resolvingSymlinksInPath()
+            let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64
+            if size == nil && file.optional { return }
+            let hash = size == file.size ? try? Self.sha256(of: url, shouldContinue: shouldContinue) : nil
+            if hash == nil || hash != file.sha256 { lock.withLock { bad.append(file) } }
+        }
+        guard shouldContinue() else { throw DownloadCancelled() }
+        return bad.isEmpty ? .ready : .corrupt(paths: bad.map(\.path).sorted(), repairBytes: bad.reduce(0) { $0 + $1.size }, freeDiskBytes: free)
+    }
+
     /// Free bytes on the volume the weights land on, walking up to the nearest
     /// directory that exists.
     public static func freeDiskBytes(near url: URL) -> Int64 {
@@ -235,6 +261,19 @@ public struct WeightStore: Sendable {
             hasher.update(data: chunk)
             return true
         }) {}
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+    public static func sha256(of url: URL, shouldContinue: @escaping @Sendable () -> Bool) throws -> String {
+        guard shouldContinue() else { throw DownloadCancelled() }
+        guard let file = try? FileHandle(forReadingFrom: url) else { return "" }
+        defer { try? file.close() }
+        var hasher = SHA256()
+        while true {
+            guard shouldContinue() else { throw DownloadCancelled() }
+            let data = try autoreleasepool { try file.read(upToCount: 8 << 20) ?? Data() }
+            if data.isEmpty { break }
+            hasher.update(data: data)
+        }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 

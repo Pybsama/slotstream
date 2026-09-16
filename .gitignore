@@ -1,6 +1,8 @@
 .DS_Store
 .build/
 *.xcodeproj
+!apps/macos/Sevra.xcodeproj/
+apps/macos/Sevra.xcodeproj/xcuserdata/
 .swiftpm/
 models/
 *.ssmodel/

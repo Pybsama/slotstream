@@ -1,0 +1,520 @@
+import AppKit
+import SwiftUI
+import SevraRuntime
+import SevraPresentation
+import UniformTypeIdentifiers
+import Combine
+
+@MainActor final class AppModel: ObservableObject {
+    @Published var snapshot: RuntimeSnapshot?
+    var selectedID: String { composer.threadID }
+    var draft: String { composer.text }
+    @Published var panel = "" {
+        willSet { if panel.isEmpty && !newValue.isEmpty { textSession.rememberFocus() } }
+        didSet {
+            if panel.isEmpty && !oldValue.isEmpty { DispatchQueue.main.async { self.textSession.restoreFocus() } }
+        }
+    }
+    @Published var focusRevision = 0
+    @Published var notice = ""
+    @Published var pendingLink: URL?
+    @Published var selectedCitation: Citation?
+    @Published var attaching = false
+    let textSession = TextSession()
+    private var dismissedError: String?
+    private var lastAnnouncedState: String?
+    private var lastThreadKey: String { "selectedThread." + digestText(homeURL.path) }
+
+    @Published var query = ""
+    @Published var savedDocument: (threadID: String, runID: String, path: String, text: String, citations: [Citation])?
+    @Published var approving = false
+    @Published var error: String?
+    @Published var transferringHome = false
+    @Published var restoredHomeURL: URL?
+    @Published var backupURL: URL?
+    @Published var homeTransferMessage = ""
+    private var openedHomes: [Process] = []
+    var restoreNeedsReview: Bool { snapshot?.restoreReview.map { !$0.reviewed } ?? false }
+    var aiPaused: Bool { restoreNeedsReview || snapshot?.storageNeedsReview == true }
+    var submitting: Bool { composer.sending }
+    var draftSaved: Bool { composer.saved }
+    private var composerChanges: AnyCancellable?
+    private var journalChanges: AnyCancellable?
+    lazy var journalComposer = ComposerSession(store: .init(
+        read: { [weak self] _ in
+            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            let draft = await runtime.journalDraftState()
+            return .init(text: draft.text, revision: draft.revision)
+        },
+        write: { [weak self] _, text, revision in
+            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            do { let draft = try await runtime.saveJournalDraft(text: text, expectedRevision: revision); return .init(text: draft.text, revision: draft.revision) }
+            catch let conflict as DraftConflict { throw ComposerSession.Changed(.init(text: conflict.current.text, revision: conflict.current.revision)) }
+        },
+        send: { [weak self] _, text, nonce, revision, remaining in
+            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            do { let draft = try await runtime.submitJournalDraft(text: text, nonce: nonce, expectedRevision: revision, remainingDraft: remaining); return .init(text: draft.text, revision: draft.revision) }
+            catch let conflict as DraftConflict { throw ComposerSession.Changed(.init(text: conflict.current.text, revision: conflict.current.revision)) }
+        }))
+    lazy var composer = ComposerSession(store: .init(
+        read: { [weak self] id in
+            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            let value = try await runtime.draftState(threadID: id)
+            return .init(text: value.text, revision: value.revision)
+        },
+        write: { [weak self] id, text, revision in
+            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            do {
+                let value = try await runtime.saveDraft(threadID: id, text: text, expectedRevision: revision)
+                return .init(text: value.text, revision: value.revision)
+            } catch let conflict as DraftConflict {
+                throw ComposerSession.Changed(.init(text: conflict.current.text, revision: conflict.current.revision))
+            }
+        },
+        send: { [weak self] id, text, nonce, revision, remaining in
+            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            do {
+                let value = try await runtime.submitDraft(threadID: id, text: text, nonce: nonce, expectedRevision: revision, remainingDraft: remaining)
+                return .init(text: value.text, revision: value.revision)
+            } catch let conflict as DraftConflict {
+                throw ComposerSession.Changed(.init(text: conflict.current.text, revision: conflict.current.revision))
+            }
+        }))
+    @Published var setupStatus: ModelSetupStatus?
+    @Published var preparingModel = false
+    @Published var performancePreferences = PerformancePreferences.restore(UserDefaults.standard.data(forKey: "performance.preferences.v1"))
+    @Published var preparingForSleep = false
+    private var performancePoll: Task<Void, Never>?
+    private var sleepTask: Task<Void, Never>?
+    @Published var appearance = Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "System") ?? .system
+    var runtime: SevraRuntime?
+    var endpoint: LocalEndpoint?
+    var setup: ModelSetup?
+    var poll: Task<Void, Never>?
+    var onFind: (() -> Void)?
+    var thread: WorkThread? { snapshot?.home.threads.first { $0.id == selectedID } }
+    var busy: Bool { thread?.run.map { !$0.state.terminal } ?? false }
+    var thinkingEnabled: Bool { thread?.thinking == true }
+    /// Thinking stays off for tool turns in this version, so the switch is
+    /// unavailable while a source is attached rather than silently ignored.
+    var thinkingUnavailable: Bool { snapshot?.attachmentNames[selectedID] != nil || aiPaused }
+    var liveThinking: ThinkingObservation? {
+        guard let thought = snapshot?.thinking, thought.threadID == selectedID else { return nil }
+        return thought
+    }
+    func thinkingTrace(for runID: String) -> String? { snapshot?.thinkingTraces[runID] }
+    /// Median of the last ten completed thoughts on this Mac; the honest cost line.
+    var typicalThinkingSeconds: Double? {
+        let recent = (snapshot?.home.threads ?? []).flatMap { thread in
+            thread.allRuns.compactMap { run in run.thinking.map { (run.order ?? 0, $0) } }
+        }.filter { [.closed, .budget, .answerNow].contains($0.1.ending) && $0.1.tokens > 0 }
+            .sorted { $0.0 < $1.0 }.suffix(10).map(\.1.seconds).sorted()
+        guard !recent.isEmpty else { return nil }
+        return recent[recent.count / 2]
+    }
+    func toggleThinking() {
+        let id = selectedID, next = !thinkingEnabled
+        perform { try await $0.setThinking(threadID: id, enabled: next) }
+    }
+    func answerNow() {
+        let id = selectedID
+        perform { try await $0.answerNow(threadID: id) }
+    }
+    var homeURL: URL {
+        if let path = ProcessInfo.processInfo.environment["SEVRA_HOME"] { return URL(fileURLWithPath: path) }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Sevra/Home")
+    }
+    @Published var externalChanges: [ExternalHomeChange] = []
+    @Published var reviewingChanges = false
+    func inspectHomeChanges() {
+        guard let runtime else { panel = "Settings"; return }
+        Task {
+            do { externalChanges = try await runtime.inspectExternalChanges(); panel = "Home changes" }
+            catch { self.error = error.localizedDescription }
+        }
+    }
+    func adoptExternalDrafts() {
+        guard let runtime, !reviewingChanges else { return }
+        let reviewed = Dictionary(uniqueKeysWithValues: externalChanges.map { ($0.path, $0.digest) })
+        reviewingChanges = true
+        Task {
+            defer { reviewingChanges = false }
+            do {
+                try await runtime.reconcileExternalDrafts(reviewed: reviewed)
+                try await composer.reloadAfterExternalReview()
+                externalChanges = []; error = nil; dismissedError = nil; panel = ""; focusRevision += 1
+                notice = "External drafts adopted. Previous versions are preserved locally."
+                await refresh()
+            } catch { self.error = error.localizedDescription; inspectHomeChanges() }
+        }
+    }
+    func backUpHome() {
+        guard let runtime, !transferringHome else { return }
+        let panel = NSSavePanel(); panel.title = "Back up Home"
+        panel.nameFieldStringValue = "Sevra Home.sevrahome"; panel.canCreateDirectories = true
+        panel.message = "Includes saved conversations, drafts, memories, journal and owned files. Model weights and attached source folders stay separate."
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        transferringHome = true; homeTransferMessage = ""
+        Task {
+            defer { transferringHome = false }
+            do {
+                let closed = try await composer.close {
+                    guard try await self.journalComposer.close(perform: {
+                        let result = try await runtime.exportHome(to: destination)
+                        self.notice = result.manifest.evidenceComplete ? "Home backup verified and saved." : "Home backup saved. Original attached source folders are separate dependencies."
+                        self.homeTransferMessage = self.notice; self.backupURL = result.url; self.error = nil
+                    }) else { throw SevraError.refused("Finish saving the journal before backing up Home.") }
+                }
+                if !closed { error = "Finish the current draft operation before backing up Home." }
+            } catch { self.error = error.localizedDescription }
+        }
+    }
+    func restoreHomeBackup() {
+        guard !transferringHome else { return }
+        let picker = NSOpenPanel(); picker.title = "Choose Home backup"
+        picker.canChooseFiles = false; picker.canChooseDirectories = true; picker.allowsMultipleSelection = false
+        guard picker.runModal() == .OK, let archive = picker.url else { return }
+        let destination = NSSavePanel(); destination.title = "Restore to a new Home"
+        destination.nameFieldStringValue = "Restored Sevra Home"; destination.canCreateDirectories = true
+        destination.directoryURL = archive.deletingLastPathComponent()
+        destination.message = "Your current Home stays in place. The restored copy opens with AI paused until you review its dated privacy choices."
+        guard destination.runModal() == .OK, let url = destination.url else { return }
+        let dbmd = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/dbmd")
+        transferringHome = true; homeTransferMessage = ""
+        Task {
+            defer { transferringHome = false }
+            do {
+                let knownHome = await runtime?.snapshot().home
+                let result = try await Task.detached(priority: .userInitiated) { try HomeArchive.restore(archive, to: url, dbmd: dbmd, knownHome: knownHome) }.value
+                restoredHomeURL = result.url; notice = "Home restored and verified. Open it to review before enabling AI."
+                homeTransferMessage = notice; self.error = nil
+            } catch { self.error = error.localizedDescription }
+        }
+    }
+    func openRestoredHome() {
+        guard let url = restoredHomeURL, let executable = Bundle.main.executableURL else { return }
+        if let existing = openedHomes.first(where: { $0.isRunning && $0.environment?["SEVRA_HOME"] == url.path }) {
+            NSRunningApplication(processIdentifier: existing.processIdentifier)?.activate(options: [])
+            return
+        }
+        let child = Process(); child.executableURL = executable
+        child.environment = ["HOME": NSHomeDirectory(), "PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8", "SEVRA_HOME": url.path]
+        child.standardOutput = FileHandle.nullDevice; child.standardError = FileHandle.nullDevice
+        do { try child.run(); openedHomes.removeAll { !$0.isRunning }; openedHomes.append(child) }
+        catch { self.error = error.localizedDescription }
+    }
+    func reviewRestoredHome() {
+        guard let review = snapshot?.restoreReview, !review.reviewed, let runtime else { return }
+        let alert = NSAlert(); alert.messageText = "Enable AI for this restored Home?"
+        let privacy = review.privacyEpochKnown ? "Newer Forget decisions from the current Home were preserved. " : "Later Forget or correction choices may be missing. "
+        alert.informativeText = "This snapshot is from " + review.snapshotDate.formatted(date: .abbreviated, time: .shortened) + ". " + privacy + "Inspect Knowledge and remove anything you no longer want used before enabling AI. No previous job restarts, no source folder is reattached and no document is saved by this choice."
+        alert.addButton(withTitle: "Enable AI for this snapshot"); alert.addButton(withTitle: "Keep reviewing")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        Task { do { try await runtime.acknowledgeRestore(archiveDigest: review.archiveDigest); await refresh() } catch { self.error = error.localizedDescription } }
+    }
+    func start() {
+        composerChanges = composer.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        journalChanges = journalComposer.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        setAppearance(appearance)
+        let root = homeURL
+        let dbmd = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/dbmd")
+        let modelPath = ProcessInfo.processInfo.environment["SEVRA_MODEL"]
+        let preferences = performancePreferences
+        setup = modelPath.map { ModelSetup(model: URL(fileURLWithPath: $0)) } ?? ModelSetup()
+        poll = Task {
+            do {
+                runtime = try await Task.detached(priority: .userInitiated) {
+                    let engine = modelPath.map { LocalInference(model: URL(fileURLWithPath: $0), preferences: preferences) } ?? LocalInference(preferences: preferences)
+                    return try SevraRuntime(homeURL: root, dbmd: dbmd, inference: engine, performancePreferences: preferences)
+                }.value
+                if let runtime { endpoint = try await Task.detached { try LocalEndpoint(runtime: runtime) }.value }
+                await runtime?.maintainPerformance()
+                performancePoll = Task { [weak self] in
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        guard !Task.isCancelled else { break }
+                        await self?.runtime?.maintainPerformance()
+                    }
+                }
+                await refresh()
+                let remembered = UserDefaults.standard.string(forKey: lastThreadKey)
+                let id = snapshot?.home.threads.first { $0.id == remembered && $0.mode != .incognito }?.id ?? "home"
+                try await composer.open(id); focusRevision += 1
+                try await journalComposer.open("journal")
+            } catch { self.error = error.localizedDescription; return }
+            while !Task.isCancelled {
+                await refresh()
+                try? await Task.sleep(nanoseconds: 150_000_000)
+            }
+        }
+    }
+    func refresh() async {
+        guard let runtime else { return }
+        let incoming = await runtime.snapshot()
+        if snapshot != incoming { snapshot = incoming }
+        let setupValue = setup?.snapshot()
+        if setupStatus != setupValue { setupStatus = setupValue }
+        if let failure = snapshot?.error, failure != dismissedError { error = failure }
+        let state = thread?.run?.state.rawValue
+        if state != lastAnnouncedState {
+            lastAnnouncedState = state
+            if let run = thread?.run, run.state.terminal || run.state == .needsYou {
+                NSAccessibility.post(element: NSApplication.shared, notification: .announcementRequested,
+                    userInfo: [.announcement: run.state == .needsYou ? "Document ready for your review." : run.status, .priority: 50])
+            }
+        }
+    }
+    func edited(_ value: String) {
+        composer.edit(value)
+    }
+    func saveDraft() async {
+        await composer.flush()
+    }
+    func saveJournal() { Task { _ = await journalComposer.send(); await refresh() } }
+    func navigate(_ id: String, panel destinationPanel: String = "") {
+        Task {
+            do {
+                guard try await composer.move(to: id) else { return }
+                panel = destinationPanel
+                await refresh()
+                if thread?.mode != .incognito { UserDefaults.standard.set(selectedID, forKey: lastThreadKey) }
+                focusRevision += 1
+            } catch { self.error = error.localizedDescription }
+        }
+    }
+    func navigateToReview(_ id: String) {
+        navigate(id, panel: "Artifact")
+    }
+    func renameThread(_ id: String) {
+        navigate(id, panel: "Rename")
+    }
+    func newThread(_ mode: MemoryMode = .shared) {
+        perform { runtime in
+            guard try await self.composer.move(prepare: {
+                let id = try await runtime.newThread(mode: mode)
+                return (id, .init(text: "", revision: 0))
+            }) else { return }
+            self.panel = ""; self.focusRevision += 1
+            if mode != .incognito { UserDefaults.standard.set(self.selectedID, forKey: self.lastThreadKey) }
+        }
+    }
+    func continueInThread(messageIDs: [String]) {
+        perform { runtime in
+            guard self.selectedID == "home" else { return }
+            guard try await self.composer.move(prepare: {
+                let id = try await runtime.promoteHome(messageIDs: messageIDs)
+                let draft = try await runtime.draftState(threadID: id)
+                // Publish the destination before activating its composer so
+                // the first rendered frame already contains its Home quotes.
+                await self.refresh()
+                return (id, .init(text: draft.text, revision: draft.revision))
+            }) else { return }
+            self.panel = ""; self.focusRevision += 1
+            UserDefaults.standard.set(self.selectedID, forKey: self.lastThreadKey)
+        }
+    }
+    func send() {
+        guard !preparingForSleep else { return }
+        guard setup?.snapshot().busy != true else { error = "Finish model setup before sending."; return }
+        guard !busy, !submitting, !attaching, !aiPaused, !composer.transitioning else { return }
+        let id = selectedID
+        Task {
+            let accepted = await composer.send()
+            await refresh()
+            if accepted, selectedID == id {
+                NotificationCenter.default.post(name: .sevraJumpToLatest, object: nil, userInfo: ["focus": false])
+            }
+        }
+    }
+    func stop() {
+        let id = selectedID
+        if let i = snapshot?.home.threads.firstIndex(where: { $0.id == id }) {
+            snapshot?.home.threads[i].run?.state = .stopping
+            snapshot?.home.threads[i].run?.status = "Stopping"
+        }
+        perform { try await $0.stop(threadID: id) }
+    }
+    func attach() {
+        let picker = NSOpenPanel(); picker.canChooseDirectories = true; picker.canChooseFiles = true
+        picker.allowsMultipleSelection = false; picker.prompt = "Attach read-only"
+        picker.message = "Choose one text file or folder for this thread. Sevra can read it but cannot change it."
+        guard picker.runModal() == .OK, let url = picker.url else { return }
+        attachFiles([url])
+    }
+    func attachFiles(_ urls: [URL]) {
+        guard !busy, !attaching, let url = urls.first, urls.count == 1 else { error = "Attach one file or folder after the current response finishes."; return }
+        let id = selectedID; attaching = true
+        Task {
+            defer { attaching = false }
+            do { try await runtime?.attach(threadID: id, folder: url); await refresh(); focusRevision += 1 }
+            catch { self.error = error.localizedDescription }
+        }
+    }
+    func approve(_ proposal: ArtifactProposal) {
+        guard !approving else { return }; approving = true
+        let id = selectedID
+        perform { runtime in
+            defer { self.approving = false }
+            _ = try await runtime.approve(threadID: id, proposalID: proposal.id, digest: proposal.digest)
+            await self.refresh()
+            if self.selectedID == id { self.panel = ""; self.focusRevision += 1 }
+        }
+    }
+    func openArtifact(runID: String? = nil) {
+        guard let run = runID.flatMap({ id in thread?.savedRuns.first { $0.id == id } }) ?? (runID == nil ? thread?.savedRuns.last : nil), let path = run.artifact else { return }
+        let id = selectedID
+        perform { runtime in
+            let text = try await runtime.readSavedArtifact(threadID: id, runID: run.id)
+            guard self.selectedID == id else { return }
+            self.savedDocument = (id, run.id, path, text, run.excerpts ?? []); self.panel = "Artifact"
+        }
+    }
+    func dismissError() { dismissedError = error; error = nil }
+    func closePanel() { selectedCitation = nil; pendingLink = nil; panel = "" }
+    func copyText(_ text: String) {
+        guard text.utf8.count <= 4 * 1024 * 1024 else { error = "Use Export Markdown for this large document. Its text was not truncated."; return }
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string)
+        notice = "Copied"
+        Task { try? await Task.sleep(nanoseconds: 2_000_000_000); if notice == "Copied" { notice = "" } }
+    }
+    func exportText(_ text: String, filename: String) {
+        let picker = NSSavePanel(); picker.nameFieldStringValue = filename; picker.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]
+        picker.title = "Export Markdown"; picker.message = "Save the complete Markdown source where you choose."
+        guard picker.runModal() == .OK, let url = picker.url else { return }
+        Task {
+            do { try await Task.detached { try Data(text.utf8).write(to: url, options: .atomic) }.value; notice = "Exported " + url.lastPathComponent }
+            catch { self.error = error.localizedDescription }
+        }
+    }
+    func inspectLink(_ url: URL) {
+        if url.scheme == "sevra-citation" {
+            let components = url.pathComponents.filter { $0 != "/" }
+            guard components.count == 2, let thread else { return }
+            let citations: [Citation]
+            if let proposal = thread.run?.proposal, proposal.id == components[0] { citations = proposal.citations }
+            else if let saved = savedDocument, saved.threadID == selectedID, "saved:" + saved.runID == components[0] { citations = saved.citations }
+            else { citations = snapshot?.home.citations(for: components[0], in: thread) ?? [] }
+            guard let citation = citations.first(where: { $0.id == components[1] }) else { error = "The source for this citation is not available in this view."; return }
+            selectedCitation = citation
+        } else if MarkdownDocumentRenderer.externalURL(url.absoluteString) != nil { pendingLink = url }
+    }
+    func prepareRetry() {
+        guard !busy, let text = thread?.messages.last(where: { $0.role == "user" })?.text else { return }
+        if !draft.isEmpty { notice = "Your current draft is preserved. Send it when you are ready."; focusRevision += 1; return }
+        edited(text); panel = ""; focusRevision += 1
+    }
+    func closeIncognito() {
+        let id = selectedID
+        perform { runtime in
+            guard try await self.composer.move(prepare: {
+                let value = try await runtime.draftState(threadID: "home")
+                return ("home", .init(text: value.text, revision: value.revision))
+            }, discardCurrent: true) else { return }
+            try await runtime.closeIncognito(threadID: id)
+            self.textSession.discard(id); self.panel = ""; self.focusRevision += 1
+        }
+    }
+    func setAppearance(_ choice: Appearance) {
+        appearance = choice; UserDefaults.standard.set(choice.rawValue, forKey: "appearance")
+        switch choice {
+        case .system: NSApp.appearance = nil
+        case .light: NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+    }
+    func setPerformance(_ value: PerformancePreferences) {
+        guard let runtime else { return }
+        guard value != performancePreferences else { return }
+        do {
+            try PerformancePolicy.validate(value, on: .current())
+            UserDefaults.standard.set(try JSONEncoder().encode(value), forKey: "performance.preferences.v1")
+            performancePreferences = value
+        } catch { self.error = error.localizedDescription; return }
+        // The view commits a slider on release or a number on Return/focus
+        // loss. Preference writes never happen on every dragging frame.
+        Task {
+            do {
+                try await runtime.setPerformancePreferences(performancePreferences)
+                await runtime.maintainPerformance(); await refresh()
+            } catch { self.error = error.localizedDescription }
+        }
+    }
+    func prepareForSleep() {
+        preparingForSleep = true; setup?.cancel()
+        sleepTask = Task {
+            // Request runtime cancellation first; saving the composer never
+            // submits it and does not authorize replay on wake.
+            async let stop: Void? = runtime?.prepareForSleep()
+            await composer.flush()
+            if journalComposer.ready { await journalComposer.flush() }
+            do { try await stop } catch { self.error = error.localizedDescription }
+        }
+    }
+    func wake() {
+        Task {
+            await sleepTask?.value; sleepTask = nil
+            await runtime?.wake(); preparingForSleep = false
+            await runtime?.maintainPerformance(); await refresh()
+        }
+    }
+    func setUpModel(download: Bool) {
+        guard let runtime, let setup, !preparingModel else { return }
+        preparingModel = true
+        Task {
+            var acquired = false
+            do {
+                try await runtime.beginModelMaintenance(); acquired = true
+                try await Task.detached(priority: .utility) {
+                    if download { try setup.download() } else { try setup.check() }
+                }.value
+            } catch SevraError.cancelled {
+                // The setup panel already reports the deliberate stop.
+            } catch { self.error = error.localizedDescription }
+            if acquired { await runtime.endModelMaintenance() }
+            preparingModel = false
+            await refresh()
+        }
+    }
+    func perform(_ operation: @escaping (SevraRuntime) async throws -> Void) {
+        guard let runtime else { return }
+        Task { do { try await operation(runtime); await refresh() } catch { self.error = error.localizedDescription } }
+    }
+    func closeWindow() async -> Bool {
+        guard composer.ready else { return true }
+        if journalComposer.ready, !(await journalComposer.prepareToClose()) { panel = "Journal"; return false }
+        guard await composer.prepareToClose() else { return false }
+        if thread?.mode == .incognito {
+            let id = selectedID
+            do {
+                guard try await composer.move(to: "home") else { return false }
+                try await runtime?.closeIncognito(threadID: id)
+                textSession.discard(id); await refresh()
+            } catch { self.error = error.localizedDescription; return false }
+        }
+        return true
+    }
+    func quit() async -> Bool {
+        if preparingModel {
+            setup?.cancel(); error = "Model setup is stopping. Quit again after its file writes finish."; return false
+        }
+        if !composer.ready {
+            poll?.cancel()
+            do { try await runtime?.shutdown() }
+            catch { self.error = error.localizedDescription; return false }
+            endpoint?.stop(); performancePoll?.cancel(); return true
+        }
+        do {
+            if journalComposer.ready {
+                var closed = false
+                guard try await journalComposer.close(perform: {
+                    closed = try await self.composer.close(perform: { try await self.runtime?.shutdown() })
+                }), closed else { if journalComposer.issue != nil { panel = "Journal" }; return false }
+            } else {
+                guard try await composer.close(perform: { try await self.runtime?.shutdown() }) else { return false }
+            }
+        }
+        catch { self.error = error.localizedDescription; return false }
+        composer.finish(); journalComposer.finish(); endpoint?.stop(); poll?.cancel(); performancePoll?.cancel()
+        return true
+    }
+}

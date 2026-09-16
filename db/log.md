@@ -1408,6 +1408,21 @@ Persistent prefix e2e over 15,514 prompt tokens at 10 GB, beyond memory retentio
 ## [2026-09-14 16:45] update | records/measurements/persistent-prefix-cache-2026-09-14
 Rewritten for rows shared across turns: real-weights exactness (1,134 and 1,190 assertions), a three-turn serve run with restart and regenerate, and a 15,514-token run where later turns wrote 117.7 MB reusing about 431 MB; the earlier whole-state runs are kept as an earlier build.
 
+## [2026-09-14 17:17] update | records/design/sevra-spec/implementation-status
+Implemented the native Mac development slice and public philosophy docs. Captured real local Workspace Brief commit/reopen and runtime, recovery, privacy, draft-race, Unix IPC and bundle checks. Native visual QA remains blocked by the locked Mac; full Mac release gates stay open.
+
+## [2026-09-14 17:25] update | records/design/sevra-spec/implementation-status
+Recorded final engine static regression proof and added the Mac guide to generated agent documentation. Preserved existing warning and native UI/release limits.
+
+## [2026-09-14 17:46] update | records/design/sevra-spec/implementation-status
+Completed scoped native brand and interaction review: bundled Observer icon, Light/Dark/System resolution, native Save/relaunch, in-app saved document, draft continuity and Find. Fixed packaging, spacing, palette, text scale and saved-file opening. Runtime checks and brain gates pass; full UI/release qualification remains open.
+
+## [2026-09-14 18:51] update | records/design/sevra-spec/implementation-status
+Implemented native rich Markdown and document affordances, responsive navigation and review, keyboard focus fixes, exact copy/export and individual-file attachment. Recorded final bundle and scoped native QA; runtime and presentation checks pass. Full UI-D and release qualification remains open.
+
+## [2026-09-14 18:51] validate | db
+Polish consistency gates: zero validation errors, two preserved historical log warnings; projection and claims gates pass, generated docs and plist parsing current, diff whitespace clean.
+
 ## [2026-09-15 00:02] create | sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed
 v0.2.18 release acceptance: CI artifact 25/25 after a headroom-only first run, publication and attestation, installation, installed e2e 31/31, persistent prefix e2e 11/11 on the installed binary.
 
@@ -1416,6 +1431,42 @@ v0.2.18 published, installed and accepted; after a restart the installed binary 
 
 ## [2026-09-15 00:20] update | sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed
 Corrected the commit that dropped Tools/verify.sh's executable bit: d813bcf (2026-09-02), not 0f7aae1, which only last touched the file.
+
+## [2026-09-15 00:41] update | records/design/sevra-spec/implementation-status
+Corrected native draft scheduling, atomic Send, typed conflict recovery, close/Incognito lifecycle and delayed NSTextView focus. Recorded production-composer adverse checks, real dbmd restart/data boundaries, native regressions and scoped native real-model/UI walkthrough with exact bundle identities.
+
+## [2026-09-15 00:41] validate | db
+Mac correction verification: app/CLI/checks compile; composer, Markdown and runtime suites pass; native focus and failure recovery verified. Build inputs and ad-hoc signature match. Brain gates: zero errors and two preserved historical log warnings; projections and claims pass.
+
+## [2026-09-15 01:29] update | records/design/sevra-spec/implementation-status
+Integrated native window controls, sidebar navigation, page and memory status, Search and contextual actions into a unified AppKit toolbar. Verified build, Light/Dark and compact layouts, long-title truncation, shortcuts, Search/back and an empty Incognito menu round trip. Existing unrelated app work preserved; broader UI and release gates remain open.
+
+## [2026-09-15 01:42] update | records/design/sevra-spec/implementation-status
+Implemented adaptive Mac memory budgets and native Performance settings, deferred resource handoff, model readiness/idle release, sleep cancellation and explicit context overflow. Recorded passing regression suite, corrected real-model handoff failure, autorelease cleanup and scoped native UI checks; broader release/hardware gates remain open.
+
+## [2026-09-15 01:54] update | records/design/sevra-spec/implementation-status
+Refined native toolbar alignment, sidebar row/icon spacing, shared conversation and panel gutters, artifact insets and transcript paragraph rhythm. Canonical app build and presentation checks pass; scoped Light/Dark, compact, large-text, resized-sidebar, split-document, full-screen document and More-menu checks completed. Brain validation has zero errors and two preserved historical log warnings; projections, claims and whitespace checks pass.
+
+## [2026-09-15 01:56] update | records/design/sevra-spec/implementation-status
+Recorded a final rebuild after concurrent app edits and corrected the earlier checkout-source hash association in an append-only receipt. Final bundle manifest matched current build inputs; signature and Home/Search layout checks pass. Brain validation remains at zero errors with two historical warnings; projections, claims and whitespace checks pass.
+
+## [2026-09-15 02:04] update | records/design/sevra-spec/implementation-status
+Fixed the Home continuation display and coordinated navigation; repeated actions reuse one thread. Verified exact referenced context, scope, draft safety, restart, external-edit refusal and a native real-model follow-up. Broader app and release gates remain open.
+
+## [2026-09-15 04:12] update | records/design/sevra-spec/implementation-status
+Completed the native Settings and UX audit: General/Model/Keyboard categories, progressive memory details, accurate file status, keyboard Search, responder-chain Escape, clearer memory choices and individual accessible setting values. Recorded scoped Light/Dark, compact/large-text, validation, draft and Incognito checks plus the passing scripted regressions and final stable-input signed bundle. The app is open on Home with System and default sizes. Validation has zero errors and two preserved historical warnings; projections, claims and whitespace checks pass. Full accessibility, live IME, sustained-load and release gates remain open.
+
+## [2026-09-15 04:58] update | records/design/sevra-spec/implementation-status
+Recorded the whole native Mac adversarial review with raw failures, final passing composer/presentation/runtime checks, separate static gates, synthetic native walkthrough and build identities. Corrected historical document/citation retention, journal durability, invalid-save recovery, canonical path restart, memory admission/context, shutdown guards, tool validation/correction and verification cancellation. Real-model replay of the final spelling correction remains pending while another decode sweep runs; the locked screen blocks the final native refinement recheck. Normal user app was left intact; the isolated audit process is stopped. Brain gates passed with zero errors and two preserved historical warnings; projections, 216 claims checks and whitespace checks passed. Full app and release qualification remains open.
+
+## [2026-09-15 16:01] update | records/design/sevra-spec/implementation-status
+Completed adversarial correction passes: leading-system tool feedback now passes the real Cedar replay; bounded Home backup/inert restore, exact external draft review/restart, inspectable recent context and scoped memory selection pass regressions. Verified native Find focus, recovery review and activation, backup feedback, appearance, context disclosure and Check/Stop. Installed the tested ad-hoc development build after retaining rollback copies; the existing Home reopened with canonical bytes unchanged. Raw failures, final passing suite and source/binary identities are in the new adversarial-fixes receipt. Brain gates passed with zero errors and the two preserved historical log warnings; projections, claims and whitespace checks pass. The broader stable product/release and hardware gates remain open. No model or audit process remains running.
+
+## [2026-09-15 17:30] update | records/design/sevra-spec/implementation-status
+Added native icon help and corrected earlier-page Latest, pane-specific Find, independent Markdown source modes and menu admission. Verified native outline, paging, keyboard/source, exact copy/export, attach/detach, new thread and settings controls; composer and Markdown regressions pass. Installed the verified development bundle with rollback retained and existing Home files unchanged. Native tooltips and AX help are present; sustained hover capture, full accessibility/OS and broader release gates remain untested. Brain gates pass with the two preserved historical warnings.
+
+## [2026-09-15 17:56] update | records/design/sevra-spec/implementation-status
+Implemented contextual Latest navigation; preserved native resize failure and passing scroll/composer/Markdown checks, light/dark and keyboard UI observations, matching build inputs and unchanged Home after verified bundle update. Brain gates pass with the two historical log warnings retained.
 
 ## [2026-09-16 17:28] create | records/plan/decode-forecast-taps-2026-09-14
 Forecast taps program (2026-09-14 to 09-16): offline gate, 18 GB screen, B1 cohort, co-routing prior, learned correction (offline, native diagnostic, screen, held-out confirmation), threshold screen, readout diagnostic and timing screen, and the corrected-over-shipped confirmation; closed with the corrected attention tap as the 0.2.19 default.
@@ -1450,6 +1501,9 @@ Noted that the 0.2.19 release benchmark (22 GB target, 15.86 tok/s) does not re-
 ## [2026-09-16 17:28] validate | db
 0.2.19 release docs and records: dbmd validate --all with zero errors and the two preserved historical log warnings; projections, llms-full and claims gates pass on the export of the release commit.
 
+## [2026-09-16 19:47] create | records/decisions/target-range-macs-that-cannot-hold-the-model
+Target range decision: built for Macs that cannot hold the model (16 to 64 GB); 96 GB+ supported, not optimized. README (Who it's for, tier row relabel, FAQ), HARDWARE, GETTING-STARTED, ENGINEERING, llms.txt, CHANGELOG, CLAUDE.md, 1-goal, every-Mac design note, presets-v1 note and the 96 GB+ claim body updated; projections regenerated; no number changed.
+
 ## [2026-09-16 19:51] create | sources/runs/2026/09/2026-09-16-release-0-2-19-published-and-installed
 v0.2.19 release acceptance: CI 35136690124 on the third commit after two coverage-ratchet failures, candidate verified against a clean export (174 files), 25/25 model gates on the CI binary, publication and attestation, install 0.2.18 to 0.2.19, installed e2e 31/31, persistent prefix e2e 11/11, doctor at 22 GB plans the corrected forecast (409 MiB) and pull --verify finds the sidecar present.
 
@@ -1458,6 +1512,18 @@ v0.2.19 published, installed and accepted: 25 of 25 model gates on the CI artifa
 
 ## [2026-09-16 19:51] validate | db
 Release records for v0.2.19: dbmd validate --all with zero errors and the two preserved historical log warnings; projections and 243 claim checks pass.
+
+## [2026-09-16 20:19] create | sources/runs/2026/09/2026-09-16-sevra-mac-thinking
+Mac app opt-in thinking: scripted suite and four real-model runs, final run passing
+
+## [2026-09-16 20:19] update | records/design/sevra-spec/runtime-contract
+Thinking before answers: sticky switch, bounded low-effort thought with forced closure, Answer now, receipts, memory-only thought
+
+## [2026-09-16 20:19] update | records/design/sevra-spec/ui-contract
+Thinking controls: Think longer toggle, cost line, live clock, working notes, receipt line, Answer now
+
+## [2026-09-16 20:19] update | records/design/sevra-spec/implementation-status
+Thinking before answers implemented and verified; UI review and tool-loop thinking remain open
 
 ## [2026-09-16 21:10] update | README.md
 Speed section rewritten around the 0.2.19 result (15.86 tok/s at a 22 GB target, the automatic plan of a 32 GB Mac): the release commit had placed the 0.2.19 paragraph inside the 0.2.16 paragraph through a line-offset staging error; the measured table and notes now lead with 0.2.19, and the docs/ENGINEERING.md row is back in the results table's order.
@@ -1471,6 +1537,3 @@ hardware-planning-range-medium needle ~6–16 tok/s and hardware-planning-range-
 ## [2026-09-16 21:10] validate | db
 Re-anchored estimates: dbmd validate --all with zero errors and the two preserved historical log warnings; projections and claim checks pass on the export.
 
-
-## [2026-09-16 19:47] create | records/decisions/target-range-macs-that-cannot-hold-the-model
-Target range decision: built for Macs that cannot hold the model (16 to 64 GB); 96 GB+ supported, not optimized. README (Who it's for, tier row relabel, FAQ), HARDWARE, GETTING-STARTED, ENGINEERING, llms.txt, CHANGELOG, CLAUDE.md, 1-goal, every-Mac design note, presets-v1 note and the 96 GB+ claim body updated; projections regenerated; no number changed.

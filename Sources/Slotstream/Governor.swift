@@ -254,6 +254,15 @@ public final class MemoryGovernor: @unchecked Sendable {
         else { queue.async { self.stopOnQueue() } }
     }
 
+    /// Drain queued pressure/resize work before an embedding owner releases
+    /// the model. Call outside the generation lock; stop() remains nonblocking
+    /// for existing callers that may hold it.
+    public func stopAndWait() async {
+        await withCheckedContinuation { continuation in
+            queue.async { self.stopOnQueue(); continuation.resume() }
+        }
+    }
+
     private func stopOnQueue() {
         pressure?.cancel()
         timer?.cancel()

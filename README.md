@@ -23,6 +23,13 @@ as Hermes or Codex. Developers can connect their own apps through its APIs or Sw
 > [See Sevra and join the waitlist](https://www.sevrahq.com/).
 > Slotstream's command-line tool, APIs, and Swift library remain independently usable.
 
+Sevra's native apps share **Markdown/text specifications**, with a deeply
+integrated implementation for each platform. The Mac app uses Swift,
+SwiftUI/AppKit and Slotstream directly. Its application runtime owns memory,
+tools and permissions; the interface needs no local web server. See the
+[native philosophy and development build](docs/SEVRA-MAC.md). The app remains
+in development, with release qualification tracked separately from the engine.
+
 ## Who it's for
 
 Slotstream is built for Macs that cannot hold the model in memory: **16 to

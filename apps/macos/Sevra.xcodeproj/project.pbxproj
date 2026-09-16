@@ -1,0 +1,44 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+B25C83218BEFEB23C2734C4D = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel.swift"; sourceTree = "<group>"; };
+3D03AC2E7D67BB6B854291D1 = {isa = PBXBuildFile; fileRef = B25C83218BEFEB23C2734C4D; };
+F4562CF1326CB84759CD87E8 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ContentView.swift"; sourceTree = "<group>"; };
+00F8E3082419762E1DD77287 = {isa = PBXBuildFile; fileRef = F4562CF1326CB84759CD87E8; };
+0A12A423B321B7D0A6EA893C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NativeText.swift"; sourceTree = "<group>"; };
+77104DD10D79F23CB3CC944F = {isa = PBXBuildFile; fileRef = 0A12A423B321B7D0A6EA893C; };
+AA6701BC4E394221B81FBB01 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NativeControls.swift"; sourceTree = "<group>"; };
+AA6701BC4E394221B81FBB02 = {isa = PBXBuildFile; fileRef = AA6701BC4E394221B81FBB01; };
+CE9EBAD1D2994758E1F18A0A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ObserverMark.swift"; sourceTree = "<group>"; };
+8C92FDBC2A95BBE48A04EFCB = {isa = PBXBuildFile; fileRef = CE9EBAD1D2994758E1F18A0A; };
+444C89D6E87893E22BD00414 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SevraMain.swift"; sourceTree = "<group>"; };
+ADB8D1A6FD334E68123CBBB4 = {isa = PBXBuildFile; fileRef = 444C89D6E87893E22BD00414; };
+8D50C2FEB7AB837497CB1244 = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/Fonts; sourceTree = "<group>"; };
+93E922CA827C06A31B842B86 = {isa = PBXBuildFile; fileRef = 8D50C2FEB7AB837497CB1244; };
+BA32085E161CEB6A34119A81 = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/Sevra.icns; sourceTree = "<group>"; };
+9D4CA18BFA0D9844CA6FE300 = {isa = PBXBuildFile; fileRef = BA32085E161CEB6A34119A81; };
+FA7B5AC3DC413AE00DAAC5EF = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MacCommands.swift"; sourceTree = "<group>"; };
+CAF1AAB7A6205DC56D900616 = {isa = PBXBuildFile; fileRef = FA7B5AC3DC413AE00DAAC5EF; };
+A0F92CE29080AA5C9767B609 = {isa = PBXFileReference; lastKnownFileType = folder; path = Resources/Licenses; sourceTree = "<group>"; };
+B8288CA7B686A23946116EF3 = {isa = PBXBuildFile; fileRef = A0F92CE29080AA5C9767B609; };
+FC233BDA2344D97687F5A251 = {isa = PBXGroup; children = (AA6701BC4E394221B81FBB01,FA7B5AC3DC413AE00DAAC5EF,B25C83218BEFEB23C2734C4D,F4562CF1326CB84759CD87E8,0A12A423B321B7D0A6EA893C,CE9EBAD1D2994758E1F18A0A,444C89D6E87893E22BD00414,); path = App; sourceTree = "<group>"; };
+A8792157CB4F27FB949C035F = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sevra.app; sourceTree = BUILT_PRODUCTS_DIR; };
+0A3E27B8CA818264D75C8D81 = {isa = PBXGroup; children = (A8792157CB4F27FB949C035F,); name = Products; sourceTree = "<group>"; };
+19F479106CE8C3BA8C106518 = {isa = PBXGroup; children = (A0F92CE29080AA5C9767B609,FC233BDA2344D97687F5A251,BA32085E161CEB6A34119A81,8D50C2FEB7AB837497CB1244,0A3E27B8CA818264D75C8D81,); sourceTree = "<group>"; };
+BC4A71180870F7945155FBB0 = {isa = XCLocalSwiftPackageReference; relativePath = .; };
+AFB743F80872619A0435EE38 = {isa = XCSwiftPackageProductDependency; package = BC4A71180870F7945155FBB0; productName = SevraPresentation; };
+B8FAC477C3B67DEF3A1E9032 = {isa = PBXBuildFile; productRef = AFB743F80872619A0435EE38; };
+D92C6A81B2FF50096BCDA808 = {isa = XCSwiftPackageProductDependency; package = BC4A71180870F7945155FBB0; productName = SevraRuntime; };
+86824FA4B5C47A6FCAE09710 = {isa = PBXBuildFile; productRef = D92C6A81B2FF50096BCDA808; };
+878A52FC5FF6A57D50B7B870 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (AA6701BC4E394221B81FBB02,CAF1AAB7A6205DC56D900616,3D03AC2E7D67BB6B854291D1,00F8E3082419762E1DD77287,77104DD10D79F23CB3CC944F,8C92FDBC2A95BBE48A04EFCB,ADB8D1A6FD334E68123CBBB4,); runOnlyForDeploymentPostprocessing = 0; };
+E2AA269EB967A8853A258BFA = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (86824FA4B5C47A6FCAE09710,B8FAC477C3B67DEF3A1E9032,); runOnlyForDeploymentPostprocessing = 0; };
+41D311A605520FC7B8B9A980 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B8288CA7B686A23946116EF3,93E922CA827C06A31B842B86,9D4CA18BFA0D9844CA6FE300,); runOnlyForDeploymentPostprocessing = 0; };
+05D28061FE98016837891EB5 = {isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = (); outputPaths = (); name = "Bundle native runtime dependencies"; shellPath = /bin/sh; shellScript = "set -eu\nDBMD=${SEVRA_DBMD:-$HOME/.dbmd/bin/dbmd}\nAPP=\"$TARGET_BUILD_DIR/$WRAPPER_NAME\"\nmkdir -p \"$APP/Contents/Helpers\"\ncp \"$DBMD\" \"$APP/Contents/Helpers/dbmd\"\ncp \"$SRCROOT/../../Tools/lib/mlx-0.31.1.metallib\" \"$APP/Contents/MacOS/mlx.metallib\"\ncodesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" \"$APP/Contents/Helpers/dbmd\"\ncodesign --force --sign \"${EXPANDED_CODE_SIGN_IDENTITY:--}\" \"$APP/Contents/MacOS/mlx.metallib\"\n"; runOnlyForDeploymentPostprocessing = 0; };
+488864B3D19480A82F7F1786 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 5.0;}; name = Debug; };
+952548237D7F645F11D1E7B6 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 5.0; PRODUCT_NAME = Sevra; PRODUCT_BUNDLE_IDENTIFIER = com.sevra.mac.development; INFOPLIST_FILE = Info.plist; CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; ENABLE_USER_SCRIPT_SANDBOXING = NO; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; }; name = Debug; };
+35B1014F135DE9B45529B733 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 5.0;}; name = Release; };
+E2D3A31BEAA1368FC62DA77A = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; MACOSX_DEPLOYMENT_TARGET = 26.0; SWIFT_VERSION = 5.0; PRODUCT_NAME = Sevra; PRODUCT_BUNDLE_IDENTIFIER = com.sevra.mac.development; INFOPLIST_FILE = Info.plist; CODE_SIGN_IDENTITY = "-"; CODE_SIGN_STYLE = Manual; ENABLE_USER_SCRIPT_SANDBOXING = NO; SWIFT_OPTIMIZATION_LEVEL = "-O"; }; name = Release; };
+B4E10CAA9C5E22150B71559C = {isa = XCConfigurationList; buildConfigurations = (488864B3D19480A82F7F1786,35B1014F135DE9B45529B733,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+4A807E8A027297B0B93701FB = {isa = XCConfigurationList; buildConfigurations = (952548237D7F645F11D1E7B6,E2D3A31BEAA1368FC62DA77A,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+34A04005BCAF206EEC990BD9 = {isa = PBXNativeTarget; buildConfigurationList = 4A807E8A027297B0B93701FB; buildPhases = (878A52FC5FF6A57D50B7B870,E2AA269EB967A8853A258BFA,41D311A605520FC7B8B9A980,05D28061FE98016837891EB5,); buildRules = (); dependencies = (); name = Sevra; packageProductDependencies = (D92C6A81B2FF50096BCDA808,AFB743F80872619A0435EE38,); productName = Sevra; productReference = A8792157CB4F27FB949C035F; productType = "com.apple.product-type.application"; };
+244210E48437B6556980A702 = {isa = PBXProject; attributes = {LastUpgradeCheck = 2600; }; buildConfigurationList = B4E10CAA9C5E22150B71559C; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en,Base,); mainGroup = 19F479106CE8C3BA8C106518; packageReferences = (BC4A71180870F7945155FBB0,); productRefGroup = 0A3E27B8CA818264D75C8D81; projectDirPath = ""; projectRoot = ""; targets = (34A04005BCAF206EEC990BD9,); };
+}; rootObject = 244210E48437B6556980A702; }
