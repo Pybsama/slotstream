@@ -11,7 +11,7 @@ origin. See [Security](../SECURITY.md).
 This page covers the Ollama-style `/api/*` and OpenAI-style `/v1/*` endpoints.
 For the AI SDK gateway, see the [fx guide](FX.md). OpenAI tool calling is
 described below. The OpenAI tool and reasoning additions require Slotstream
-0.2.8 or later.
+0.2.8 or later; the Responses API requires Slotstream 0.2.20 or later.
 Use `qwen3.8-flash-next:4bit` as the model name.
 
 Unknown fields, unsupported features, and malformed values return a 400
@@ -26,6 +26,8 @@ these are listed below.
 | `POST /api/chat` | Chat completion in Ollama format; streams by default |
 | `POST /api/generate` | Prompt completion in Ollama format; streams by default |
 | `POST /v1/chat/completions` | Chat completion in OpenAI format; doesn't stream by default |
+| `POST /v1/responses` | Response in OpenAI Responses format, the API Codex uses; doesn't stream by default |
+| `GET`/`DELETE /v1/responses/{id}` | Returns 404; responses aren't stored |
 | `GET /v1/models` | Lists the model in OpenAI format |
 | `GET /api/tags` | Lists the model in Ollama format |
 | `GET /api/ps` | Reports the loaded model and its current memory use |
@@ -137,6 +139,91 @@ gateway. Reasoning is returned separately in `reasoning_content`, which is
 accepted on assistant history messages. A conflicting `think` flag is a 400.
 Initial `system` and `developer` instructions are combined in order.
 
+## `/v1/responses`
+
+The OpenAI Responses API, which Codex and newer OpenAI SDK code use. Set the
+client's base URL to `http://localhost:11434/v1`; a placeholder API key works.
+For Codex, follow the [Codex guide](CODEX.md).
+
+```bash
+curl localhost:11434/v1/responses -d '{
+  "model": "qwen3.8-flash-next:4bit",
+  "instructions": "Answer briefly.",
+  "input": "What is 2+2?"
+}'
+```
+
+Accepted fields: `model`, `input` (text or an array of items),
+`instructions`, `tools`, `tool_choice`, `parallel_tool_calls`,
+`reasoning.effort`, `max_output_tokens`, `temperature`, `top_p`, and
+`stream` (default `false`). JSON `null` is treated as unset.
+
+Input items are `message` (roles `system`, `developer`, `user`, `assistant`;
+content as text or `input_text`, `output_text`, and `input_image` parts),
+`reasoning`, `function_call`, and `function_call_output` (text, or content
+items with text and `input_image` parts). System and developer messages
+before the conversation join `instructions`; a later one renders as user
+text, which is what Codex does with its own context messages. Function call
+outputs may arrive in any order; the adapter matches `call_id` and restores
+the call order for the native model template. An `input_image` needs an
+inline `image_url` data URL; see [Images](#images).
+
+Tools use the Responses shape, `{"type":"function","name":...,
+"description":...,"parameters":...}`. A `namespace` tool is flattened: each
+member renders as `namespace.name`, and a call to it is reported with the
+`name` and `namespace` fields split again. Hosted `web_search` and
+`file_search` tools are dropped because the model cannot run them. Other
+tool types, `strict: true`, and the `text.format` constrained-output
+setting return 400, as on `/v1/chat/completions`. `tool_choice` accepts
+`auto`, `none`, `required`, `{"type": "function", "name": ...}`, or
+`{"type": "custom", "name": ...}` for a freeform tool; `allowed_tools`
+returns 400.
+
+Accepted without effect, because the server has nothing to change:
+`store` (nothing is stored either way), `include`, `metadata`,
+`prompt_cache_key`, `prompt_cache_retention`, `safety_identifier`, `user`,
+`service_tier`, `stream_options`, `text.verbosity`, `truncation:
+"disabled"`, and the Codex fields `client_metadata` and `access_programs`.
+Refused with 400: `previous_response_id` and `conversation` (no responses are
+stored, so every request carries its whole conversation), `background:
+true`, `prompt` templates, `context_management`, `max_tool_calls`,
+`top_logprobs`, `truncation: "auto"`, `input_file` and `input_audio` parts,
+`file_id` images, encrypted reasoning or tool output from another provider,
+and an input that ends with an assistant item.
+
+`reasoning.effort` uses the same mapping as `reasoning_effort` on the chat
+endpoint: `none` and `minimal` disable thinking, the other levels enable it.
+The model's reasoning streams as `reasoning_summary_text` deltas and is
+returned as the reasoning item's `summary`, which clients echo back on the
+next turn. Without `max_output_tokens` the reply budget is the
+`max_output_tokens` value `/v1/models` reports, a quarter of the served window
+up to 8,192 tokens, bounded by the room the prompt leaves.
+
+The response object, returned whole without `stream` and carried by the
+`response.created` and `response.completed` events, has `id`, `status`,
+`model`, `output`, and `usage`, and repeats the request's `tools`,
+`tool_choice`, `parallel_tool_calls`, `instructions`, `temperature`,
+`top_p`, `max_output_tokens`, `reasoning`, and `text` as the API does. It
+reports `store: false` and a null `previous_response_id` because nothing is
+kept.
+
+A streamed reply is Server-Sent Events, each with an `event:` line and a
+`data:` line: `response.created`, `response.in_progress`,
+`response.output_item.added` and `.done`, `response.content_part.added` and
+`.done`, `response.output_text.delta` and `.done`,
+`response.reasoning_summary_part.added`, `.delta` and `.done`,
+`response.function_call_arguments.delta` and `.done`, and
+`response.completed` with `usage`. During a long prompt read the server sends
+a `response.in_progress` event every 10 seconds, because Codex's idle timeout
+counts events rather than bytes. Running out of tokens before the reply ends
+is `response.incomplete` with `incomplete_details.reason:
+"max_output_tokens"`, unless a complete function call was already delivered,
+in which case the response completes. An inference failure after the stream
+starts is a `response.failed` event carrying `error.code` and `error.message`,
+with no `response.completed` after it. Function calls are delivered whole:
+`response.output_item.added`, one arguments delta, `arguments.done`, and
+`output_item.done`, only once the model's call block is complete.
+
 ## Sampling defaults
 
 The table applies to ordinary chat. Tool-enabled requests default to temperature
@@ -181,13 +268,14 @@ by connection termination, without a successful finish or `[DONE]` marker.
 
 ## Images
 
-All three APIs accept images, using these request shapes:
+Every API accepts images, using these request shapes:
 
 | API | Image field |
 |---|---|
 | Ollama chat | `images: [base64]` on the user message |
 | Ollama generate | `images: [base64]` on the request |
 | OpenAI chat | An `image_url` content part with a `data:` URL |
+| OpenAI Responses | An `input_image` part with an `image_url` data URL, in a message or a `function_call_output` |
 | AI SDK gateway | A `file` part with an `image/*` media type and inline `data` |
 
 This Python 3 example sends `cat.jpg` to the Ollama chat endpoint. It uses

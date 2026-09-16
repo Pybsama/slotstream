@@ -9,8 +9,8 @@ and its limits for developers and people adjusting that configuration.
 Hermes uses the OpenAI chat-completions endpoint. Slotstream translates its
 function definitions, calls, results, and reasoning into the same native model
 format used by the fx gateway. Tool execution and argument validation belong
-to Hermes. Slotstream does not implement the OpenAI Responses API or
-constrained JSON generation. See the [API reference](API.md).
+to Hermes. Slotstream also serves the OpenAI Responses API for clients such as
+Codex; constrained JSON generation is not implemented. See the [API reference](API.md).
 
 ## Context and memory
 

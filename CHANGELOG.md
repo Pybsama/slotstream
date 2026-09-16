@@ -8,6 +8,20 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Serve the OpenAI Responses API at `POST /v1/responses`, the protocol Codex
+  requires since it dropped Chat Completions. Function tools, Codex's
+  `namespace` bundles (flattened to `namespace.name` and split again on the
+  way back) and freeform `custom` tools such as `apply_patch` render through
+  the model's native tool grammar; replies stream as the item and delta
+  events Codex reads, with a progress event every ten seconds during a long
+  prompt read because Codex's idle timeout counts events. Reasoning streams
+  as summary text and is accepted back as replayed history; pictures arrive
+  as `input_image` parts in messages and in `function_call_output` items.
+  `Tools/codex_catalog.py` writes the model catalog that tells Codex the
+  served window and declares `apply_patch`. Guide: `docs/CODEX.md`; wire
+  details: `docs/API.md`. Verified with `codex exec` creating a file through
+  `apply_patch`, reading it back through `exec_command`, describing an
+  attached picture, and reading one through `view_image`.
 - Say who Slotstream is for. It is built for Macs that cannot hold the model,
   16 to 64 GB; 96 GB and larger Macs run it but are not the optimization
   target. The README, hardware guide, getting-started guide, engineering

@@ -369,11 +369,11 @@ public final class Server {
             return
         }
         let path = Self.routePath(req.path)
-        let inferencePaths = ["/api/chat", "/api/generate", "/v1/chat/completions",
+        let inferencePaths = ["/api/chat", "/api/generate", "/v1/chat/completions", "/v1/responses",
                               "/v3/ai/language-model", "/v1/ai/language-model"]
         let control: RequestController?
         if req.method == "POST", inferencePaths.contains(path) {
-            let dialect = path == "/v1/chat/completions" ? "openai"
+            let dialect = path == "/v1/chat/completions" || path == "/v1/responses" ? "openai"
                 : path.hasSuffix("/language-model") ? "gateway" : "ollama"
             do {
                 let accepted = try engine.beginRequest(connected: { self.peerAlive(fd) })
@@ -395,6 +395,7 @@ public final class Server {
             case "/api/chat": apiChat(fd, json, cors: cors, control: control)
             case "/api/generate": apiGenerate(fd, json, cors: cors, control: control)
             case "/v1/chat/completions": v1Chat(fd, json, cors: cors, control: control)
+            case "/v1/responses": v1Responses(fd, json, cors: cors, control: control)
             default: gatewayChat(fd, json, headers: req.headers, cors: cors, control: control)
             }
             return
@@ -466,6 +467,14 @@ public final class Server {
             // fx shows a balance for the gateway provider. A local model has no
             // billing; zero is the honest answer and keeps `fx credits` working.
             respondJSON(fd, ["balance": "0", "total_used": "0"], cors: cors)
+        case ("GET", _) where path.hasPrefix("/v1/responses/"),
+             ("DELETE", _) where path.hasPrefix("/v1/responses/"):
+            // The API can retrieve, cancel and delete a stored response; this
+            // server stores none, so there is nothing at any id.
+            respondJSON(
+                fd, ["error": ["message": "this server stores no responses; there is nothing at \(path)",
+                               "type": "invalid_request_error", "code": "stored_state_unsupported"]],
+                status: "404 Not Found", cors: cors)
         case ("GET", "/v1/models"):
             respondJSON(
                 fd,
@@ -1669,6 +1678,189 @@ public final class Server {
         } else if !stream, alive {
             respondJSON(fd, ["id": rid, "object": "chat.completion", "created": created, "model": engine.modelName,
                 "choices": [["index": 0, "finish_reason": finish, "message": accumulated.message]], "usage": usage], cors: cors)
+        }
+    }
+
+    // MARK: /v1/responses (OpenAI Responses API, SSE streaming)
+
+    /// The Responses API, which is what Codex speaks. The wire contract lives in
+    /// `ResponsesDialect`; this function wires it to the engine the way `v1Chat`
+    /// wires Chat Completions, sharing the template, the splice, the vision
+    /// path, the native tool parser and the OpenAI output rules.
+    private func v1Responses(_ fd: Int32, _ rawJSON: [String: Any], cors: String, control: RequestController) {
+        let json = Self.withoutNulls(rawJSON)
+        func fail(_ failure: ResponsesDialect.Failure, status: String = "400 Bad Request") {
+            respondJSON(fd, failure.body, status: status, cors: cors)
+        }
+        if let e = modelError(json) { return fail(ResponsesDialect.Failure("model_not_found", e)) }
+        let request: ResponsesDialect.Request
+        do { request = try ResponsesDialect.parse(json) }
+        catch let failure as ResponsesDialect.Failure { return fail(failure) }
+        catch { return fail(ResponsesDialect.Failure("invalid_request", "\(error)")) }
+
+        let renderTools = request.choice == .disabled ? [] : request.tools
+        var messages = request.messages
+        if case .tool(let name) = request.choice {
+            messages = Self.instructing(messages, "You must call the \(name) tool now.")
+        } else if request.choice == .required {
+            messages = Self.instructing(messages, "You must call one of the available tools now.")
+        }
+        if !request.parallel && !renderTools.isEmpty {
+            messages = Self.instructing(messages, "Call at most one tool in this response.")
+        }
+
+        let ids: [Int]
+        var vision: VisionPrompt?
+        do {
+            if request.hasImages {
+                (ids, vision) = try engine.encodeChatWithVision(
+                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort, request: control)
+            } else {
+                try control.checkInputBytes(ContextInputMemory.bytes(messages: messages, tools: renderTools))
+                ids = try engine.encodeChatSpliced(
+                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort)
+            }
+        } catch let failure as RequestFailure {
+            requestRefusal(fd, failure, dialect: "openai", cors: cors)
+            return
+        } catch let e as SlotstreamError {
+            return fail(ResponsesDialect.Failure("invalid_image", "\(e)"))
+        } catch {
+            return fail(ResponsesDialect.Failure("template_error", "\(error)"))
+        }
+        guard !ids.isEmpty else { return fail(ResponsesDialect.Failure("empty_prompt", "input must not be empty")) }
+        if let e = engine.contextError(promptTokens: ids.count) {
+            return fail(ResponsesDialect.Failure("context_length_exceeded", e))
+        }
+        guard ids.count < engine.maxContextTokens else {
+            return fail(ResponsesDialect.Failure("context_length_exceeded",
+                "prompt is \(ids.count) tokens, leaving no reply room in the \(engine.maxContextTokens)-token window"))
+        }
+
+        // Sampling. Codex sends no output limit, so the default is the
+        // gateway's advertised budget bounded by the room left in the window,
+        // never the 512-token chat default, which truncates every real edit.
+        var params = renderTools.isEmpty ? (request.thinking ? SampleParams.thinking : .instruct) : .agent
+        let room = max(1, engine.maxContextTokens - ids.count)
+        params.maxTokens = min(
+            request.maxOutputTokens ?? GatewayDialect.outputBudget(contextCap: engine.maxContextTokens), room)
+        if let v = request.temperature { params.temperature = v }
+        if let v = request.topP { params.topP = v }
+        params.seed = Self.randomSeed()
+        params = params.sanitized()
+        params.maxTokens = min(params.maxTokens, room)
+
+        let stream = request.stream
+        let response = ResponsesDialect.ResponseStream(model: engine.modelName, namespaces: request.namespaces,
+                                                       freeform: request.freeform, echo: request.echo)
+        var headersStarted = false
+        let output = makeOutput(fd, streaming: stream)
+        defer { output?.finish() }
+        @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
+        func endOutput() { self.endChunked(fd, writer: output) }
+        var alive = true
+        func emit(_ frames: [String]) {
+            guard stream, alive else { return }
+            for f in frames {
+                alive = writeChunk(Data(f.utf8))
+                if !alive { break }
+            }
+        }
+        let accumulated = OpenAIOutput(tools: renderTools, choice: request.choice, parallel: request.parallel)
+        let thinker = request.thinking ? ThinkSplitter() : nil
+        let parser = renderTools.isEmpty ? nil : ToolCallSplitter(tools: renderTools.map { $0.schema },
+            idFactory: { "call_" + UUID().uuidString.replacingOccurrences(of: "-", with: "") })
+        var reasoningTokens = 0
+        var publishedCalls = 0
+        // The accumulator applies the OpenAI rules (declared names, a forced
+        // choice, malformed calls) and hands back chat-shaped deltas; they are
+        // re-expressed as Responses items here, in the order they happened.
+        func publish(_ deltas: [[String: Any]]) {
+            for delta in deltas {
+                if let t = delta["content"] as? String { emit(response.text(t)) }
+                if delta["tool_calls"] != nil, publishedCalls < accumulated.calls.count {
+                    emit(response.functionCall(accumulated.calls[publishedCalls]))
+                    publishedCalls += 1
+                }
+            }
+        }
+        func consume(_ delta: String) {
+            var body = delta
+            if let thinker {
+                let (thought, content) = thinker.push(delta)
+                if !thought.isEmpty {
+                    reasoningTokens += 1
+                    _ = accumulated.reasoningDelta(thought)
+                    emit(response.reasoning(thought))
+                }
+                body = content
+            }
+            if !body.isEmpty { publish(accumulated.consume(parser?.push(body) ?? [.text(body)])) }
+        }
+        let incremental = stream || (!request.parallel && !renderTools.isEmpty)
+        let callback: ((Int, String) -> Bool)? = incremental ? { _, delta in
+            if output?.alive == false { alive = false }
+            guard alive else { return false }
+            consume(delta)
+            return accumulated.error == nil && !accumulated.finishedSingleCall && alive
+        } : nil
+        var lastKeepalive = RuntimeClock.now()
+        let (text, _, stats) = engine.generate(promptIds: ids, params: params, vision: vision,
+            shouldContinue: {
+                // The one hook that runs during prefill. Codex allows 300 s of
+                // silence by default and counts events, not bytes, so the
+                // keepalive is a real in_progress event rather than a comment.
+                if headersStarted && RuntimeClock.seconds(since: lastKeepalive) >= 10 {
+                    lastKeepalive = RuntimeClock.now()
+                    emit([response.keepalive()])
+                }
+                return alive && (output?.alive ?? true) && self.peerAlive(fd)
+                    && accumulated.error == nil && !accumulated.finishedSingleCall
+            }, onToken: callback, request: control, onAdmitted: {
+                guard stream else { return true }
+                headersStarted = self.startChunked(fd, contentType: "text/event-stream", cors: cors)
+                guard headersStarted else { return false }
+                emit(response.created())
+                return alive
+            })
+        if let error = stats.runtimeError {
+            let failure = stats.requestFailure ?? RequestFailure(.inferenceError, error)
+            if headersStarted {
+                emit(response.fail(code: failure.code.rawValue, message: failure.message))
+                endOutput()
+            } else { requestRefusal(fd, failure, dialect: "openai", cors: cors) }
+            return
+        }
+        if !incremental { consume(text) }
+        if let thinker {
+            let (thought, body) = thinker.flush()
+            if !thought.isEmpty {
+                reasoningTokens += 1
+                _ = accumulated.reasoningDelta(thought)
+                emit(response.reasoning(thought))
+            }
+            if !body.isEmpty { publish(accumulated.consume(parser?.push(body) ?? [.text(body)])) }
+        }
+        if let parser { publish(accumulated.consume(parser.flush())) }
+        _ = accumulated.finishReason(stats.finishReason)
+        if let error = accumulated.error {
+            if stream {
+                emit(response.fail(code: "inference_error", message: error))
+                endOutput()
+            } else if alive {
+                fail(ResponsesDialect.Failure("inference_error", error), status: "500 Internal Server Error")
+            }
+            return
+        }
+        let usage = ResponsesDialect.Usage(input: stats.promptTokens, cached: stats.reusedPrefixTokens,
+                                           output: stats.decodeTokens, reasoning: reasoningTokens)
+        if stream {
+            if alive {
+                emit(response.finish(engineReason: stats.finishReason, usage: usage))
+                endOutput()
+            }
+        } else if alive {
+            respondJSON(fd, response.finished(engineReason: stats.finishReason, usage: usage), cors: cors)
         }
     }
 }

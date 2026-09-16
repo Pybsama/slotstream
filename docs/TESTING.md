@@ -249,7 +249,11 @@ not general vision accuracy.
 
 The `openai-conversation`, `openai-tool-output`, and `openai-context-budget`
 catalogue checks cover request/history semantics, complete-call publication,
-stream equivalence, and the separate default/maximum context budgets.
+stream equivalence, and the separate default/maximum context budgets. The
+`responses-request`, `responses-events`, `responses-codex-tools`, and
+`responses-codex-fixture` checks cover the Responses API that Codex uses:
+item and tool parsing, the event stream and its response object, Codex's
+real tool schemas, and a captured Codex first-turn request.
 
 Against an already-running server, run `python3 Tools/openai_tools_gate.py
 --output /tmp/openai-tools.jsonl`. This exercises the real model and HTTP/SSE

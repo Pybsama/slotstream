@@ -40,14 +40,14 @@ OpenAI**, then enter:
 
 | Setting | Value |
 |---|---|
-| API mode, if offered | Chat Completions |
+| API mode, if offered | Chat Completions or Responses |
 | Base URL | `http://127.0.0.1:11434/v1` |
 | Model | `qwen3.8-flash-next:4bit` |
 | API key, if required | `unused` |
 
 No OpenAI account or key is needed for this local connection. Leave `unused`
-as written. An app that requires the OpenAI Responses API cannot use this
-connection unless it also offers a Chat Completions mode.
+as written. Apps that use the OpenAI Responses API work on the same base URL;
+Codex needs the provider entry in the [Codex guide](CODEX.md).
 
 If the app asks for a **full endpoint** instead of a base URL, use:
 
@@ -95,7 +95,7 @@ it actually reads the file and returns its contents.
 |---|---|
 | Connection refused or the wrong model appears | Keep the Slotstream server running and copy the address and model name exactly. Check for [port conflicts](TROUBLESHOOTING.md#the-server-cant-listen-on-port-11434). |
 | Tools don't work | Use OpenAI Chat Completions with Slotstream 0.2.8 or later. The Ollama connection does not support tools. |
-| The app calls `/v1/responses` | Select Chat Completions mode. Responses-only apps are unsupported. |
+| The app calls `/v1/responses` | Supported from Slotstream 0.2.20. Update with the install command if `slotstream --version` is older. Codex needs the [custom provider setup](CODEX.md); it cannot use `--oss`. |
 | The conversation is too long | The window includes instructions, history, and reply. Auto picks 32,768 tokens through 32 GB of RAM and more on larger Macs; `slotstream doctor` shows yours. Hermes needs the `--max-context 65536` setup in its guide. |
 | The first answer times out | Check progress in the Slotstream window. Long prompts can take minutes. See your agent's guide for its timeout settings. |
 | Summaries stop early or use a cloud model | Check the separate summary-provider and reply-length settings. Use the full configuration in the Hermes guide; fx has known summary limitations. |

@@ -11,7 +11,7 @@ on SSD and loading the parts it needs into memory. It is built for Macs with
 the model works offline. No Python or cloud API account is required.
 
 Use it to chat, ask about pictures, or work with files through an agent such
-as Hermes. Developers can connect their own apps through its APIs or Swift library.
+as Hermes or Codex. Developers can connect their own apps through its APIs or Swift library.
 
 [Get started](#install) · [Performance](#speed) · [Guides](#guides) · [Get help](#support)
 
@@ -227,6 +227,7 @@ again. Follow the [step-by-step setup](docs/GETTING-STARTED.md) for more help.
 |---|---|
 | Chat in Open WebUI or another app | [Connect a chat app](docs/CLIENTS.md) |
 | Work with files and tools through an agent | [Use Hermes](docs/HERMES.md) |
+| Code with Codex | [Use Codex](docs/CODEX.md) |
 | Ask about a picture | [Use an image](docs/GETTING-STARTED.md#ask-about-a-picture) |
 | Use a coding agent | [Connect fx](docs/FX.md) |
 | Fix a problem, move the model, or uninstall | [Troubleshooting](docs/TROUBLESHOOTING.md) |
