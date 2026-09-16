@@ -51,7 +51,7 @@ extension Catalogue {
             Check("router-projection", tier: .t1) { Diagnostics.optimizationRouterProjection() },
             Check("block-selection", tier: .t1) { Diagnostics.optimizationBlockSelection() },
             Check("indexer-visibility", tier: .t1) { Diagnostics.optimizationIndexerVisibility() },
-        ] + toolCallChecks + gatewayChecks + openAIChecks + responsesChecks
+        ] + toolCallChecks + gatewayChecks + openAIChecks + responsesChecks + weightStoreChecks
     }
 
     /// The automatic context window on simulated Macs: each tier's choice, the

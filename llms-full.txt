@@ -4364,15 +4364,8 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## Unreleased
+## 0.2.20 - 2026-09-16
 
-- Say that Slotstream is native end to end. The README's new Built native
-  section, the engineering notes' native-stack table, the Swift library
-  guide, the Sevra Mac notes and `llms.txt` now describe the Swift, MLX and
-  Metal stack, the run-time-compiled Metal kernels, the C download decoder
-  and the role of the Python tooling, and keep speed attributed to the
-  measured mechanisms. No number changed. Decision:
-  `db/records/decisions/native-stack-stated-on-every-surface.md`.
 - Serve the OpenAI Responses API at `POST /v1/responses`, the protocol Codex
   requires since it dropped Chat Completions. Function tools, Codex's
   `namespace` bundles (flattened to `namespace.name` and split again on the
@@ -4387,6 +4380,14 @@ determines which version the installer downloads.
   details: `docs/API.md`. Verified with `codex exec` creating a file through
   `apply_patch`, reading it back through `exec_command`, describing an
   attached picture, and reading one through `view_image`.
+- Library: an app that embeds Slotstream can return allocator-held buffers
+  after releasing its engine (`Engine.releaseUnusedMemory()`), drain the
+  memory governor before that release (`MemoryGovernor.stopAndWait()`), and
+  stop weight verification from a Stop button or at shutdown
+  (`WeightStore.status(shouldContinue:)` and
+  `WeightStore.sha256(of:shouldContinue:)`). Existing signatures are
+  unchanged. The Sevra for Mac development app in `apps/macos` uses them; it
+  is not part of the release download.
 - Say who Slotstream is for. It is built for Macs that cannot hold the model,
   16 to 64 GB; 96 GB and larger Macs run it but are not the optimization
   target. The README, hardware guide, getting-started guide, engineering
@@ -4394,6 +4395,13 @@ determines which version the installer downloads.
   the 96 GB+ estimate row is labeled as the case where the model fits in
   memory. No number changed. Decision:
   `db/records/decisions/target-range-macs-that-cannot-hold-the-model.md`.
+- Say that Slotstream is native end to end. The README's new Built native
+  section, the engineering notes' native-stack table, the Swift library
+  guide, the Sevra Mac notes and `llms.txt` now describe the Swift, MLX and
+  Metal stack, the run-time-compiled Metal kernels, the C download decoder
+  and the role of the Python tooling, and keep speed attributed to the
+  measured mechanisms. No number changed. Decision:
+  `db/records/decisions/native-stack-stated-on-every-surface.md`.
 
 ## 0.2.19 - 2026-09-16
 
