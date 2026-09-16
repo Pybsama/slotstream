@@ -3,7 +3,7 @@ type: design
 meta-type: conclusion
 id: 01m1hhwmtzy3hdem9bswjz5d4q
 created: 2026-09-02T17:15:26.943840+00:00
-updated: 2026-09-02T17:15:26.943840+00:00
+updated: 2026-09-16T19:43:53.937429+00:00
 summary: slotstream — Qwen3.8-Flash-Next on every Apple Silicon Mac
 date: 2026-08-28
 doc: plan
@@ -22,3 +22,5 @@ Measured columns). Everything marked **est.** is a first-principles estimate to 
 by a measurement; everything marked **verified** came from the model config or a live check.
 
 ---
+
+**Positioning note (2026-09-16).** "Every Apple Silicon Mac" describes compatibility, not the target. The engine is optimized for Macs that cannot hold the model, 16 to 64 GB; larger Macs run it and are not the optimization target ([[records/decisions/target-range-macs-that-cannot-hold-the-model]]).

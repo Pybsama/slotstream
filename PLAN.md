@@ -12,6 +12,8 @@ by a measurement; everything marked **verified** came from the model config or a
 
 ---
 
+**Positioning note (2026-09-16).** "Every Apple Silicon Mac" describes compatibility, not the target. The engine is optimized for Macs that cannot hold the model, 16 to 64 GB; larger Macs run it and are not the optimization target ([[records/decisions/target-range-macs-that-cannot-hold-the-model]]).
+
 ## Sevra integration: maintained model choices for hardware
 Owner-approved engineering direction, September 8, 2026. Implementation of
 the maintained-selection lifecycle is planned; the current Slotstream engine
@@ -119,6 +121,8 @@ pre-registered test matrix and measurable done-criteria. The mechanism (slots + 
 is model-agnostic; this model is the first and only v0 target.
 
 ---
+
+**Target range, stated 2026-09-16.** The goal above is the target: Macs that cannot hold the model, 16 to 64 GB. Macs of 96 GB and more, where the model fits in memory, run it without being the optimization target. Decision: [[records/decisions/target-range-macs-that-cannot-hold-the-model]].
 
 ## 2. Ground truth: the model (verified from `config.json`, 2026-08-28)
 
@@ -677,6 +681,8 @@ never auto-sudos). External USB4 NVMe (~3 GB/s) is a supported weights location 
 row in the matrix for 256 GB-internal-disk Macs.
 
 ---
+
+**Rows above the target range (2026-09-16).** `big96`, `big128` and `max192` describe Macs where the model fits in memory. They are outside the optimization target ([[records/decisions/target-range-macs-that-cannot-hold-the-model]]), their decode estimates were never measured, and the one community report on a 128 GB M5 Max reads 31.5 tok/s at a 73 GB target on 0.2.3 ([[records/measurements/c2-macbook-pro-m5-max-128gb-community]]). Keep the rows as the historical map; do not plan work against their estimates.
 
 ## 6. Correctness strategy (non-negotiable invariants)
 

@@ -3,7 +3,7 @@ type: design
 meta-type: conclusion
 id: 01m1hhwnbbmez0xhbrt0wkby5d
 created: 2026-09-02T17:15:27.467669+00:00
-updated: 2026-09-02T17:15:27.467669+00:00
+updated: 2026-09-16T19:43:53.956489+00:00
 summary: Presets v1 (est. columns to be replaced by M8 measurements)
 date: 2026-08-28
 doc: plan
@@ -94,3 +94,5 @@ never auto-sudos). External USB4 NVMe (~3 GB/s) is a supported weights location 
 row in the matrix for 256 GB-internal-disk Macs.
 
 ---
+
+**Rows above the target range (2026-09-16).** `big96`, `big128` and `max192` describe Macs where the model fits in memory. They are outside the optimization target ([[records/decisions/target-range-macs-that-cannot-hold-the-model]]), their decode estimates were never measured, and the one community report on a 128 GB M5 Max reads 31.5 tok/s at a 73 GB target on 0.2.3 ([[records/measurements/c2-macbook-pro-m5-max-128gb-community]]). Keep the rows as the historical map; do not plan work against their estimates.

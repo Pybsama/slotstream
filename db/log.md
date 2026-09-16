@@ -1471,3 +1471,6 @@ hardware-planning-range-medium needle ~6–16 tok/s and hardware-planning-range-
 ## [2026-09-16 21:10] validate | db
 Re-anchored estimates: dbmd validate --all with zero errors and the two preserved historical log warnings; projections and claim checks pass on the export.
 
+
+## [2026-09-16 19:47] create | records/decisions/target-range-macs-that-cannot-hold-the-model
+Target range decision: built for Macs that cannot hold the model (16 to 64 GB); 96 GB+ supported, not optimized. README (Who it's for, tier row relabel, FAQ), HARDWARE, GETTING-STARTED, ENGINEERING, llms.txt, CHANGELOG, CLAUDE.md, 1-goal, every-Mac design note, presets-v1 note and the 96 GB+ claim body updated; projections regenerated; no number changed.

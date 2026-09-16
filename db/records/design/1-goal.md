@@ -3,7 +3,7 @@ type: design
 meta-type: conclusion
 id: 01m1hhwmx5898411x5j2ar5f5v
 created: 2026-09-02T17:15:27.013396+00:00
-updated: 2026-09-02T17:15:27.013396+00:00
+updated: 2026-09-16T19:43:53.917871+00:00
 summary: 1. Goal
 date: 2026-08-28
 doc: plan
@@ -31,3 +31,5 @@ pre-registered test matrix and measurable done-criteria. The mechanism (slots + 
 is model-agnostic; this model is the first and only v0 target.
 
 ---
+
+**Target range, stated 2026-09-16.** The goal above is the target: Macs that cannot hold the model, 16 to 64 GB. Macs of 96 GB and more, where the model fits in memory, run it without being the optimization target. Decision: [[records/decisions/target-range-macs-that-cannot-hold-the-model]].
