@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-16T17:28:42.005810Z
+updated: 2026-09-16T19:50:35.681990Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-16-release-0-2-19-published-and-installed]] — v0.2.19 acceptance: CI artifact 25/25, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary, doctor at 22 GB shows the corrected forecast.
 - [[sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb]] — 0.2.19 release benchmark at 22 GB: the shipping build's default 1.108 over the 0.2.18 forecast (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-b1-cohort-20gb]] — Taps B1 at 20 GB: aggregate 1.058 (bootstrap 1.031 to 1.088), families 1.019 to 1.105, 36 of 36 outputs identical; r0033 kept one counted pair, so the pairs condition fails
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-correction-native-diagnostic]] — Native learned correction: corrected top-10 set equals the offline set in 99.90% of 141,450 rows, agreement 0.79799 against 0.7980 offline, plain tap 0.72918; passes
@@ -506,9 +507,8 @@ updated: 2026-09-16T17:28:42.005810Z
 - [[sources/runs/2026/09/2026-09-05-hermes-planned-context-counterexample]] — Full long-context prefill completes but its sampled process peak exceeds the planned envelope
 - [[sources/runs/2026/09/2026-09-05-hermes-openai-real-client-gates]] — Released and current Hermes complete real local tool loops, title fallback and bounded compaction; OpenAI and gateway gates pass
 - [[sources/runs/2026/09/2026-09-05-optimization-prefix-client-and-vision-integration]] — Optimization prefix divergent-client and real-image integration V92
-- [[sources/runs/2026/09/2026-09-05-optimization-build-lock-recovery]] — Optimization build lock failure and corrected refusal
 
 ## More
 
-This folder has 575 files. The 500 most recent are listed above.
+This folder has 576 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

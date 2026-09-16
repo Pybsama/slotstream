@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-16T17:28:42.011501Z
+updated: 2026-09-16T19:50:35.695629Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-19-published-2026-09-16]] — v0.2.19 published, installed and accepted: 25 of 25 model gates on the CI artifact, 31 of 31 installed-release checks, 11 prefix checks, corrected forecast planned at 22 GB
 - [[records/measurements/corrected-forecast-release-benchmark-2026-09-16]] — Shipping build's default 1.10x over the 0.2.18 forecast at 22 GB: aggregate 1.108 (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
 - [[records/measurements/corrected-forecast-default-2026-09-16]] — 0.2.19 default on the shipping build: engages where the 0.2.16 lookahead did, charges 409 MiB with the file (373 without), pull fetches the sidecar, and a 22 GB smoke gives identical outputs
 - [[records/measurements/decode-forecast-taps-b1-cohort-2026-09-15]] — Attention tap on B1 at 20 GB: 1.058 against the qualified configuration (bootstrap 1.031 to 1.088), 36 of 36 outputs identical; fails only the pairs condition after host swap-outs

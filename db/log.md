@@ -1450,3 +1450,12 @@ Noted that the 0.2.19 release benchmark (22 GB target, 15.86 tok/s) does not re-
 ## [2026-09-16 17:28] validate | db
 0.2.19 release docs and records: dbmd validate --all with zero errors and the two preserved historical log warnings; projections, llms-full and claims gates pass on the export of the release commit.
 
+## [2026-09-16 19:51] create | sources/runs/2026/09/2026-09-16-release-0-2-19-published-and-installed
+v0.2.19 release acceptance: CI 35136690124 on the third commit after two coverage-ratchet failures, candidate verified against a clean export (174 files), 25/25 model gates on the CI binary, publication and attestation, install 0.2.18 to 0.2.19, installed e2e 31/31, persistent prefix e2e 11/11, doctor at 22 GB plans the corrected forecast (409 MiB) and pull --verify finds the sidecar present.
+
+## [2026-09-16 19:51] create | records/measurements/release-0-2-19-published-2026-09-16
+v0.2.19 published, installed and accepted: 25 of 25 model gates on the CI artifact, 31 of 31 installed-release checks, 11 prefix checks; the installed binary plans the corrected forecast at 22 GB.
+
+## [2026-09-16 19:51] validate | db
+Release records for v0.2.19: dbmd validate --all with zero errors and the two preserved historical log warnings; projections and 243 claim checks pass.
+
