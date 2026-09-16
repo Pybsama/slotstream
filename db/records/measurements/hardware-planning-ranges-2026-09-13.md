@@ -2,7 +2,7 @@
 type: measurement
 id: 01m2dtc5nvwg0t0jfr4fra1nx6
 created: 2026-09-13T16:42:28.411325+00:00
-updated: 2026-09-13T16:49:56.423367+00:00
+updated: 2026-09-16T21:10:05.330094+00:00
 summary: Hardware speed planning ranges and inference limits
 date: 2026-09-13
 doc: measurements
@@ -86,3 +86,29 @@ The public current-result surfaces use the reported two-decimal medians
 No source bytes, model benchmark or runtime policy changed. The configuration
 was measured before release and adopted in 0.2.16; public wording distinguishes
 that benchmark from a rerun of the downloaded release binary.
+
+## Re-anchored after 0.2.19, 2026-09-16
+
+The 0.2.19 release benchmark measured the development Mac at a 22 GB
+process target, the automatic target of a 32 GB Mac: 15.86 tok/s with the
+corrected forecast and 14.38 with the 0.2.18 forecast, medians over the
+counted cells of each arm ([[records/measurements/corrected-forecast-release-benchmark-2026-09-16]]).
+That measurement replaces two inferences:
+
+- Medium (24 to less than 48 GB) now rounds outward from 6.22 (the 32 GB M5
+  Air on 0.2.11) and 15.86 (the M5 Pro at the 32 GB automatic target on
+  0.2.19): ~6–16 tok/s. The upper end still assumes a comparable chip and
+  SSD; no Mac in the band has been timed on 0.2.19.
+- High (48 to less than 96 GB) now rounds down from 15.86 as its lower
+  reference instead of 13.47: ~15–27 tok/s. The 48 GB Mac was measured at a
+  22 GB target, below its own 33.6 GB automatic target, whose larger cache has
+  not been timed on 0.2.19. The upper end still transfers the M5 Max's 26.9
+  tok/s at a 48 GB process target.
+- The automatic-plan estimate of about 10 tok/s at 32 GB, taken from the
+  two-draft measurement at 76 experts per layer on 0.2.14, is withdrawn in
+  favour of the direct measurement.
+
+Low and 96 GB+ are unchanged. The ranges remain editorial estimates across
+releases, chips and SSDs, not calibrated intervals; no release-speedup
+multiplier was applied to community reports. Public surfaces: README.md and
+docs/HARDWARE.md.

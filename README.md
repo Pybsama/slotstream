@@ -39,24 +39,18 @@ currently supported.
 `tok/s` means tokens per second; a token is a small piece of text, often part
 of a word. Speeds describe replies after the model has warmed up.
 
-**The decode lookahead introduced in 0.2.16 measured 1.11x faster decode.**
-It predicts which parts of the model the next layers will need and reads them
-from the SSD before they're requested, keeps a faster copy of the routing
-weights, and waits for the GPU less often. On prompts it was never tuned on,
-the development Mac went from 11.79 to 13.47 tok/s at a 20 GB memory target,
-with identical output. Both configurations used speculative decoding. These
-are pre-release benchmark results for the configuration shipped in 0.2.16;
-**The corrected expert forecast in 0.2.19 measured 1.10x faster decode than 0.2.18.**
-The lookahead now reads the model's state right after the previous layer's
-attention step and applies a small learned correction, so it predicts the
-experts the next layer will need more accurately and reads about 20% fewer
-expert records from the SSD during a reply. On eight prompts it was never tuned
-on, the shipping build went from 14.38 to 15.86 tok/s at a 22 GB memory target
-(a 32 GB Mac's automatic plan) with identical output; a pre-release measurement
-at a 20 GB target read 1.11x, 13.10 to 14.83 tok/s. Existing installs get the
-37.5 MB correction file by running `slotstream pull` again.
-
-the [latest published release](https://github.com/carloslfu/slotstream/releases/latest)
+**Our development Mac, a 48 GB M5 Pro, generates 15.86 tok/s with 0.2.19 at a
+22 GB memory target, the automatic plan of a 32 GB Mac.** That is the release
+benchmark of the corrected expert forecast against the 0.2.18 forecast on
+eight prompts it was never tuned on: 1.10x faster decode, 14.38 to 15.86 tok/s,
+identical output. The decode lookahead introduced in 0.2.16 had measured 1.11x
+(11.79 to 13.47 tok/s at a 20 GB target). Both read the parts of the model the
+next layers will need from the SSD before they are requested; 0.2.19 predicts
+them from the previous layer's attention state with a small learned correction
+that `slotstream pull` fetches, and reads about 20% fewer expert records per
+reply. The [expert lookahead guide](docs/EXPERT-LOOKAHEAD.md) has the
+measurements, and the
+[latest published release](https://github.com/carloslfu/slotstream/releases/latest)
 determines what the installer downloads.
 
 <a id="speed-by-memory"></a>
@@ -72,13 +66,15 @@ and settings, with higher speeds generally requiring a faster chip and SSD.
 |---|---|---|---|
 | Compatibility | 8 GB | **Support coming soon.** The current model doesn't fit yet. | Not available yet |
 | Low | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
-| Medium | 24–<48 GB | ~6–14 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
-| High | 48–<96 GB | ~13–27 tok/s | 65,536 at 48 GB; 131,072 at 64 GB |
+| Medium | 24–<48 GB | ~6–16 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
+| High | 48–<96 GB | ~15–27 tok/s | 65,536 at 48 GB; 131,072 at 64 GB |
 | Ultra | 96 GB+ | ~20–32 tok/s | 262,144 tokens, the model's full window |
 
-The High range now uses our latest **13.47 tok/s measured on a 48 GB M5 Pro**
-as its lower reference, rounded to a whole token for the estimate. Older
-chips and slower SSDs can fall below it.
+The Medium upper end and the High lower reference now use the **15.86 tok/s
+measured on our 48 GB M5 Pro at a 22 GB target**, the automatic target of a
+32 GB Mac, rounded outward to whole tokens. Older chips and slower SSDs can
+fall below it, and the 48 GB automatic plan's larger cache has not been timed
+on 0.2.19.
 
 **The upper ends of High and Ultra assume an M5 Max-class chip, a fast
 internal SSD and a larger manually selected memory target.** Auto mode keeps
@@ -101,15 +97,17 @@ RAM alone doesn't define a performance tier.
 |---|---|---|---|---|
 | Mac mini, M2 (base storage) | 16 GB | 0.2.2 | 10.2 GB (auto) | 1.41 tok/s |
 | MacBook Air, M5 | 32 GB | 0.2.11 | 22 GB | 6.22 tok/s |
-| **MacBook Pro, M5 Pro (our development Mac)** | **48 GB** | 0.2.16 configuration, pre-release benchmark | 20 GB | **13.47 tok/s** |
+| **MacBook Pro, M5 Pro (our development Mac)** | **48 GB** | 0.2.19, release benchmark | 22 GB | **15.86 tok/s** |
+| Same M5 Pro, 0.2.16 configuration | 48 GB | 0.2.16, pre-release benchmark | 20 GB | 13.47 tok/s |
 | Same M5 Pro, historical result | 48 GB | 0.2.3 | 33 GB (auto) | ~12 tok/s |
 | MacBook Pro, M5 Max | 128 GB | 0.2.3 | 34.6 GB (auto) | ~21–22 tok/s |
 | Same M5 Max | 128 GB | 0.2.3 | 48 GB (manual) | ~26.9 tok/s |
 | Same M5 Max | 128 GB | 0.2.3 | 73 GB (manual) | ~31.5 tok/s |
 
-Our latest M5 Pro result is the median across eligible runs in a held-out
-comparison (34 of 36 pairs eligible), with two speculative drafts and decode
-lookahead. The other Macs are community reports.
+Our latest M5 Pro result is the median over the default arm's 24 counted cells
+in the 0.2.19 release benchmark, with two speculative drafts and the corrected
+decode forecast; the 0.2.16 result is the median across 34 of 36 eligible pairs
+of its held-out comparison. The other Macs are community reports.
 They use different releases and settings, including speculative decoding on
 the M5 Max. See [hardware results and test conditions](docs/HARDWARE.md) for
 credits and methods. The two M5 Pro rows also change software and settings,
@@ -121,8 +119,8 @@ Its targets are total-process budgets in decimal GB, separate from the Mac's
 installed memory. Those community results have not been independently rerun
 or remeasured on 0.2.16, and are not predictions for every Mac with that much RAM.
 
-The 13.47 tok/s M5 Pro result is a measured reference, not a speed ceiling
-for larger Macs. The [hardware guide](docs/HARDWARE.md#speed-estimates) lists
+The 15.86 tok/s M5 Pro result is a measured reference at a 22 GB target, not
+a speed ceiling for larger Macs or caches. The [hardware guide](docs/HARDWARE.md#speed-estimates) lists
 the automatic plans and remaining estimate limits. See
 [memory defaults and overrides](#why-doesnt-slotstream-use-all-of-my-ram)
 to try a larger cache.

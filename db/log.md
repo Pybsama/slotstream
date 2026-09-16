@@ -1459,3 +1459,15 @@ v0.2.19 published, installed and accepted: 25 of 25 model gates on the CI artifa
 ## [2026-09-16 19:51] validate | db
 Release records for v0.2.19: dbmd validate --all with zero errors and the two preserved historical log warnings; projections and 243 claim checks pass.
 
+## [2026-09-16 21:10] update | README.md
+Speed section rewritten around the 0.2.19 result (15.86 tok/s at a 22 GB target, the automatic plan of a 32 GB Mac): the release commit had placed the 0.2.19 paragraph inside the 0.2.16 paragraph through a line-offset staging error; the measured table and notes now lead with 0.2.19, and the docs/ENGINEERING.md row is back in the results table's order.
+
+## [2026-09-16 21:10] update | records/measurements/hardware-planning-ranges-2026-09-13
+Re-anchored after 0.2.19: Medium ~6–16 tok/s (upper end from 15.86 at the 32 GB automatic target), High ~15–27 tok/s (lower reference from the same measurement); the about-10 tok/s automatic-plan estimate at 32 GB is withdrawn for the direct measurement. README.md and docs/HARDWARE.md updated.
+
+## [2026-09-16 21:10] update | records/claims
+hardware-planning-range-medium needle ~6–16 tok/s and hardware-planning-range-high needle ~15–27 tok/s with re-anchoring notes; tier-estimate-10-tok-s-at-32-gb withdrawn (measured 15.86 tok/s at the 22 GB target).
+
+## [2026-09-16 21:10] validate | db
+Re-anchored estimates: dbmd validate --all with zero errors and the two preserved historical log warnings; projections and claim checks pass on the export.
+

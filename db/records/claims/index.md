@@ -2,12 +2,14 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-16T17:28:42.119289Z
+updated: 2026-09-16T21:10:05.461135Z
 ---
 
 # records/claims
 
+- [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
 - [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
+- [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
 - [[records/claims/warm-decode-0-2-19-at-22-gb]] — Warm decode is 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target on the development Mac
 - [[records/claims/corrected-forecast-0-2-19-medians-tok-s]] — Median decode rose from 14.38 to 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target
 - [[records/claims/corrected-forecast-0-2-19-faster-decode]] — The 0.2.19 corrected forecast decodes 1.10x faster than the 0.2.18 forecast
@@ -43,10 +45,8 @@ updated: 2026-09-16T17:28:42.119289Z
 - [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
 - [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
 - [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
-- [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
 - [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Small-memory planner estimates use the M5 Pro curve; README has broader ranges
 - [[records/claims/hardware-planning-range-ultra]] — Estimated warm reply range for 96 GB or more Macs
-- [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
 - [[records/claims/hardware-planning-range-low]] — Estimated warm reply range for 16 to less than 24 GB Macs
 - [[records/claims/full-context-wait-about-8-minutes-at-65536]] — M5 Pro-based prefill estimate is about 8 minutes near the larger window from a 24 GB simulation
 - [[records/claims/full-context-wait-about-3-minutes-from-24-gb]] — M5 Pro-based prefill estimate is about 3 minutes near the default window from a 24 GB simulation

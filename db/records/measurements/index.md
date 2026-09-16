@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-16T19:50:35.695629Z
+updated: 2026-09-16T21:10:05.330094Z
 ---
 
 # records/measurements
 
+- [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/release-0-2-19-published-2026-09-16]] — v0.2.19 published, installed and accepted: 25 of 25 model gates on the CI artifact, 31 of 31 installed-release checks, 11 prefix checks, corrected forecast planned at 22 GB
 - [[records/measurements/corrected-forecast-release-benchmark-2026-09-16]] — Shipping build's default 1.10x over the 0.2.18 forecast at 22 GB: aggregate 1.108 (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
 - [[records/measurements/corrected-forecast-default-2026-09-16]] — 0.2.19 default on the shipping build: engages where the 0.2.16 lookahead did, charges 409 MiB with the file (373 without), pull fetches the sidecar, and a 22 GB smoke gives identical outputs
@@ -28,7 +29,6 @@ updated: 2026-09-16T19:50:35.695629Z
 - [[records/measurements/automatic-context-window-draft-head-131072-2026-09-13]] — Draft head on at 131,072 tokens: inside its 18 GB plan with a reply identical to the draft-off run; the draft-head limit stays at the model limit
 - [[records/measurements/automatic-context-window-131072-read-2026-09-13]] — A 131,072-token window completed inside its 16 GB plan: 14.80 GB sampled peak against 15.00 planned, 38.1-minute read; estimates run optimistic past 65,536
 - [[records/measurements/automatic-context-window-plans-2026-09-13]] — Auto takes 32,768 tokens through 32 GB, 65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB; weights-free checks pass
-- [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/public-documentation-evidence-audit-2026-09-13]] — Public documentation audit: correct performance, memory, simulation and release scope; no new benchmark
 - [[records/measurements/automatic-memory-default-evidence-scope-2026-09-09]] — Automatic memory default: evidence scope and retained policy (2026-09-09)
 - [[records/measurements/c2-macbook-pro-m5-max-128gb-community]] — C2: MacBook Pro M5 Max, 128 GB (community, 2026-09-03)
