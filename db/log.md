@@ -1417,3 +1417,36 @@ v0.2.18 published, installed and accepted; after a restart the installed binary 
 ## [2026-09-15 00:20] update | sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed
 Corrected the commit that dropped Tools/verify.sh's executable bit: d813bcf (2026-09-02), not 0f7aae1, which only last touched the file.
 
+## [2026-09-16 17:28] create | records/plan/decode-forecast-taps-2026-09-14
+Forecast taps program (2026-09-14 to 09-16): offline gate, 18 GB screen, B1 cohort, co-routing prior, learned correction (offline, native diagnostic, screen, held-out confirmation), threshold screen, readout diagnostic and timing screen, and the corrected-over-shipped confirmation; closed with the corrected attention tap as the 0.2.19 default.
+
+## [2026-09-16 17:28] create | sources/runs/2026/09
+Fourteen run sources for the forecast taps program: 2026-09-15-forecast-taps-{offline-stage, screen-18gb, b1-cohort-20gb, coroute-prior, learned-correction-offline, learned-correction-native-diagnostic, learned-screen-20gb, learned-confirmation-20gb, threshold-screen-16gb, readout-diagnostic, readout-learned-correction, readout-timing-screen-20gb, readout-timing-confirmation-20gb} and 2026-09-16-corrected-forecast-default-checks-sidecar-smoke.
+
+## [2026-09-16 17:28] create | records/measurements
+Twelve measurement records for the forecast taps program (decode-forecast-taps-* 2026-09-15, orders 1460 to 1480) and corrected-forecast-default-2026-09-16 (1482): the corrected attention tap decoded 1.111x over the shipped configuration on eight held-out prompts, the default checks pass and the sidecar pulls and verifies.
+
+## [2026-09-16 17:28] create | records/decisions/corrected-decode-forecast-default-with-the-sidecar
+The corrected attention-tap forecast is the 0.2.19 default; the rank-128 correction file is a mirror-hosted sidecar that pull fetches and verifies; SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary keeps the 0.2.16 forecast.
+
+## [2026-09-16 17:28] create | records/claims
+Nine claims for the forecast taps program (attention tap agreement 0.62 to 0.73 and B1 1.058x, learned correction agreement 0.80 and 1.031x, threshold screen 1.013 and 0.994, readout agreement 0.86 and 5 and 26 percent slower, corrected over shipped 1.111x, lookahead charge 409 MiB) on docs/EXPERT-LOOKAHEAD.md, docs/CLI.md, CHANGELOG.md and llms.txt.
+
+## [2026-09-16 17:28] update | records/claims/expert-lookahead-default-two-layer-forecast
+Withdrawn: 0.2.19 forecasts from the previous layer's attention state with the learned correction; the two-layer boundary forecast remains as the SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary override and the fallback without the file.
+
+## [2026-09-16 17:28] update | records/plan/deprioritized-decision-2026-08-29
+Order 340 to 341 to place the forecast taps program before it in PLAN.md.
+
+## [2026-09-16 17:28] create | sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb
+Release benchmark on the shipping 0.2.19 build at a 22 GB target: the default (corrected forecast, file next to the weights) against SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary on eight held-out prompts, 24 counted pairs, identical outputs, 1.10x, 14.38 to 15.86 tok/s.
+
+## [2026-09-16 17:28] create | records/measurements/corrected-forecast-release-benchmark-2026-09-16
+The 0.2.19 default decodes 1.10x faster than the 0.2.18 forecast at a 22 GB target on eight held-out prompts with identical output, 14.38 to 15.86 tok/s; three claims on README.md, docs/CLI.md, docs/ENGINEERING.md, docs/EXPERT-LOOKAHEAD.md, docs/HARDWARE.md, llms.txt and CHANGELOG.md.
+
+## [2026-09-16 17:28] update | records/claims/hardware-planning-range-high
+Noted that the 0.2.19 release benchmark (22 GB target, 15.86 tok/s) does not re-anchor the range, which keeps its 13.47 tok/s lower reference at the 20 GB profile.
+
+## [2026-09-16 17:28] validate | db
+0.2.19 release docs and records: dbmd validate --all with zero errors and the two preserved historical log warnings; projections, llms-full and claims gates pass on the export of the release commit.
+

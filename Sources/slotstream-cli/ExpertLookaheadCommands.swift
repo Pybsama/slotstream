@@ -163,6 +163,12 @@ struct ExpertLookaheadCapture: ParsableCommand {
     var forecastSelfcheck: String = "off"
     @Option(help: "Record each forecast target's mixed input rows for the offline C12 recomputation: on | off")
     var forecastInputs: String = "off"
+    @Option(help: "Observer-only attention forecast taps to record: attention, attention-shared, attention-corrected, attention-readout, boundary-readout, attention-readout-corrected (comma-separated)")
+    var forecastTaps: String = ""
+    @Option(help: "Tap correction factors (safetensors) for the attention-corrected observer tap")
+    var forecastCorrection: String = ""
+    @Option(help: "Candidates per row in observer-only forecasts (1...64); a router prefetch policy uses its own top")
+    var forecastPerRow: Int = 10
 
     typealias Request = ExpertLookaheadRequest
 
@@ -177,6 +183,25 @@ struct ExpertLookaheadCapture: ParsableCommand {
             }
             return n
         }
+        let observerTaps: [RouterForecastTap] = try forecastTaps.split(separator: ",").map {
+            guard let tap = RouterForecastTap(rawValue: $0.trimmingCharacters(in: .whitespaces)), tap != .boundary else {
+                throw PlanError("--forecast-taps must be attention, attention-shared, attention-corrected, attention-readout, "
+                    + "boundary-readout or attention-readout-corrected, comma-separated")
+            }
+            return tap
+        }
+        let correctedTaps = observerTaps.filter(\.isCorrected)
+        guard correctedTaps.count <= 1, correctedTaps.isEmpty == forecastCorrection.isEmpty else {
+            throw PlanError("--forecast-correction and exactly one corrected tap (attention-corrected or attention-readout-corrected) go together")
+        }
+        if let corrected = correctedTaps.first {
+            let header = try RouterTapCorrection.readHeader(path: forecastCorrection)
+            let served: RouterForecastTap = header.tap == .attentionReadout ? .attentionReadoutCorrected : .attentionCorrected
+            guard served == corrected else {
+                throw PlanError("--forecast-correction was fitted on the \(header.tap.rawValue) tap and serves \(served.rawValue), not \(corrected.rawValue)")
+            }
+        }
+        guard (1 ... 64).contains(forecastPerRow) else { throw PlanError("--forecast-per-row must be in 1...64") }
         let proto = try ExpertLookaheadCLI.loadProtocol(protocolPath)
         let list = try JSONDecoder().decode([Request].self, from: Data(contentsOf: URL(fileURLWithPath: requests)))
         let outURL = URL(fileURLWithPath: out, isDirectory: true)
@@ -200,15 +225,24 @@ struct ExpertLookaheadCapture: ParsableCommand {
                 header["run_id"] = proto.runId
                 header["capture"] = ["features": features == "on", "x2": x2 == "on", "installed": capture == "on",
                                      "forecast_selfcheck": forecastSelfcheck == "on", "forecast_inputs": forecastInputs == "on",
-                                     "forecast_strides": observerStrides]
-                header["schema"] = "expert-lookahead-shard-v2"
+                                     "forecast_strides": observerStrides, "forecast_taps": observerTaps.map(\.rawValue),
+                                     "forecast_per_row": forecastPerRow]
+                header["schema"] = "expert-lookahead-shard-v3"
+                let correction = forecastCorrection.isEmpty ? nil
+                    : try RouterTapCorrection(path: forecastCorrection, hidden: engine.model.cfg.hiddenSize,
+                                              experts: engine.model.cfg.numExperts, targets: engine.model.runLayers - 1)
+                if let correction {
+                    header["forecast_correction"] = ["path": forecastCorrection, "sha256": correction.identity,
+                                                     "resident_bytes": correction.residentBytes]
+                }
                 if let scheduler = engine.model.lookahead?.prefetch {
                     let c = scheduler.configuration
                     header["prefetch"] = ["policy": c.policy.rawValue, "shadow": c.shadow, "enabled": c.enabled,
                                           "cap_records": c.capRecords, "lanes": c.lanes, "window": c.windowLayers,
                                           "top": c.topPerLayer, "strides": c.strides, "issue_cap": c.issueCapPerTarget,
                                           "memo_layers": c.memoLayers, "reserve_bytes": c.reserveBytes,
-                                          "adoption": c.adoption.rawValue, "slot_cap": c.slotCap,
+                                          "adoption": c.adoption.rawValue, "slot_cap": c.slotCap, "tap": c.tap.rawValue,
+                                          "correction": c.correctionPath ?? "",
                                           "threshold": c.threshold.isFinite ? Double(c.threshold) : -1e30]
                 }
                 let collector: ExpertLookaheadCollector? = capture == "on"
@@ -220,8 +254,11 @@ struct ExpertLookaheadCapture: ParsableCommand {
                     let session = engine.model.lookahead ?? ExpertLookaheadSession()
                     session.observer = collector
                     session.observerForecastStrides = observerStrides
+                    session.observerForecastTaps = observerTaps
+                    session.observerCandidatesPerRow = forecastPerRow
                     session.forecastSelfCheck = forecastSelfcheck == "on"
                     session.captureForecastInputs = forecastInputs == "on"
+                    session.observerTapCorrection = correction
                     engine.model.lookahead = session
                 }
                 // The first launch names the run; a resumed launch keeps that file

@@ -71,16 +71,67 @@ package protocol ExpertLookaheadObserver: AnyObject {
     func residency(_ snapshot: ExpertLookaheadResidency, afterPass: Int)
     func passReconciled(id: Int, kept: Int)
     func endPass(id: Int, nanos: UInt64, aborted: Bool)
-    /// Router-reuse forecast: target `targetLayer`'s router applied at the
-    /// completed boundary of `sourceLayer` (stride 0 is the C12 self-check).
-    /// `ids` holds `rows * candidatesPerRow` expert IDs in rank order with one
-    /// margin each (logit minus the row's tenth logit); `inputs` carries the
-    /// target's mixed input rows only when the capture asks for them.
-    func forecast(pass: Int, sourceLayer: Int, targetLayer: Int, rows: Int, ids: [Int32], margins: [Float], inputs: MLXArray?)
+    /// Router-reuse forecast: target `targetLayer`'s router applied to the
+    /// streams read at `tap` of `sourceLayer` (for the boundary tap, stride 0
+    /// is the C12 self-check). `ids` holds `rows * candidatesPerRow` expert IDs
+    /// in rank order with one margin each (logit minus the row's tenth logit);
+    /// `inputs` carries the target's mixed input rows only when the capture
+    /// asks for them.
+    func forecast(pass: Int, sourceLayer: Int, targetLayer: Int, tap: RouterForecastTap, rows: Int, ids: [Int32],
+                  margins: [Float], inputs: MLXArray?)
 }
 
 extension ExpertLookaheadObserver {
-    package func forecast(pass: Int, sourceLayer: Int, targetLayer: Int, rows: Int, ids: [Int32], margins: [Float], inputs: MLXArray?) {}
+    package func forecast(pass: Int, sourceLayer: Int, targetLayer: Int, tap: RouterForecastTap, rows: Int, ids: [Int32],
+                          margins: [Float], inputs: MLXArray?) {}
+}
+
+/// Where a router-reuse forecast reads the residual streams.
+///
+/// `boundary`, the qualified default, reads them after `sourceLayer`'s MoE add,
+/// for targets `sourceLayer + stride`. The attention taps read the streams of
+/// the layer just before the target (`sourceLayer = target - 1`) once that
+/// layer's attention output has been added, and ride that layer's routing
+/// readback. Between deferred barriers a stride-2 boundary forecast arrives at
+/// that same readback, so an attention tap arrives as early while missing one
+/// layer's routed experts and the target's attention instead of two whole
+/// layers. `attentionShared` also adds that layer's shared expert, which is
+/// resident and needs no routing.
+package enum RouterForecastTap: String, CaseIterable {
+    case boundary
+    case attention
+    case attentionShared = "attention-shared"
+    /// The attention tap with a learned correction of its logits
+    /// (`RouterTapCorrection`); it is evaluated only when a correction is loaded.
+    case attentionCorrected = "attention-corrected"
+    /// The attention tap plus the target's own attention sublayer, run on
+    /// that approximate input against the target's caches without writing
+    /// them (`Qwen4ExpModel.readoutForecast`): what stays missing is the
+    /// source layer's routed experts.
+    case attentionReadout = "attention-readout"
+    /// The same readout on the streams after the source layer's MoE add,
+    /// the target's exact input: a self-check that should reproduce the
+    /// target's routing. Observer only; never a scheduler tap.
+    case boundaryReadout = "boundary-readout"
+    /// The readout tap with a learned correction of its logits, fitted on the
+    /// readout's input; evaluated only when such a correction is loaded.
+    case attentionReadoutCorrected = "attention-readout-corrected"
+
+    /// Stable code for the capture's forecast record (see the collector).
+    package var code: UInt32 {
+        switch self {
+        case .boundary: return 0
+        case .attention: return 1
+        case .attentionShared: return 2
+        case .attentionCorrected: return 3
+        case .attentionReadout: return 4
+        case .boundaryReadout: return 5
+        case .attentionReadoutCorrected: return 6
+        }
+    }
+
+    /// The taps that apply a loaded correction, and so evaluate only with one.
+    package var isCorrected: Bool { self == .attentionCorrected || self == .attentionReadoutCorrected }
 }
 
 /// Per-model routing of lookahead events. Owned by the model, called only on
@@ -102,34 +153,76 @@ package final class ExpertLookaheadSession {
     /// list set by the capture command; stride 0 (the self-check) and the
     /// optional input capture are diagnostics set by the capture command.
     package var observerForecastStrides: [Int] = []
+    /// Observer-only attention taps and candidates per row, also set by the
+    /// capture command. An installed router policy uses its own tap and top.
+    package var observerForecastTaps: [RouterForecastTap] = []
+    package var observerCandidatesPerRow = 10
     package var forecastSelfCheck = false
     package var captureForecastInputs = false
+    /// The capture command's correction for an observer-only corrected tap.
+    package var observerTapCorrection: RouterTapCorrection?
 
     package init() {}
 
+    /// The correction the corrected attention tap applies: the installed
+    /// scheduler's own when it has one, otherwise the capture command's.
+    package var tapCorrection: RouterTapCorrection? { prefetch?.tapCorrection ?? observerTapCorrection }
+
+    /// The installed policy's placement of the readout tap's evaluation
+    /// (`ExpertPrefetchConfiguration.readoutAfterDemand`); observers keep the readback.
+    package var readoutAfterDemand: Bool { prefetch?.configuration.readoutAfterDemand ?? false }
+
+    /// The installed router policy's tap, if a router policy is installed.
+    private var schedulerTap: RouterForecastTap? {
+        guard let prefetch, prefetch.usesRouterForecast else { return nil }
+        return prefetch.configuration.tap
+    }
+
     package var routerForecastStrides: [Int] {
-        if let prefetch, prefetch.usesRouterForecast { return prefetch.configuration.strides }
+        if let prefetch, prefetch.usesRouterForecast {
+            // A policy on an attention tap reads no boundary strides of its own.
+            return prefetch.configuration.tap == .boundary ? prefetch.configuration.strides : observerForecastStrides
+        }
         return observerForecastStrides
     }
     package var forecastCandidatesPerRow: Int {
         if let prefetch, prefetch.usesRouterForecast { return prefetch.configuration.topPerLayer }
-        return 10
+        return observerCandidatesPerRow
     }
     /// Only main verification passes forecast: the scheduler acts on those
     /// alone, and prefill or plain passes must stay exactly as they were.
     package var wantsRouterForecast: Bool {
         currentPhase == .mainVerify && (forecastSelfCheck || !routerForecastStrides.isEmpty)
     }
+    /// The attention taps a main verification pass evaluates: the policy's tap
+    /// when it is not the boundary, then the observer-only taps. The corrected
+    /// tap is evaluated only when a correction is loaded.
+    package var attentionForecastTaps: [RouterForecastTap] {
+        guard currentPhase == .mainVerify else { return [] }
+        // A corrected tap evaluates only with a correction fitted for it.
+        let served = tapCorrection?.correctedTap
+        func evaluates(_ tap: RouterForecastTap) -> Bool { tap != .boundary && (!tap.isCorrected || served == tap) }
+        var taps: [RouterForecastTap] = []
+        if let tap = schedulerTap, evaluates(tap) { taps.append(tap) }
+        for tap in observerForecastTaps where evaluates(tap) && !taps.contains(tap) { taps.append(tap) }
+        return taps
+    }
 
-    /// Hand one target's forecast to the observer and, for a real stride, to
-    /// the scheduler. Called on the model thread before the layer's tick.
-    package func forecast(sourceLayer: Int, targetLayer: Int, rows: Int, ids: [Int32], margins: [Float], inputs: MLXArray?) {
+    /// Hand one target's forecast to the observer and, when it comes from the
+    /// policy's own tap (for the boundary tap, at one of its strides), to the
+    /// scheduler. Called on the model thread before the source layer's tick;
+    /// an attention tap arrives before the source layer's demand.
+    package func forecast(sourceLayer: Int, targetLayer: Int, tap: RouterForecastTap = .boundary, rows: Int,
+                          ids: [Int32], margins: [Float], inputs: MLXArray?) {
         guard currentPass >= 0 else { return }
-        observer?.forecast(pass: currentPass, sourceLayer: sourceLayer, targetLayer: targetLayer, rows: rows,
+        observer?.forecast(pass: currentPass, sourceLayer: sourceLayer, targetLayer: targetLayer, tap: tap, rows: rows,
                            ids: ids, margins: margins, inputs: inputs)
-        if targetLayer > sourceLayer, currentPhase == .mainVerify {
-            prefetch?.forecast(target: targetLayer, ids: ids, margins: margins)
+        guard targetLayer > sourceLayer, currentPhase == .mainVerify, let prefetch else { return }
+        if let policyTap = schedulerTap {
+            guard policyTap == tap,
+                  tap != .boundary || prefetch.configuration.strides.contains(targetLayer - sourceLayer) else { return }
         }
+        prefetch.forecast(target: targetLayer, ids: ids, margins: margins)
     }
 
     package var isActive: Bool { observer != nil || prefetch != nil }

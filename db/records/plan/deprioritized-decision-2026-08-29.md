@@ -3,13 +3,13 @@ type: plan
 meta-type: operational
 id: 01m1hhwnxb75108mehdn46vjg4
 created: 2026-09-02T17:15:28.043849+00:00
-updated: 2026-09-02T17:15:28.043849+00:00
+updated: 2026-09-16T13:35:02.399123+00:00
 summary: Deprioritized (decision 2026-08-29)
 date: 2026-08-29
 doc: plan
 kind: deprioritized
 level: '3'
-order: '340'
+order: '341'
 source: '[[sources/docs/2026/09/plan-md-2026-09-02]]'
 title: Deprioritized (decision 2026-08-29)
 ---

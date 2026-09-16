@@ -509,13 +509,16 @@ public final class Qwen4ExpModel {
         // next routing readback (see the barrier below). A pass that returns
         // early or throws drops whatever is still queued.
         defer { routingReadbacks.discard() }
+        // Attention forecast taps ride each layer's own routing readback, so the
+        // queue is installed for them even when every layer is a barrier.
+        let attentionTaps = self.lookahead?.attentionForecastTaps ?? []
         for l in 0 ..< runLayers {
             if shouldContinue?() == false { return nil }
             if MemTrace.on { MemTrace.enterLayer(l, kind: gdn[l] != nil ? "gdn" : "qsa") }
             moe[l]!.specializedRouter = optimizations.routerTopK
             moe[l]!.overlapShared = optimizations.overlapSharedExpert
             moe[l]!.overlapResident = optimizations.overlapResidentExperts
-            moe[l]!.readbackQueue = barrierPeriod > 1 ? routingReadbacks : nil
+            moe[l]!.readbackQueue = barrierPeriod > 1 || !attentionTaps.isEmpty ? routingReadbacks : nil
             qsa[l]?.indexer.denseBypass = optimizations.denseIndexerBypass
             qsa[l]?.indexer.specializedSelector = optimizations.indexerBlockTopK
             moe[l]!.workspaceComputeRanges = layerMajor ? ranges : []
@@ -668,6 +671,31 @@ public final class Qwen4ExpModel {
                 h = h[0..., mlpRow..., 0...]
                 terminalMoERowsSkipped += S - 1
             }
+            // Attention forecast taps for the next layer, on streams that now
+            // hold this layer's attention output. They are evaluated with this
+            // layer's routing readback and reach the scheduler before its demand.
+            var deferredReadout: RouterForecastBatch?
+            if !attentionTaps.isEmpty, !pruneLastMoE, l + 1 < runLayers, let session = self.lookahead,
+               let attentionBatch = buildAttentionForecast(taps: attentionTaps, layer: l, streams: h, x2: x2,
+                                                           injection: inj2!, state: state) {
+                var batch = attentionBatch
+                if session.readoutAfterDemand, batch.targets.contains(where: { $0.tap == .attentionReadout || $0.tap == .attentionReadoutCorrected }) {
+                    // The readout's GPU work is submitted now and consumed after
+                    // this layer's demand reads, so it runs while they are in
+                    // flight instead of delaying the routing readback.
+                    let readout = RouterForecastBatch(targets: batch.targets.filter { $0.tap == .attentionReadout || $0.tap == .attentionReadoutCorrected },
+                                                      buildSeconds: batch.buildSeconds)
+                    batch.targets.removeAll { $0.tap == .attentionReadout || $0.tap == .attentionReadoutCorrected }
+                    batch.buildSeconds = 0
+                    asyncEval(readout.targets.map { $0.logits })
+                    deferredReadout = readout
+                }
+                if !batch.targets.isEmpty {
+                    routingReadbacks.enqueue(batch.targets.map { $0.logits }) { [self] waited in
+                        finishRouterForecast(session: session, layer: l, batch: batch, evalSeconds: waited)
+                    }
+                }
+            }
             if l == dbgLayer { Self.debugDump("x2", x2) }
             contextNumericsObserver?(l, "x2", x2)
             contextNumericsObserver?(l, "inj2", inj2!)
@@ -684,6 +712,11 @@ public final class Qwen4ExpModel {
                 moe[l]!.contextNumericsObserver = { name, value in observe(l, name, value) }
             } else { moe[l]!.contextNumericsObserver = nil }
             let moeOut = try moe[l]!(x2)
+            if let readout = deferredReadout, let session = self.lookahead {
+                // Consumed here, after the demand reads: the host copy waits only
+                // for whatever of the readout the GPU has not finished.
+                finishRouterForecast(session: session, layer: l, batch: readout, evalSeconds: 0)
+            }
             contextNumericsObserver?(l, "moe", moeOut)
             if l == dbgLayer { Self.debugDump("moe", moeOut) }
             MemTrace.mark("moe", moeOut)
@@ -697,9 +730,21 @@ public final class Qwen4ExpModel {
             // and routers are built lazily on them here and evaluated in the
             // same sync as the streams (one graph, one wait per layer); the
             // candidates are selected on the host before this layer's tick.
-            let forecastBatch = self.lookahead.flatMap { session in
+            var builtForecast = self.lookahead.flatMap { session in
                 session.wantsRouterForecast ? buildRouterForecast(session: session, layer: l, streams: h, x2: x2) : nil
             }
+            // The readout self-check (observer only): the streams after this
+            // layer's MoE add are the next layer's exact input, so its readout
+            // forecast should reproduce that layer's routing.
+            if attentionTaps.contains(.boundaryReadout), l + 1 < runLayers, self.lookahead != nil {
+                let started = RuntimeClock.now()
+                let read = readoutForecast(target: l + 1, streams: h, state: state)
+                let seconds = RuntimeClock.seconds(since: started)
+                if builtForecast == nil { builtForecast = RouterForecastBatch(targets: [], buildSeconds: 0) }
+                builtForecast!.targets.append((l + 1, .boundaryReadout, read.mixed, read.logits))
+                builtForecast!.buildSeconds += seconds
+            }
+            let forecastBatch = builtForecast
             // Barrier period. The drain exists so this layer's pool references
             // release before the next layer's ensure() scatters into those slots.
             // Holding pins for several generations keeps an unevaluated gather's
@@ -749,10 +794,11 @@ public final class Qwen4ExpModel {
         return h
     }
 
-    /// One layer boundary's router-reuse forecast: lazy logits per target and
-    /// the mixed inputs they came from.
+    /// One layer's router-reuse forecast: lazy logits per target, the tap they
+    /// were read at and the mixed inputs they came from.
     private struct RouterForecastBatch {
-        var targets: [(target: Int, mixed: MLXArray, logits: MLXArray)]
+        typealias Target = (target: Int, tap: RouterForecastTap, mixed: MLXArray, logits: MLXArray)
+        var targets: [Target]
         var buildSeconds: Double
     }
 
@@ -765,18 +811,103 @@ public final class Qwen4ExpModel {
     /// Nothing here touches the real router path, reference bits or pins.
     private func buildRouterForecast(session: ExpertLookaheadSession, layer l: Int, streams h: MLXArray, x2: MLXArray) -> RouterForecastBatch? {
         let started = RuntimeClock.now()
-        var targets: [(target: Int, mixed: MLXArray, logits: MLXArray)] = []
+        var targets: [RouterForecastBatch.Target] = []
         if session.forecastSelfCheck {
-            targets.append((l, x2, moe[l]!.routerProjection(x2)))
+            targets.append((l, .boundary, x2, moe[l]!.routerProjection(x2)))
         }
         for stride in session.routerForecastStrides {
             let t = l + stride
             guard stride > 0, t < runLayers else { continue }
             let mixed = mlpHC[t].mixedInput(h)
-            targets.append((t, mixed, moe[t]!.routerProjection(mixed)))
+            targets.append((t, .boundary, mixed, moe[t]!.routerProjection(mixed)))
         }
         guard !targets.isEmpty else { return nil }
         return RouterForecastBatch(targets: targets, buildSeconds: RuntimeClock.seconds(since: started))
+    }
+
+    /// Attention taps (`RouterForecastTap`) at layer `l` for target `l + 1`,
+    /// built before this layer's MoE call on streams that already hold its
+    /// attention output: the target's own `mlpHC` mixed read and router, as at
+    /// a boundary. `attentionShared` first adds this layer's shared expert
+    /// through the layer's own inject weights, and the MoE call reuses those
+    /// matmuls. What stays missing is this layer's routed experts and the
+    /// target's attention sublayer. The logits ride this layer's routing readback.
+    private func buildAttentionForecast(taps: [RouterForecastTap], layer l: Int, streams h: MLXArray,
+                                        x2: MLXArray, injection: MLXArray, state: State) -> RouterForecastBatch? {
+        let started = RuntimeClock.now()
+        let t = l + 1
+        var targets: [RouterForecastBatch.Target] = []
+        // The attention tap and its corrected form share one mixed read and router
+        // matmul; the readout tap and its corrected form share one readout.
+        var plain: (mixed: MLXArray, logits: MLXArray)?
+        var readout: (mixed: MLXArray, logits: MLXArray)?
+        for tap in taps {
+            switch tap {
+            case .boundary:
+                continue
+            case .attention, .attentionCorrected:
+                let read = plain ?? {
+                    let mixed = mlpHC[t].mixedInput(h)
+                    return (mixed, moe[t]!.routerProjection(mixed))
+                }()
+                plain = read
+                guard tap == .attentionCorrected else {
+                    targets.append((t, tap, read.mixed, read.logits))
+                    continue
+                }
+                guard let correction = lookahead?.tapCorrection, correction.correctedTap == tap, correction.covers(target: t) else { continue }
+                precondition(read.mixed.shape.last == correction.header.hidden,
+                              "tap correction width \(correction.header.hidden) does not match the router input \(read.mixed.shape)")
+                targets.append((t, tap, read.mixed, correction.apply(target: t, mixed: read.mixed, logits: read.logits)))
+            case .attentionShared:
+                let parts = moe[l]!.precomputedSharedParts ?? moe[l]!.sharedExpertParts(x2)
+                moe[l]!.precomputedSharedParts = parts
+                let shared = sigmoid(parts.1) * parts.0
+                let streams = h + (shared.expandedDimensions(axis: -2) * injection.expandedDimensions(axis: -1))
+                    .reshaped(h.shape)
+                let mixed = mlpHC[t].mixedInput(streams)
+                targets.append((t, tap, mixed, moe[t]!.routerProjection(mixed)))
+            case .attentionReadout, .attentionReadoutCorrected:
+                let read = readout ?? readoutForecast(target: t, streams: h, state: state)
+                readout = read
+                guard tap == .attentionReadoutCorrected else {
+                    targets.append((t, tap, read.mixed, read.logits))
+                    continue
+                }
+                guard let correction = lookahead?.tapCorrection, correction.correctedTap == tap, correction.covers(target: t) else { continue }
+                precondition(read.mixed.shape.last == correction.header.hidden,
+                              "tap correction width \(correction.header.hidden) does not match the readout's router input \(read.mixed.shape)")
+                targets.append((t, tap, read.mixed, correction.apply(target: t, mixed: read.mixed, logits: read.logits)))
+            case .boundaryReadout:
+                // Built after this layer's MoE add, on the target's exact input.
+                continue
+            }
+        }
+        guard !targets.isEmpty else { return nil }
+        return RouterForecastBatch(targets: targets, buildSeconds: RuntimeClock.seconds(since: started))
+    }
+
+    /// The readout taps: the target's own attention-side hyper-connection read
+    /// of `streams`, its attention sublayer run on that read against its
+    /// caches as they stand (nothing written), the injection back into the
+    /// streams, then the target's mixed read and router, as at a boundary. On
+    /// the streams after the source layer's attention add (`attentionReadout`)
+    /// the input misses only the source layer's routed experts; on the streams
+    /// after its MoE add (`boundaryReadout`) it is the target's exact input.
+    /// The PLE layer's term is not added when the target is that layer, and a
+    /// full-attention target attends densely, as the forward does within the
+    /// indexer's budget.
+    private func readoutForecast(target t: Int, streams h: MLXArray, state: State) -> (mixed: MLXArray, logits: MLXArray) {
+        let (x1, inj1) = attnHC[t](h)
+        let out: MLXArray
+        if let g = gdn[t] {
+            out = g.readout(x1, cache: state.linear[t])
+        } else {
+            out = qsa[t]!.readout(x1, rope: rope, cache: state.kv[t]!)
+        }
+        let streams = h + (out.expandedDimensions(axis: -2) * inj1!.expandedDimensions(axis: -1)).reshaped(h.shape)
+        let mixed = mlpHC[t].mixedInput(streams)
+        return (mixed, moe[t]!.routerProjection(mixed))
     }
 
     /// Phase two, after the sync: one host copy per target (three rows of 512
@@ -790,7 +921,7 @@ public final class Qwen4ExpModel {
         let k = max(perRow, tenth + 1)
         var topIdx = [Int32](repeating: -1, count: k)
         var topVal = [Float](repeating: -Float.infinity, count: k)
-        for (t, mixed, logits) in batch.targets {
+        for (t, tap, mixed, logits) in batch.targets {
             let rows = logits.size / experts
             let values = logits.asArray(Float.self)
             guard values.count == rows * experts, rows > 0 else { continue }
@@ -816,7 +947,7 @@ public final class Qwen4ExpModel {
                     margins.append(topVal[i] - reference)
                 }
             }
-            session.forecast(sourceLayer: l, targetLayer: t, rows: rows, ids: ids, margins: margins,
+            session.forecast(sourceLayer: l, targetLayer: t, tap: tap, rows: rows, ids: ids, margins: margins,
                              inputs: session.captureForecastInputs ? mixed : nil)
         }
         session.prefetch?.addForecastSeconds(build: batch.buildSeconds, eval: evalSeconds,

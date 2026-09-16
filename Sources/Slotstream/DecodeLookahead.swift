@@ -26,6 +26,15 @@ public enum DecodeLookahead {
     public static let stagingReserveBytes = 128 << 20
     /// The whole incremental charge, taken from the expert pool before it is sized.
     public static let reserveBytes = stagingReserveBytes + routerCacheBytes
+    /// The same charge when the checkpoint ships a tap correction: its file
+    /// stays resident, so its bytes join the staging reserve in whole MiB.
+    public static func reserveBytes(correctionBytes: Int) -> Int {
+        stagingReserveBytes + routerCacheBytes + roundedMiB(correctionBytes)
+    }
+    /// Whole MiB, rounded up; zero for nothing.
+    public static func roundedMiB(_ bytes: Int) -> Int {
+        bytes <= 0 ? 0 : (((bytes + (1 << 20) - 1) >> 20) << 20)
+    }
     /// Layers between GPU barriers in the qualified configuration.
     public static let barrierLayers = 4
     /// Slots a victim scan keeps free beyond pins and speculative reservations;
@@ -51,6 +60,11 @@ public enum DecodeLookaheadPlanning: Sendable, Equatable {
     /// The default: on with the draft head when the cache still reaches the
     /// activation floor after the head's charge; its bytes come out of the pool.
     case automatic
+    /// The default with the checkpoint's shipped tap correction located next
+    /// to the weights (`RouterTapCorrection.shipped`): the corrected attention
+    /// forecast, its file's bytes joining the automatic charge in whole MiB
+    /// when the lookahead is on.
+    case automaticCorrected(bytes: Int)
     /// Never enabled or charged.
     case off
     /// An experimental environment configuration: its reservation is charged

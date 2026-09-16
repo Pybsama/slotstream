@@ -2,11 +2,24 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-15T00:03:16.542860Z
+updated: 2026-09-16T17:28:42.011501Z
 ---
 
 # records/measurements
 
+- [[records/measurements/corrected-forecast-release-benchmark-2026-09-16]] — Shipping build's default 1.10x over the 0.2.18 forecast at 22 GB: aggregate 1.108 (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
+- [[records/measurements/corrected-forecast-default-2026-09-16]] — 0.2.19 default on the shipping build: engages where the 0.2.16 lookahead did, charges 409 MiB with the file (373 without), pull fetches the sidecar, and a 22 GB smoke gives identical outputs
+- [[records/measurements/decode-forecast-taps-b1-cohort-2026-09-15]] — Attention tap on B1 at 20 GB: 1.058 against the qualified configuration (bootstrap 1.031 to 1.088), 36 of 36 outputs identical; fails only the pairs condition after host swap-outs
+- [[records/measurements/decode-forecast-taps-learned-confirmation-2026-09-15]] — Held-out confirmation at 20 GB: corrected over attention 1.031 (bootstrap 1.013 to 1.041), kinds 1.025 to 1.055, 30 of 30 pairs with identical outputs; every condition passes
+- [[records/measurements/decode-forecast-taps-learned-correction-2026-09-15]] — Rank-128 correction of the attention tap: validation agreement 0.7292 to 0.7980, twin coverage 0.5397 to 0.6209, 35.2 MiB; the native form matches offline in 99.90% of rows
+- [[records/measurements/decode-forecast-taps-readout-diagnostic-2026-09-15]] — Attention readout: exact (self-check 0.9997), 0.8614 agreement against 0.7980 for the corrected tap; its own correction reaches 0.8790, short of the 0.90 bar, so the lever stopped
+- [[records/measurements/decode-forecast-taps-readout-timing-confirmation-2026-09-15]] — Corrected tap against the shipped configuration on eight held-out prompts at 20 GB: 1.111 (bootstrap 1.102 to 1.123), all 23 pairs above 1, outputs identical, 13.10 to 14.83 tok/s
+- [[records/measurements/decode-forecast-taps-readout-timing-screen-2026-09-15]] — Readout timing screen at 20 GB: no readout arm has a pair above 1 against the corrected tap (readback 0.952, after-demand 0.737); 113 cells with identical outputs; lever closed
+- [[records/measurements/decode-forecast-taps-threshold-screen-2026-09-15]] — Lower issue thresholds at 16 GB: 0.031 reads 1.015 on the first twelve pairs, below the 1.02 confirmation bar, and 0.0 reads 0.994; outputs identical; the 0.062 threshold stays
+- [[records/measurements/decode-forecast-taps-learned-screen-2026-09-15]] — Corrected tap over the attention tap on the exploration prompts at 20 GB: 1.036 on the first twelve counted pairs (9 above 1), 32 cells with identical outputs; the confirmation runs
+- [[records/measurements/decode-forecast-taps-coroute-prior-2026-09-15]] — Co-routing prior from the previous layer's routed experts: +0.0032 agreement and +0.0094 twin coverage against 0.03 bars; negative, no native diagnostic
+- [[records/measurements/decode-forecast-taps-offline-and-screen-2026-09-15]] — Attention tap offline gate 0.7292 against 0.6171 agreement, twin coverage 0.539 against 0.439; native screen at 18 GB 1.054 on the first twelve pairs with identical outputs; the confirmation runs
+- [[records/measurements/decode-forecast-taps-2026-09-15]] — Decode forecast taps: a more accurate expert forecast at the same lead time decodes 1.111 over the 0.2.16 to 0.2.18 configuration with identical outputs and becomes the 0.2.19 default
 - [[records/measurements/release-0-2-18-published-2026-09-14]] — v0.2.18 published, installed and accepted: 25 of 25 model gates on the CI artifact, 31 of 31 installed-release checks, and a disk prefix restore on the installed binary
 - [[records/measurements/persistent-prefix-cache-2026-09-14]] — Persistent prefix cache at 10 GB: exact restore, later turns write only new rows (118 MB per turn at 15.5K tokens), and restarts and regenerated replies resume with identical ids
 - [[records/measurements/expert-lookahead-2-b0-cohort-2026-09-12]] — Slot-adoption prefetch passes the held-out B0 gate: aggregate 1.105x, lower bound 1.090, every family faster, 36 of 36 pairs eligible, outputs exact; rescored from 1.120x with true medians

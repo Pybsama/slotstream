@@ -2,17 +2,30 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-14T16:29:42.880372Z
+updated: 2026-09-16T17:28:42.119289Z
 ---
 
 # records/claims
 
+- [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
+- [[records/claims/warm-decode-0-2-19-at-22-gb]] — Warm decode is 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target on the development Mac
+- [[records/claims/corrected-forecast-0-2-19-medians-tok-s]] — Median decode rose from 14.38 to 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target
+- [[records/claims/corrected-forecast-0-2-19-faster-decode]] — The 0.2.19 corrected forecast decodes 1.10x faster than the 0.2.18 forecast
+- [[records/claims/expert-lookahead-default-two-layer-forecast]] — The qualified expert lookahead forecasts two layers ahead
+- [[records/claims/decode-lookahead-charges-409-mib-with-the-correction]] — The decode lookahead charges 409 MiB with the checkpoint's correction file
+- [[records/claims/decode-forecast-corrected-over-shipped-1-111x]] — The corrected forecast decoded 1.111x over the shipped configuration on held-out prompts
+- [[records/claims/decode-forecast-readout-timing-5-and-26-percent-slower]] — The readout decoded 5% slower than the corrected forecast, 26% slower after the demand reads
+- [[records/claims/decode-forecast-readout-agreement-0-86]] — The attention readout reaches 0.86 forecast agreement, 0.88 corrected
+- [[records/claims/decode-forecast-threshold-screen-1-013-and-0-994]] — Lower issue thresholds screened at 1.013 and 0.994 against the shipped threshold
+- [[records/claims/decode-forecast-learned-correction-1-031x]] — The learned correction decoded 1.031x over the uncorrected tap on held-out prompts
+- [[records/claims/decode-forecast-learned-correction-agreement-0-80]] — The learned correction raised forecast agreement to 0.80
+- [[records/claims/decode-forecast-attention-tap-b1-1-058x]] — The attention tap decoded 1.058x on B1, a run that failed its hygiene condition
+- [[records/claims/decode-forecast-attention-tap-agreement-0-62-to-0-73]] — The attention tap raised forecast agreement from 0.62 to 0.73
 - [[records/claims/persistent-prefix-default-max-age]] — The opt-in persistent prefix cache removes states unused for 30 days by default
 - [[records/claims/persistent-prefix-default-minimum-tokens]] — The opt-in persistent prefix cache writes states of 2048 tokens or more by default
 - [[records/claims/persistent-prefix-default-disk-quota]] — The opt-in persistent prefix cache disk quota defaults to 20 GB
 - [[records/claims/expert-lookahead-guide-b1-benchmark-scope]] — The final expert lookahead benchmark scope is one M5 Pro and twelve held-out prompts
 - [[records/claims/expert-lookahead-default-four-layer-drain]] — The qualified decode lookahead normally drains GPU work every four layers
-- [[records/claims/expert-lookahead-default-two-layer-forecast]] — The qualified expert lookahead forecasts two layers ahead
 - [[records/claims/expert-lookahead-prefetch-b0-1-105x]] — Slot-adoption prefetch achieved 1.105x decode throughput in the B0 cohort
 - [[records/claims/lookahead-parts-add-about-2-percent-each]] — The router weight cache and the deferred GPU drains each add about 2% over prefetch
 - [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
@@ -28,7 +41,6 @@ updated: 2026-09-14T16:29:42.880372Z
 - [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the 32,768-token window
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
-- [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
 - [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding

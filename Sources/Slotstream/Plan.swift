@@ -855,11 +855,14 @@ public enum Planner {
         // retained from a loaded engine) is charged whether or not it is enabled.
         let retainedLookahead: Bool?
         let fixedLookaheadBytes: Int
+        // The shipped tap correction's bytes, charged with the automatic default only when it is on.
+        let automaticCorrectionBytes: Int
         switch decodeLookahead {
-        case .automatic: retainedLookahead = nil; fixedLookaheadBytes = 0
-        case .off: retainedLookahead = false; fixedLookaheadBytes = 0
-        case .reserved(let bytes): retainedLookahead = false; fixedLookaheadBytes = bytes
-        case .retained(let enabled, let bytes): retainedLookahead = enabled; fixedLookaheadBytes = bytes
+        case .automatic: retainedLookahead = nil; fixedLookaheadBytes = 0; automaticCorrectionBytes = 0
+        case .automaticCorrected(let bytes): retainedLookahead = nil; fixedLookaheadBytes = 0; automaticCorrectionBytes = max(0, bytes)
+        case .off: retainedLookahead = false; fixedLookaheadBytes = 0; automaticCorrectionBytes = 0
+        case .reserved(let bytes): retainedLookahead = false; fixedLookaheadBytes = bytes; automaticCorrectionBytes = 0
+        case .retained(let enabled, let bytes): retainedLookahead = enabled; fixedLookaheadBytes = bytes; automaticCorrectionBytes = 0
         }
         guard fixedLookaheadBytes >= 0, fixedLookaheadBytes <= (4096 << 20) else {
             throw PlanError("expert lookahead reserve must be between 0 and 4096 MiB")
@@ -954,7 +957,7 @@ public enum Planner {
         }
         /// Budget the automatic lookahead takes when it is on.
         func lookaheadChargeGB(_ on: Bool) -> Double {
-            on && retainedLookahead == nil ? Double(DecodeLookahead.reserveBytes) / 1e9 : 0
+            on && retainedLookahead == nil ? Double(DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes)) / 1e9 : 0
         }
 
         func finish(
@@ -1000,7 +1003,7 @@ public enum Planner {
                 notes: notes,
                 simulated: simulated, contextQualification: qualification,
                 lookaheadReserveBytes: fixedLookaheadBytes
-                    + (lookaheadOn && retainedLookahead == nil ? DecodeLookahead.reserveBytes : 0),
+                    + (lookaheadOn && retainedLookahead == nil ? DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes) : 0),
                 decodeLookahead: lookaheadOn)
             let resolved = try runtimePolicy.map { try applyingRuntimePolicy(base, policy: $0) } ?? base
             let bytes = resolved.memoryLedger.expectedPeakBytes

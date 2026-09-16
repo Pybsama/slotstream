@@ -10,7 +10,304 @@ import Slotstream
 extension Diagnostics {
     public static func expertLookaheadRuntime() throws -> [CheckReport] {
         [try expertLookaheadLaneBudget(), try expertLookaheadTickets(), try expertLookaheadScheduler(),
-         try expertLookaheadForecastMerge(), try expertLookaheadAdoption(), try expertLookaheadRoutingReadback()]
+         try expertLookaheadForecastMerge(), try expertLookaheadForecastTap(), try expertLookaheadAdoption(),
+         try expertLookaheadRoutingReadback()]
+    }
+
+    /// Attention forecast taps (`RouterForecastTap`). The environment names the
+    /// tap, refuses any other value and gives an attention tap a one-layer
+    /// window. An attention policy issues a target's candidates on arrival,
+    /// where the boundary tap waits for a tick, and a cap refusal leaves the
+    /// rest to the ticks. The session forecasts no boundary strides for an
+    /// attention policy, lists the taps a verification pass evaluates, and hands
+    /// the scheduler only its policy's tap (for the boundary tap, only its
+    /// strides) while the observer sees every forecast.
+    public static func expertLookaheadForecastTap() throws -> CheckReport {
+        var c = CheckBuilder("expert-lookahead-forecast-tap")
+        let base = ["SLOTSTREAM_OPT_EXPERT_PREFETCH": "1", "SLOTSTREAM_EXPERT_PREFETCH_POLICY": "router",
+                    "SLOTSTREAM_EXPERT_PREFETCH_STRIDES": "2"]
+        let optimizations = try InferenceOptimizations.environment(base)
+        let parsedBoundary = try ExpertPrefetchConfiguration.environment(base, optimizations: optimizations)
+        c.expect("the tap defaults to the boundary with its stride window",
+            parsedBoundary.tap == .boundary && parsedBoundary.windowLayers == 2)
+        c.expect("the qualified default reads the boundary", ExpertPrefetchConfiguration.qualifiedDecode.tap == .boundary)
+        for tap in [RouterForecastTap.attention, .attentionShared, .attentionReadout] {
+            var env = base
+            env["SLOTSTREAM_EXPERT_PREFETCH_TAP"] = tap.rawValue
+            let parsed = try ExpertPrefetchConfiguration.environment(env, optimizations: optimizations)
+            c.expect("\(tap.rawValue) parses with a one-layer window", parsed.tap == tap && parsed.windowLayers == 1)
+        }
+        var unknown = base
+        unknown["SLOTSTREAM_EXPERT_PREFETCH_TAP"] = "mlp"
+        c.expect("an unknown tap is refused",
+            (try? ExpertPrefetchConfiguration.environment(unknown, optimizations: optimizations)) == nil)
+        c.equal("record codes are stable", RouterForecastTap.allCases.map(\.code), [0, 1, 2, 3, 4, 5, 6])
+        var placed = base
+        placed["SLOTSTREAM_EXPERT_PREFETCH_TAP"] = RouterForecastTap.attentionReadout.rawValue
+        placed["SLOTSTREAM_EXPERT_PREFETCH_READOUT"] = "after-demand"
+        c.expect("the readout can be consumed after the demand reads",
+            (try? ExpertPrefetchConfiguration.environment(placed, optimizations: optimizations))?.readoutAfterDemand == true)
+        placed["SLOTSTREAM_EXPERT_PREFETCH_READOUT"] = "readback"
+        c.expect("or with the readback, the default",
+            (try? ExpertPrefetchConfiguration.environment(placed, optimizations: optimizations))?.readoutAfterDemand == false
+                && (try? ExpertPrefetchConfiguration.environment(base, optimizations: optimizations))?.readoutAfterDemand == false)
+        placed["SLOTSTREAM_EXPERT_PREFETCH_READOUT"] = "later"
+        c.expect("another placement is refused",
+            (try? ExpertPrefetchConfiguration.environment(placed, optimizations: optimizations)) == nil)
+        var misplaced = base
+        misplaced["SLOTSTREAM_EXPERT_PREFETCH_READOUT"] = "after-demand"
+        c.expect("the placement needs the readout tap",
+            (try? ExpertPrefetchConfiguration.environment(misplaced, optimizations: optimizations)) == nil)
+        var selfCheck = base
+        selfCheck["SLOTSTREAM_EXPERT_PREFETCH_TAP"] = RouterForecastTap.boundaryReadout.rawValue
+        c.expect("the readout self-check is refused as a scheduler tap",
+            (try? ExpertPrefetchConfiguration.environment(selfCheck, optimizations: optimizations)) == nil)
+        let readoutSession = ExpertLookaheadSession()
+        readoutSession.observerForecastTaps = [.boundary, .attentionReadout, .boundaryReadout]
+        readoutSession.beginPass(phase: .mainVerify, tokens: [7], features: [])
+        c.expect("both readout taps evaluate as observers",
+            readoutSession.attentionForecastTaps == [.attentionReadout, .boundaryReadout])
+        readoutSession.requestFinished()
+
+        // The corrected tap: its factors travel with that tap only, their file
+        // joins the default reserve, and the correction is the registered
+        // formula on forecast logits.
+        var corrected = base
+        corrected["SLOTSTREAM_EXPERT_PREFETCH_TAP"] = RouterForecastTap.attentionCorrected.rawValue
+        c.expect("the corrected tap needs its factors",
+            (try? ExpertPrefetchConfiguration.environment(corrected, optimizations: optimizations)) == nil)
+        let (rows, hidden, rank, experts) = (2, 4, 2, 3)
+        let a = MLXArray((0 ..< 2 * hidden * rank).map { Float(($0 % 7) - 3) * 0.25 }, [2, hidden, rank])
+        let b = MLXArray((0 ..< 2 * rank * experts).map { Float(($0 % 5) - 2) * 0.5 }, [2, rank, experts])
+        let mu = MLXArray((0 ..< 2 * hidden).map { Float($0) * 0.1 }, [2, hidden])
+        let delta = MLXArray((0 ..< 2 * experts).map { Float($0) - 2 }, [2, experts])
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("slotstream-tap-correction-\(getpid()).safetensors")
+        defer { try? FileManager.default.removeItem(at: file) }
+        try MLX.save(arrays: ["a": a.asType(.float16), "b": b.asType(.float16), "mu": mu, "delta": delta,
+                              "targets": MLXArray([Int32(1), Int32(2)])],
+                     metadata: ["schema": RouterTapCorrection.schema, "tap": "attention", "first_target": "1"], url: file)
+        corrected["SLOTSTREAM_EXPERT_PREFETCH_CORRECTION"] = file.path
+        let parsedCorrected = try ExpertPrefetchConfiguration.environment(corrected, optimizations: optimizations)
+        let fileBytes = ((try? FileManager.default.attributesOfItem(atPath: file.path))?[.size] as? NSNumber)?.intValue ?? -1
+        c.expect("the corrected tap parses with its factors and a one-layer window",
+            parsedCorrected.tap == .attentionCorrected && parsedCorrected.windowLayers == 1
+                && parsedCorrected.correctionBytes == fileBytes && parsedCorrected.correctionPath == file.path)
+        c.equal("the factors join the default reserve in whole MiB",
+            parsedCorrected.reserveBytes, parsedBoundary.reserveBytes + (((fileBytes + (1 << 20) - 1) >> 20) << 20))
+        var other = corrected
+        other["SLOTSTREAM_EXPERT_PREFETCH_TAP"] = RouterForecastTap.attentionReadoutCorrected.rawValue
+        c.expect("a correction fitted on the attention tap is refused for the corrected readout",
+            (try? ExpertPrefetchConfiguration.environment(other, optimizations: optimizations)) == nil)
+        let readoutFile = FileManager.default.temporaryDirectory
+            .appendingPathComponent("slotstream-readout-correction-\(getpid()).safetensors")
+        defer { try? FileManager.default.removeItem(at: readoutFile) }
+        try MLX.save(arrays: ["a": a.asType(.float16), "b": b.asType(.float16), "mu": mu, "delta": delta,
+                              "targets": MLXArray([Int32(1), Int32(2)])],
+                     metadata: ["schema": RouterTapCorrection.schema, "tap": "attention-readout", "first_target": "1"], url: readoutFile)
+        other["SLOTSTREAM_EXPERT_PREFETCH_CORRECTION"] = readoutFile.path
+        c.expect("a correction fitted on the readout serves the corrected readout tap",
+            (try? ExpertPrefetchConfiguration.environment(other, optimizations: optimizations))?.tap == .attentionReadoutCorrected
+                && (try? RouterTapCorrection.readHeader(path: readoutFile.path))?.tap == .attentionReadout)
+        var swapped = corrected
+        swapped["SLOTSTREAM_EXPERT_PREFETCH_CORRECTION"] = readoutFile.path
+        c.expect("and is refused for the corrected attention tap",
+            (try? ExpertPrefetchConfiguration.environment(swapped, optimizations: optimizations)) == nil)
+        var stray = base
+        stray["SLOTSTREAM_EXPERT_PREFETCH_CORRECTION"] = file.path
+        c.expect("factors without the corrected tap are refused",
+            (try? ExpertPrefetchConfiguration.environment(stray, optimizations: optimizations)) == nil)
+        // The shipped file's home next to the weights: located only when present,
+        // fitted on the attention tap and carrying the measured digest.
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("slotstream-correction-home-\(getpid())")
+        defer { try? FileManager.default.removeItem(at: home) }
+        let shipped = home.appendingPathComponent(RouterTapCorrection.shippedRelativePath)
+        try FileManager.default.createDirectory(at: shipped.deletingLastPathComponent(), withIntermediateDirectories: true)
+        c.expect("an absent shipped correction locates nothing",
+            RouterTapCorrection.locate(modelDirectory: home).located == nil)
+        try FileManager.default.copyItem(at: file, to: shipped)
+        let found = RouterTapCorrection.locate(modelDirectory: home, pinnedSHA256: nil)
+        c.expect("a shipped correction is located with its header and digest",
+            found.located?.path == shipped.path && found.located?.header.fileBytes == fileBytes
+                && found.located?.sha256.count == 64 && found.located?.header.tap == .attention)
+        c.expect("the measured digest is required when pinned",
+            RouterTapCorrection.locate(modelDirectory: home, pinnedSHA256: String(repeating: "0", count: 64)).located == nil
+                && RouterTapCorrection.locate(modelDirectory: home, pinnedSHA256: found.located?.sha256).located != nil)
+        let withFile = ExpertPrefetchConfiguration.qualifiedDecode(correction: found.located)
+        c.expect("the qualified default with a located correction is the corrected attention tap",
+            withFile.tap == .attentionCorrected && withFile.windowLayers == 1 && withFile.correctionPath == shipped.path
+                && withFile.correctionBytes == fileBytes)
+        c.equal("its reserve is the staging reserve plus the file in whole MiB",
+            withFile.reserveBytes, parsedBoundary.reserveBytes + (((fileBytes + (1 << 20) - 1) >> 20) << 20))
+        c.equal("the planner's charge grows by the same bytes",
+            DecodeLookahead.reserveBytes(correctionBytes: fileBytes), DecodeLookahead.reserveBytes + (((fileBytes + (1 << 20) - 1) >> 20) << 20))
+        c.expect("without a located correction the qualified default is unchanged",
+            ExpertPrefetchConfiguration.qualifiedDecode(correction: nil) == ExpertPrefetchConfiguration.qualifiedDecode)
+        c.equal("the automatic plan carries a located correction's bytes",
+            DecodeLookaheadPlanning.environment([:], modelDirectory: home, pinnedSHA256: nil), .automaticCorrected(bytes: fileBytes))
+        c.equal("and stays automatic without one",
+            DecodeLookaheadPlanning.environment([:], modelDirectory: FileManager.default.temporaryDirectory, pinnedSHA256: nil), .automatic)
+        c.equal("the boundary override keeps the previous forecast with the file present",
+            DecodeLookaheadPlanning.environment(["SLOTSTREAM_EXPERT_PREFETCH_TAP": "boundary"], modelDirectory: home, pinnedSHA256: nil), .automatic)
+        c.expect("and the engine's shipped lookup honours it",
+            RouterTapCorrection.shipped(modelDirectory: home, env: ["SLOTSTREAM_EXPERT_PREFETCH_TAP": "boundary"], pinnedSHA256: nil).located == nil
+                && RouterTapCorrection.shipped(modelDirectory: home, env: [:], pinnedSHA256: nil).located != nil)
+        c.equal("the sidecar reports the copied file as mismatched against the pinned digest",
+            TapCorrectionSidecar.status(modelDir: home) == .present, false)
+        c.equal("and an empty directory as absent",
+            TapCorrectionSidecar.status(modelDir: FileManager.default.temporaryDirectory), .absent)
+        try FileManager.default.removeItem(at: shipped)
+        try FileManager.default.copyItem(at: readoutFile, to: shipped)
+        c.expect("a readout-fitted file at the shipped path does not select the default",
+            RouterTapCorrection.locate(modelDirectory: home, pinnedSHA256: nil).located == nil)
+        let loaded = try RouterTapCorrection(path: file.path, hidden: hidden, experts: experts, targets: 2)
+        c.expect("the loader refuses another geometry",
+            (try? RouterTapCorrection(path: file.path, hidden: hidden, experts: experts + 1, targets: 2)) == nil)
+        let mixed = MLXArray((0 ..< rows * hidden).map { Float($0 % 5) * 0.3 }, [1, rows, hidden])
+        let logits = MLXArray((0 ..< rows * experts).map { Float($0) }, [1, rows, experts])
+        let applied = loaded.apply(target: 2, mixed: mixed, logits: logits).asArray(Float.self)
+        let av = a.asArray(Float.self), bv = b.asArray(Float.self), muv = mu.asArray(Float.self)
+        let dv = delta.asArray(Float.self), xv = mixed.asArray(Float.self), lv = logits.asArray(Float.self)
+        var reference = [Float](repeating: 0, count: rows * experts)
+        for r in 0 ..< rows {
+            // Target 2 is row 1 of every factor.
+            var narrow = [Float](repeating: 0, count: rank)
+            for k in 0 ..< rank {
+                for j in 0 ..< hidden { narrow[k] += (xv[r * hidden + j] - muv[hidden + j]) * av[hidden * rank + j * rank + k] }
+            }
+            for e in 0 ..< experts {
+                var v = lv[r * experts + e] + dv[experts + e]
+                for k in 0 ..< rank { v += narrow[k] * bv[rank * experts + k * experts + e] }
+                reference[r * experts + e] = v
+            }
+        }
+        c.expect("the correction is the registered formula (FP16 factors, within 1e-2)",
+            applied.count == reference.count && zip(applied, reference).allSatisfy { abs($0 - $1) < 1e-2 })
+        c.expect("an in-memory correction applies exactly as the loaded one",
+            RouterTapCorrection(a: a, b: b, mu: mu, delta: delta).apply(target: 2, mixed: mixed, logits: logits)
+                .asArray(Float.self) == applied)
+        let correctedSession = ExpertLookaheadSession()
+        correctedSession.observerForecastTaps = [.attention, .attentionCorrected]
+        correctedSession.beginPass(phase: .mainVerify, tokens: [7], features: [])
+        c.expect("the corrected tap is skipped until a correction is loaded", correctedSession.attentionForecastTaps == [.attention])
+        correctedSession.observerTapCorrection = loaded
+        c.expect("with a correction both taps evaluate",
+            correctedSession.attentionForecastTaps == [.attention, .attentionCorrected])
+        correctedSession.observerForecastTaps = [.attentionReadout, .attentionReadoutCorrected]
+        c.expect("a correction for the attention tap does not serve the corrected readout",
+            correctedSession.attentionForecastTaps == [.attentionReadout])
+        correctedSession.requestFinished()
+
+        let pieces = fakePieces
+        let reader: ExpertPieceReader = { key, piece, destination, shouldContinue in
+            guard shouldContinue() else { throw CheckpointReadError.cancelled }
+            fill(destination, key: key, piece: piece, bytes: pieces[piece])
+        }
+        var configuration = ExpertPrefetchConfiguration()
+        configuration.enabled = true
+        configuration.policy = .router
+        configuration.tap = .attention
+        configuration.strides = [2]
+        configuration.windowLayers = 1
+        configuration.capRecords = 4
+        configuration.lanes = 2
+        configuration.topPerLayer = 10
+        configuration.issueCapPerTarget = 3
+        configuration.threshold = 0
+        func scheduler(_ configuration: ExpertPrefetchConfiguration) -> ExpertPrefetchScheduler {
+            ExpertPrefetchScheduler(reader: reader, isResident: { _ in false }, pieceBytes: pieces,
+                configuration: configuration, predictor: nil, layers: 6, experts: 16)
+        }
+        let arrival = scheduler(configuration)
+        func settle(_ keys: [ExpertKey]) {
+            for key in keys {
+                for _ in 0 ..< 400 where arrival.diagnosticState(key) == .reading { usleep(5000) }
+            }
+        }
+        arrival.beginPass(id: 1, features: [])
+        arrival.forecast(target: 1, ids: [1, 2, 3], margins: [1, 1, 1])
+        c.equal("an attention tap issues on arrival, before any tick", arrival.liveTickets, 3)
+        c.equal("the arrival issue is counted", arrival.observation.arrivalIssues, 1)
+        c.equal("the observation names the tap", arrival.observation.forecastTap, "attention")
+        arrival.forecast(target: 2, ids: [4, 5, 6], margins: [1, 1, 1])
+        c.equal("the byte cap refuses the rest of target 2", arrival.observation.capRefusals, 1)
+        c.equal("live tickets at the byte cap", arrival.liveTickets, 4)
+        settle([ExpertKey(1, 1), ExpertKey(1, 2), ExpertKey(1, 3), ExpertKey(2, 4)])
+        arrival.layerCompleted(0)
+        c.equal("target 1 stays live through the previous layer's tick", arrival.liveTickets, 4)
+        arrival.layerCompleted(1)
+        c.expect("target 1 expired at its layer", arrival.diagnosticState(ExpertKey(1, 1)) == nil)
+        c.expect("the refused candidates issue at the next tick",
+            arrival.diagnosticState(ExpertKey(2, 5)) != nil && arrival.diagnosticState(ExpertKey(2, 6)) != nil)
+        c.equal("target 2 holds its issue cap", arrival.liveTickets, 3)
+        arrival.requestFinished()
+        c.equal("accounting drained at request end", arrival.accounting.liveBytes, 0)
+
+        var boundaryConfiguration = configuration
+        boundaryConfiguration.tap = .boundary
+        boundaryConfiguration.windowLayers = 2
+        let ticked = scheduler(boundaryConfiguration)
+        ticked.beginPass(id: 2, features: [])
+        ticked.forecast(target: 3, ids: [1, 2], margins: [1, 1])
+        c.equal("the boundary tap waits for a tick", ticked.liveTickets, 0)
+        c.equal("no arrival issue at the boundary", ticked.observation.arrivalIssues, 0)
+        ticked.layerCompleted(1)
+        c.equal("the tick issues the boundary forecast", ticked.liveTickets, 2)
+        ticked.requestFinished()
+
+        let recorder = ForecastTapRecorder()
+        let session = ExpertLookaheadSession()
+        session.observer = recorder
+        session.observerForecastTaps = [.attentionShared, .boundary]
+        let routed = scheduler(configuration)
+        session.prefetch = routed
+        c.expect("no taps outside a verification pass", session.attentionForecastTaps.isEmpty)
+        session.beginPass(phase: .mainVerify, tokens: [7], features: [])
+        c.expect("an attention policy reads no boundary strides", session.routerForecastStrides.isEmpty)
+        c.expect("the policy's tap first, then observer-only taps, never the boundary",
+            session.attentionForecastTaps == [.attention, .attentionShared])
+        session.forecast(sourceLayer: 0, targetLayer: 2, tap: .boundary, rows: 1, ids: [1], margins: [1], inputs: nil)
+        session.forecast(sourceLayer: 1, targetLayer: 2, tap: .attentionShared, rows: 1, ids: [2], margins: [1], inputs: nil)
+        c.equal("other taps never reach an attention policy", routed.observation.forecastMerged, 0)
+        session.forecast(sourceLayer: 1, targetLayer: 2, tap: .attention, rows: 1, ids: [3], margins: [1], inputs: nil)
+        c.equal("the policy's own tap reaches it", routed.observation.forecastMerged, 1)
+        c.equal("the observer sees every forecast", recorder.taps, [.boundary, .attentionShared, .attention])
+        session.requestFinished()
+        c.expect("no taps after the pass", session.attentionForecastTaps.isEmpty)
+
+        let boundarySession = ExpertLookaheadSession()
+        let strided = scheduler(boundaryConfiguration)
+        boundarySession.prefetch = strided
+        boundarySession.observerForecastTaps = [.attention]
+        boundarySession.beginPass(phase: .mainVerify, tokens: [7], features: [])
+        c.equal("a boundary policy forecasts its own strides", boundarySession.routerForecastStrides, [2])
+        c.expect("observer-only taps still evaluate beside a boundary policy",
+            boundarySession.attentionForecastTaps == [.attention])
+        boundarySession.forecast(sourceLayer: 0, targetLayer: 1, tap: .boundary, rows: 1, ids: [1], margins: [1], inputs: nil)
+        c.equal("a stride the policy does not use never reaches it", strided.observation.forecastMerged, 0)
+        boundarySession.forecast(sourceLayer: 0, targetLayer: 2, tap: .boundary, rows: 1, ids: [1], margins: [1], inputs: nil)
+        c.equal("the policy's stride reaches it", strided.observation.forecastMerged, 1)
+        boundarySession.forecast(sourceLayer: 1, targetLayer: 2, tap: .attention, rows: 1, ids: [2], margins: [1], inputs: nil)
+        c.equal("an observer-only tap never reaches a boundary policy", strided.observation.forecastMerged, 1)
+        boundarySession.requestFinished()
+        return c.report()
+    }
+
+    /// Records the tap of every forecast a session hands its observer.
+    private final class ForecastTapRecorder: ExpertLookaheadObserver {
+        var taps: [RouterForecastTap] = []
+        func beginPass(id: Int, phase: ExpertLookaheadPhase, tokens: [Int], features: [ExpertLookaheadStartFeature], nanos: UInt64) {}
+        func routes(pass: Int, layer: Int, rows: Int, topK: Int, ids: [Int32]) {}
+        func layerCompleted(pass: Int, layer: Int, x2: MLXArray, nanos: UInt64) {}
+        func demand(_ event: ExpertLookaheadDemandEvent) {}
+        func admissions(pass: Int, layer: Int, experts: [Int32]) {}
+        func residency(_ snapshot: ExpertLookaheadResidency, afterPass: Int) {}
+        func passReconciled(id: Int, kept: Int) {}
+        func endPass(id: Int, nanos: UInt64, aborted: Bool) {}
+        func forecast(pass: Int, sourceLayer: Int, targetLayer: Int, tap: RouterForecastTap, rows: Int, ids: [Int32],
+                      margins: [Float], inputs: MLXArray?) {
+            taps.append(tap)
+        }
     }
 
     /// C14: router-policy forecast merge. Per-target merges deduplicate against

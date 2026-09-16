@@ -2,11 +2,26 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-15T00:20:20.871446Z
+updated: 2026-09-16T17:28:42.005810Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb]] — 0.2.19 release benchmark at 22 GB: the shipping build's default 1.108 over the 0.2.18 forecast (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-b1-cohort-20gb]] — Taps B1 at 20 GB: aggregate 1.058 (bootstrap 1.031 to 1.088), families 1.019 to 1.105, 36 of 36 outputs identical; r0033 kept one counted pair, so the pairs condition fails
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-correction-native-diagnostic]] — Native learned correction: corrected top-10 set equals the offline set in 99.90% of 141,450 rows, agreement 0.79799 against 0.7980 offline, plain tap 0.72918; passes
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-correction-offline]] — Learned correction offline: rank-128 raises validation agreement 0.7292 to 0.7980 and twin coverage 0.5397 to 0.6209 with 27,467 fewer wasted reads in 35.2 MiB; passes
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-offline-stage]] — Taps offline stage: the attention tap reads 0.7292 top-10 agreement against 0.6171 for the shipped forecast, twin coverage 0.539 against 0.439; the gate passes
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-diagnostic]] — Readout diagnostic: the readout path is exact (self-check 0.9997) and reads 0.8614 top-10 agreement against 0.7980 for the corrected tap; a correction on top comes first
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-timing-confirmation-20gb]] — Readout timing confirmation at 20 GB: corrected over qualified 1.111 (bootstrap 1.102 to 1.123), all 23 pairs above 1, 60 of 60 outputs identical, 13.10 to 14.83 tok/s
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-timing-screen-20gb]] — Readout timing screen at 20 GB: no readout arm has a pair above 1 against the corrected tap (readback 0.952, after-demand 0.737); 113 cells with identical outputs
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-screen-18gb]] — Taps screen at 18 GB: 48 cells with identical outputs; attention tap 1.054 over the qualified configuration on the first twelve pairs (11 above 1), attention-shared 1.078
+- [[sources/runs/2026/09/2026-09-16-corrected-forecast-default-checks-sidecar-smoke]] — 0.2.19 default qualified on the shipping build: 55 of 55 checks, plans by target (409 MiB from 22 GB), sidecar fetched and verified by pull, 22 GB smoke with identical outputs
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-learned-correction]] — Readout correction offline: rank-128 lifts the readout 0.8614 to 0.8790 (bar 0.90) and twin coverage +0.0274 (bar +0.03); the gate fails and the lever stops at the offline result
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-threshold-screen-16gb]] — Threshold screen at 16 GB: t031 1.015 on the first twelve counted pairs (below the 1.02 confirmation bar), t000 0.994; 47 of 48 cells counted, outputs identical; the 0.062 threshold stays
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-confirmation-20gb]] — Learned confirmation at 20 GB: aggregate 1.031 (bootstrap 1.013 to 1.041), kinds 1.025 to 1.055, 30 of 30 pairs counted with identical outputs; passes every registered condition
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-screen-20gb]] — Learned screen at 20 GB: 32 cells with identical outputs; corrected over attention 1.036 on the first twelve counted pairs (9 above 1); the confirmation runs
+- [[sources/runs/2026/09/2026-09-15-forecast-taps-coroute-prior]] — Co-routing prior: leave-one-request-out top-10 agreement +0.0032 and matched-traffic twin coverage +0.0094 against bars of 0.03; negative, no native diagnostic
 - [[sources/runs/2026/09/2026-09-14-release-0-2-18-published-and-installed]] — v0.2.18 acceptance: CI artifact 25/25 after a headroom-only first run, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-long-conversation-e2e]] — 15,514-token serve e2e at 10 GB: turns beyond memory retention restored from disk in under 0.1 s and wrote 117.7 MB reusing about 431 MB of rows; restart and regenerate matched ids.
 - [[sources/runs/2026/09/2026-09-14-persistent-prefix-segments-e2e]] — Three-turn serve e2e at 10 GB: later turns wrote 117 MB each reusing about 108 MB of rows; a restart and a regenerated turn 3 restored from disk with identical ids; 12 of 12 checks.
@@ -492,23 +507,8 @@ updated: 2026-09-15T00:20:20.871446Z
 - [[sources/runs/2026/09/2026-09-05-hermes-openai-real-client-gates]] — Released and current Hermes complete real local tool loops, title fallback and bounded compaction; OpenAI and gateway gates pass
 - [[sources/runs/2026/09/2026-09-05-optimization-prefix-client-and-vision-integration]] — Optimization prefix divergent-client and real-image integration V92
 - [[sources/runs/2026/09/2026-09-05-optimization-build-lock-recovery]] — Optimization build lock failure and corrected refusal
-- [[sources/runs/2026/09/2026-09-05-optimization-broader-alternatives-audit]] — Optimization broader alternatives and optional batching source audit
-- [[sources/runs/2026/09/2026-09-05-optimization-prefix-checkpoint-retention]] — Optimization budgeted prefix checkpoint retention V89
-- [[sources/runs/2026/09/2026-09-05-hermes-context-first-counterexample]] — Completed 65,520-token prompt exceeds a plan that still priced the default context
-- [[sources/runs/2026/09/2026-09-05-optimization-prefix-state-fork]] — Prefix state fork V88: COW ownership and exact divergent continuation
-- [[sources/runs/2026/09/2026-09-05-optimization-bf16-word-slot-copies]] — BF16 word slot copies V87: exact state, request speed rejected
-- [[sources/runs/2026/09/2026-09-05-optimization-contiguous-slot-copies]] — Contiguous slot copies V86: exact lifecycle, request speed rejected
-- [[sources/runs/2026/09/2026-09-05-optimization-expert-transfer-profile]] — Expert transfer profile V84–V85: exact managed staging and material scatter
-- [[sources/runs/2026/09/2026-09-05-optimization-gdn-phase-profile]] — GDN phase profile V83: exact traced state and bounded prefill materiality screen
-- [[sources/runs/2026/09/2026-09-05-optimization-ngram-lookahead]] — Bounded n-gram prefill lookahead V80–V82
-- [[sources/runs/2026/09/2026-09-05-optimization-native-packed-layout]] — Native verified expert layout V78–V79
-- [[sources/runs/2026/09/2026-09-05-optimization-packed-read-verification]] — Packed expert per-read verification V77
-- [[sources/runs/2026/09/2026-09-05-optimization-request-read-recovery]] — Recoverable expert/ngram reads, request lifecycle and HTTP failures V73–V76
-- [[sources/runs/2026/09/2026-09-05-optimization-actual-expert-layout]] — Actual-offset expert layout: cache calibration and cold component qualification V70–V72
-- [[sources/runs/2026/09/2026-09-05-optimization-default-acceptance]] — Default-path acceptance V68 and targeted delivery corrections V69
-- [[sources/runs/2026/09/2026-09-05-optimization-compact-indexer-history]] — Compact main indexer history, long restore, MTP and failed resource qualification V64–V67
 
 ## More
 
-This folder has 560 files. The 500 most recent are listed above.
+This folder has 575 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

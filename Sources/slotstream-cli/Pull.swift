@@ -39,10 +39,20 @@ struct Pull: ParsableCommand {
             ?? ModelLocator.resolve(model)
         if verifyOnly {
             try WeightStore.verify(at: dest, log: { print($0) })
+            for file in TapCorrectionSidecar.files {
+                switch TapCorrectionSidecar.status(modelDir: dest, file: file) {
+                case .present: print("\(file.path): present, digest verified (optional sidecar)")
+                case .absent: print("\(file.path): absent (optional sidecar; `slotstream pull` fetches it)")
+                case .mismatched(let why): print("\(file.path): \(why) (optional sidecar; `slotstream pull` replaces it)")
+                }
+            }
             return
         }
         try withInterruptiblePull { cancellation in
             try WeightStore.download(to: dest, connections: connections, transport: selectedTransport, cancellation: cancellation, log: { print($0); fflush(stdout) })
+            for file in TapCorrectionSidecar.files {
+                TapCorrectionSidecar.ensure(modelDir: dest, file: file, cancellation: cancellation, log: { print($0); fflush(stdout) })
+            }
         }
         print("\nready. next:  slotstream serve     (or: slotstream run --prompt \"...\")")
     }

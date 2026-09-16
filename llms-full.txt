@@ -54,6 +54,16 @@ weights, and waits for the GPU less often. On prompts it was never tuned on,
 the development Mac went from 11.79 to 13.47 tok/s at a 20 GB memory target,
 with identical output. Both configurations used speculative decoding. These
 are pre-release benchmark results for the configuration shipped in 0.2.16;
+**The corrected expert forecast in 0.2.19 measured 1.10x faster decode than 0.2.18.**
+The lookahead now reads the model's state right after the previous layer's
+attention step and applies a small learned correction, so it predicts the
+experts the next layer will need more accurately and reads about 20% fewer
+expert records from the SSD during a reply. On eight prompts it was never tuned
+on, the shipping build went from 14.38 to 15.86 tok/s at a 22 GB memory target
+(a 32 GB Mac's automatic plan) with identical output; a pre-release measurement
+at a 20 GB target read 1.11x, 13.10 to 14.83 tok/s. Existing installs get the
+37.5 MB correction file by running `slotstream pull` again.
+
 the [latest published release](https://github.com/carloslfu/slotstream/releases/latest)
 determines what the installer downloads.
 
@@ -460,7 +470,10 @@ agent still need their own internet access.
 The transfer alone is estimated at about 2 hours at 100 Mbps or 8 hours at 25 Mbps.
 Connection overhead and processing add to that time. You can stop with
 **Control+C** and run the same command later to resume. Downloaded files are
-checked for corruption automatically.
+checked for corruption automatically. Since 0.2.19 the download also includes
+a small forecast-correction file (37.5 MB) that makes replies faster; if you
+installed the model with an earlier release, run `slotstream pull` once more to
+fetch it.
 
 For an interrupted or damaged download, moving the files to another disk,
 or reclaiming disk space, see [Troubleshooting](TROUBLESHOOTING.md).
@@ -565,6 +578,7 @@ On the 48 GB M5 Pro:
 | Reply generation after the cache warms up | ~12 tok/s |
 | Reply generation with speculative decoding and the 0.2.16 decode lookahead, 20 GB target | 13.47 tok/s, 1.11x faster than without the lookahead |
 | Engine load in the original experiment, before processing the prompt | ~2 s (historical) |
+| Reply generation with the 0.2.19 corrected forecast, 22 GB target (a 32 GB Mac's automatic plan) | 15.86 tok/s, 1.10x faster than the 0.2.18 forecast |
 | Planned memory with automatic sizing | 32 GB (estimate) |
 
 That memory figure is the historical planner estimate, not a measurement of
@@ -819,7 +833,11 @@ We reuse a future layer's own router on the model's current internal state to
 guess its choices early. That state will still change before the layer runs,
 so this is an approximate forecast. It needs no separately trained predictor.
 
-- **Forecast:** look two layers ahead, giving SSD reads time to overlap GPU work.
+- **Forecast:** as each layer's routing comes back, read the model's state after the
+  previous layer's attention step, apply the next layer's router to it and correct
+  the result with a small learned table shipped for the checkpoint (0.2.19). Without
+  that file, the router of the layer two ahead runs on the state two layers back, as in
+  0.2.16. Either way the SSD reads get time to overlap GPU work.
 - **Prepare:** reserve cache slots for promising missing experts. Background
   workers read into reusable temporary buffers, then copy into those slots.
 - **Use:** when the real router asks for a prepared expert, make its slot
@@ -839,10 +857,32 @@ has a separate job: proposing tokens for the main model to verify.
 | [Reuse the model's routers](../db/records/measurements/expert-lookahead-2-router-reuse-prefetch-native-screens-2026-09-12.md) | Much better forecasts, but the first implementation was slower: preparing prefetched weights for use cost more than the disk waits it saved. |
 | [Prepare weights in reserved cache slots](../db/records/measurements/expert-lookahead-2-b0-cohort-2026-09-12.md) | Moving that work into background workers made prefetch useful: **1.105x** decode throughput on the first held-out benchmark. |
 | [Cache router conversions and reduce GPU waits](../db/records/measurements/decode-path-serialization-attribution-2026-09-13.md) | Keeping router weights in FP32 and draining queued GPU work every four layers (when cache space permits) added **about 2% each** over prefetch in separate tuning runs. |
+| [Forecast from the previous layer's attention](../db/records/measurements/decode-forecast-taps-b1-cohort-2026-09-15.md) | Reading the model's state after the previous layer's attention, at the same lead time, raised forecast agreement from 0.62 to 0.73 and decoded 1.058x on the held-out benchmark with identical outputs, but the run failed a hygiene condition (host swap noise left one prompt with a single clean pair), so it is not a confirmed result on its own. |
+| [Learn a small correction of the forecast](../db/records/measurements/decode-forecast-taps-learned-confirmation-2026-09-15.md) | A per-layer linear correction of the forecast's router logits, 35 MiB of FP16 factors fitted on the pilot's requests, raised agreement to 0.80 and decoded **1.031x** over the uncorrected tap on ten held-out prompts (bootstrap 1.013 to 1.041), identical outputs, 9% fewer reads during decode. |
+| [Issue more speculative reads](../db/records/measurements/decode-forecast-taps-threshold-screen-2026-09-15.md) | Lower margin thresholds cut demand reads but the extra reads arrived late and wasted bandwidth: 1.013 and 0.994 against the shipped threshold, which stays. |
+| [Compute the next layer's attention early](../db/records/measurements/decode-forecast-taps-readout-timing-screen-2026-09-15.md) | Running the target layer's attention on the forecast's input against the resident caches is exact and reaches 0.86 agreement (0.88 corrected), near the ceiling: the rest is the previous layer's routed experts, unknowable before reading them. It still decoded 5% slower than the corrected forecast, and 26% slower when its GPU work was deferred behind the demand reads, because that work costs more than the reads it saves. |
+| [Corrected forecast against the shipped bundle](../db/records/measurements/decode-forecast-taps-readout-timing-confirmation-2026-09-15.md) | The direct measurement for a default decision: **1.111x** over the shipped configuration on eight held-out prompts (bootstrap 1.102 to 1.123), all 23 pairs faster, identical outputs, 21% fewer records read in decode and 73% fewer wasted speculative bytes. Shipped as the 0.2.19 default; see below. |
 
 Cache replacement policies and remembering routes for repeated tokens also
 failed their [adoption gates](../db/records/measurements/expert-lookahead-2-router-reuse-prefetch-native-screens-2026-09-12.md).
 The existing CLOCK cache policy stayed.
+
+## The 0.2.19 default: a corrected forecast
+
+**The shipping build's default decodes 1.10x faster than the 0.2.18 forecast** on
+eight held-out prompts (two code, two prose, two reasoning, one dialogue, one
+structured) at a 22 GB memory target, aggregate 1.108 (bootstrap 1.092 to 1.147),
+every kind at 1.079 or above, 24 counted pairs, identical output in every
+cell, 14.38 to 15.86 tok/s median. It reads about 20% fewer expert records
+during decode and wastes about 74% fewer speculative bytes. The two arms are
+the same binary: the default (the correction file located next to the weights)
+against `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary`, the 0.2.18 forecast. The
+22 GB target is where the automatic plan runs the lookahead under the
+benchmark's settings (prefix cache off, two drafts); at a 20 GB target it does
+not, so a pre-release measurement of the same contrast used environment-configured
+arms there and read 1.111x, 13.10 to 14.83 tok/s. See the
+[release benchmark](../db/records/measurements/corrected-forecast-release-benchmark-2026-09-16.md)
+and the [default's qualification](../db/records/measurements/corrected-forecast-default-2026-09-16.md).
 
 ## Final result and limits
 
@@ -860,10 +900,13 @@ Other Macs, cache sizes and prompt processing were not qualified by this test.
 The component gains came from tuning runs and cannot be added to this result.
 
 Lookahead is enabled by default with the draft head when the cache meets its
-activation threshold. Its **373 MiB** reservation comes out of the memory
-budget before sizing the expert cache. Set `SLOTSTREAM_OPT_EXPERT_PREFETCH=0`
-to disable the default bundle. The [adoption decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
-records the settings, memory safeguards and overrides.
+activation threshold. Its **373 MiB** reservation, 409 MiB with the 0.2.19
+correction file, comes out of the memory budget before sizing the expert cache.
+Set `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` to disable the default bundle, or
+`SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary` to keep the 0.2.16 forecast with the
+file present. The [adoption decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
+and the [corrected forecast decision](../db/records/decisions/corrected-decode-forecast-default-with-the-sidecar.md)
+record the settings, memory safeguards and overrides.
 
 
 <!-- ===== docs/HERMES-NOTES.md ===== -->
@@ -1240,6 +1283,13 @@ overlap the transfer. Historical raw-path testing measured 112 MB/s on a
 1 Gbit/s link; that is not a guarantee for another connection. Ctrl-C safely
 preserves verified chunks. See [the download guide](DOWNLOAD-FORMAT.md).
 
+Since 0.2.19, `pull` also fetches one optional file outside the compressed
+package: the 37.5 MB decode forecast correction
+`lookahead/tap-correction-attention-rank128-v1.safetensors`, verified by size and
+SHA-256 against the pinned mirror commit. `--verify` reports it, an installed
+model gets it by running `slotstream pull` again, and a model directory without
+it runs the 0.2.16 forecast.
+
 Weights placed elsewhere are used by passing that directory to `--model`, or
 by symlinking it into the default location. Symlinked directories work from
 0.2.1 onward.
@@ -1387,9 +1437,10 @@ See
 | `SLOTSTREAM_SWEEP_ADMIT` | engine | `0` stops the last pass of a prompt from admitting the prompt's hottest experts into the pool, so decode starts cold. A/B work only. |
 | `SLOTSTREAM_SWEEP_TRACE` | engine | `1` prints, after each prefill, where the sweep's time went: reads, waiting for the GPU, sorting rows, copies out of the pool, and MLX's peak and cache. |
 | `SLOTSTREAM_PREFILL_CACHE_MB` | engine | MLX buffer-cache cap while a prompt is read. The plan sets 512 at targets of 12 GB and under (the sweep's varying array sizes otherwise fill the 2 GB cache, 1.7 GB of peak at the floor) and no cap above, where it costs ~6% of prefill; this forces a value at any target. |
-| `SLOTSTREAM_OPT_EXPERT_PREFETCH` | engine | `0` turns off the decode lookahead and its 373 MiB charge. `1` selects an experimental prefetch configuration from the `SLOTSTREAM_EXPERT_PREFETCH_*` tuning variables instead; for comparisons only. |
+| `SLOTSTREAM_OPT_EXPERT_PREFETCH` | engine | `0` turns off the decode lookahead and its 373 MiB charge (409 MiB with the checkpoint's forecast correction file). `1` selects an experimental prefetch configuration from the `SLOTSTREAM_EXPERT_PREFETCH_*` tuning variables instead; for comparisons only. |
 | `SLOTSTREAM_OPT_ROUTER_WEIGHTS` | engine | `0` or `1` overrides the FP32 router weight cache that the decode lookahead turns on. |
 | `SLOTSTREAM_DECODE_BARRIER_LAYERS` | engine | Layers between GPU drains, 1…48. The decode lookahead uses 4; `1` drains after every layer. A pass that could not keep that many layers of experts pinned drains after every layer anyway. |
+| `SLOTSTREAM_EXPERT_PREFETCH_TAP` | engine | `boundary` keeps the 0.2.16 forecast (the layer-boundary router forecast at stride 2) when the correction file is present, charging 373 MiB instead of 409; the configuration 0.2.19 was benchmarked against. Other values belong to the experimental configuration and are for comparisons only. |
 | `SLOTSTREAM_ROOT_DIR` | installer | Install somewhere other than `~/.slotstream`. |
 | `SLOTSTREAM_RELEASE_BASE` | installer | Fetch the release from another base URL (CI uses it to test unpublished builds). |
 
@@ -1457,19 +1508,29 @@ See [Testing](TESTING.md) for the full suites.
 
 From 0.2.16 the decode lookahead runs by default with the draft head when
 the cache reaches the same 76-per-layer floor before the lookahead's own
-reservation. The final printed cache can therefore be smaller. After each layer, the
-engine runs the router of the layer two ahead on the current hidden state and
-reads the experts it picks from the SSD straight into cache slots, before that
-layer asks for them. It also keeps FP32 copies of the router weights and drains
-the GPU every four layers instead of every layer. Output is unchanged.
+reservation. The final printed cache can therefore be smaller. As each layer's
+routing comes back, the engine reads the model's state after the previous layer's
+attention step, applies the next layer's router to it, corrects the result with a
+small learned table shipped for the checkpoint
+(`lookahead/tap-correction-attention-rank128-v1.safetensors`, 37.5 MB, which
+`pull` fetches next to the weights), and reads the experts it picks from the SSD
+straight into cache slots before that layer asks for them. It also keeps FP32
+copies of the router weights and drains the GPU every four layers instead of
+every layer. Output is unchanged.
 
-The memory plan charges 373 MiB for it before sizing the expert cache, and
-`doctor` prints `lookahead: on`. On twelve held-out prompts at a 20 GB target
-with two drafts, decode was 1.11x faster than without it. A head forced onto a
-smaller cache runs without it. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns it off,
-and the two variables above override its router cache and drain period. The
+The memory plan charges 373 MiB for it before sizing the expert cache, 409 MiB
+when the correction file is present, and `doctor` prints `lookahead: on` with the
+charge. On twelve held-out prompts at a 20 GB target with two drafts, the 0.2.16
+lookahead decoded 1.11x faster than without it; the corrected forecast of 0.2.19
+decoded 1.10x faster than the 0.2.18 forecast on eight held-out prompts at a 22 GB target,
+14.38 to 15.86 tok/s (see the [expert lookahead guide](EXPERT-LOOKAHEAD.md)). A head
+forced onto a smaller cache runs without it. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0`
+turns it off, `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary` keeps the 0.2.16 forecast
+with the file present, and the two variables above override its router cache and
+drain period. The
 [decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
-records the evidence and limits.
+and the [corrected forecast decision](../db/records/decisions/corrected-decode-forecast-default-with-the-sidecar.md)
+record the evidence and limits.
 
 
 <!-- ===== docs/API.md ===== -->
@@ -3050,6 +3111,12 @@ or disk can limit a very fast connection.
 
 The installed model has 25 files, including the optional 1.5 GB draft head.
 A missing draft head still allows inference with speculative decode off.
+Since 0.2.19 `pull` also fetches one optional sidecar outside the compressed
+objects, after the weights: `lookahead/tap-correction-attention-rank128-v1.safetensors`
+(37,540,708 bytes), the decode forecast correction, pinned by size, SHA-256 and
+mirror commit and written atomically. It is not part of the manifest, so every
+existing pull and manifest revision is untouched; a missing or failed sidecar is
+reported and never fails a pull, and the engine then runs the previous forecast.
 Decoding and disk writes overlap the transfer. The client starts at eight
 independent connections and increases concurrency only when measured
 throughput improves. `--connections` fixes the count; `--transport raw`
@@ -3301,7 +3368,8 @@ These results were measured on real Macs, using different releases and settings:
 
 | Mac | Memory | Reply speed |
 |---|---|---|
-| **MacBook Pro, M5 Pro (our development Mac), 0.2.16 configuration at a 20 GB target** | **48 GB** | **13.47 tok/s** |
+| **MacBook Pro, M5 Pro (our development Mac), 0.2.19 at a 22 GB target** | **48 GB** | **15.86 tok/s** |
+| Same M5 Pro, 0.2.16 configuration at a 20 GB target | 48 GB | 13.47 tok/s |
 | Same M5 Pro, historical 0.2.3 result | 48 GB | ~12 tok/s |
 | Mac mini, M2 (base storage) | 16 GB | 1.41 tok/s |
 | MacBook Air, M5 | 32 GB | 6.22 tok/s |
@@ -3309,8 +3377,10 @@ These results were measured on real Macs, using different releases and settings:
 | Same M5 Max, 0.2.3, 48 GB target | 128 GB | ~26.9 tok/s |
 | Same M5 Max, 0.2.3, 73 GB target | 128 GB | ~31.5 tok/s |
 
-The latest M5 Pro result comes from the pre-release benchmark of the
-configuration shipped in 0.2.16. The M5 Pro results are from the author; the
+The latest M5 Pro result is the 0.2.19 release benchmark of the shipping
+build's default against the 0.2.18 forecast (1.10x faster, 14.38 to 15.86 tok/s,
+identical output); the 0.2.16 row is the pre-release benchmark of that release's
+configuration. The M5 Pro results are from the author; the
 others are community reports.
 The 18, 24 and 36 GB sizes still need reports, and 8 GB Macs don't run the
 model. Open the details below for versions, settings, and credits.
@@ -3320,6 +3390,7 @@ model. Open the details below for versions, settings, and credits.
 
 | Mac | Memory | SSD | macOS | slotstream | Plan | Warm decode | Long prompt | Reported memory | Reported by |
 |---|---|---|---|---|---|---|---|---|---|
+| MacBook Pro, M5 Pro | 48 GB | internal, 2 TB | 26.6.2 | 0.2.19 | 22 GB target, two drafts, corrected decode forecast, ~100 experts/layer | 14.38 to 15.86 tok/s with the corrected forecast, arm medians over counted cells from 24 held-out pairs | not measured | not recorded | [@carloslfu](https://github.com/carloslfu), 2026-09-16 |
 | MacBook Pro, M5 Pro | 48 GB | internal, 2 TB | 26.6.2 | 0.2.16 candidate | 20 GB target, two drafts, decode lookahead, ~88 experts/layer | 11.79 to 13.47 tok/s with the lookahead, arm medians over eligible runs from 34 held-out pairs | not measured | not recorded | [@carloslfu](https://github.com/carloslfu), 2026-09-13 |
 | MacBook Pro, M5 Pro | 48 GB | internal, 2 TB | 26.6 | 0.2.3 | auto: 33 GB target, ~152 experts/layer | ~12 tok/s; 12.8 with `--mtp` at a 28 GB memory target | ~220 tok/s at a 4096-token pass (est.) | 32 GB (estimate) | [@carloslfu](https://github.com/carloslfu), 2026-09-02 |
 | Mac mini, M2 | 16 GB | internal, 256 GB | 26.6.2 | 0.2.2 | auto: 10.2 GB target, ~21 experts/layer | **1.41 tok/s** | not measured; `context-check` postdates 0.2.2 | 6.1 GB | [@flol's report](https://github.com/carloslfu/slotstream/issues/5), 2026-09-02 |
@@ -3407,7 +3478,7 @@ confidence intervals. Endpoints are rounded outward to whole tok/s.
 |---|---|---|
 | 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
 | 24–<48 GB | ~6–14 tok/s | The 32 GB M5 Air reported 6.22 tok/s; the M5 Pro achieved 13.47 tok/s at a 20 GB process target. The upper end assumes a comparable chip and SSD with enough memory for that configuration; it has not been timed on a Mac in this band. |
-| 48–<96 GB | ~13–27 tok/s | The latest 48 GB M5 Pro result is 13.47 tok/s, rounded down for this estimate; its older ~12 tok/s result remains historical evidence. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
+| 48–<96 GB | ~13–27 tok/s | The 0.2.16 48 GB M5 Pro result is 13.47 tok/s, rounded down for this estimate, and the 0.2.19 result at a 22 GB target is 15.86 tok/s (the range was not re-anchored); its older ~12 tok/s result remains historical evidence. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
 | 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. |
 
 The Ultra lower endpoint allows for the same reporter's roughly 20 tok/s
@@ -3537,6 +3608,26 @@ release; anything under **Unreleased** is on `main` only.
 Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
+
+## 0.2.19 - 2026-09-16
+
+- Generate replies 1.10x faster with a more accurate expert forecast at
+  the same lead time. The decode lookahead now reads the model's state right
+  after the previous layer's attention step, applies the next layer's router to
+  it and corrects the result with a small learned table fitted for the
+  checkpoint, so it reads about a fifth fewer expert records from the SSD during
+  decode and wastes about three quarters fewer speculative bytes. Output is
+  unchanged. `slotstream pull` fetches the 37.5 MB correction file
+  (`lookahead/tap-correction-attention-rank128-v1.safetensors`) next to the
+  weights and verifies it; if you installed the model with an earlier release,
+  run `slotstream pull` once more, and until then the engine runs the 0.2.16
+  forecast. The memory plan charges 409 MiB for the lookahead with the file
+  (373 MiB without). `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary` keeps the 0.2.16
+  forecast with the file present. Levers measured and left out on their
+  registered gates: a co-routing prior, a lower read-issue threshold and
+  computing the next layer's attention early, which reads more accurately but
+  costs more GPU time than the reads it saves; see the
+  [expert lookahead guide](docs/EXPERT-LOOKAHEAD.md).
 
 ## 0.2.18 - 2026-09-14
 

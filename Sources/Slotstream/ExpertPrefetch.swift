@@ -505,6 +505,10 @@ public struct ExpertPrefetchObservation: Codable, Equatable {
     public var forecastMerged = 0
     public var forecastTargets = 0
     public var dirtyRescans = 0
+    /// The tap the router policy forecasts at (`RouterForecastTap`), and the
+    /// attention-tap forecasts that issued their target at once on arrival.
+    public var forecastTap = "boundary"
+    public var arrivalIssues = 0
     /// Router forecast cost split: graph build, the layer's joint sync (which
     /// also evaluates the streams), and host selection plus hand-off.
     public var forecastBuildSeconds = 0.0
@@ -558,6 +562,11 @@ package struct ExpertPrefetchConfiguration: Equatable {
     package var strides: [Int] = [2, 1]
     package var issueCapPerTarget = 32
     package var memoLayers = 0
+    /// Router policy: where the forecast reads the streams (`RouterForecastTap`).
+    /// Only `boundary` uses the strides. An attention tap's forecast arrives at
+    /// the routing readback of the layer just before its target, so its
+    /// candidates are issued on arrival rather than at the next tick.
+    package var tap: RouterForecastTap = .boundary
     /// How a speculative record reaches the pool. `staging` (the shipped
     /// mechanism): a ticket owns aligned host buffers and adoption scatters
     /// them into the slot the demand path's victim scan chooses. `slot`: the
@@ -576,6 +585,16 @@ package struct ExpertPrefetchConfiguration: Equatable {
     /// Slot mode: the most records that may be reserved out of the pool at
     /// once (the byte cap plays no part; the bytes are pool bytes).
     package var slotCap = 64
+    /// The corrected attention tap's factors (`RouterTapCorrection`): the file
+    /// header is checked at parse time, the scheduler loads the tensors, and
+    /// the file's bytes join the default reserve.
+    package var correctionPath: String?
+    /// Where the readout tap's logits are evaluated: with the source layer's
+    /// routing readback (false), or asynchronously, consumed after that
+    /// layer's demand reads so the readout's GPU work runs while they are in
+    /// flight (true). Meaningful with the attention-readout tap only.
+    package var readoutAfterDemand = false
+    package var correctionBytes = 0
     /// Incremental runtime reservation charged before expert capacity is solved.
     package var reserveBytes = 0
 
@@ -625,6 +644,40 @@ package struct ExpertPrefetchConfiguration: Equatable {
         }
         c.issueCapPerTarget = try integer("SLOTSTREAM_EXPERT_PREFETCH_ISSUE_CAP", 1 ... 512, fallback: 32)
         c.memoLayers = try integer("SLOTSTREAM_EXPERT_PREFETCH_MEMO_LAYERS", 0 ... 47, fallback: 0)
+        if let raw = env["SLOTSTREAM_EXPERT_PREFETCH_TAP"] {
+            guard let t = RouterForecastTap(rawValue: raw), t != .boundaryReadout else {
+                throw ModelError("SLOTSTREAM_EXPERT_PREFETCH_TAP must be boundary, attention, attention-shared, attention-corrected, "
+                    + "attention-readout or attention-readout-corrected")
+            }
+            c.tap = t
+        }
+        if let raw = env["SLOTSTREAM_EXPERT_PREFETCH_READOUT"] {
+            switch raw {
+            case "readback": c.readoutAfterDemand = false
+            case "after-demand": c.readoutAfterDemand = true
+            default: throw ModelError("SLOTSTREAM_EXPERT_PREFETCH_READOUT must be readback or after-demand")
+            }
+            guard c.tap == .attentionReadout || c.tap == .attentionReadoutCorrected else {
+                throw ModelError("SLOTSTREAM_EXPERT_PREFETCH_READOUT applies only with SLOTSTREAM_EXPERT_PREFETCH_TAP=attention-readout "
+                    + "or attention-readout-corrected")
+            }
+        }
+        if let raw = env["SLOTSTREAM_EXPERT_PREFETCH_CORRECTION"] {
+            guard c.tap.isCorrected else {
+                throw ModelError("SLOTSTREAM_EXPERT_PREFETCH_CORRECTION applies only with SLOTSTREAM_EXPERT_PREFETCH_TAP=attention-corrected "
+                    + "or attention-readout-corrected")
+            }
+            let header = try RouterTapCorrection.readHeader(path: raw)
+            let served: RouterForecastTap = header.tap == .attentionReadout ? .attentionReadoutCorrected : .attentionCorrected
+            guard served == c.tap else {
+                throw ModelError("SLOTSTREAM_EXPERT_PREFETCH_CORRECTION was fitted on the \(header.tap.rawValue) tap and serves "
+                    + "\(served.rawValue), not \(c.tap.rawValue)")
+            }
+            c.correctionBytes = header.fileBytes
+            c.correctionPath = raw
+        } else if c.tap.isCorrected {
+            throw ModelError("SLOTSTREAM_EXPERT_PREFETCH_TAP=\(c.tap.rawValue) requires SLOTSTREAM_EXPERT_PREFETCH_CORRECTION")
+        }
         if let raw = env["SLOTSTREAM_EXPERT_PREFETCH_ADOPT"] {
             guard let a = Adoption(rawValue: raw) else { throw ModelError("SLOTSTREAM_EXPERT_PREFETCH_ADOPT must be staging or slot") }
             c.adoption = a
@@ -637,9 +690,10 @@ package struct ExpertPrefetchConfiguration: Equatable {
             c.readShape = s
         }
         if c.policy == .router {
-            // The window is the largest stride; candidates per position default
-            // to the router's own top-10 unless TOP is set explicitly.
-            c.windowLayers = c.strides.max() ?? 1
+            // The window is the largest stride, or one layer for an attention
+            // tap, whose target is the next layer; candidates per position
+            // default to the router's own top-10 unless TOP is set explicitly.
+            c.windowLayers = c.tap == .boundary ? (c.strides.max() ?? 1) : 1
             if env["SLOTSTREAM_EXPERT_PREFETCH_TOP"] == nil { c.topPerLayer = 10 }
         }
         if let raw = env["SLOTSTREAM_EXPERT_PREFETCH_DEVICE"] {
@@ -650,7 +704,8 @@ package struct ExpertPrefetchConfiguration: Equatable {
         if c.active, c.policy != .recent, c.policy != .router, (c.packPath ?? "").isEmpty {
             throw ModelError("expert prefetch with the \(c.policy.rawValue) policy requires SLOTSTREAM_EXPERT_PACK")
         }
-        let defaultReserve = c.active ? Self.defaultReserveBytes >> 20 : 0
+        // A tap correction's factors stay resident, so its file joins the default reserve, rounded up to MiB.
+        let defaultReserve = c.active ? (Self.defaultReserveBytes >> 20) + ((c.correctionBytes + (1 << 20) - 1) >> 20) : 0
         let mib = try integer("SLOTSTREAM_EXPERT_LOOKAHEAD_RESERVE_MIB", 0 ... 4096, fallback: defaultReserve)
         c.reserveBytes = mib << 20
         return c
@@ -739,11 +794,34 @@ package final class ExpertPrefetchScheduler {
         observationValue.mode = configuration.shadow ? "shadow" : (configuration.enabled ? "on" : "diagnostic")
         observationValue.adoption = configuration.adoption.rawValue
         observationValue.readShape = configuration.readShape.rawValue
+        observationValue.forecastTap = configuration.tap.rawValue
+        // A corrected tap loads its factors here, through the identity, so a bad
+        // file or a short reserve stops the engine at start.
+        let correctionIdentity = tapCorrection.map { ":correction=\($0.identity.prefix(16))" } ?? ""
         observationValue.predictorIdentity = predictor?.identity
             ?? (configuration.policy == .recent ? "recent-routes"
-                : configuration.policy == .router
-                    ? "router-reuse:strides=\(configuration.strides.map(String.init).joined(separator: ","))" : "")
+                : configuration.policy != .router ? ""
+                : configuration.tap == .boundary
+                    ? "router-reuse:strides=\(configuration.strides.map(String.init).joined(separator: ","))"
+                    : "router-reuse:tap=\(configuration.tap.rawValue)\(correctionIdentity)")
     }
+
+    /// The corrected attention tap's factors (`ExpertPrefetchConfiguration.correctionPath`),
+    /// loaded once; the reserve must hold the staging cap and the factors.
+    package private(set) lazy var tapCorrection: RouterTapCorrection? = {
+        guard let path = configuration.correctionPath else { return nil }
+        let correction: RouterTapCorrection
+        do {
+            correction = try RouterTapCorrection(path: path, hidden: nil, experts: experts, targets: layers - 1)
+        } catch {
+            fatalError("tap correction \(path) failed to load: \(error)")
+        }
+        guard accounting.capBytes + correction.residentBytes <= configuration.reserveBytes else {
+            fatalError("expert lookahead needs \(accounting.capBytes + correction.residentBytes) bytes (staging cap plus tap correction) "
+                + "but only \(configuration.reserveBytes) are reserved; raise SLOTSTREAM_EXPERT_LOOKAHEAD_RESERVE_MIB")
+        }
+        return correction
+    }()
 
     package convenience init(store: ExpertStore, pool: SlotPool, configuration: ExpertPrefetchConfiguration,
                              predictor: ExpertPredictor?, layers: Int, experts: Int) {
@@ -780,11 +858,12 @@ package final class ExpertPrefetchScheduler {
 
     package func resetObservation() {
         let mode = observationValue.mode, identity = observationValue.predictorIdentity
-        let adoption = observationValue.adoption
+        let adoption = observationValue.adoption, tap = observationValue.forecastTap
         observationValue = ExpertPrefetchObservation()
         observationValue.mode = mode
         observationValue.predictorIdentity = identity
         observationValue.adoption = adoption
+        observationValue.forecastTap = tap
     }
 
     /// Slot mode bookkeeping for the pool: a record adopted straight from its
@@ -878,7 +957,18 @@ package final class ExpertPrefetchScheduler {
         observationValue.forecastMerged += added
         observationValue.forecastTargets += 1
         if !forecastMergedThisPass { forecastMergedThisPass = true; observationValue.forecastPasses += 1 }
-        if added > 0, target <= issuedThrough { dirtyTargets.insert(target) }
+        guard added > 0 else { return }
+        if configuration.tap != .boundary {
+            // An attention tap arrives at the routing readback just before its
+            // target, ahead of that layer's demand and tick: issue now. A cap
+            // refusal leaves the rest to the ticks.
+            let started = RuntimeClock.now()
+            observationValue.arrivalIssues += 1
+            if !issueLayer(target), target <= issuedThrough { dirtyTargets.insert(target) }
+            observationValue.scheduleSeconds += RuntimeClock.seconds(since: started)
+        } else if target <= issuedThrough {
+            dirtyTargets.insert(target)
+        }
     }
 
     /// The model measures the forecast's own compute; it is charged here so

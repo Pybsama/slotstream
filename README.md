@@ -46,6 +46,16 @@ weights, and waits for the GPU less often. On prompts it was never tuned on,
 the development Mac went from 11.79 to 13.47 tok/s at a 20 GB memory target,
 with identical output. Both configurations used speculative decoding. These
 are pre-release benchmark results for the configuration shipped in 0.2.16;
+**The corrected expert forecast in 0.2.19 measured 1.10x faster decode than 0.2.18.**
+The lookahead now reads the model's state right after the previous layer's
+attention step and applies a small learned correction, so it predicts the
+experts the next layer will need more accurately and reads about 20% fewer
+expert records from the SSD during a reply. On eight prompts it was never tuned
+on, the shipping build went from 14.38 to 15.86 tok/s at a 22 GB memory target
+(a 32 GB Mac's automatic plan) with identical output; a pre-release measurement
+at a 20 GB target read 1.11x, 13.10 to 14.83 tok/s. Existing installs get the
+37.5 MB correction file by running `slotstream pull` again.
+
 the [latest published release](https://github.com/carloslfu/slotstream/releases/latest)
 determines what the installer downloads.
 

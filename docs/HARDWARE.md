@@ -40,7 +40,8 @@ These results were measured on real Macs, using different releases and settings:
 
 | Mac | Memory | Reply speed |
 |---|---|---|
-| **MacBook Pro, M5 Pro (our development Mac), 0.2.16 configuration at a 20 GB target** | **48 GB** | **13.47 tok/s** |
+| **MacBook Pro, M5 Pro (our development Mac), 0.2.19 at a 22 GB target** | **48 GB** | **15.86 tok/s** |
+| Same M5 Pro, 0.2.16 configuration at a 20 GB target | 48 GB | 13.47 tok/s |
 | Same M5 Pro, historical 0.2.3 result | 48 GB | ~12 tok/s |
 | Mac mini, M2 (base storage) | 16 GB | 1.41 tok/s |
 | MacBook Air, M5 | 32 GB | 6.22 tok/s |
@@ -48,8 +49,10 @@ These results were measured on real Macs, using different releases and settings:
 | Same M5 Max, 0.2.3, 48 GB target | 128 GB | ~26.9 tok/s |
 | Same M5 Max, 0.2.3, 73 GB target | 128 GB | ~31.5 tok/s |
 
-The latest M5 Pro result comes from the pre-release benchmark of the
-configuration shipped in 0.2.16. The M5 Pro results are from the author; the
+The latest M5 Pro result is the 0.2.19 release benchmark of the shipping
+build's default against the 0.2.18 forecast (1.10x faster, 14.38 to 15.86 tok/s,
+identical output); the 0.2.16 row is the pre-release benchmark of that release's
+configuration. The M5 Pro results are from the author; the
 others are community reports.
 The 18, 24 and 36 GB sizes still need reports, and 8 GB Macs don't run the
 model. Open the details below for versions, settings, and credits.
@@ -59,6 +62,7 @@ model. Open the details below for versions, settings, and credits.
 
 | Mac | Memory | SSD | macOS | slotstream | Plan | Warm decode | Long prompt | Reported memory | Reported by |
 |---|---|---|---|---|---|---|---|---|---|
+| MacBook Pro, M5 Pro | 48 GB | internal, 2 TB | 26.6.2 | 0.2.19 | 22 GB target, two drafts, corrected decode forecast, ~100 experts/layer | 14.38 to 15.86 tok/s with the corrected forecast, arm medians over counted cells from 24 held-out pairs | not measured | not recorded | [@carloslfu](https://github.com/carloslfu), 2026-09-16 |
 | MacBook Pro, M5 Pro | 48 GB | internal, 2 TB | 26.6.2 | 0.2.16 candidate | 20 GB target, two drafts, decode lookahead, ~88 experts/layer | 11.79 to 13.47 tok/s with the lookahead, arm medians over eligible runs from 34 held-out pairs | not measured | not recorded | [@carloslfu](https://github.com/carloslfu), 2026-09-13 |
 | MacBook Pro, M5 Pro | 48 GB | internal, 2 TB | 26.6 | 0.2.3 | auto: 33 GB target, ~152 experts/layer | ~12 tok/s; 12.8 with `--mtp` at a 28 GB memory target | ~220 tok/s at a 4096-token pass (est.) | 32 GB (estimate) | [@carloslfu](https://github.com/carloslfu), 2026-09-02 |
 | Mac mini, M2 | 16 GB | internal, 256 GB | 26.6.2 | 0.2.2 | auto: 10.2 GB target, ~21 experts/layer | **1.41 tok/s** | not measured; `context-check` postdates 0.2.2 | 6.1 GB | [@flol's report](https://github.com/carloslfu/slotstream/issues/5), 2026-09-02 |
@@ -146,7 +150,7 @@ confidence intervals. Endpoints are rounded outward to whole tok/s.
 |---|---|---|
 | 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
 | 24–<48 GB | ~6–14 tok/s | The 32 GB M5 Air reported 6.22 tok/s; the M5 Pro achieved 13.47 tok/s at a 20 GB process target. The upper end assumes a comparable chip and SSD with enough memory for that configuration; it has not been timed on a Mac in this band. |
-| 48–<96 GB | ~13–27 tok/s | The latest 48 GB M5 Pro result is 13.47 tok/s, rounded down for this estimate; its older ~12 tok/s result remains historical evidence. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
+| 48–<96 GB | ~13–27 tok/s | The 0.2.16 48 GB M5 Pro result is 13.47 tok/s, rounded down for this estimate, and the 0.2.19 result at a 22 GB target is 15.86 tok/s (the range was not re-anchored); its older ~12 tok/s result remains historical evidence. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
 | 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. |
 
 The Ultra lower endpoint allows for the same reporter's roughly 20 tok/s

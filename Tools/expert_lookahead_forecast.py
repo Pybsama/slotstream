@@ -69,7 +69,12 @@ def load_request(run_dir, row, want_inputs=False, want_x2=False):
                 entry = dict(ids=np.array(rec["ids"]), margins=np.array(rec["margins"]), rows=rec["rows"], per_row=rec["per_row"])
                 if want_inputs and rec["inputs"] is not None:
                     entry["inputs"] = xt.bf16_to_f32(np.array(rec["inputs"]))
-                p["forecasts"][(rec["source"], rec["target"])] = entry
+                if rec.get("tap", 0):
+                    # Attention taps (shard format 3) stay out of the boundary map the commands here read;
+                    # Tools/expert_lookahead_taps.py reads them.
+                    p.setdefault("tap_forecasts", {})[(rec["source"], rec["target"], rec["tap"])] = entry
+                else:
+                    p["forecasts"][(rec["source"], rec["target"])] = entry
     if residency is None:
         return None
     after = residency["after"]

@@ -68,8 +68,10 @@ public struct ExpertLookaheadRequestSummary: Codable, Equatable {
 /// closed at the request boundary with an explicit flush and fsync.
 final class ExpertLookaheadShardWriter {
     static let payloadLimit = 256 << 20
-    /// Format version 2 adds record kind 10; readers accept 1 and 2.
-    static let formatVersion: UInt32 = 2
+    /// Format version 2 adds record kind 10; version 3 carries the forecast
+    /// tap in the upper 16 bits of that record's source field. Readers accept
+    /// 1, 2 and 3.
+    static let formatVersion: UInt32 = 3
     let url: URL
     private var file: UnsafeMutablePointer<FILE>?
     private var digest = SHA256()
@@ -367,7 +369,8 @@ package final class ExpertLookaheadCollector: ExpertLookaheadObserver {
         emit(.reconciled, payload)
     }
 
-    package func forecast(pass: Int, sourceLayer: Int, targetLayer: Int, rows: Int, ids: [Int32], margins: [Float], inputs: MLXArray?) {
+    package func forecast(pass: Int, sourceLayer: Int, targetLayer: Int, tap: RouterForecastTap, rows: Int, ids: [Int32],
+                          margins: [Float], inputs: MLXArray?) {
         guard phases[pass] == .mainVerify else { return }
         var inputBits: [UInt16] = []
         var width = 0
@@ -387,7 +390,8 @@ package final class ExpertLookaheadCollector: ExpertLookaheadObserver {
         }
         var payload = Data(capacity: 24 + 2 * ids.count + 4 * margins.count + 2 * inputBits.count)
         payload.append(le32(UInt32(pass)))
-        payload.append(le32(UInt32(sourceLayer)))
+        // Format version 3: the tap's code rides the source field's upper 16 bits.
+        payload.append(le32(UInt32(sourceLayer) | tap.code << 16))
         payload.append(le32(UInt32(targetLayer)))
         payload.append(le32(UInt32(rows)))
         payload.append(le32(UInt32(perRow)))

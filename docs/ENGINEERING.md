@@ -47,6 +47,7 @@ On the 48 GB M5 Pro:
 | Reply generation after the cache warms up | ~12 tok/s |
 | Reply generation with speculative decoding and the 0.2.16 decode lookahead, 20 GB target | 13.47 tok/s, 1.11x faster than without the lookahead |
 | Engine load in the original experiment, before processing the prompt | ~2 s (historical) |
+| Reply generation with the 0.2.19 corrected forecast, 22 GB target (a 32 GB Mac's automatic plan) | 15.86 tok/s, 1.10x faster than the 0.2.18 forecast |
 | Planned memory with automatic sizing | 32 GB (estimate) |
 
 That memory figure is the historical planner estimate, not a measurement of

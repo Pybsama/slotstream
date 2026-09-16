@@ -4,8 +4,22 @@ extension DecodeLookaheadPlanning {
     /// `automatic` unless the environment names a prefetch switch or an explicit
     /// reserve. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns the default off; `=1`
     /// selects the experimental configuration its tuning variables describe.
-    public static func environment(_ env: [String: String] = ProcessInfo.processInfo.environment) -> Self {
-        guard ExpertPrefetchConfiguration.explicitlyConfigured(env) else { return .automatic }
+    public static func environment(_ env: [String: String] = ProcessInfo.processInfo.environment,
+                                   modelDirectory: URL? = nil) -> Self {
+        environment(env, modelDirectory: modelDirectory, pinnedSHA256: RouterTapCorrection.shippedSHA256)
+    }
+
+    /// The same with the digest a located correction must carry (nil skips it, for tests).
+    package static func environment(_ env: [String: String], modelDirectory: URL?, pinnedSHA256: String?) -> Self {
+        guard ExpertPrefetchConfiguration.explicitlyConfigured(env) else {
+            // The automatic default carries the checkpoint's shipped correction
+            // when one is located next to the weights, so the plan charges it.
+            if let modelDirectory,
+               let located = RouterTapCorrection.shipped(modelDirectory: modelDirectory, env: env, pinnedSHA256: pinnedSHA256).located {
+                return .automaticCorrected(bytes: located.header.fileBytes)
+            }
+            return .automatic
+        }
         let bytes = ExpertPrefetchConfiguration.plannedReserveBytes(env)
         return bytes > 0 ? .reserved(bytes: bytes) : .off
     }
@@ -32,6 +46,24 @@ extension ExpertPrefetchConfiguration {
         c.memoLayers = 0
         c.readShape = .piece
         c.reserveBytes = defaultReserveBytes
+        return c
+    }
+
+    /// The qualified default with the checkpoint's measured correction when one
+    /// is located next to the weights (`RouterTapCorrection.locate`): the
+    /// corrected attention tap the held-out confirmation measured at 1.031 over
+    /// the plain tap, its file joining the reserve in whole MiB. Without a
+    /// located correction this is `qualifiedDecode` unchanged. Selecting it is
+    /// the engine's decision at load; the planner charges
+    /// `DecodeLookahead.reserveBytes(correctionBytes:)` for it.
+    package static func qualifiedDecode(correction: RouterTapCorrection.Located?) -> Self {
+        var c = qualifiedDecode
+        guard let correction else { return c }
+        c.tap = .attentionCorrected
+        c.windowLayers = 1
+        c.correctionPath = correction.path
+        c.correctionBytes = correction.header.fileBytes
+        c.reserveBytes = DecodeLookahead.stagingReserveBytes + DecodeLookahead.roundedMiB(correction.header.fileBytes)
         return c
     }
 

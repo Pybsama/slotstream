@@ -378,6 +378,12 @@ def cmd_capture(args):
         command += ["--forecast-selfcheck", "on"]
     if getattr(args, "forecast_inputs", "off") == "on":
         command += ["--forecast-inputs", "on"]
+    if getattr(args, "forecast_taps", ""):
+        command += ["--forecast-taps", args.forecast_taps]
+    if getattr(args, "forecast_correction", ""):
+        command += ["--forecast-correction", args.forecast_correction]
+    if getattr(args, "forecast_per_row", 0):
+        command += ["--forecast-per-row", str(args.forecast_per_row)]
     extra = dict(item.split("=", 1) for item in (args.env or []))
     env = run_env(proto, extra)
     started = time.time()
@@ -408,7 +414,7 @@ def iter_records(path):
     if bytes(view[:4]) != b"XLA1":
         raise ValueError(f"{path}: bad magic")
     version, header_len = struct.unpack_from("<II", view, 4)
-    if version not in (1, 2):
+    if version not in (1, 2, 3):
         raise ValueError(f"{path}: unsupported version {version}")
     header = json.loads(bytes(view[12:12 + header_len]))
     offset = 12 + header_len
@@ -482,11 +488,14 @@ def parse_record(kind, view):
         return dict(pass_id=pass_id, nanos=nanos, aborted=bool(aborted))
     if kind == 10:
         pass_id, source, target, rows, per_row, width = struct.unpack_from("<IIIIII", view, 0)
+        # Format version 3 carries the forecast tap in the source field's upper 16 bits (0 boundary,
+        # 1 attention, 2 attention plus the shared expert); earlier shards always read as 0.
+        source, tap = source & 0xFFFF, source >> 16
         n = rows * per_row
         ids = np.frombuffer(view, dtype="<u2", count=n, offset=24)
         margins = np.frombuffer(view, dtype="<f4", count=n, offset=24 + 2 * n)
         inputs = np.frombuffer(view, dtype="<u2", count=rows * width, offset=24 + 6 * n) if width else None
-        return dict(pass_id=pass_id, source=source, target=target, rows=rows, per_row=per_row, width=width,
+        return dict(pass_id=pass_id, source=source, target=target, tap=tap, rows=rows, per_row=per_row, width=width,
                     ids=ids.reshape(rows, per_row) if rows else ids, margins=margins.reshape(rows, per_row) if rows else margins,
                     inputs=inputs.reshape(rows, width) if width else None)
     raise ValueError(kind)
@@ -788,6 +797,9 @@ def main():
     p.add_argument("--forecast-strides", default="", help="observer-only router-reuse strides to record without a scheduler")
     p.add_argument("--forecast-selfcheck", default="off", help="record the stride-0 self-check forecast (C12): on | off")
     p.add_argument("--forecast-inputs", default="off", help="record forecast input rows for the offline C12 recomputation: on | off")
+    p.add_argument("--forecast-taps", default="", help="observer-only attention taps to record: attention, attention-shared, attention-corrected")
+    p.add_argument("--forecast-correction", default="", help="tap correction factors (safetensors) for the attention-corrected tap")
+    p.add_argument("--forecast-per-row", type=int, default=0, help="candidates per row in observer-only forecasts (engine default 10)")
     p.set_defaults(func=cmd_capture)
     p = sub.add_parser("validate-data"); p.add_argument("--run", required=True); p.add_argument("--limit", type=int, default=0)
     p.set_defaults(func=cmd_validate_data)

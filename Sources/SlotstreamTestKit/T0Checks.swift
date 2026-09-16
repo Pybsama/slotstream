@@ -33,6 +33,7 @@ extension Catalogue {
             Check("expert-lookahead-tickets", tier: .t0) { try Diagnostics.expertLookaheadTickets() },
             Check("expert-lookahead-scheduler", tier: .t0) { try Diagnostics.expertLookaheadScheduler() },
             Check("expert-lookahead-forecast-merge", tier: .t0) { try Diagnostics.expertLookaheadForecastMerge() },
+            Check("expert-lookahead-forecast-tap", tier: .t0) { try Diagnostics.expertLookaheadForecastTap() },
             Check("decode-lookahead-defaults", tier: .t0) { try Diagnostics.decodeLookaheadDefaults() },
             Check("vision-check", tier: .t0) { Diagnostics.vision() },
             // T1: touches MLX, so it needs the Metal library beside the runner.

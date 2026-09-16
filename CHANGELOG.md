@@ -6,6 +6,26 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## 0.2.19 - 2026-09-16
+
+- Generate replies 1.10x faster with a more accurate expert forecast at
+  the same lead time. The decode lookahead now reads the model's state right
+  after the previous layer's attention step, applies the next layer's router to
+  it and corrects the result with a small learned table fitted for the
+  checkpoint, so it reads about a fifth fewer expert records from the SSD during
+  decode and wastes about three quarters fewer speculative bytes. Output is
+  unchanged. `slotstream pull` fetches the 37.5 MB correction file
+  (`lookahead/tap-correction-attention-rank128-v1.safetensors`) next to the
+  weights and verifies it; if you installed the model with an earlier release,
+  run `slotstream pull` once more, and until then the engine runs the 0.2.16
+  forecast. The memory plan charges 409 MiB for the lookahead with the file
+  (373 MiB without). `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary` keeps the 0.2.16
+  forecast with the file present. Levers measured and left out on their
+  registered gates: a co-routing prior, a lower read-issue threshold and
+  computing the next layer's attention early, which reads more accurately but
+  costs more GPU time than the reads it saves; see the
+  [expert lookahead guide](docs/EXPERT-LOOKAHEAD.md).
+
 ## 0.2.18 - 2026-09-14
 
 - Keep long conversations on disk with `serve --prefix-cache-dir <dir>`. A

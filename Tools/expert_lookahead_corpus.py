@@ -42,6 +42,15 @@ def git_blob(path):
     return subprocess.check_output(['git', 'rev-parse', f'HEAD:{path}'], cwd=ROOT, text=True).strip()
 
 
+def source_bytes(source):
+    """The source file's bytes as frozen: the manifest's git blob when present, so later edits to the
+    working tree cannot change a frozen prompt; the working tree only for a source without a blob."""
+    blob = source.get('blob')
+    if blob:
+        return subprocess.check_output(['git', 'cat-file', 'blob', blob], cwd=ROOT)
+    return (ROOT / source['path']).read_bytes()
+
+
 def git_head():
     return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
 
@@ -131,8 +140,7 @@ def build_code_requests(rng):
 
 
 def materialize_code(request):
-    path = ROOT / request['source']['path']
-    data = path.read_bytes()
+    data = source_bytes(request['source'])
     lo, hi = request['span']
     body = data[lo:hi].decode('utf-8')
     if 'mutation' in request:
@@ -315,10 +323,10 @@ def materialize_prose(request):
     if request.get('long'):
         parts = []
         for source in request['sources']:
-            parts.append((ROOT / source['path']).read_text(encoding='utf-8'))
+            parts.append(source_bytes(source).decode('utf-8'))
         body = '\n\n'.join(parts).encode('utf-8')[: request['byte_limit']].decode('utf-8', errors='ignore')
         return PROSE_TEMPLATES['long-summary'].format(body=body)
-    data = (ROOT / request['source']['path']).read_bytes()
+    data = source_bytes(request['source'])
     lo, hi = request['span']
     body = data[lo:hi].decode('utf-8', errors='ignore')
     return PROSE_TEMPLATES[request['template']].format(body=body)

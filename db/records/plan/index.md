@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/plan
-updated: 2026-09-13T19:56:09.219048Z
+updated: 2026-09-16T13:38:52.268790Z
 ---
 
 # records/plan
 
+- [[records/plan/decode-forecast-taps-2026-09-14]] — A more accurate expert forecast at the same lead time: attention taps, a learned correction and three closed levers, each registered and gated; the corrected tap ships in 0.2.19
+- [[records/plan/deprioritized-decision-2026-08-29]] — Deprioritized (decision 2026-08-29)
 - [[records/plan/configurable-context-window-2026-09-06]] — Configurable context through the model limit: shared byte accounting, request guards, bounded prefill and staged qualification
 - [[records/plan/decode-path-serialization-2026-09-12]] — Remove per-layer host synchronizations so expert reads, GPU work and host work overlap: paired exact sweeps by round, then one pre-registered held-out cohort
 - [[records/plan/expert-lookahead-2-replacement-router-reuse-memo-2026-09-11]] — Successor protocol: exact replacement-policy lab against the Belady bound, prefetch from the model's own routers, early-layer token memo; counts offline, time native
@@ -20,7 +22,6 @@ updated: 2026-09-13T19:56:09.219048Z
 - [[records/plan/11-definition-of-done-v0-1-updated-with-2026-08-28-results]] — 11. Definition of Done — v0.1 (updated with 2026-08-28 results)
 - [[records/plan/9-risk-register]] — 9. Risk register
 - [[records/plan/m9-later-each-gated-on-v0-1-done]] — M9+ — Later (each gated on v0.1 done)
-- [[records/plan/deprioritized-decision-2026-08-29]] — Deprioritized (decision 2026-08-29)
 - [[records/plan/n5-real-gui-and-editor-clients]] — N5 — Real GUI and editor clients
 - [[records/plan/n3-and-n4-removed-from-the-queue-2026-08-30]] — N3 and N4 — removed from the queue (2026-08-30)
 - [[records/plan/n2-dense-sweep-prefill-the-remainder-of-m5]] — N2 — Dense-sweep prefill (the remainder of M5)

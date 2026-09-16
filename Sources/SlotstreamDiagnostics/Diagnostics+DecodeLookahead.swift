@@ -63,6 +63,16 @@ extension Diagnostics {
         c.expect("off: same head, no lookahead, no charge",
             at22off.mtpEnabled && !at22off.decodeLookahead && at22off.lookaheadReserveBytes == 0)
         c.expect("the charge comes out of the expert pool", at22off.slots > at22.slots)
+        // The checkpoint's shipped tap correction (37,540,708 bytes) joins the
+        // charge in whole MiB: 373 + 36 = 409 MiB, all of it out of the pool.
+        c.equal("no correction adds nothing", DecodeLookahead.reserveBytes(correctionBytes: 0), DecodeLookahead.reserveBytes)
+        c.equal("the shipped file rounds up to 36 MiB", DecodeLookahead.roundedMiB(37_540_708), 36 << 20)
+        c.equal("corrected charge is 409 MiB", DecodeLookahead.reserveBytes(correctionBytes: 37_540_708), 409 << 20)
+        let corrected = try plan(22, lookahead: .automaticCorrected(bytes: 37_540_708))
+        c.expect("22 GB target, corrected: head and lookahead on", corrected.mtpEnabled && corrected.decodeLookahead)
+        c.equal("22 GB target, corrected: whole charge reserved", corrected.lookaheadReserveBytes, 409 << 20)
+        c.equal("corrected ledger carries the charge", corrected.memoryLedger.lookaheadReserveBytes, 409 << 20)
+        c.expect("the correction's bytes come out of the pool", corrected.slots <= at22.slots)
         let at20 = try plan(20)
         c.expect("20 GB target: below the floor after the head", !at20.mtpEnabled && !at20.decodeLookahead)
         let at16 = try plan(16)

@@ -165,7 +165,7 @@ struct ModelOptions: ParsableArguments {
             mtp: requireMTP ? .on : requestedMTP, mtpAvailable: MTPWeights.present(modelDir: modelURL),
             vision: visionMode(), visionAvailable: visionAvailable(),
             maxContextTokens: maxContext, qualification: qualification,
-            runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment())
+            runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: modelURL))
         let plan = try runtimePlan(base, prefixCacheEnabled: prefixCacheEnabled).withRequestPolicy(configuration)
         FileHandle.standardError.write((plan.banner() + "\n").data(using: .utf8)!)
         return plan
@@ -186,7 +186,7 @@ struct ModelOptions: ParsableArguments {
         try ensureWeights()
         let resolved = try Planner.resolveContextWindow(.automatic, request: request, on: .current(),
             mtpAvailable: MTPWeights.present(modelDir: modelURL), visionAvailable: visionAvailable(),
-            runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment())
+            runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: modelURL))
         let configuration = try ContextConfiguration(maxContextTokens: resolved.plan.maxContextTokens,
             maxPrefillWaitMinutes: maxPrefillWait)
         let plan = try runtimePlan(resolved.plan, prefixCacheEnabled: prefixCacheEnabled).withRequestPolicy(configuration)
@@ -811,7 +811,7 @@ struct Doctor: ParsableCommand {
                 workingSetGB: simWorkingSet ?? (simRAM.map { $0 * 0.75 } ?? Planner.deviceWorkingSetGB()),
                 availableGB: simulatedAvailable, isSimulated: true)
             : .current()
-        let lookahead = DecodeLookaheadPlanning.environment()
+        let lookahead = DecodeLookaheadPlanning.environment(modelDirectory: model.modelURL)
         // The window: explicit, or this machine's automatic choice planned
         // against the (possibly simulated) live memory, exactly as serve does.
         var automatic: AutomaticContextWindow?

@@ -331,8 +331,13 @@ public final class Engine {
         let processEnvironment = ProcessInfo.processInfo.environment
         let qualifiedLookahead = plan?.decodeLookahead == true
             && !ExpertPrefetchConfiguration.explicitlyConfigured(processEnvironment)
+        // The qualified default carries the checkpoint's shipped tap correction
+        // when one is located next to the weights (measured file only).
+        let shippedCorrection = qualifiedLookahead
+            ? RouterTapCorrection.shipped(modelDirectory: modelDir, env: processEnvironment)
+            : (located: nil, reason: "")
         let prefetchConfiguration = qualifiedLookahead
-            ? ExpertPrefetchConfiguration.qualifiedDecode
+            ? ExpertPrefetchConfiguration.qualifiedDecode(correction: shippedCorrection.located)
             : try ExpertPrefetchConfiguration.environment(optimizations: InferenceOptimizations.environment())
         var predictor: ExpertPredictor? = nil
         if prefetchConfiguration.active {
@@ -388,7 +393,10 @@ public final class Engine {
                         model.decodeBarrierLayers = DecodeLookahead.barrierLayers
                     }
                 }
-                // The plan banner already announces the default; describe only experiments.
+                // The plan banner already announces the default; name its forecast, then describe only experiments.
+                if qualifiedLookahead { FileHandle.standardError.write(
+                    "[expert-lookahead] \(shippedCorrection.located == nil ? "boundary forecast" : "corrected attention forecast"): \(shippedCorrection.reason)\n"
+                        .data(using: .utf8)!) }
                 if !qualifiedLookahead { FileHandle.standardError.write(
                     "[expert-lookahead] \(prefetchConfiguration.shadow ? "shadow" : "prefetch") mode, policy \(prefetchConfiguration.policy.rawValue), cap \(prefetchConfiguration.capRecords) records, \(prefetchConfiguration.lanes) lanes, window \(prefetchConfiguration.windowLayers), top \(prefetchConfiguration.topPerLayer)\(prefetchConfiguration.policy == .router ? ", strides \(prefetchConfiguration.strides.map(String.init).joined(separator: ",")), issue cap \(prefetchConfiguration.issueCapPerTarget), memo layers \(prefetchConfiguration.memoLayers)" : ""), adoption \(prefetchConfiguration.adoption.rawValue)\(prefetchConfiguration.adoption == .slot ? " (slot cap \(prefetchConfiguration.slotCap))" : "")\n"
                         .data(using: .utf8)!) }

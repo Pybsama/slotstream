@@ -761,6 +761,34 @@ final class QSAAttention {
         return oProj(out * sigmoid(gate), minimumRows: minimumProjectionRows)
     }
 
+    /// Attention for `x` over the cached keys and values without appending
+    /// to them: this pass's rows after the cache, dense and causal, as the
+    /// forward computes while the indexer is inactive (contexts within its
+    /// budget). A forecast reads it; the indexer and KV caches stay untouched.
+    func readout(_ x: MLXArray, rope: Rope, cache: KVCache) -> MLXArray {
+        let (B, S) = (x.dim(0), x.dim(1))
+        let offset = cache.offset
+        let H = cfg.numAttentionHeads
+        let D = cfg.headDim
+        let qg = qProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, H, 2 * D])
+        var q = qNorm(qg[.ellipsis, 0 ..< D]).transposed(0, 2, 1, 3)
+        let gate = qg[.ellipsis, D...].reshaped([B, S, H * D])
+        var k = kNorm(kProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D])).transposed(0, 2, 1, 3)
+        var v = vProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D]).transposed(0, 2, 1, 3)
+        var (c, s) = rope.table(start: offset, count: S)
+        c = c.expandedDimensions(axis: 1)
+        s = s.expandedDimensions(axis: 1)
+        q = rope.rotate(q, c, s)
+        k = rope.rotate(k, c, s)
+        if offset > 0, let keys = cache.keys, let values = cache.values {
+            k = concatenated([keys[0..., 0..., 0 ..< offset, 0...], k], axis: 2)
+            v = concatenated([values[0..., 0..., 0 ..< offset, 0...], v], axis: 2)
+        }
+        let out = Self.attend(q: q, k: k, v: v, sparse: nil, base: offset, scale: scale,
+                              block: AttentionTuning.queryBlock(pass: S, context: k.dim(2)))
+        return oProj(out.transposed(0, 2, 1, 3).reshaped([B, S, H * D]) * sigmoid(gate), minimumRows: minimumProjectionRows)
+    }
+
     /// Attention over a pass, in blocks of queries.
     ///
     /// Mask semantics mirror the reference: fused-causal sdpa when the indexer
@@ -1056,6 +1084,30 @@ final class GDNLayer {
         }
         return result
     }
+
+    /// The layer's output on `x` from the caches as they stand, writing
+    /// nothing back: the same projections, convolution window, recurrence and
+    /// gated norm as the forward, on the state before this pass. A forecast
+    /// reads it (`Qwen4ExpModel.readoutForecast`); it never records, advances
+    /// or compacts a cache, so the real pass finds the caches untouched.
+    func readout(_ x: MLXArray, cache: LinearCache?) -> MLXArray {
+        let (B, S) = (x.dim(0), x.dim(1))
+        let mixed = inQKV(x, minimumRows: minimumProjectionRows)
+        let z = inZ(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.linearNumVHeads, cfg.linearVHeadDim])
+        let bProj = inB(x, minimumRows: minimumProjectionRows)
+        let aProj = inA(x, minimumRows: minimumProjectionRows)
+        let K = cfg.convKernel
+        let convState = cache?.convState ?? MLXArray.zeros([B, K - 1, convDim], dtype: x.dtype)
+        let convOut = MLXNN.silu(conv1d(concatenated([convState, mixed], axis: 1), convWeight, groups: convDim))
+        var q = convOut[.ellipsis, 0 ..< keyDim].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
+        var k = convOut[.ellipsis, keyDim ..< (2 * keyDim)].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
+        let v = convOut[.ellipsis, (2 * keyDim)...].reshaped([B, S, cfg.linearNumVHeads, cfg.linearVHeadDim])
+        q = l2normQK(q) * Float(pow(Double(cfg.linearKHeadDim), -0.5))
+        k = l2normQK(k)
+        let (y, _) = gatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj, aLog: aLog, dtBias: dtBias,
+                                      state: cache?.ssmState, mask: nil)
+        return outProj(norm(y, gate: z).reshaped([B, S, valueDim]), minimumRows: minimumProjectionRows)
+    }
 }
 
 // MARK: - MoE
@@ -1104,8 +1156,24 @@ final class MoELayer {
         sharedDownProj = w.linear(b + ".shared_expert.down_proj")
     }
 
+    /// Shared-expert matmul outputs `(value, gate)` built before routing by an
+    /// attention-shared forecast tap on this layer's own input. The next call
+    /// adds these arrays instead of building the same operations again, as the
+    /// shared-expert overlap does, and clears them whether or not it uses them.
+    var precomputedSharedParts: (MLXArray, MLXArray)?
+
+    /// The shared expert's two matmul outputs on `input`, without observers:
+    /// the operations `callAsFunction` would otherwise build after routing.
+    func sharedExpertParts(_ input: MLXArray) -> (MLXArray, MLXArray) {
+        let value = sharedDownProj(MLXNN.silu(sharedGateProj(input, minimumRows: minimumProjectionRows))
+            * sharedUpProj(input, minimumRows: minimumProjectionRows), minimumRows: minimumProjectionRows)
+        return (value, sharedGate(input, minimumRows: minimumProjectionRows))
+    }
+
     func callAsFunction(_ x: MLXArray) throws -> MLXArray {
         let (B, S) = (x.dim(0), x.dim(1))
+        let precomputedShared = precomputedSharedParts
+        precomputedSharedParts = nil
         // The reference matmul promotes the BF16 router to FP32. An optional
         // pre-materialized copy removes that repeated conversion at extra cost.
         let logits: MLXArray
@@ -1154,10 +1222,14 @@ final class MoELayer {
         // in the original graph to preserve its rounding/fusion boundary.
         var earlyShared: (MLXArray, MLXArray)?
         if overlapShared && !useLayerWorkspace {
-            let parts = sharedParts(x)
+            let parts = precomputedShared ?? sharedParts(x)
             asyncEval(parts.0, parts.1)
             earlyShared = parts
             sharedPrelaunches += 1
+        } else if let precomputedShared, !useLayerWorkspace {
+            // An attention-shared forecast tap built these matmuls on this
+            // input, and the routing readback above has evaluated them.
+            earlyShared = precomputedShared
         }
         pool.advancePinGeneration()
         let routed: MLXArray

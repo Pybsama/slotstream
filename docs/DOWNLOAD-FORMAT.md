@@ -21,6 +21,12 @@ or disk can limit a very fast connection.
 
 The installed model has 25 files, including the optional 1.5 GB draft head.
 A missing draft head still allows inference with speculative decode off.
+Since 0.2.19 `pull` also fetches one optional sidecar outside the compressed
+objects, after the weights: `lookahead/tap-correction-attention-rank128-v1.safetensors`
+(37,540,708 bytes), the decode forecast correction, pinned by size, SHA-256 and
+mirror commit and written atomically. It is not part of the manifest, so every
+existing pull and manifest revision is untouched; a missing or failed sidecar is
+reported and never fails a pull, and the engine then runs the previous forecast.
 Decoding and disk writes overlap the transfer. The client starts at eight
 independent connections and increases concurrency only when measured
 throughput improves. `--connections` fixes the count; `--transport raw`

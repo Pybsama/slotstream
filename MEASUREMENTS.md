@@ -5004,3 +5004,267 @@ The first complete run on the same artifact ended at 24 passed and 1 failed: the
 ## Limits
 
 No clean-timing or throughput qualification is claimed; acceptance shared the machine with ordinary work and waited for memory headroom before it started. The installed-release checks ran at a 32,768-token window and a 10 GB target. The installed persistent prefix check used a 10 GB target and skipped its cold baseline, which the development measurement covers.
+
+## Decode forecast taps: a more accurate forecast at the same lead time
+**Outcome: a more accurate expert forecast at the same lead time raises decode throughput by 11.1% over the configuration 0.2.16 to 0.2.18 shipped, with identical outputs, and becomes the 0.2.19 default.** The shipped decode lookahead forecast a layer's routing from the model's state two layers back. Reading the state after the previous layer's attention step instead, at the same point in time, raised top-10 forecast agreement from 0.62 to 0.73; a rank-128 linear correction of that forecast's router logits, fitted on the benchmark corpus's training requests, raised it to 0.80. On eight held-out prompts at a 20 GB target the corrected forecast decoded at 1.111 against the shipped configuration (bootstrap 1.102 to 1.123), all 23 counted pairs above 1, reading 21% fewer expert records during decode and wasting 73% fewer speculative bytes ([[records/measurements/decode-forecast-taps-readout-timing-confirmation-2026-09-15]]). The plan is [[records/plan/decode-forecast-taps-2026-09-14]]; the default change is [[records/decisions/corrected-decode-forecast-default-with-the-sidecar]].
+
+Every step was registered before its data existed and read under a fixed gate. The sections below record them in dependency order: the offline gate and the native screen of the attention taps, the B1 confirmation that passed every effect condition but one hygiene condition, a co-routing prior that failed offline, the learned correction offline and natively, its screen and held-out confirmation, the issue-threshold screen that closed at 0.062, the attention readout that reached 0.86 agreement offline but lost natively, and the timing confirmation that produced the default's number. Four levers closed on their registered readings (the shared-expert variant by rule, the co-routing prior, the lower threshold and the readout); two passed (the attention tap and its learned correction) and ship together.
+
+Limits that apply to every section: one 48 GB M5 Pro, one checkpoint, the 20 GB profile with two drafts unless a section says otherwise, no multilingual prompt in the later held-out sets, and a correction trained on the pilot's 56 training requests. The prefetch twin projects read coverage and never counts in-flight joins or GPU cost, so its ratios are never claims; the numbers that stand are the native paired measurements.
+
+### Decode forecast taps, steps 1 and 2: the attention tap passes its offline gate and the 18 GB screen
+**Outcome: forecasting from the streams after the previous layer's attention, at the same lead time as the shipped forecast, raises offline top-10 agreement from 0.6171 to 0.7292, and the native screen at 18 GB decodes 1.054 over the qualified configuration on the first twelve counted pairs with identical outputs, so the B1 confirmation runs.** Steps 1 and 2 of [[records/plan/decode-forecast-taps-2026-09-14]].
+
+**Where the forecast reads.** The shipped forecast for target layer T applies T's own hyper-connection read and router to the streams after layer T-2's expert add, and reaches the scheduler on layer T-1's routing readback. At that readback the streams already hold T-1's attention output, so a forecast built on them (the `attention` tap) arrives just as early and misses only T-1's routed experts and T's attention; `attention-shared` adds T-1's resident shared expert. The capture command records any tap without a scheduler, and `SLOTSTREAM_EXPERT_PREFETCH_TAP` selects one for the router policy.
+
+**Offline gate** ([[sources/runs/2026/09/2026-09-15-forecast-taps-offline-stage]]): the 13 pilot validation requests captured at a 10 GB target with every tap as an observer, 141,450 rows over targets 2 to 47.
+
+| forecast | top-10 agreement | exact top-10 | recall at 16 | twin coverage at the shipped traffic | wasted reads |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| boundary, stride 2 (shipped) | 0.6171 | 0.0223 | 0.7389 | 0.4389 | 136,416 |
+| attention tap | 0.7292 | 0.0530 | 0.8565 | 0.5393 | 102,443 |
+| attention tap with the shared expert | 0.7398 | 0.0603 | 0.8655 | 0.5492 | 99,104 |
+| boundary, stride 1 (one attention block late) | 0.7619 | 0.0885 | 0.8819 | 0.5785 | 89,203 |
+
+The gate asked for agreement at least 0.03 above stride 2 and matched-traffic coverage at least 0.03 above the shipped setting with no more wasted reads; the attention tap passes both by a wide margin. The shared-expert variant added 0.0099 of coverage against the registered 0.01 margin, so the plain attention tap went forward by rule. Adding the tap to the stride-2 forecast was below the tap alone at matched traffic.
+
+**Native screen at 18 GB** ([[sources/runs/2026/09/2026-09-15-forecast-taps-screen-18gb]]): the qualified configuration set explicitly (`combined`) against the same with each tap, on r0005, r0206, r0096 and r0074 at 256 outputs, interleaved. The 20 GB profile needed 25 GB reclaimable and 23.65 GB was available, so the screen ran at 18 GB as a mechanism screen. A first attempt stopped when `docs/LIBRARY.md` had been edited since the corpus froze; the corpus tool now reads every code and prose source from the git blob recorded at freeze. Another session compiled and ran its app on the same Mac, so a contention rule was registered before the screen resumed: a sampler records compiler, linker and engine processes every 5 s, a cell whose window holds one is excluded, and rounds are added until each arm has 12 counted pairs. Four rounds, 48 cells, every output identical to its reference.
+
+| configuration | counted cells | median tok/s | paired ratio (all pairs) | first 12 pairs | above 1 of 12 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| combined (reference) | 15 | 11.26 | | | |
+| attention tap | 15 | 11.97 | 1.047 (14) | 1.054 | 11 |
+| attention tap with the shared expert | 14 | 12.15 | 1.077 (14) | 1.078 | 11 |
+
+The reading needed a paired ratio of at least 1.01 with at least 8 of the first 12 pairs above 1 for the tap chosen offline; the attention tap passes. Mechanism, medians over pairs: records read in decode 0.869, reads issued 0.898, adopted 1.140, expired unused 0.563, wasted bytes 0.562. A screen decides only whether the confirmation runs; its ratios are not claims.
+
+### Decode forecast taps, step 3: B1 at 1.058 against the qualified configuration, not passed as registered
+**Outcome: on the twelve held-out B1 prompts at 20 GB the attention tap decodes at 1.058 against the qualified configuration (bootstrap 1.031 to 1.088), every family at 1.019 or above, every output identical, but the run does not pass as registered: host swap-outs excluded six pairs and left r0033 with one counted pair, which fails the pairs condition.** Step 3 of [[records/plan/decode-forecast-taps-2026-09-14]]; run [[sources/runs/2026/09/2026-09-15-forecast-taps-b1-cohort-20gb]].
+
+**Registration.** Written 36 seconds after the screen launched and before its first cell finished, the B1 gate for one change inside the qualified configuration: outputs identical in every pair; aggregate paired ratio (median of rounds per prompt, geometric mean per family, equal family weight) at least 1.02; bootstrap 2.5th percentile above 1.00; no family below 0.97; no family duration regression above 2%; at least two clean pairs per prompt. The hygiene rule added before the screen was analyzed counts a pair only when the cohort tool counts it under process-pageins-v1 and neither arm's window holds a compiler, linker or second engine.
+
+**Run.** Three rounds of twelve prompts at 512 outputs with a 128-token warmup, alternating arm order, 02:35 to 04:26 on 2026-09-15 with 26.2 GB reclaimable at launch. No arm window held a compiler, linker or second engine; the Sevra app peaked at 5.9% CPU, so the sensitivity reading equals the rule as written.
+
+| family | tok/s ratio | duration ratio | prompt medians (counted pairs) |
+| --- | ---: | ---: | --- |
+| code | 1.059 | 0.931 | r0062 1.049 (3), r0033 1.070 (1) |
+| dialogue | 1.028 | 0.976 | r0296 1.028 (3), r0295 1.028 (3) |
+| multilingual | 1.019 | 0.959 | r0244 1.066 (3), r0245 0.974 (3) |
+| prose | 1.105 | 1.005 | r0171 1.040 (3), r0173 1.173 (2) |
+| reasoning | 1.070 | 0.941 | r0124 1.088 (3), r0125 1.052 (2) |
+| structured | 1.068 | 0.955 | r0256 1.065 (2), r0257 1.072 (2) |
+
+| condition | required | result |
+| --- | --- | --- |
+| identical outputs | every pair | 36 of 36 |
+| aggregate ratio | at least 1.02 | 1.0578 |
+| bootstrap lower bound | above 1.00 | 1.0311 (upper 1.0880) |
+| family floor | at least 0.97 | 1.019 (multilingual) |
+| family duration | at most 1.02 | 1.005 (prose) |
+| counted pairs per prompt | at least 2 | r0033 has 1 |
+
+Median decode throughput over counted pairs was 12.17 tok/s for the qualified configuration and 12.98 with the tap. Paired medians, tap over qualified: records read in decode 0.878, reads issued 0.880, adopted 1.123, expired unused 0.569, wasted bytes 0.568, forecast evaluation seconds 0.545.
+
+**Standing.** Every effect condition passes and the mechanism matches the screen, but the registration makes a prompt with one counted pair a failed run, so this measurement changed no default and supports no public number on its own. The tap's default evidence came later, directly, from [[records/measurements/decode-forecast-taps-readout-timing-confirmation-2026-09-15]], which measured the corrected tap against the same qualified configuration on fresh prompts.
+
+### Decode forecast taps, step 5: the co-routing prior fails its offline gate
+**Outcome: negative. A co-routing prior built from the previous layer's routed experts, which the host holds when the attention tap's forecast arrives, raises leave-one-request-out top-10 agreement by 0.0032 and matched-traffic twin coverage by 0.0094 against registered bars of 0.03 each, so no native diagnostic was built.** Step 5 of [[records/plan/decode-forecast-taps-2026-09-14]]; run [[sources/runs/2026/09/2026-09-15-forecast-taps-coroute-prior]]. CPU only, run between two rounds of the taps screen so no timed cell overlapped it.
+
+A per-layer pointwise mutual information table over pairs (expert routed at T-1, expert routed at T) was counted on the pilot's 56 training requests (4,180 verify passes, 12,540 rows per layer, alpha 20 smoothing as registered) and used to rescore the tap's 24 recorded candidates on the 13 validation requests as margin plus beta times the summed PMI over T-1's ten routed experts.
+
+| beta | top-10 agreement | exact top-10 | recall at 16 |
+| ---: | ---: | ---: | ---: |
+| 0 (the tap) | 0.7292 | 0.0530 | 0.8565 |
+| 0.02 | 0.7323 | 0.0465 | 0.8612 |
+| 0.05 | 0.7019 | 0.0272 | 0.8421 |
+| 0.1 | 0.6652 | 0.0139 | 0.8223 |
+| 1 | 0.5869 | 0.0023 | 0.7817 |
+
+Leave-one-request-out chose beta 0.02 in every fold (0.7323); alpha 5 gives 0.7251 and alpha 80 gives 0.7346. In the twin at the shipped setting's 284,812 issued reads, coverage is 0.5397 for the tap and 0.5490 with the prior, with 3,165 fewer wasted reads. Agreement peaks at the smallest nonzero beta and falls below the tap from 0.05 on, and exact rows fall at every nonzero beta: consistent with T-1's routes carrying little about T's choices beyond what the tap already reads from the same streams, though this probe does not test that explanation. The next accuracy step was the learned correction.
+
+### Decode forecast taps, steps 6 and 7: the learned correction passes offline and natively
+**Outcome: a per-layer ridge correction of the attention tap's router logits, truncated to rank 128 and fitted on the pilot's training requests, raises validation top-10 agreement from 0.7292 to 0.7980 and twin coverage at the shipped traffic from 0.5397 to 0.6209 with 27,467 fewer wasted reads, in 35.2 MiB of FP16 weights; the engine's native form reproduces it (top-10 sets equal in 99.90% of rows, agreement 0.79799), so timing runs followed.** Steps 6 and 7 of [[records/plan/decode-forecast-taps-2026-09-14]]; runs [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-correction-offline]] and [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-correction-native-diagnostic]].
+
+**Offline.** A 10 GB capture recorded the tap's router input and every layer's true router input for the pilot's 56 training and 13 validation requests (5,428 passes, 244,635 forecast records, 7.88 GB of shards). Per target layer, a ridge regression on 12,540 training rows corrects the tap's logits, with lambda chosen by five-fold cross-validation grouped by request (factor 1 for 29 layers, 0.1 for 17, 0.01 for 1); the rank-128 truncation keeps 87% to 98% of each correction's squared singular values.
+
+| forecast, validation rows | top-10 agreement | exact top-10 | recall at 16 | twin coverage | wasted reads | FP16 weights |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| attention tap | 0.7292 | 0.0530 | 0.8565 | 0.5397 | 102,326 | |
+| full correction | 0.8023 | 0.1062 | 0.9195 | 0.6269 | 72,821 | 117.5 MiB |
+| rank-128 correction | 0.7980 | 0.1012 | 0.9163 | 0.6209 | 74,859 | 35.2 MiB |
+
+The registered gate asked for agreement at least 0.05 above the tap, coverage at least 0.05 above the tap with no more wasted reads, and at most 64 MiB; the rank-128 form passes all three (+0.0688, +0.0812), the full form fails only the memory bound. Every target layer gains, from +0.030 (T=9) to +0.241 (T=47). The factors are `tap-correction-attention-rank128-v1.safetensors` (37,540,708 bytes, SHA-256 `37b00d3a32d1e1889a1794bbb8e97905a157a77c0508db620c1a11f2a895f7f5`), the file 0.2.19 ships as a sidecar.
+
+**Native.** `RouterTapCorrection` loads a `slotstream-tap-correction-v1` safetensors file (FP16 factors a and b, FP32 mu and delta, I32 targets), checks schema, tap, dtypes, shapes, target window and finite values, and identifies it by the file's SHA-256. The `attention-corrected` tap shares the attention tap's mixed input and router product and adds ((mixed - mu) a) b + delta per target, the wide product in FP16 and the narrow one in FP32; its factors stay resident and join the lookahead reserve in whole MiB. A capture of the 13 validation requests recorded the plain and corrected taps side by side: over all 141,450 rows the native corrected top-10 set equals the offline one in 99.90% (bar 99%), native corrected agreement is 0.79799 (0.7980 within 0.005) and the plain tap 0.72918 (0.7292 within 0.002). The forecast tap check grew to cover parsing, refusals, the reserve, the formula against a hand reference and loading against in-memory factors.
+
+### Decode forecast taps, step 8: the corrected tap screens at 1.036 over the attention tap
+**Outcome: the corrected tap screens at 1.036 over the plain attention tap on the exploration prompts at 20 GB, 9 of the first 12 counted pairs above 1, every output identical, so the held-out confirmation runs.** Step 8 of [[records/plan/decode-forecast-taps-2026-09-14]]; run [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-screen-20gb]].
+
+A smoke of one 32-output request per arm at 10 GB first showed both arms starting with identical outputs and the corrected arm's identity naming the file (`correction=37b00d3a32d1e188`). The screen froze at 20 GB with 30.4 GB reclaimable: `attention` against `attention-corrected`, which differs only in the tap, the correction file and the reserve (128 to 164 MiB), on r0005, r0206, r0096 and r0074 at 256 outputs, interleaved, under the contention rule. Host swap-outs made three r0074 cells unclean, so the rule added a fourth round; 32 cells, 29 counted, 13 pairs.
+
+| round | r0005 | r0074 | r0096 | r0206 |
+| --- | ---: | ---: | ---: | ---: |
+| 0 | 1.047 | excluded | 1.043 | 1.017 |
+| 1 | 0.996 | excluded | 1.042 | 1.024 |
+| 2 | 0.963 | excluded | 1.086 | 1.290 |
+| 3 | 0.928 | 1.040 | 1.001 | 1.033 |
+
+The first 12 counted pairs in round order give 1.036 with 9 above 1 (bars 1.01 and 8); all 13 give 1.036 with 10 above 1. Median tok/s over counted cells: 14.17 for the attention tap, 14.30 with the correction. Median counters per counted cell, attention then corrected: records read in decode 13,760 and 12,370, reads issued 23,870 and 21,020, adopted 15,950 and 17,530, expired unused 5,650 and 2,420, wasted bytes 15.6 GB and 6.7 GB. The screen decides only whether the confirmation runs; its ratios are not claims.
+
+### Decode forecast taps, step 9: the learned correction passes its held-out confirmation at 1.031 over the attention tap
+**Outcome: on ten held-out prompts from corpus families no earlier run had used, the learned correction decodes at 1.031 over the plain attention tap (bootstrap 1.013 to 1.041), every kind at 1.025 or above, three counted pairs per prompt, every output identical: the confirmation passes every registered condition.** Step 9 of [[records/plan/decode-forecast-taps-2026-09-14]]; run [[sources/runs/2026/09/2026-09-15-forecast-taps-learned-confirmation-20gb]].
+
+**Prompts.** The B0 and B1 sets had informed decisions and the correction was trained on the pilot's training requests, so the prompts come from the 36 training-split families that no capture, fit, screen or cohort had used (code 16, reasoning 8, prose 6, dialogue 3, structured 3; no multilingual family remains): for each kind, its sorted family names shuffled with a fixed seed, the first two families, and from each the request with the smallest id: r0026, r0050 (code), r0304, r0292 (dialogue), r0186, r0195 (prose), r0156, r0128 (reasoning), r0268, r0271 (structured). A scan of 16,983 run files found requests from these families only in a copy of the corpus file itself.
+
+**Run.** Three rounds at 512 outputs with a 128-token warmup at 20 GB (30.6 GB reclaimable at launch), the attention tap first and arm order alternating, 05:18 to 06:41 on 2026-09-15. No arm had a host swap-out, no arm window held a compiler, linker or second engine, and the Sevra app peaked at 6.1% CPU, so all 30 pairs counted under both readings.
+
+| kind | tok/s ratio | duration ratio | prompt medians (counted pairs) |
+| --- | ---: | ---: | --- |
+| code | 1.027 | 0.988 | r0026 1.047 (3), r0050 1.008 (3) |
+| dialogue | 1.026 | 1.012 | r0304 1.023 (3), r0292 1.028 (3) |
+| prose | 1.025 | 0.991 | r0186 1.020 (3), r0195 1.029 (3) |
+| reasoning | 1.025 | 0.977 | r0156 1.017 (3), r0128 1.034 (3) |
+| structured | 1.055 | 0.971 | r0268 1.042 (3), r0271 1.068 (3) |
+
+| condition | required | result |
+| --- | --- | --- |
+| identical outputs | every pair | 30 of 30 |
+| aggregate ratio, equal kind weight | at least 1.02 | 1.0314 |
+| bootstrap 2.5th percentile | above 1.00 | 1.0132 (median 1.0312, 97.5th 1.0409) |
+| kind floor | at least 0.97 | 1.0245 (prose) |
+| kind duration ratio | at most 1.02 | 1.012 (dialogue) |
+| counted pairs per prompt | at least 2 | 3 for every prompt |
+
+29 of 30 pairs were above 1 (r0304 in round 2 at 0.910). Median decode throughput over the pairs was 14.64 tok/s with the attention tap and 15.14 with the correction. Paired medians, corrected over attention: records read in decode 0.907, decode seconds 0.972, reads issued 0.922, adopted 1.084, expired unused 0.525, wasted bytes 0.523, demand misses 0.903, forecast evaluation seconds 0.996. Over these pairs demand reads take about 30% of decode time; the correction cut records read in decode by 10% and demand-read time by about 7%, which is the 3.1%.
+
+**Standing.** This is the correction's own confirmation, against the attention tap and not against the shipped configuration; the direct measurement against the shipped configuration is [[records/measurements/decode-forecast-taps-readout-timing-confirmation-2026-09-15]]. Limits: one machine, one checkpoint, the 20 GB profile, no multilingual prompt, and a correction trained on the pilot's training requests.
+
+### Decode forecast taps, step 10: a lower issue threshold does not earn a confirmation
+**Outcome: with the correction on, a lower issue threshold does not earn a confirmation. At 0.031 the screen reads 1.015 on the first twelve counted pairs (10 above 1) and 1.013 over 16, below the registered 1.02 bar; at 0.0 it reads 0.994: every top-10 read issued arrives late and wastes 2.4 times the bytes. The threshold stays at 0.062.** Step 10 of [[records/plan/decode-forecast-taps-2026-09-14]]; run [[sources/runs/2026/09/2026-09-15-forecast-taps-threshold-screen-16gb]].
+
+**Why it was tried.** With the correction, issued reads are adopted at a median 0.83 against the attention tap's 0.70, and the twin's threshold curve for the corrected forecast gives coverage 0.543 at 0.062, 0.582 at 0.031 and 0.670 at 0.0 with no traffic bound, while decode serialization round 2 had found natively that extra speculative reads did not reduce demand reads for the boundary forecast ([[records/measurements/decode-path-serialization-round-2-2026-09-12]]).
+
+**Run.** Another session's virtual machine held 9 GB at launch, leaving 22.35 GB reclaimable, so the screen ran at 16 GB as a mechanism screen (an expert cache of 2,746 slots against 4,206 at 20 GB, hit rates about 0.57 against 0.70). Arms identical except the threshold: t062 (reference), t031 and t000, on r0005, r0206, r0096 and r0074 at 256 outputs under the contention rule, rounds until 12 counted pairs per candidate. The Sevra app took the model lock at 13:50 and the sweep stopped at its 35th cell; it resumed at 14:28 and ran a fourth round, ending 14:47. 48 cells, 47 counted (one host swap-out exclusion), every output identical.
+
+| candidate | counted pairs | first-12 ratio | above 1 of 12 | all-pairs ratio | above 1 | reading |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| t031 (0.031) | 16 | 1.015 | 10 | 1.013 | 13 | passes the screen reading, below the 1.02 confirmation bar |
+| t000 (0.0) | 15 | 0.994 | 6 | 0.992 | 6 | fails |
+
+Median counters per counted cell, t062 then t031 then t000: records read in decode 17,780, 15,960, 10,670; reads issued 32,270, 36,510, 44,080; expired unused 3,832, 5,356, 9,033; wasted bytes 10.6 GB, 14.9 GB, 25.1 GB; reads still in flight when demanded 4,610, 5,978, 10,702; join seconds 0.074, 0.107, 0.365. Issuing every candidate cuts demand reads by 40% and still slows decode: the extra reads arrive late (twice the in-flight reads at demand time, five times the join time). The middle threshold buys a small, consistent gain that shrank over the rounds (1.026 in round 0, 1.005 in round 3) and would likely be smaller at 20 GB, where demand reads are rarer. The lever closes at this result.
+
+### Decode forecast taps, steps 11 and 12: the attention readout is exact and reads 0.86, its correction 0.88
+**Outcome: running the target layer's own attention sublayer early, on the forecast's approximate input against the resident caches, is exact (self-check 0.9997) and lifts offline top-10 agreement to 0.8614, against 0.7980 for the corrected tap; a correction fitted on top reaches 0.8790, short of the registered 0.90 bar, so the readout lever stopped at the offline result until it was reopened for a timing run.** Steps 11 and 12 of [[records/plan/decode-forecast-taps-2026-09-14]]; runs [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-diagnostic]] and [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-learned-correction]].
+
+**Why.** The stride-1 boundary forecast, which knows the previous layer's routed experts exactly and misses only the target's attention, reads 0.7619, while the corrected tap reaches 0.7980 without knowing those experts; so most of the remaining error is the target's attention over the context, and that state is resident. A nonlinear probe of the tap's input was worse than the ridge at every layer tried (it overfits families), so the attention was computed rather than predicted.
+
+**Implementation.** `attention-readout` (tap 4), at layer T-1's routing readback, takes T's attention-side read of the streams holding T-1's attention output, runs T's attention sublayer on it against T's caches without writing them (recurrence state, convolution window and KV cache are read only), injects the output into the streams, then T's mixed read and router. `boundary-readout` (tap 5) is the same readout on T's exact input, an observer-only self-check. Two follow-up builds added an `after-demand` placement that submits the readout's GPU work asynchronously at the readback and consumes it after the source layer's demand reads, and `attention-readout-corrected` (tap 6); the correction file's header names the tap it was fitted on and a file fitted on the other tap is refused. All three builds passed both check tiers.
+
+**Diagnostic**, the 13 validation requests at 10 GB, 141,450 rows over targets 2 to 47:
+
+| forecast | top-10 agreement | exact top-10 | recall at 16 | recall at 24 |
+| --- | ---: | ---: | ---: | ---: |
+| boundary, stride 2 (shipped) | 0.6171 | 0.0223 | 0.7389 | 0.8125 |
+| attention tap | 0.7292 | 0.0530 | 0.8565 | 0.9162 |
+| corrected tap | 0.7980 | 0.1012 | 0.9163 | 0.9585 |
+| readout tap | 0.8614 | 0.2055 | 0.9656 | 0.9881 |
+| readout self-check | 0.9997 | 0.9970 | 1.0000 | 1.0000 |
+
+The self-check is 0.99998 over the eleven requests within the 2,048-token indexer budget and 0.9947 on r0178 (5,231 prompt tokens), where the forward attends sparsely and the readout densely. The readout gains on every request and every layer group. The twin projects timely coverage 0.687 at the shipped traffic against 0.620 for the corrected tap, before the readout's own GPU work, which the twin cannot price.
+
+**Correction on the readout.** A 3,360-second capture of the 69 requests with the readout tap and its inputs, then the same collect, fit and twin as the attention tap's correction: the rank-128 form lifts the readout from 0.8614 to 0.8790 (bar 0.90) and twin coverage from 0.688 to 0.716 (bar +0.03) with 9,266 fewer wasted reads. With the target's attention computed early the correction has less left to learn (+0.018 against +0.069 on the attention tap); the remaining 0.12 of agreement is the previous layer's routed experts, which no forecast can know before reading them. As registered the lever stopped here; the timing run that followed was a separate decision with its own registration ([[records/measurements/decode-forecast-taps-readout-timing-screen-2026-09-15]]).
+
+### Decode forecast taps, step 13: computing the next layer's attention early loses 5% to 26%
+**Outcome: negative. Over four rounds and 77 counted cells with identical outputs, no readout arm had a single pair above 1 against the corrected attention tap: 0.952 in the readback placement (with or without its correction), 0.737 and 0.742 in the after-demand placement, and 0.85 to 0.89 or 0.70 on the long observation prompts. The readout reads fewer records but its GPU work costs more than the reads it saves, and the after-demand placement synchronizes the GPU at every layer. The lever closes.** Section 1 of the readout timing registration, step 13 of [[records/plan/decode-forecast-taps-2026-09-14]]; run [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-timing-screen-20gb]].
+
+**Registration and run.** Written after the readout correction's offline gate failed and before any configuration existed, stating the smoke's prior (7.71 against 6.18 tok/s on one cell) and the twin's projections (1.290 and 1.307 against 1.249) so neither could be read post hoc. Five arms at 20 GB, identical to the learned confirmation's corrected arm except the tap, the placement, the correction file and the reserve: `corrected` (reference), `readout-readback`, `readout-after`, `readout-corrected-readback`, `readout-corrected-after`. r0005, r0206, r0096 and r0074 at 256 outputs, rounds until 12 counted pairs per arm; the observation cells r0178 (5,231 prompt tokens) and r0222 (about 7,000) after each sweep. Three cells were unclean for host swap-outs; no arm window held a compiler, linker or second engine.
+
+| arm | counted pairs | first 12 | above 1 | all pairs | median tok/s | r0178 | r0222 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| corrected (reference) | | | | | 14.56 | | |
+| readout-readback | 15 | 0.949 | 0 | 0.952 | 13.67 | 0.888 | 0.849 |
+| readout-corrected-readback | 15 | 0.952 | 0 | 0.952 | 13.48 | 0.886 | 0.846 |
+| readout-after | 16 | 0.738 | 0 | 0.737 | 10.71 | 0.712 | 0.699 |
+| readout-corrected-after | 15 | 0.745 | 0 | 0.742 | 10.36 | 0.702 | 0.706 |
+
+**Why.** The readout does what the offline audit said: 8% fewer records read in decode (13% with its correction), half the speculative reads expiring unused, half the wasted bytes. It loses because its GPU work is not free. In the readback placement the forecast evaluation grows by 0.56 to 0.70 s and the build by 0.19 to 0.22 s per 256-output cell, about 0.8 s on a 17.6 s decode, and the routing readback it rides returns later, so the source layer's own demand reads start later. Demand reads take about 30% of decode time at this profile, so an 8% cut in records is worth about 2.4% of decode, less than the readout costs; at long context the readout attends densely on the twelve full-attention layers past the indexer budget and the loss grows to 11% to 15%. The after-demand placement submits the readout with `asyncEval` and consumes it after the source layer's experts; consumption materializes the logits, which waits for every queued GPU operation, so each layer ends with a full synchronization that the deferred four-layer barrier exists to avoid (7.6 s in the selection and scheduling timers per cell against 0.14 s and 0.08 s). The engine keeps the readout taps as observer and opt-in tools; nothing recommends them.
+
+### Decode forecast taps, step 13: the corrected tap decodes 1.111 over the shipped configuration on held-out prompts
+**Outcome: the corrected attention tap decodes 11.1% faster than the configuration 0.2.16 to 0.2.18 ship, on eight held-out prompts from families no earlier run had used: aggregate 1.111 (bootstrap 1.102 to 1.123), all 23 counted pairs above 1, every kind at 1.079 or above, every kind's request duration shorter, outputs identical in 60 of 60 cells. Median decode throughput over counted cells rose from 13.10 to 14.83 tok/s. This is the measurement behind the 0.2.19 default.** Section 2 of the readout timing registration, step 13 of [[records/plan/decode-forecast-taps-2026-09-14]]; run [[sources/runs/2026/09/2026-09-15-forecast-taps-readout-timing-confirmation-20gb]].
+
+**Registration.** With no readout arm qualifying at the screen, the confirmation ran its registered default-evidence contrast: `corrected` (the learned confirmation's corrected arm: tap attention-corrected with the rank-128 file, reserve 164 MiB) against `qualified` (the B1 plan's combined arm, the shipped boundary forecast at stride 2), nothing else differing. Prompts by rule over the 26 training-split families no capture, fit, screen or cohort had used: r0058 and r0067 (code), r0289 (dialogue), r0189 and r0211 (prose), r0092 and r0132 (reasoning), r0265 (structured); dialogue and structured hold one prompt each, a stated limit. Reading: outputs identical in every cell; aggregate paired ratio (median of rounds per prompt, geometric mean per kind, equal kind weight) at least 1.02; bootstrap 2.5th percentile above 1.00; no kind below 0.97; no kind duration ratio above 1.02; at least two counted pairs per prompt; under the contention rule as written and the Sevra sensitivity.
+
+**Run.** A first launch stopped before any configuration on a launcher defect (the screen's "no candidate" passed as the word none) and its directory was set aside unused. The corrected launcher froze the protocol at 20 GB with 26.4 GB reclaimable (about 87 experts per layer, 4,193 slots) on the readout build. 48 cells at 512 outputs with 128 warmup tokens, arm order rotating every cell, 21:26 to 22:36 on 2026-09-15, then the observation cells r0178 and r0222 to 23:13. One cell was unclean for host swap-outs (r0289 round 2, corrected); no arm window held a compiler, linker or second engine.
+
+| kind | tok/s ratio | duration ratio | prompt medians (counted pairs) |
+| --- | ---: | ---: | --- |
+| code | 1.112 | 0.928 | r0058 1.115 (3), r0067 1.110 (3) |
+| dialogue | 1.079 | 0.937 | r0289 1.079 (2) |
+| prose | 1.096 | 0.956 | r0189 1.089 (3), r0211 1.104 (3) |
+| reasoning | 1.134 | 0.889 | r0092 1.137 (3), r0132 1.130 (3) |
+| structured | 1.136 | 0.903 | r0265 1.136 (3) |
+
+| condition | required | result |
+| --- | --- | --- |
+| identical outputs | every cell | 60 of 60 |
+| aggregate ratio, equal kind weight | at least 1.02 | 1.1114 |
+| bootstrap 2.5th percentile | above 1.00 | 1.1017 (median 1.1127, 97.5th 1.1232) |
+| kind floor | at least 0.97 | 1.079 (dialogue) |
+| kind duration ratio | at most 1.02 | 0.956 (prose) |
+| counted pairs per prompt | at least 2 | 2 for r0289, 3 for the rest |
+
+All 23 pairs were above 1, from 1.048 to 1.169, identically under the Sevra sensitivity. Paired medians, corrected over qualified: records read in decode 0.794, decode seconds 0.897, request seconds 0.918, prefill seconds 0.998, reads issued 0.796, adopted 1.283, expired unused 0.275, wasted bytes 0.274, demand misses 0.838, forecast evaluation seconds 0.523. Observation cells, outside the reading: r0178 ran 1.067, 0.994 and 1.088 over the three rounds and r0222 1.073 and 1.068 in rounds 0 and 1; the round-2 corrected cell on r0222 did not complete because the engine's memory-pressure guard stopped its prefill commit while the host swapped pages in, the guard doing its job under a host event, recorded and excluded.
+
+**Standing.** This is the direct measurement the default decision needed, consistent with and replacing the product of the two earlier links (1.058 for the tap on B1, 1.031 for the correction over the tap). It became the default in 0.2.19 ([[records/decisions/corrected-decode-forecast-default-with-the-sidecar]]); the shipping build's own default-path benchmark is recorded separately. Limits: one machine, one checkpoint, the 20 GB profile, no multilingual prompt, one dialogue and one structured family, observation prompts of at most about 7,000 tokens, a correction trained on the pilot's training requests.
+
+### Corrected forecast default: checks, plans by target, the sidecar and a default-path smoke
+**Outcome: the 0.2.19 default is implemented, checked and smoked on the shipping build. The engine locates the checkpoint's correction file next to the weights, runs the corrected attention forecast and charges 409 MiB; without the file, or with `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary`, it runs the 0.2.16 forecast at 373 MiB. `pull` fetches the file from the public mirror and verifies it, and one 32-output request per arm at 22 GB produced identical outputs with the expected identities and charges.** The decision is [[records/decisions/corrected-decode-forecast-default-with-the-sidecar]]; run [[sources/runs/2026/09/2026-09-16-corrected-forecast-default-checks-sidecar-smoke]]. This record prices where the default engages and shows the wiring works; the throughput number is [[records/measurements/corrected-forecast-release-benchmark-2026-09-16]].
+
+**What changed.** `RouterTapCorrection.shipped` locates `lookahead/tap-correction-attention-rank128-v1.safetensors` in the model directory and qualifies it only when its header serves the corrected attention tap and its whole-file SHA-256 equals the measured `37b00d3a32d1e1889a1794bbb8e97905a157a77c0508db620c1a11f2a895f7f5`; `ExpertPrefetchConfiguration.qualifiedDecode(correction:)` is the qualified default with the corrected tap, the file and a reserve of 128 MiB plus the file in whole MiB, and the previous default when nothing is located. The planner carries a matching `automaticCorrected(bytes:)` case: `DecodeLookahead.reserveBytes(correctionBytes:)` charges 373 MiB plus the file rounded up to 36 MiB, 409 MiB, before the expert pool is sized, and the engine's guard that the plan's reserve covers the configuration's holds. `TapCorrectionSidecar` pins the file's size, digest and mirror commit (`8c1f9c34e4567e83d46cebe1af432e8eba4f3ea8`); `pull` fetches it after the weights when it is absent or wrong, writes it atomically, and reports and continues on any failure, and `pull --verify` reports its status. The startup banner names the forecast in use and the reason.
+
+**Checks.** The shipping tree (git tree `511d6c6a0592d9518aa54b8f859bcc8968a46336` for the sources, built in an isolated export so no other session's uncommitted hunks were in it) passes 55 of 55 T0 and T1 checks with 30,400 assertions, including `expert-lookahead-forecast-tap` (65 assertions: the taps, the readout refusals, the correction file's location, a wrong digest, a readout-fitted file at the path, the resulting configuration and the boundary override) and `decode-lookahead-defaults` (39 assertions, with the 409 MiB charge at a 22 GB plan and the `automaticCorrected` ledger). The binary is `157eb4ab0366c6a7b54f9ffd47edd416d10017abf9ccc9a911614c2ec0266b42` and reports 0.2.19.
+
+**Where the default engages**, `doctor --mtp on` under the benchmark environment (prefix cache off, draft depth 2) on the development Mac:
+
+| target | experts per layer | lookahead | charge |
+| ---: | ---: | --- | ---: |
+| 10 GB | ~17 | off (below the head's floor) | |
+| 20 GB | ~74 | off (below the head's floor) | |
+| 22 GB | ~100 | on, corrected forecast | 409 MiB |
+| 22 GB with `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary` | ~101 | on, 0.2.16 forecast | 373 MiB |
+
+So the default engages where the 0.2.16 lookahead did, from the head's 76-per-layer floor ([[records/measurements/decode-lookahead-default-2026-09-13]]), 32 GB Macs and up at the default context; the file costs about three experts per layer of cache.
+
+**Sidecar, end to end.** The public mirror serves the file at the pinned commit with `x-linked-size` 37,540,708 and an ETag equal to the digest; a plain download hashed to the digest. With the shipping binary, `pull --verify` on the installed model passed all 25 files in 8.1 s and reported the sidecar present. With the file moved aside, `pull` verified the weights, fetched the 37,540,708 bytes from the mirror, verified the digest and wrote the file in 43.5 s; `pull --verify` then reported it present again.
+
+**Smoke.** A first smoke at 10 GB ran both arms to completion with identical outputs and no lookahead in either, because at that target the cache is below the head's floor; it is kept as `xla3-ship-smoke-10gb-no-lookahead` and is why the release benchmark's profile was amended to 22 GB before any timed cell. At 22 GB, one 32-output request (r0005, 16 warmup tokens) per arm: `previous` (the boundary override) ran with identity `router-reuse:strides=2`, the banner `373 MiB, charged above` and `boundary forecast selected by SLOTSTREAM_EXPERT_PREFETCH_TAP`; `default` (nothing set) with identity `router-reuse:tap=attention-corrected:correction=37b00d3a32d1e188`, the banner `409 MiB, charged above` and `corrected attention forecast: measured correction 37b00d3a32d1e188 at lookahead/tap-correction-attention-rank128-v1.safetensors`. Both exited 0 with the same 32 output tokens; no model process remained. One 32-token cell per arm is not a comparison.
+
+**Limits.** Weights-free checks and planner arithmetic for the charge; the smoke is functional only. The default's throughput on the shipping build is the release benchmark's, at 22 GB; the 20 GB confirmation used environment-configured arms.
+
+### Corrected forecast release benchmark: the shipping build's default against the 0.2.18 forecast at 22 GB
+**Outcome: the shipping build's default decodes 1.10x faster than the 0.2.18 forecast on eight held-out prompts at a 22 GB target: aggregate 1.108 (bootstrap 1.092 to 1.147), 24 of 24 counted pairs above 1, every kind at 1.079 or above, outputs identical in every cell, median decode throughput 14.38 to 15.86 tok/s. The registered gate passes under the rule as written and the Sevra sensitivity.** Registered in `release-benchmark-preregistration.md` (sha256 `aeb81d63787595c365c2555de161ec9579216902f40de015afac46fc192dd657`) before any timed run of the shipping build, with a profile amendment from 20 to 22 GB written after the 10 GB smoke and before any timed cell; run [[sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb]]. This is the number the README states for 0.2.19; the decision is [[records/decisions/corrected-decode-forecast-default-with-the-sidecar]].
+
+**Arms.** Both on the shipping binary (`157eb4ab0366c6a7b54f9ffd47edd416d10017abf9ccc9a911614c2ec0266b42`, sources at git tree `511d6c6a0592d9518aa54b8f859bcc8968a46336`) with the protocol's pinned environment and nothing else: `default`, no prefetch variable, which located `lookahead/tap-correction-attention-rank128-v1.safetensors` next to the weights and ran the corrected attention forecast with 409 MiB charged (identity `router-reuse:tap=attention-corrected:correction=37b00d3a32d1e188`); `previous`, `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary`, the 0.2.18 forecast with 373 MiB charged (identity `router-reuse:strides=2`). The 22 GB target, a 32 GB Mac's automatic target, is the smallest whole-GB target at which the automatic plan runs the lookahead under the benchmark environment (prefix cache off, two drafts): at 20 GB the cache holds about 74 experts per layer, below the head's 76-per-layer floor, so the original 20 GB registration could not exercise the default path ([[records/measurements/corrected-forecast-default-2026-09-16]]).
+
+**Run.** The eight prompts the readout timing registration drew by rule (r0058, r0067, r0289, r0189, r0211, r0092, r0132, r0265), 3 rounds at 512 outputs with a 128-token warmup, arm order rotating every cell, protocol `xla3-release-bench-22gb` frozen at 22 GB with 32.5 GB reclaimable, process-pageins-v1 and the contention rule. Excluded cells: none. Observation cells r0178 and r0222 belong to a separate sweep outside the reading; they did not run: after the sweep ended at 09:39:43, reclaimable memory stayed near 22.6 GB, below the launcher's 27.5 GB bar, until the wait was stopped at 12:27 with no model process; they are outside the reading and remain to be run as a separate observation when memory allows.
+
+| kind | tok/s ratio | duration ratio | prompt medians (counted pairs) |
+| --- | ---: | ---: | --- |
+| code | 1.105 | 0.925 | r0058 1.098 (3), r0067 1.113 (3) |
+| dialogue | 1.079 | 0.933 | r0289 1.079 (3) |
+| prose | 1.096 | 0.948 | r0189 1.098 (3), r0211 1.095 (3) |
+| reasoning | 1.133 | 0.893 | r0092 1.128 (3), r0132 1.137 (3) |
+| structured | 1.126 | 0.915 | r0265 1.126 (3) |
+
+| condition | required | result |
+| --- | --- | --- |
+| identical outputs | every cell | yes |
+| aggregate ratio, equal kind weight | at least 1.02 | 1.1077 |
+| bootstrap 2.5th percentile | above 1.00 | 1.0919 (median 1.1137, 97.5th 1.1469) |
+| kind floor | at least 0.97 | 1.079 |
+| kind duration ratio | at most 1.02 | 0.948 |
+| counted pairs per prompt | at least 2 | r0058 3, r0067 3, r0092 3, r0132 3, r0189 3, r0211 3, r0265 3, r0289 3 |
+
+Counted pairs ranged from 1.040 to 1.297; the Sevra sensitivity reading gives aggregate 1.1077 over 24 pairs. Paired medians, default over previous: decode_read_bytes 0.805, decode_records 0.805, decode_seconds 0.903, hit_rate 0.999, prefetch.adopted 1.262, prefetch.demandMisses 0.851, prefetch.expired 0.262, prefetch.forecastBuildSeconds 1.353, prefetch.forecastEvalSeconds 0.534, prefetch.forecastSelectSeconds 1.740, prefetch.issued 0.765, prefetch.joinSeconds 0.916, prefetch.promoted 1.135, prefetch.wastedBytes 0.257, prefill_seconds 1.006, request_seconds 0.930.
+
+**Standing.** The public number for 0.2.19 rounds the aggregate down to 1.10x, reported with the medians 14.38 and 15.86 tok/s. The 20 GB confirmation with environment-configured arms on the readout build ([[records/measurements/decode-forecast-taps-readout-timing-confirmation-2026-09-15]]) read 1.111 and 13.10 to 14.83 tok/s; it is reported apart and is not comparable cache for cache. Limits: one 48 GB M5 Pro, one checkpoint, the 22 GB profile with two drafts, no multilingual prompt, one dialogue and one structured family, prompts used once before for the same contrast, and the shared machine's ordinary applications open (the contention rule excluded cells with a compiler, linker or second engine in their window).

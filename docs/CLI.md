@@ -108,6 +108,13 @@ overlap the transfer. Historical raw-path testing measured 112 MB/s on a
 1 Gbit/s link; that is not a guarantee for another connection. Ctrl-C safely
 preserves verified chunks. See [the download guide](DOWNLOAD-FORMAT.md).
 
+Since 0.2.19, `pull` also fetches one optional file outside the compressed
+package: the 37.5 MB decode forecast correction
+`lookahead/tap-correction-attention-rank128-v1.safetensors`, verified by size and
+SHA-256 against the pinned mirror commit. `--verify` reports it, an installed
+model gets it by running `slotstream pull` again, and a model directory without
+it runs the 0.2.16 forecast.
+
 Weights placed elsewhere are used by passing that directory to `--model`, or
 by symlinking it into the default location. Symlinked directories work from
 0.2.1 onward.
@@ -255,9 +262,10 @@ See
 | `SLOTSTREAM_SWEEP_ADMIT` | engine | `0` stops the last pass of a prompt from admitting the prompt's hottest experts into the pool, so decode starts cold. A/B work only. |
 | `SLOTSTREAM_SWEEP_TRACE` | engine | `1` prints, after each prefill, where the sweep's time went: reads, waiting for the GPU, sorting rows, copies out of the pool, and MLX's peak and cache. |
 | `SLOTSTREAM_PREFILL_CACHE_MB` | engine | MLX buffer-cache cap while a prompt is read. The plan sets 512 at targets of 12 GB and under (the sweep's varying array sizes otherwise fill the 2 GB cache, 1.7 GB of peak at the floor) and no cap above, where it costs ~6% of prefill; this forces a value at any target. |
-| `SLOTSTREAM_OPT_EXPERT_PREFETCH` | engine | `0` turns off the decode lookahead and its 373 MiB charge. `1` selects an experimental prefetch configuration from the `SLOTSTREAM_EXPERT_PREFETCH_*` tuning variables instead; for comparisons only. |
+| `SLOTSTREAM_OPT_EXPERT_PREFETCH` | engine | `0` turns off the decode lookahead and its 373 MiB charge (409 MiB with the checkpoint's forecast correction file). `1` selects an experimental prefetch configuration from the `SLOTSTREAM_EXPERT_PREFETCH_*` tuning variables instead; for comparisons only. |
 | `SLOTSTREAM_OPT_ROUTER_WEIGHTS` | engine | `0` or `1` overrides the FP32 router weight cache that the decode lookahead turns on. |
 | `SLOTSTREAM_DECODE_BARRIER_LAYERS` | engine | Layers between GPU drains, 1…48. The decode lookahead uses 4; `1` drains after every layer. A pass that could not keep that many layers of experts pinned drains after every layer anyway. |
+| `SLOTSTREAM_EXPERT_PREFETCH_TAP` | engine | `boundary` keeps the 0.2.16 forecast (the layer-boundary router forecast at stride 2) when the correction file is present, charging 373 MiB instead of 409; the configuration 0.2.19 was benchmarked against. Other values belong to the experimental configuration and are for comparisons only. |
 | `SLOTSTREAM_ROOT_DIR` | installer | Install somewhere other than `~/.slotstream`. |
 | `SLOTSTREAM_RELEASE_BASE` | installer | Fetch the release from another base URL (CI uses it to test unpublished builds). |
 
@@ -325,16 +333,26 @@ See [Testing](TESTING.md) for the full suites.
 
 From 0.2.16 the decode lookahead runs by default with the draft head when
 the cache reaches the same 76-per-layer floor before the lookahead's own
-reservation. The final printed cache can therefore be smaller. After each layer, the
-engine runs the router of the layer two ahead on the current hidden state and
-reads the experts it picks from the SSD straight into cache slots, before that
-layer asks for them. It also keeps FP32 copies of the router weights and drains
-the GPU every four layers instead of every layer. Output is unchanged.
+reservation. The final printed cache can therefore be smaller. As each layer's
+routing comes back, the engine reads the model's state after the previous layer's
+attention step, applies the next layer's router to it, corrects the result with a
+small learned table shipped for the checkpoint
+(`lookahead/tap-correction-attention-rank128-v1.safetensors`, 37.5 MB, which
+`pull` fetches next to the weights), and reads the experts it picks from the SSD
+straight into cache slots before that layer asks for them. It also keeps FP32
+copies of the router weights and drains the GPU every four layers instead of
+every layer. Output is unchanged.
 
-The memory plan charges 373 MiB for it before sizing the expert cache, and
-`doctor` prints `lookahead: on`. On twelve held-out prompts at a 20 GB target
-with two drafts, decode was 1.11x faster than without it. A head forced onto a
-smaller cache runs without it. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns it off,
-and the two variables above override its router cache and drain period. The
+The memory plan charges 373 MiB for it before sizing the expert cache, 409 MiB
+when the correction file is present, and `doctor` prints `lookahead: on` with the
+charge. On twelve held-out prompts at a 20 GB target with two drafts, the 0.2.16
+lookahead decoded 1.11x faster than without it; the corrected forecast of 0.2.19
+decoded 1.10x faster than the 0.2.18 forecast on eight held-out prompts at a 22 GB target,
+14.38 to 15.86 tok/s (see the [expert lookahead guide](EXPERT-LOOKAHEAD.md)). A head
+forced onto a smaller cache runs without it. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0`
+turns it off, `SLOTSTREAM_EXPERT_PREFETCH_TAP=boundary` keeps the 0.2.16 forecast
+with the file present, and the two variables above override its router cache and
+drain period. The
 [decision](../db/records/decisions/decode-lookahead-default-with-the-draft-head.md)
-records the evidence and limits.
+and the [corrected forecast decision](../db/records/decisions/corrected-decode-forecast-default-with-the-sidecar.md)
+record the evidence and limits.
