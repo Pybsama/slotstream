@@ -156,6 +156,35 @@ extension Diagnostics {
             TapCorrectionSidecar.status(modelDir: home) == .present, false)
         c.equal("and an empty directory as absent",
             TapCorrectionSidecar.status(modelDir: FileManager.default.temporaryDirectory), .absent)
+        // The sidecar's pull path without the network: a mismatch or absence is
+        // reported, and a cancelled pull stops before any request and never fails
+        // the caller. The present and fetched paths need the pinned file itself;
+        // `slotstream pull` and `pull --verify` exercise them on a real install.
+        var sidecarLog: [String] = []
+        let cancelled = PullCancellation()
+        cancelled.cancel()
+        c.equal("the sidecar url is the pinned mirror commit and path",
+            TapCorrectionSidecar.url(TapCorrectionSidecar.attention).absoluteString,
+            "https://huggingface.co/carloslfu/Qwen3.8-Flash-Next-MLX-4bit-Slotpack/resolve/8c1f9c34e4567e83d46cebe1af432e8eba4f3ea8/"
+                + RouterTapCorrection.shippedRelativePath)
+        c.expect("the pin names the measured file",
+            TapCorrectionSidecar.files.count == 1 && TapCorrectionSidecar.attention.path == RouterTapCorrection.shippedRelativePath
+                && TapCorrectionSidecar.attention.size == 37_540_708
+                && TapCorrectionSidecar.attention.sha256 == "37b00d3a32d1e1889a1794bbb8e97905a157a77c0508db620c1a11f2a895f7f5")
+        c.expect("the shipped pin sees the copied file as a size mismatch",
+            { if case .mismatched(let why) = TapCorrectionSidecar.status(modelDir: home) { return why.hasPrefix("size") }
+              return false }())
+        let copied = try Data(contentsOf: shipped)
+        let mismatchedEnsure = TapCorrectionSidecar.ensure(modelDir: home, cancellation: cancelled, log: { sidecarLog.append($0) })
+        let afterMismatch = try Data(contentsOf: shipped)
+        c.expect("a mismatched file with a cancelled pull is reported, not fetched, and left in place",
+            !mismatchedEnsure && sidecarLog.last?.contains("not fetched") == true && afterMismatch == copied)
+        let noSidecar = FileManager.default.temporaryDirectory.appendingPathComponent("slotstream-no-sidecar-\(getpid())")
+        c.expect("an absent file with a cancelled pull is reported, not fetched, and nothing is created",
+            !TapCorrectionSidecar.ensure(modelDir: noSidecar, cancellation: cancelled, log: { sidecarLog.append($0) })
+                && sidecarLog.last?.contains("not fetched") == true && !FileManager.default.fileExists(atPath: noSidecar.path))
+        c.expect("the log names the file at every step",
+            sidecarLog.count == 4 && sidecarLog.allSatisfy { $0.hasPrefix(RouterTapCorrection.shippedRelativePath + ": ") })
         try FileManager.default.removeItem(at: shipped)
         try FileManager.default.copyItem(at: readoutFile, to: shipped)
         c.expect("a readout-fitted file at the shipped path does not select the default",
