@@ -9,7 +9,7 @@ updated: 2026-09-16T21:18:52.009560Z
 
 - [[records/analyses/index|Analyses]] (3)
 - [[records/claims/index|Claims]] (99) — every number on a public surface, with the measurement that supports it and the gate that guards it
-- [[records/decisions/index|Decisions]] (32) — what was decided, on which evidence, and what would reverse it
+- [[records/decisions/index|Decisions]] (33) — what was decided, on which evidence, and what would reverse it
 - [[records/design/index|Design]] (31) — PLAN.md's design sections: goal, ground truth, byte math, architecture, correctness strategy, references
 - [[records/machines/index|Machines]] (6) — the machines measurements ran on
 - [[records/measurements/index|Measurements]] (138) — every MEASUREMENTS.md section as a record: what was measured, how, on which machine, and whether it still stands

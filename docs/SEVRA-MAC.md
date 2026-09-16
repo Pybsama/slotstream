@@ -15,6 +15,9 @@ Mac uses SwiftUI and AppKit/TextKit over a Swift application runtime. That
 runtime calls Slotstream in process and uses the official bundled dbmd tool
 for deterministic file-database operations. Metal and dbmd keep their own
 implementations. The native interface needs no web server or account.
+Slotstream itself is native Swift on MLX and Metal end to end
+([native stack](ENGINEERING.md#native-stack)), which is what makes the
+in-process call possible.
 
 The [engineering specification](../db/records/design/sevra-spec/overview.md)
 owns the detailed contracts. Its

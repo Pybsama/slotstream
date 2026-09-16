@@ -16,7 +16,9 @@ Relative links below point at the same sections, which are all in this file.
 Slotstream runs Qwen3.8-Flash-Next on your Mac by keeping most of the model
 on SSD and loading the parts it needs into memory. It is built for Macs with
 16 to 64 GB of memory, where the model cannot fit. After a one-time download,
-the model works offline. No Python or cloud API account is required.
+the model works offline. No Python or cloud API account is required. The
+whole engine is native Swift on Apple's MLX and Metal, built around this one
+model and tuned as one system; see [Built native](#built-native).
 
 Use it to chat, ask about pictures, or work with files through an agent such
 as Hermes or Codex. Developers can connect their own apps through its APIs or Swift library.
@@ -273,6 +275,34 @@ other apps need room. Cache size changes speed without removing experts
 from the model. The [engineering explanation](docs/ENGINEERING.md#how-it-works)
 covers the implementation.
 
+<a id="built-native"></a>
+
+## Built native
+
+Slotstream is one native Mac program. The command-line tool, the HTTP
+server, the memory planner, the expert cache and the model itself are Swift,
+running on Apple's MLX framework and its Metal kernels. There is no Python
+runtime or interpreter anywhere on the path from a request to the GPU. Where
+a step needed its own kernel, such as the gated-delta recurrence, the
+selected attention and the expert routing, Slotstream compiles its own Metal
+code at run time.
+
+That is deliberate. The engine is built around one model on one kind of
+hardware, so each layer is tuned for the layer below it. Expert records are
+read from the SSD into the cache slots the GPU computes from, the memory plan
+is checked against what the process really uses, and a governor resizes the
+cache while other apps need room. The same choice is why the whole engine
+ships as one file that installs with one command, and why a Mac app can run
+it in process instead of talking to a local server. That is how the Sevra
+Mac app, now in development, uses it.
+
+The speed on this page comes from what that control allows: predicting the
+experts the next layers will need, reading fewer records from the SSD and
+overlapping those reads with GPU work. Every published number has a recorded
+method in the [measurements](MEASUREMENTS.md). The trade is that the engine
+runs only on Apple Silicon. Windows and Linux are planned in Sevra with their
+own native engines.
+
 <a id="context"></a>
 
 ## Status and limits
@@ -347,6 +377,16 @@ the model fits in memory, and engines that keep it resident report faster
 replies; Slotstream is not optimized for that case. See
 [Who it's for](#who-its-for) and
 [related projects](docs/ENGINEERING.md#related-projects).
+
+### Why is it written in Swift and not Python?
+
+The engine needs direct control of memory, disk reads and the GPU, and it
+has to ship as one file that a Mac app can call in process. Swift on MLX and
+Metal gives all of that; a Python runtime would put an interpreter and a
+separate process in the way. The Python in the repository is tooling: the
+reference model the Swift port is checked against, the benchmark drivers and
+the release checks. None of it runs when you use Slotstream. See
+[Built native](#built-native).
 
 ### Will this wear out my SSD?
 
@@ -615,6 +655,46 @@ That design targets Macs that cannot hold the model, 16 to 64 GB. On 96 GB
 and larger Macs the model fits in memory, and the streaming machinery is
 overhead that an engine keeping the model resident does not pay; see
 [related projects](#related-projects) and [who it's for](../README.md#who-its-for).
+
+<a id="native-stack"></a>
+
+## Native stack
+
+Slotstream is Swift from the command line down to the GPU. No interpreter
+runs on the request path.
+
+| Layer | Implementation |
+|---|---|
+| Command-line tool, HTTP server, the OpenAI-, Ollama- and Responses-compatible endpoints and the fx gateway | Swift: `Sources/slotstream-cli`, `Sources/Slotstream/Server.swift` and the dialect files beside it |
+| Memory planner, expert store and slot cache, governor, sampler, speculative decode, prefix cache | Swift: `Sources/Slotstream` |
+| Tensor operations | [mlx-swift](https://github.com/ml-explore/mlx-swift), Apple's MLX, with its prebuilt `mlx.metallib` beside the binary |
+| Gated-delta recurrence, selected attention, partial rotation, block and router selection | Slotstream's own Metal kernels, compiled at run time through `MLXFast.metalKernel` |
+| Tokenizer | [swift-transformers](https://github.com/huggingface/swift-transformers) |
+| Slotpack download decoder | C, `Sources/CSlotpack`, with no external codec |
+| Expert and n-gram reads | `pread` into a fixed slot pool over parallel lanes, with lane counts chosen by measurement |
+
+The Python under `Tools/` never runs in the product. It is the reference
+implementation the Swift port is checked against layer by layer, the numpy
+sampler oracle, the trace simulators and benchmark drivers, the model-free
+gates and the release checks. The [testing guide](TESTING.md) lists them.
+
+The stack is native on purpose. The engine exists for one model on one kind
+of hardware, and each layer is tuned for the layer below it: expert records
+are read from the SSD into the slots the GPU computes from, process memory is
+accounted from real CPU and GPU allocations, and the governor resizes the
+cache under memory pressure. The same design ships as one binary, installs
+with one command and can be called in process from a Mac app; the
+[Swift library](LIBRARY.md) and the [Sevra Mac notes](SEVRA-MAC.md) describe
+that use.
+
+What the native stack does not claim: the measured gains on this page come
+from the mechanisms named with them, the decode lookahead, the corrected
+expert forecast, speculative decoding and the prefix cache. Warm decode is
+dominated by SSD reads and GPU waits, so the work goes to fewer reads and
+more overlap rather than host-side micro-optimization
+([decision](../db/records/decisions/decode-host-time-is-waiting-not-graph-construction.md)).
+The engine runs only on Apple Silicon, and there is no completed same-Mac
+comparison with other engines; see [related projects](#related-projects).
 
 ## Speed
 
@@ -888,6 +968,9 @@ Mac uses SwiftUI and AppKit/TextKit over a Swift application runtime. That
 runtime calls Slotstream in process and uses the official bundled dbmd tool
 for deterministic file-database operations. Metal and dbmd keep their own
 implementations. The native interface needs no web server or account.
+Slotstream itself is native Swift on MLX and Metal end to end
+([native stack](ENGINEERING.md#native-stack)), which is what makes the
+in-process call possible.
 
 The [engineering specification](../db/records/design/sevra-spec/overview.md)
 owns the detailed contracts. Its
@@ -2363,7 +2446,10 @@ an explicit still-unavailable error.
 # Using slotstream from Swift
 
 Use the `Slotstream` Swift package to plan memory, download weights, run the
-model, or start its HTTP server from your own Mac app or tool.
+model, or start its HTTP server from your own Mac app or tool. It is the same
+native engine the command-line tool uses, Swift on MLX and Metal end to end,
+so your app runs the model in process with no local server or Python runtime
+in between; see the [native stack](ENGINEERING.md#native-stack).
 
 Add the package and product to `Package.swift`:
 
@@ -4280,6 +4366,13 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Say that Slotstream is native end to end. The README's new Built native
+  section, the engineering notes' native-stack table, the Swift library
+  guide, the Sevra Mac notes and `llms.txt` now describe the Swift, MLX and
+  Metal stack, the run-time-compiled Metal kernels, the C download decoder
+  and the role of the Python tooling, and keep speed attributed to the
+  measured mechanisms. No number changed. Decision:
+  `db/records/decisions/native-stack-stated-on-every-surface.md`.
 - Serve the OpenAI Responses API at `POST /v1/responses`, the protocol Codex
   requires since it dropped Chat Completions. Function tools, Codex's
   `namespace` bundles (flattened to `namespace.name` and split again on the

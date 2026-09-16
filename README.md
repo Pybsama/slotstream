@@ -8,7 +8,9 @@
 Slotstream runs Qwen3.8-Flash-Next on your Mac by keeping most of the model
 on SSD and loading the parts it needs into memory. It is built for Macs with
 16 to 64 GB of memory, where the model cannot fit. After a one-time download,
-the model works offline. No Python or cloud API account is required.
+the model works offline. No Python or cloud API account is required. The
+whole engine is native Swift on Apple's MLX and Metal, built around this one
+model and tuned as one system; see [Built native](#built-native).
 
 Use it to chat, ask about pictures, or work with files through an agent such
 as Hermes or Codex. Developers can connect their own apps through its APIs or Swift library.
@@ -265,6 +267,34 @@ other apps need room. Cache size changes speed without removing experts
 from the model. The [engineering explanation](docs/ENGINEERING.md#how-it-works)
 covers the implementation.
 
+<a id="built-native"></a>
+
+## Built native
+
+Slotstream is one native Mac program. The command-line tool, the HTTP
+server, the memory planner, the expert cache and the model itself are Swift,
+running on Apple's MLX framework and its Metal kernels. There is no Python
+runtime or interpreter anywhere on the path from a request to the GPU. Where
+a step needed its own kernel, such as the gated-delta recurrence, the
+selected attention and the expert routing, Slotstream compiles its own Metal
+code at run time.
+
+That is deliberate. The engine is built around one model on one kind of
+hardware, so each layer is tuned for the layer below it. Expert records are
+read from the SSD into the cache slots the GPU computes from, the memory plan
+is checked against what the process really uses, and a governor resizes the
+cache while other apps need room. The same choice is why the whole engine
+ships as one file that installs with one command, and why a Mac app can run
+it in process instead of talking to a local server. That is how the Sevra
+Mac app, now in development, uses it.
+
+The speed on this page comes from what that control allows: predicting the
+experts the next layers will need, reading fewer records from the SSD and
+overlapping those reads with GPU work. Every published number has a recorded
+method in the [measurements](MEASUREMENTS.md). The trade is that the engine
+runs only on Apple Silicon. Windows and Linux are planned in Sevra with their
+own native engines.
+
 <a id="context"></a>
 
 ## Status and limits
@@ -339,6 +369,16 @@ the model fits in memory, and engines that keep it resident report faster
 replies; Slotstream is not optimized for that case. See
 [Who it's for](#who-its-for) and
 [related projects](docs/ENGINEERING.md#related-projects).
+
+### Why is it written in Swift and not Python?
+
+The engine needs direct control of memory, disk reads and the GPU, and it
+has to ship as one file that a Mac app can call in process. Swift on MLX and
+Metal gives all of that; a Python runtime would put an interpreter and a
+separate process in the way. The Python in the repository is tooling: the
+reference model the Swift port is checked against, the benchmark drivers and
+the release checks. None of it runs when you use Slotstream. See
+[Built native](#built-native).
 
 ### Will this wear out my SSD?
 

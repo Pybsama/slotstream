@@ -44,6 +44,46 @@ and larger Macs the model fits in memory, and the streaming machinery is
 overhead that an engine keeping the model resident does not pay; see
 [related projects](#related-projects) and [who it's for](../README.md#who-its-for).
 
+<a id="native-stack"></a>
+
+## Native stack
+
+Slotstream is Swift from the command line down to the GPU. No interpreter
+runs on the request path.
+
+| Layer | Implementation |
+|---|---|
+| Command-line tool, HTTP server, the OpenAI-, Ollama- and Responses-compatible endpoints and the fx gateway | Swift: `Sources/slotstream-cli`, `Sources/Slotstream/Server.swift` and the dialect files beside it |
+| Memory planner, expert store and slot cache, governor, sampler, speculative decode, prefix cache | Swift: `Sources/Slotstream` |
+| Tensor operations | [mlx-swift](https://github.com/ml-explore/mlx-swift), Apple's MLX, with its prebuilt `mlx.metallib` beside the binary |
+| Gated-delta recurrence, selected attention, partial rotation, block and router selection | Slotstream's own Metal kernels, compiled at run time through `MLXFast.metalKernel` |
+| Tokenizer | [swift-transformers](https://github.com/huggingface/swift-transformers) |
+| Slotpack download decoder | C, `Sources/CSlotpack`, with no external codec |
+| Expert and n-gram reads | `pread` into a fixed slot pool over parallel lanes, with lane counts chosen by measurement |
+
+The Python under `Tools/` never runs in the product. It is the reference
+implementation the Swift port is checked against layer by layer, the numpy
+sampler oracle, the trace simulators and benchmark drivers, the model-free
+gates and the release checks. The [testing guide](TESTING.md) lists them.
+
+The stack is native on purpose. The engine exists for one model on one kind
+of hardware, and each layer is tuned for the layer below it: expert records
+are read from the SSD into the slots the GPU computes from, process memory is
+accounted from real CPU and GPU allocations, and the governor resizes the
+cache under memory pressure. The same design ships as one binary, installs
+with one command and can be called in process from a Mac app; the
+[Swift library](LIBRARY.md) and the [Sevra Mac notes](SEVRA-MAC.md) describe
+that use.
+
+What the native stack does not claim: the measured gains on this page come
+from the mechanisms named with them, the decode lookahead, the corrected
+expert forecast, speculative decoding and the prefix cache. Warm decode is
+dominated by SSD reads and GPU waits, so the work goes to fewer reads and
+more overlap rather than host-side micro-optimization
+([decision](../db/records/decisions/decode-host-time-is-waiting-not-graph-construction.md)).
+The engine runs only on Apple Silicon, and there is no completed same-Mac
+comparison with other engines; see [related projects](#related-projects).
+
 ## Speed
 
 On the 48 GB M5 Pro:

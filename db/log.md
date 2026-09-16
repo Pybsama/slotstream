@@ -1537,3 +1537,18 @@ hardware-planning-range-medium needle ~6–16 tok/s and hardware-planning-range-
 ## [2026-09-16 21:10] validate | db
 Re-anchored estimates: dbmd validate --all with zero errors and the two preserved historical log warnings; projections and claim checks pass on the export.
 
+## [2026-09-16 21:21] create | records/decisions/native-stack-stated-on-every-surface
+The native Swift/MLX/Metal stack is stated as design on every public surface; speed stays attributed to measured mechanisms
+
+## [2026-09-16 21:21] update | README.md
+Built native section, introduction sentence and a FAQ on why the engine is Swift rather than Python; no number changed
+
+## [2026-09-16 21:21] update | docs
+ENGINEERING.md native-stack table and rationale; LIBRARY.md and SEVRA-MAC.md in-process consequence; llms.txt native fact; CHANGELOG Unreleased entry; llms-full.txt regenerated
+
+## [2026-09-16 21:21] index-rebuild | db
+sources/runs index was stale for the 2026-09-16 sevra-mac-thinking run after an in-flight edit; rebuilt
+
+## [2026-09-16 21:21] validate | db
+dbmd validate --all: zero errors and the two preserved historical log warnings; claims gate 243 checks, projections regenerated
+

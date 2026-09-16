@@ -1,7 +1,10 @@
 # Using slotstream from Swift
 
 Use the `Slotstream` Swift package to plan memory, download weights, run the
-model, or start its HTTP server from your own Mac app or tool.
+model, or start its HTTP server from your own Mac app or tool. It is the same
+native engine the command-line tool uses, Swift on MLX and Metal end to end,
+so your app runs the model in process with no local server or Python runtime
+in between; see the [native stack](ENGINEERING.md#native-stack).
 
 Add the package and product to `Package.swift`:
 

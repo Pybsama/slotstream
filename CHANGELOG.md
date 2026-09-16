@@ -8,6 +8,13 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Say that Slotstream is native end to end. The README's new Built native
+  section, the engineering notes' native-stack table, the Swift library
+  guide, the Sevra Mac notes and `llms.txt` now describe the Swift, MLX and
+  Metal stack, the run-time-compiled Metal kernels, the C download decoder
+  and the role of the Python tooling, and keep speed attributed to the
+  measured mechanisms. No number changed. Decision:
+  `db/records/decisions/native-stack-stated-on-every-surface.md`.
 - Serve the OpenAI Responses API at `POST /v1/responses`, the protocol Codex
   requires since it dropped Chat Completions. Function tools, Codex's
   `namespace` bundles (flattened to `namespace.name` and split again on the

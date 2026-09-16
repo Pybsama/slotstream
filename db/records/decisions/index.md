@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-09-16T19:43:53.886405Z
+updated: 2026-09-16T21:18:52.009560Z
 ---
 
 # records/decisions
 
+- [[records/decisions/native-stack-stated-on-every-surface]] — Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
 - [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
 - [[records/decisions/corrected-decode-forecast-default-with-the-sidecar]] — The lookahead forecasts from the previous layer's attention output with a rank-128 correction shipped as a pinned sidecar; 1.111 over the previous configuration, identical output, 409 MiB
 - [[records/decisions/automatic-context-window-per-machine]] — Auto picks the largest of 32,768, 65,536, 131,072 and 262,144 tokens that keeps speculative decoding, retains one conversation and adds at most 10% to a typical request
