@@ -6,7 +6,8 @@
 **Run a 105 GB AI model on a 48 GB Mac.**
 
 Slotstream runs Qwen3.8-Flash-Next on your Mac by keeping most of the model
-on SSD and loading the parts it needs into memory. After a one-time download,
+on SSD and loading the parts it needs into memory. It is built for Macs with
+16 to 64 GB of memory, where the model cannot fit. After a one-time download,
 the model works offline. No Python or cloud API account is required.
 
 Use it to chat, ask about pictures, or work with files through an agent such
@@ -21,6 +22,20 @@ as Hermes. Developers can connect their own apps through its APIs or Swift libra
 > with Mac.
 > [See Sevra and join the waitlist](https://www.sevrahq.com/).
 > Slotstream's command-line tool, APIs, and Swift library remain independently usable.
+
+## Who it's for
+
+Slotstream is built for Macs that cannot hold the model in memory: **16 to
+64 GB**. The point is frontier-class intelligence on the Macs most people
+already own, so that range is where the engineering, the measurements and the
+defaults go.
+
+It also runs on 96 GB and larger Macs, where the model fits in memory, and a
+larger cache makes it faster there. It is not optimized for them. An engine
+that keeps the whole model in memory skips the SSD streaming and cache
+bookkeeping Slotstream is built around, and such engines report faster replies
+for this model on those Macs. See
+[related projects](docs/ENGINEERING.md#related-projects) if that is your Mac.
 
 ## Will it run on my Mac?
 
@@ -68,7 +83,7 @@ and settings, with higher speeds generally requiring a faster chip and SSD.
 | Low | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
 | Medium | 24–<48 GB | ~6–16 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
 | High | 48–<96 GB | ~15–27 tok/s | 65,536 at 48 GB; 131,072 at 64 GB |
-| Ultra | 96 GB+ | ~20–32 tok/s | 262,144 tokens, the model's full window |
+| Fits in memory | 96 GB+ | ~20–32 tok/s | 262,144 tokens, the model's full window |
 
 The Medium upper end and the High lower reference now use the **15.86 tok/s
 measured on our 48 GB M5 Pro at a 22 GB target**, the automatic target of a
@@ -76,13 +91,17 @@ measured on our 48 GB M5 Pro at a 22 GB target**, the automatic target of a
 fall below it, and the 48 GB automatic plan's larger cache has not been timed
 on 0.2.19.
 
-**The upper ends of High and Ultra assume an M5 Max-class chip, a fast
-internal SSD and a larger manually selected memory target.** Auto mode keeps
+From 96 GB the model fits in memory. Slotstream runs there and benefits from a
+larger cache, but that row is outside its target range; see
+[Who it's for](#who-its-for).
+
+**The upper ends of High and the fits-in-memory row assume an M5 Max-class
+chip, a fast internal SSD and a larger manually selected memory target.** Auto mode keeps
 a conservative ceiling, so extra installed RAM alone may leave the target
 unchanged. The High upper estimate transfers the 128 GB M5 Max's 48 GB
 target result to a comparable Mac with enough available memory; that smaller
-Mac has not been benchmarked. Ultra is based on the same M5 Max's auto-to-73 GB
-target sweep. Slower chips, other workloads or memory pressure can put a Mac
+Mac has not been benchmarked. The fits-in-memory row is based on the same
+M5 Max's auto-to-73 GB target sweep. Slower chips, other workloads or memory pressure can put a Mac
 outside these ranges. These are estimates, not measured limits or statistical
 confidence intervals. See the [estimate basis](docs/HARDWARE.md#planning-ranges)
 and the actual results below.
@@ -111,7 +130,9 @@ of its held-out comparison. The other Macs are community reports.
 They use different releases and settings, including speculative decoding on
 the M5 Max. See [hardware results and test conditions](docs/HARDWARE.md) for
 credits and methods. The two M5 Pro rows also change software and settings,
-so they do not isolate the effect of memory.
+so they do not isolate the effect of memory. The M5 Max rows are outside the
+target range: the model fits in memory on that Mac. They show the engine
+working there, not what it is optimized for.
 
 **A larger memory target can improve speed.** The M5 Max figures come from
 the [same machine with speculative decoding enabled](https://github.com/carloslfu/slotstream/issues/6#issuecomment-5520489176).
@@ -240,6 +261,8 @@ covers the implementation.
 
 ## Status and limits
 
+- **Built for 16 to 64 GB:** on 96 GB and larger Macs the model fits in memory
+  and Slotstream is not the optimized path; see [Who it's for](#who-its-for).
 - **One generation at a time:** connected apps share the same running model.
 - **Conversation length is limited:** longer histories take more memory and
   time. [Speed by Mac memory](#speed-by-memory) recommends a window for each
@@ -299,6 +322,15 @@ Replace `40` with your chosen total-process budget in decimal GB. An explicit
 target keeps the cache fixed and disables automatic resizing, so leave room
 for macOS and other apps and watch memory pressure. See the
 [memory options](docs/CLI.md#memory-options) for details.
+
+### Is Slotstream the fastest way to run this model?
+
+On a Mac that cannot hold the model, 16 to 64 GB, it is the way to run it at
+all, and the engineering goes into making that fast. On 96 GB and larger Macs
+the model fits in memory, and engines that keep it resident report faster
+replies; Slotstream is not optimized for that case. See
+[Who it's for](#who-its-for) and
+[related projects](docs/ENGINEERING.md#related-projects).
 
 ### Will this wear out my SSD?
 

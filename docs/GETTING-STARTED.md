@@ -12,6 +12,9 @@ on macOS 26.
 
 Slotstream needs a Mac with at least 16 GB of memory. On an 8 GB Mac even the
 smallest memory plan doesn't fit, so it refuses to start instead of swapping.
+It is built for Macs with 16 to 64 GB, where the model cannot fit in memory;
+on 96 GB and larger Macs it runs but is not optimized, see
+[Who it's for](../README.md#who-its-for).
 Less available memory can reduce the expert cache and slow replies; the chip,
 SSD and workload also matter. See the [hardware guide](HARDWARE.md)
 for measurements from real Macs and estimates for each memory size.

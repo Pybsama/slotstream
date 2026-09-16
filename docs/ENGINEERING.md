@@ -38,6 +38,11 @@ framework. The tested expert-gather operation materialized every expert in a
 layer, even though the token needed only a few. Explicit slots keep those
 reads and allocations under control. The [design](../PLAN.md) covers the details.
 
+That design targets Macs that cannot hold the model, 16 to 64 GB. On 96 GB
+and larger Macs the model fits in memory, and the streaming machinery is
+overhead that an engine keeping the model resident does not pay; see
+[related projects](#related-projects) and [who it's for](../README.md#who-its-for).
+
 ## Speed
 
 On the 48 GB M5 Pro:
@@ -223,7 +228,8 @@ for the other controls and their precedence.
 I have a 48 GB MacBook Pro and wanted to run this model on it. The stock loader
 pushed the machine into 48 GB of swap before producing a token. I built
 slotstream to keep the shared weights in memory and stream the experts from
-SSD, with a cache that leaves room for other apps.
+SSD, with a cache that leaves room for other apps. That is still the target:
+Macs that cannot hold the model, 16 to 64 GB.
 
 The [measurements](../MEASUREMENTS.md#m07--the-naive-path-fails-why-slotstream-exists)
 start with that failed load. The launch was also
@@ -232,6 +238,12 @@ start with that failed load. The launch was also
 page on September 1, 2026.
 
 ## Related projects
+
+If your Mac holds the whole model, 96 GB and up, an engine that keeps it in
+memory is the faster choice. [MTPLX](https://github.com/youssofal/MTPLX) runs
+this model with native speculative decoding on such Macs and publishes its
+measurements. Slotstream is built for the Macs below that line; see
+[Who it's for](../README.md#who-its-for).
 
 Other projects approach local inference with different models, hardware,
 and memory strategies:

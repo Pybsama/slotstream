@@ -17,6 +17,16 @@ Update README/docs, canonical plan/support records and generated projections
 alongside verified implementation. Do not present this direction as shipped
 model selection or new hardware support.
 
+## Target range (September 16, 2026)
+
+Slotstream is built for Macs that cannot hold the model in memory, 16 to
+64 GB. Macs of 96 GB and more run it and gain from a larger cache, but they are
+not the optimization target, and engines that keep the model resident are
+faster there. Keep their rows in the docs as evidence labeled beyond the
+target; never present larger Macs as the goal, plan work against the big-Mac
+preset estimates, or trade the target range's speed or memory for them.
+Canonical: [target range decision](db/records/decisions/target-range-macs-that-cannot-hold-the-model.md).
+
 ## Public documentation
 
 Keep `README.md` approachable and complete: purpose, capabilities, measured

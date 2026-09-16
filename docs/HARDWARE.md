@@ -11,6 +11,11 @@ Choose Apple menu → About This Mac to check your chip and memory. The
 installer has been tested on macOS 14 and 15; model runs have been tested
 on macOS 26. Windows, Linux, and Intel Macs are not supported by this engine.
 
+Slotstream is built for Macs with 16 to 64 GB of memory, where the model
+cannot fit. It runs on 96 GB and larger Macs too, where the model fits in
+memory, but it is not optimized for them; see
+[Who it's for](../README.md#who-its-for).
+
 **Compatibility-tier support is coming soon.** An 8 GB Mac can't run the
 current model: even the smallest memory plan needs more
 memory than it has, so Slotstream refuses to start instead of swapping. On
@@ -53,7 +58,9 @@ The latest M5 Pro result is the 0.2.19 release benchmark of the shipping
 build's default against the 0.2.18 forecast (1.10x faster, 14.38 to 15.86 tok/s,
 identical output); the 0.2.16 row is the pre-release benchmark of that release's
 configuration. The M5 Pro results are from the author; the
-others are community reports.
+others are community reports. The M5 Max rows are outside the target range:
+the model fits in memory on that Mac, and engines that keep it resident
+report faster replies there.
 The 18, 24 and 36 GB sizes still need reports, and 8 GB Macs don't run the
 model. Open the details below for versions, settings, and credits.
 
@@ -113,7 +120,11 @@ the M5 Pro throughout, the M2 in C1, the M5 Max in C2, and the M5 Air in C3.
 
 ## Does more memory help?
 
-Yes, a larger expert cache can reduce SSD reads and improve reply speed.
+Within Slotstream, yes: a larger expert cache reduces SSD reads and improves
+reply speed. From 96 GB the model fits in memory; Slotstream runs there and
+benefits from a larger cache, but that is not the case it is optimized for,
+and engines that keep the model resident report faster replies there. See
+[Who it's for](../README.md#who-its-for).
 The clearest community evidence is
 [@waterliu1981's cache sweep](https://github.com/carloslfu/slotstream/issues/6#issuecomment-5520489176)
 on the same M5 Max, using Slotstream 0.2.3 with speculative decoding enabled:
@@ -151,12 +162,12 @@ confidence intervals. Endpoints are rounded outward to whole tok/s.
 | 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
 | 24–<48 GB | ~6–16 tok/s | The 32 GB M5 Air reported 6.22 tok/s on 0.2.11; the M5 Pro measured 15.86 tok/s on 0.2.19 at a 22 GB process target, the automatic target of a 32 GB Mac, rounded outward to 16. The upper end assumes a comparable chip and SSD; no Mac in this band has been timed on 0.2.19. |
 | 48–<96 GB | ~15–27 tok/s | The lower reference rounds down from the 48 GB M5 Pro's 15.86 tok/s on 0.2.19 at a 22 GB target, below its own 33.6 GB automatic target, whose larger cache has not been timed; the 0.2.16 result at a 20 GB target was 13.47 tok/s, and the older ~12 tok/s result remains historical evidence. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
-| 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. |
+| 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. This row is outside Slotstream's target range: the model fits in memory from 96 GB. |
 
-The Ultra lower endpoint allows for the same reporter's roughly 20 tok/s
+The 96 GB+ row's lower endpoint allows for the same reporter's roughly 20 tok/s
 warm auto runs on 0.2.1; the main results table uses the updated 0.2.3 report.
-The upper ends of High and Ultra assume an M5 Max-class chip, fast internal
-SSD, speculative decoding and manual targets that leave room for macOS and
+The upper ends of High and the 96 GB+ row assume an M5 Max-class chip, fast
+internal SSD, speculative decoding and manual targets that leave room for macOS and
 other apps. A 48 GB process target cannot consume all of a Mac's installed
 48 GB; it needs a larger machine. These ranges mix releases, so they are not
 predictions for a single current build. No release-speedup multiplier was

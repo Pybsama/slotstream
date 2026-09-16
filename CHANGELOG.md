@@ -6,6 +6,16 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+- Say who Slotstream is for. It is built for Macs that cannot hold the model,
+  16 to 64 GB; 96 GB and larger Macs run it but are not the optimization
+  target. The README, hardware guide, getting-started guide, engineering
+  notes, `llms.txt`, agent instructions and the plan records now state it, and
+  the 96 GB+ estimate row is labeled as the case where the model fits in
+  memory. No number changed. Decision:
+  `db/records/decisions/target-range-macs-that-cannot-hold-the-model.md`.
+
 ## 0.2.19 - 2026-09-16
 
 - Generate replies 1.10x faster with a more accurate expert forecast at
