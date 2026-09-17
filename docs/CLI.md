@@ -337,12 +337,13 @@ See [Testing](TESTING.md) for the full suites.
   6,144 tokens of context the pass now runs two rows at a time through the
   vector kernel, the kernel plain decode's attention uses. The gain grows with
   the context. On a quiet machine at a 22 GB target, speculative decode
-  measured 11.82 against 11.67 tok/s (x1.013) with a 16,356-token prompt and
-  x1.29 with a 32,740-token prompt; the fetch-free pass is 32% cheaper at
-  32,740 tokens and 45% at 65,508. The split changes which drafts are
-  accepted, so the 16k gain is small and prompt-dependent, while at 32k both
-  arms accept alike. `SLOTSTREAM_OPT_VERIFY_SPLIT=0` restores the dense pass.
-  Below the threshold the dense kernel is faster
+  measured 11.82 against 11.67 tok/s (x1.013) with a 16,356-token prompt,
+  x1.085 on a second 16,356-token prompt and x1.29 with a 32,740-token prompt;
+  the fetch-free pass is 32% cheaper at 32,740 tokens and 45% at 65,508. The
+  split changes which drafts are accepted, so the 16k gain is small and
+  prompt-dependent, while at 32k both arms accept alike.
+  `SLOTSTREAM_OPT_VERIFY_SPLIT=0` restores the dense pass. Below the threshold
+  the dense kernel is faster
   ([measurement](../db/records/measurements/speculative-verify-pass-split-attention-2026-09-17.md)).
 - Exact mode: a multi-row pass rounds a little differently from one-row
   passes, so speculative and plain decode can pick different tokens at near

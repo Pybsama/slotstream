@@ -5450,14 +5450,18 @@ reclaimable at each start).
 | prompt tokens | rounds | dense | split | ratio |
 | ---: | ---: | ---: | ---: | ---: |
 | 16,356 | 3 | 11.67 | 11.82 | x1.013 |
+| 16,356, second prompt | 3 | 12.82 | 13.90 | x1.085 |
 | 32,740 | 2 | 8.98 | 11.63 | x1.294 |
 
 The 16k ratio replaces the x1.079 measured earlier the same day, when both
 arms ran about 10% slower on a busy machine. The cause of the small 16k gain
 is visible in the arms' own acceptance: the split accepts 63.4% of drafts on
 that prompt against the dense arm's 69.8%, so it runs 56 verify passes to the
-dense arm's 53 and the cheaper pass mostly pays for the extra passes. That
-difference is a rounding artifact of this prompt and can fall either way. At
+dense arm's 53 and the cheaper pass mostly pays for the extra passes. That difference is a rounding artifact of the prompt and does not have a fixed
+direction: a second 16k prompt has the two arms accepting 70.8% and 73.1% and
+the split 1.085 times the dense pass, and the exact arm on the first prompt
+accepted more than the dense pass, 70.8% against 69.8%. At 16k the gain is
+therefore whatever acceptance the prompt draws, between the two measured ends. At
 32k both arms run 57 passes at 61.4% and 62.3%, so the ratio there is the
 per-pass saving and nothing else, and it is the ratio that carries the change.
 A first 64-token attempt at 16k reported x0.936; 25 to 29 verify passes with a

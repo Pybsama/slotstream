@@ -67,6 +67,30 @@ arm's 53, and the cheaper pass mostly pays for the extra passes. The
 pre-commit step of the same shape measured x1.079 on a busier machine, where
 both arms ran about 10% slower.
 
+## 16k, a second prompt, 128 tokens, three rounds
+
+```text
+== start 18:38:18 load { 2.99 2.79 3.00 }
+engine ready in 1.1s: expert cache ~74/512 per layer (3531 global slots = 9.8 GB), mtp draft head on, eos [248044, 248046]
+prompt: 16375 tokens; context window 32768; ~73 experts/layer; arms: spec,split
+round 1: spec 9.70 tok/s (accept 73.1%, 52 passes); split 13.90 tok/s (accept 70.8%, 53 passes);
+round 2: split 14.38 tok/s (accept 70.8%, 53 passes); spec 13.00 tok/s (accept 73.1%, 52 passes);
+round 3: spec 12.82 tok/s (accept 73.1%, 52 passes); split 13.81 tok/s (accept 70.8%, 53 passes);
+medians (tok/s) over 3 rounds, greedy=true:
+  spec          12.82
+  split         13.90   x1.085 against spec
+  every arm repeats its own output across rounds: true
+  split verify attention engaged in: split
+== end 18:48:19 load { 3.27 3.59 3.42 }
+```
+
+The same shape on a different 16,356-token prompt: the split is 1.085 times
+the dense pass, and the two arms accept almost alike here, 70.8% against
+73.1%, over 53 and 52 passes. Taken with the first prompt's x1.013, the 16k
+end-to-end gain depends on the acceptance the prompt happens to draw, and the
+direction is not fixed: the exact arm on the first prompt accepted more than
+the dense pass, 70.8% against 69.8%.
+
 ## 32k, 128 tokens, two rounds
 
 ```text

@@ -75,6 +75,7 @@
     "Sources/Slotstream/TapCorrectionSidecar.swift": 56.82,
     "Sources/Slotstream/ToolCallSplitter.swift": 96.27,
     "Sources/Slotstream/Vendored/GatedDelta.swift": 0.0,
+    "Sources/Slotstream/VerifyPassSelfCheck.swift": 99.67,
     "Sources/Slotstream/Vision.swift": 29.04,
     "Sources/Slotstream/VisionAttention.swift": 70.0,
     "Sources/Slotstream/VisionPrompt.swift": 27.97,
@@ -142,6 +143,7 @@
     "Sources/SlotstreamDiagnostics/Diagnostics+SlotSlices.swift": 45.61,
     "Sources/SlotstreamDiagnostics/Diagnostics+StateRecovery.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Diagnostics+TerminalPrefill.swift": 0.0,
+    "Sources/SlotstreamDiagnostics/Diagnostics+VerifyPass.swift": 81.9,
     "Sources/SlotstreamDiagnostics/Diagnostics+Vision.swift": 88.82,
     "Sources/SlotstreamDiagnostics/Diagnostics+VisionAttention.swift": 98.65,
     "Sources/SlotstreamDiagnostics/Diagnostics+VisionCapacity.swift": 0.0,
@@ -149,6 +151,6 @@
     "Sources/SlotstreamDiagnostics/ExpertLookaheadCollector.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Goldens.swift": 94.03
   },
-  "note": "Per-file T0/T1 line coverage floors. v0.2.12 adds measured floors and separately reviewed native-code denominator growth; existing covered paths remain required. See db/records/measurements/release-qualification-0-2-12.md. Restored production server/prefix/context checks raise their measured floors; the prefix diagnostic denominator correction is individually reviewed in that same record. v0.2.19 keeps every other floor and sets three: Engine.swift 8.58 after the sidecar banner lines, which run only at engine start with a model (CI run 35128525013), and the new RouterTapCorrection.swift 86.47 and TapCorrectionSidecar.swift 56.82 (CI run 35133879745); see db/records/measurements/release-0-2-19-published-2026-09-16.md.",
-  "total": 42.45
+  "note": "Per-file T0/T1 line coverage floors. v0.2.12 adds measured floors and separately reviewed native-code denominator growth; existing covered paths remain required. See db/records/measurements/release-qualification-0-2-12.md. Restored production server/prefix/context checks raise their measured floors; the prefix diagnostic denominator correction is individually reviewed in that same record. v0.2.19 keeps every other floor and sets three: Engine.swift 8.58 after the sidecar banner lines, which run only at engine start with a model (CI run 35128525013), and the new RouterTapCorrection.swift 86.47 and TapCorrectionSidecar.swift 56.82 (CI run 35133879745); see db/records/measurements/release-0-2-19-published-2026-09-16.md. The verify-pass change adds two measured floors, VerifyPassSelfCheck.swift 99.67 and Diagnostics+VerifyPass.swift 81.90, both from CI run 35287698798; every other floor is unchanged. The verify-pass control assertions live in the second file rather than Diagnostics+Runtime.swift because each c.expect call site carries a default detail autoclosure that never runs while the assertion passes, so adding assertions to a file lowers its line ratio; see db/records/measurements/speculative-verify-pass-split-attention-2026-09-17.md.",
+  "total": 43.84
 }

@@ -1762,3 +1762,9 @@ Evidence re-anchored to the quiet-machine ratios; the default stands on the per-
 ## [2026-09-17 23:41] index-rebuild | db
 Rebuilt the record indexes after the claim withdrawals and the measurement summary were edited in place; the pinned 0.13.4 gate caught the stale entries that the local 0.13.5-dev.4 build does not report.
 
+## [2026-09-17 23:54] create | records/claims/verify-split-16k-decode-second-prompt-x1-085
+A second 16k prompt: x1.085, the arms accepting 70.8% and 73.1%; with the first prompt's x1.013 it brackets the 16k gain.
+
+## [2026-09-17 23:54] update | sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck
+Added the second 16k prompt's raw output.
+
