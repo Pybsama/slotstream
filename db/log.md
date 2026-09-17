@@ -1564,3 +1564,15 @@ Sub-document pass recorded: the README carries the summary and pointers, the har
 ## [2026-09-17 02:15] validate | db
 README simplification: dbmd validate --all with zero errors and the two preserved historical log warnings; llms-full, projections and 231 claim checks pass.
 
+## [2026-09-17 02:24] update | README.md
+Introduction pass: the Speed paragraph keeps the headline measurement and its mechanism and drops the release-benchmark comparison; the window list under the table, the draft-token FAQ and a second memory command move to the guides; the Sevra note, Who it's for, Built native and the Swift FAQ tightened. 350 to 334 lines, every anchor and linked heading kept.
+
+## [2026-09-17 02:24] update | records/claims
+Four claims drop README.md from their surfaces after the introduction pass and keep the others: corrected-forecast-0-2-19-faster-decode, corrected-forecast-0-2-19-medians-tok-s, draft-depth-default-two, automatic-context-window-262144-from-96-gb. Claims gate 227 checks, 0 failures.
+
+## [2026-09-17 02:24] update | records/decisions/newcomer-documentation
+Introduction pass recorded: what left the README, where it lives, and the four claims whose surfaces changed.
+
+## [2026-09-17 02:24] validate | db
+README introduction pass: dbmd validate --all with zero errors and the two preserved historical log warnings; claims gate 227 checks, 0 failures.
+

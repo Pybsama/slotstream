@@ -2,11 +2,15 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-17T02:14:32.054273Z
+updated: 2026-09-17T02:23:22.107819Z
 ---
 
 # records/claims
 
+- [[records/claims/automatic-context-window-262144-from-96-gb]] — Auto takes the full 262,144-token window from 96 GB
+- [[records/claims/draft-depth-default-two]] — The adopted speculative draft-chain default is two tokens
+- [[records/claims/corrected-forecast-0-2-19-medians-tok-s]] — Median decode rose from 14.38 to 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target
+- [[records/claims/corrected-forecast-0-2-19-faster-decode]] — The 0.2.19 corrected forecast decodes 1.10x faster than the 0.2.18 forecast
 - [[records/claims/warm-decode-m5-max-73gb-target-community]] — M5 Max community report: 31.5 tok/s at a 73 GB target
 - [[records/claims/warm-decode-m5-max-48gb-target-community]] — M5 Max community report: 26.9 tok/s at a 48 GB target
 - [[records/claims/warm-decode-m5-max-128gb-community]] — M5 Max community report: 21 to 22 tok/s
@@ -24,8 +28,6 @@ updated: 2026-09-17T02:14:32.054273Z
 - [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
 - [[records/claims/hardware-planning-range-ultra]] — Estimated warm reply range for 96 GB or more Macs
 - [[records/claims/warm-decode-0-2-19-at-22-gb]] — Warm decode is 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target on the development Mac
-- [[records/claims/corrected-forecast-0-2-19-medians-tok-s]] — Median decode rose from 14.38 to 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target
-- [[records/claims/corrected-forecast-0-2-19-faster-decode]] — The 0.2.19 corrected forecast decodes 1.10x faster than the 0.2.18 forecast
 - [[records/claims/expert-lookahead-default-two-layer-forecast]] — The qualified expert lookahead forecasts two layers ahead
 - [[records/claims/decode-lookahead-charges-409-mib-with-the-correction]] — The decode lookahead charges 409 MiB with the checkpoint's correction file
 - [[records/claims/decode-forecast-corrected-over-shipped-1-111x]] — The corrected forecast decoded 1.111x over the shipped configuration on held-out prompts
@@ -49,7 +51,6 @@ updated: 2026-09-17T02:14:32.054273Z
 - [[records/claims/automatic-target-43-2-gb-at-64-gb]] — Auto targets 43.2 GB at 64 GB with its 131,072-token window
 - [[records/claims/automatic-context-window-tolerance-10-percent]] — A larger automatic window may add at most 10% to a typical request
 - [[records/claims/automatic-context-window-131072-at-64-gb]] — Auto takes a 131,072-token window at 64 GB
-- [[records/claims/automatic-context-window-262144-from-96-gb]] — Auto takes the full 262,144-token window from 96 GB
 - [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the 32,768-token window
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
@@ -69,7 +70,6 @@ updated: 2026-09-17T02:14:32.054273Z
 - [[records/claims/minimum-mac-memory-16-gb]] — Slotstream needs a Mac with at least 16 GB of memory
 - [[records/claims/draft-head-31-7-percent-faster-at-76-per-layer]] — Two drafts decoded 31.7% faster than plain decode on the same memory at 76 experts per layer
 - [[records/claims/peak-memory-32-gb-at-auto]] — The 32 GB automatic-plan figure is an estimate, not a measured lifetime footprint peak
-- [[records/claims/draft-depth-default-two]] — The adopted speculative draft-chain default is two tokens
 - [[records/claims/auto-memory-target-ceiling-33-gb]] — Automatic sizing has an intentional 33 GB base target ceiling, with explicit overrides and measurement-led revisions.
 - [[records/claims/hermes-auxiliary-timeout]] — Hermes guide sets explicit auxiliary timeouts
 - [[records/claims/hermes-title-output-budget]] — Hermes guide bounds local title output

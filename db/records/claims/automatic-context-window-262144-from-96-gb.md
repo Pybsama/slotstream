@@ -2,13 +2,13 @@
 type: claim
 id: 01m2dvvtqd7zj6yrebfcfv1tp2
 created: 2026-09-13T17:08:30.061087+00:00
-updated: 2026-09-13T17:08:30.061087+00:00
+updated: 2026-09-17T02:23:22.107819+00:00
 summary: Auto takes the full 262,144-token window from 96 GB
 basis: derived
 gate: Tools/planner_gates.sh and Tools/context_gates.py
 needle: 262,144 from 96 GB
 supported_by: '[[records/measurements/automatic-context-window-plans-2026-09-13]]'
-surfaces: README.md, docs/HARDWARE.md, docs/API.md, llms.txt, CHANGELOG.md
+surfaces: docs/HARDWARE.md, docs/API.md, llms.txt, CHANGELOG.md
 title: Auto takes the full 262,144-token window from 96 GB
 status: current
 ---

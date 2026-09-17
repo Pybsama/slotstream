@@ -2,7 +2,7 @@
 type: decision
 id: 01m21jj97w5hteckpk2khdy25h
 created: 2026-09-08T22:35:06.876703+00:00
-updated: 2026-09-17T02:14:32.183186+00:00
+updated: 2026-09-17T02:24:34.332939+00:00
 summary: Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 decided_on: 2026-09-08
 reversible_if: The public setup changes or users demonstrate that a different entry point makes installation and first use clearer.
@@ -63,3 +63,21 @@ in `docs/EXPERT-LOOKAHEAD.md`. Twelve claims whose numbers left the README
 dropped it from their surfaces and keep their other surfaces; every old README
 anchor and linked heading was preserved. The README went from 455 to 350
 lines.
+
+## Introduction pass, 2026-09-16
+
+Carlos asked whether the README needed the release-benchmark sentence (the
+comparison with the 0.2.18 forecast, the 1.10x and the 14.38 to 15.86 tok/s
+medians) and for a pass over every section, so that the README reads as a
+simple, compelling introduction with the detail in the guides. The Speed
+paragraph now states the headline measurement, the mechanism in one sentence
+and the pointer to the lookahead guide; the comparison numbers stay in
+`docs/EXPERT-LOOKAHEAD.md`, `docs/HARDWARE.md`, `docs/CLI.md` and the release
+notes. The context-window list under the table went because the table shows
+it, the draft-token FAQ lives only in `docs/CLI.md`, and the RAM FAQ keeps one
+preview command. The Sevra note, Who it's for, Built native and the Swift FAQ
+were tightened without dropping a stated fact. Four claims dropped the README
+from their surfaces and keep the others: `corrected-forecast-0-2-19-faster-decode`,
+`corrected-forecast-0-2-19-medians-tok-s`, `draft-depth-default-two` and
+`automatic-context-window-262144-from-96-gb`. Every anchor, linked heading and
+required section stays. The README went from 350 to 334 lines.

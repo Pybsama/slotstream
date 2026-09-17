@@ -2,13 +2,13 @@
 type: claim
 id: 01m27vcffajt5cjah1x0329qe8
 created: 2026-09-11T09:04:40.426147+00:00
-updated: 2026-09-11T09:13:46.732026+00:00
+updated: 2026-09-17T02:23:22.084987+00:00
 summary: The adopted speculative draft-chain default is two tokens
 basis: derived
 gate: slotstream-checks --tier t0 --filter adaptive-speculation-policy
 needle: default 2
 supported_by: '[[records/measurements/draft-depth-two-default-2026-09-11]]'
-surfaces: README.md, docs/CLI.md, docs/ENGINEERING.md, llms.txt
+surfaces: docs/CLI.md, docs/ENGINEERING.md, llms.txt
 title: Speculative draft depth defaults to two
 status: current
 ---
