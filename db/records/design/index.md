@@ -2,20 +2,20 @@
 type: index
 scope: type-folder
 folder: records/design
-updated: 2026-09-16T20:19:00.539192Z
+updated: 2026-09-17T14:55:23.061681Z
 ---
 
 # records/design
 
 - [[records/design/sevra-spec/implementation-status]] — Mac application implementation progress and unpassed release gates
-- [[records/design/sevra-spec/runtime-contract]] — Native Home, inference completion, source tools and exact artifact commit
+- [[records/design/sevra-spec/runtime-contract]] — Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
+- [[records/design/sevra-spec/overview]] — Sevra native product specification entry point
+- [[records/design/sevra-spec/mac-platform]] — Mac native implementation baseline and dependency qualification
 - [[records/design/sevra-spec/ui-contract]] — Mac UI geometry, native text, appearance and review requirements
 - [[records/design/presets-v1-est-columns-to-be-replaced-by-m8-measurements]] — Presets v1 (est. columns to be replaced by M8 measurements)
 - [[records/design/slotstream-qwen3-8-flash-next-on-every-apple-silicon-mac]] — slotstream — Qwen3.8-Flash-Next on every Apple Silicon Mac
 - [[records/design/1-goal]] — 1. Goal
 - [[records/design/sevra-spec/home-template]] — Versioned Sevra Home configuration template
-- [[records/design/sevra-spec/mac-platform]] — Mac native implementation baseline and dependency qualification
-- [[records/design/sevra-spec/overview]] — Sevra native product specification entry point
 - [[records/design/measured-operating-policies]] — Measured operating policies and revision criteria
 - [[records/design/sevra-maintained-model-integration]] — Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.
 - [[records/design/m9-addendum-built-and-measured-2026-09-01]] — M9 addendum — built and measured (2026-09-01)

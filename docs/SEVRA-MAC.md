@@ -67,16 +67,114 @@ process; the Unload control alone does not release that process-wide lock.
 
 ## Exercise the local workflow
 
-Open a new thread, attach an ordinary UTF-8 text file or a small folder of text/source files,
-and ask Sevra to read them and propose a cited briefing. The model can request
-bounded reads but cannot change the source folder. Review the complete document
-before choosing **Save document**. Saved artifacts use create-only publication
-inside the Home. Unsupported rich formats are explicitly unavailable until
-their extraction isolation is qualified.
+Open a new thread and attach files or folders with the paperclip, the
+**File → Attach Files…** command (⌘⇧A), drag and drop, or paste. A thread holds
+up to eight attachments, each shown as a chip above the composer. Ask Sevra
+about them, or ask for a cited briefing and review the complete document before
+choosing **Save document**. Saved artifacts use create-only publication inside
+the Home.
+
+### What Sevra can read
+
+- **Text and code:** Markdown, plain text, CSV, JSON, logs and common source
+  files up to 8 MB each.
+- **Documents:** PDF, Word (`.docx` and `.doc`), RTF, OpenDocument text, Excel
+  (`.xlsx`) and EPUB, up to 64 MB. Sevra searches their text and cites the page
+  a PDF excerpt came from.
+- **Scans and images:** PNG, JPEG, HEIC, TIFF, GIF, WebP and BMP, plus PDF pages
+  without a text layer. Sevra recognizes their text on this Mac when a page is
+  read, at most 40 pages per request, and marks such citations as recognized
+  text.
+- **Folders:** up to 2,000 files. Hidden files, symbolic links and dependency
+  folders such as `node_modules` are skipped and counted, never followed.
+
+Password-protected, damaged and oversized documents are refused with a reason.
+Sevra reads the text inside a document, not its layout; tables and multiple
+columns come out as plain text.
+
+Rich documents are opened by `sevra-extract`, a small helper that ships inside
+the app. Each document gets a fresh helper process that receives only the
+document's bytes. Before it parses anything, the helper puts itself in a macOS
+sandbox that denies reading your files, writing outside its own work folder,
+all network access, launching programs and the window server. Text recognition is
+split in two. A strict helper turns the file into plain grayscale pixels, and a
+second helper that may use the GPU and Neural Engine only ever sees those
+pixels. Sevra stops a helper that runs too long, prints too much, uses too much
+memory or is cancelled, together with anything it started.
+
+### Reviewed changes
+
+Each chip has an access menu. **Read only** is the default. **Can propose
+changes** lets Sevra stage new files and edits in that folder or file. Staged
+changes are never written during a response. When it ends, **Review changes**
+shows every file with a line-by-line diff, and **Show complete text** shows
+exactly what will be written.
+
+**Write Files** applies the whole set. Sevra first checks that each file is
+unchanged since it was read and saves the previous version in the Home. It then
+replaces the file in one atomic step, keeping its permissions and Finder tags.
+A file edited after the review, replaced by a symbolic link, or hard-linked
+elsewhere is left alone and reported. If Sevra closes while writing, the
+review reports which files were written; nothing is replayed.
+
+**Undo Changes** restores the previous versions and moves new files to the
+Trash, where **Show in Trash** finds them. A file edited since Sevra wrote it
+is left as it is. Sevra never changes shell scripts, HTML, SVG or notebooks,
+and keeps access only while a folder is attached. After a restart, attach the
+folder again to write or undo. Incognito threads can read but not change files.
+
+### Knowledge bases
+
+A folder with a `DB.md` file attaches as a db.md knowledge base. Sevra searches
+and queries it through the pinned dbmd tool, which runs inside the same kind of
+sandbox, confined to that store. With changes allowed, Sevra can stage new
+records and body edits, appends and replacements, for review. Records are
+written through dbmd, so indexes stay current; db.md files each new record by
+its type, and the review reports where it went. Frontmatter, the store's
+`DB.md`, its indexes and log, and anything under `sources/` are never edited.
+Undo restores the records and rebuilds the index.
+
+### Skills and mini-apps
+
+The sparkles button in the composer lists skills. **/app** asks Sevra to build
+or change a mini-app, and **/skill** saves a repeatable workflow. Your own
+skills appear after you approve them; type `/name` to use one. A skill only adds
+instructions to a request. It never grants access to files, and anything it
+proposes still waits for your review.
+
+A mini-app is one HTML file with its own CSS and JavaScript. Its review shows
+the data it asks for and how many records each collection already holds, notes
+about what it tries to do, its source, and a live **Try it** preview backed by
+scratch data that is discarded. **Turn On App** publishes that exact version and
+grants the listed access on this Mac. Open apps from **Apps & Skills** (⌘2),
+where you can switch versions, turn an app off or remove it. Removing an app
+keeps its versions and data in the Home.
+
+Apps store records through `window.sevra` (`list`, `get`, `create`, `update`,
+`archive`, `restore`) in named collections. Each record is a db.md file under
+`db/records/app-data/` in your Home, with a revision number that prevents lost
+updates. An app sees only the collections its active version declared and you
+approved. Apps that use the same collection share its records. Sevra assigns
+record ids, tells an app about changes made elsewhere with a `sevra-change`
+event but never about its own saves, and slows down an app that saves too often.
+A save based on a stale revision is refused instead of overwriting newer data. A
+changed app file, a restored Home or a Home file edited outside Sevra stops
+access until you act.
+
+Each app runs in its own web view that serves only its approved bytes. It has no
+network: loads are blocked by content rules and a content security policy, and
+anything that would connect anyway meets a proxy that refuses it. Peer
+connections, link preconnects and DNS prefetching are switched off, and the app
+does not run at all unless WebKit confirms they are. Navigation, popups,
+downloads and camera or microphone access are refused, and browser storage ends
+with the view. Opening a web link from an app asks you first. Backups carry app
+versions and data but never their access grants, so a restored app stays off
+until you turn it on.
 
 Settings exposes System, Light and Dark. System follows macOS; overrides
 persist. Saved drafts and threads reopen with the same Home. Incognito is a
-separate session and cannot create persistent memories or staged artifacts.
+separate session and cannot create persistent memories, staged artifacts,
+file changes, apps or skills.
 
 After a completed Home exchange, **Continue in thread** opens a work thread
 with that exchange visibly labeled **From Home**. The original messages stay
@@ -121,8 +219,32 @@ The script builds the app and local CLI, then checks the production composer
 state machine with delayed and failing storage, native Markdown presentation,
 and the runtime using scripted inference and real dbmd persistence. Disposable
 Homes exercise restart, crash recovery, tool boundaries and data isolation.
-Native UI walkthroughs and real-model checks remain separate evidence; this
-suite does not qualify every OS, input method, accessibility mode or release.
+The runtime suite also covers document reading, the helper sandbox, reviewed
+changes, crash recovery, knowledge bases, skills and mini-app data. It finds
+`sevra-extract` beside itself, or through `SEVRA_EXTRACT`. The script also runs
+two offscreen view checks. The mini-app check loads a hostile page into the
+production app host and requires that a local listener sees no connection and
+no datagram, then clicks through a file-change review and an app review:
+
+```bash
+bash Tools/check_sevra_apps_ui.sh
+```
+
+The thinking-controls check can also run on its own:
+
+```bash
+bash Tools/check_sevra_thinking_ui.sh
+```
+
+That check renders the production views over the scripted engine in a scratch
+Home, finds each control by its rendered label and clicks it: Think longer on
+and off, Send, the live clock, Answer now, the working-notes disclosure, the
+receipt line and the typical-time hint, in light and dark appearance. Its
+window is ordered far outside every display and the process never activates,
+so nothing appears on screen; snapshots land in `.build/sevra-thinking-ui/`.
+Native UI walkthroughs, VoiceOver passes and real-model checks remain separate
+evidence; this suite does not qualify every OS, input method, accessibility
+mode or release.
 
 ## Home backup and recovery
 
@@ -251,7 +373,7 @@ page while keeping the composer focused. The shortcut also appears in the View
 menu and Keyboard settings.
 
 The composer grows with the draft, retains native Undo and marked-text handling,
-and accepts a file or folder through its picker, drag or paste. Thread controls
+and accepts files and folders through its picker, drag or paste. Thread controls
 cover pin, rename, lifecycle and memory scope. Review opens beside the conversation
 when space allows; compact windows use explicit navigation and a single document
 pane. Search, Settings and document commands have deliberate focus behavior.
@@ -349,6 +471,27 @@ apps/macos/.build/release/sevra-mac-checks --real \
 The harness reviews a synthetic fixture after checking its frozen rubric. It
 does not certify the native Save button, appearance, accessibility or public
 release. See the implementation ledger for observed and pending evidence.
+
+A second real-model fixture asks a question about a generated PDF, proposes an
+exact edit to a text file and proposes a counter mini-app, acting as reviewer
+for each. It needs the helper, the metallib copied as above and the same memory
+rules:
+
+```bash
+SEVRA_EXTRACT="$PWD/apps/macos/.build/release/sevra-extract" \
+  apps/macos/.build/release/sevra-mac-checks --real-basics \
+  --home "$PWD/.build/sevra-disposable-real-basics"
+```
+
+To try the counter app it built, run the apps check against the app's file. The
+app opens twice in the production host over one scratch store. After a few
+clicks on plus, the reopened app must show the same count and keep a single
+saved record:
+
+```bash
+SEVRA_APP_UNDER_TEST="$(find "$PWD/.build/sevra-disposable-real-basics/Home/extensions/miniapps" -name index.html | head -1)" \
+  SEVRA_APP_DATA=counter:write bash Tools/check_sevra_apps_ui.sh
+```
 
 Slotstream's original CLI, serving APIs, library products and package coordinates
 remain independently usable. This application work does not rename the public

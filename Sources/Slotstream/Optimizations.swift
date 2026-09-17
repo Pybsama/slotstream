@@ -79,6 +79,23 @@ public struct InferenceOptimizations: Codable, Equatable {
     /// Optional so control sets saved before the experiment decode unchanged.
     public var expertPrefetch: Bool? = nil
     public var expertPrefetchShadow: Bool? = nil
+    /// Speculative verify attention: the three-to-eight-row pass goes through
+    /// the vector kernel two rows at a time from the measured context
+    /// crossover instead of the dense kernel, whose cost grows with the
+    /// context. In the deployment family. `verifySplitMinContext` overrides
+    /// the measured threshold (keys; zero engages at any context). With
+    /// `rowInvariantProjection` the split becomes the exact mode's attention,
+    /// one call per row from two rows up. Optional so control sets saved
+    /// before the path decode unchanged.
+    public var verifySplitAttention: Bool? = nil
+    public var verifySplitMinContext: Int? = nil
+    /// Row-invariant small dense matmuls (router, inject weights, dense
+    /// QLinear fallbacks) for passes of one to eight rows. With the split
+    /// verify attention it selects the exact mode, in which a verify pass of
+    /// up to `MultiRowAttention.exactMaxRows` rows reproduces the one-row
+    /// passes of this mode bit for bit. It changes plain decode's rounding as
+    /// well.
+    public var rowInvariantProjection: Bool? = nil
 
     public var readScopeEnabled: Bool {
         readScopeTokens > 0 && layerExpertWorkspace && compactStateWindows
@@ -106,6 +123,7 @@ public struct InferenceOptimizations: Codable, Equatable {
         result.completePromptCheckpoint = true
         result.sharedRoPE = true
         result.fusedRoPE = true
+        result.verifySplitAttention = true
         return result
     }
 
@@ -204,6 +222,16 @@ public struct InferenceOptimizations: Codable, Equatable {
         guard !(result.expertPrefetch == true && result.expertPrefetchShadow == true) else {
             throw ModelError("EXPERT_PREFETCH and EXPERT_PREFETCH_SHADOW are mutually exclusive")
         }
+        result.verifySplitAttention = try flag("SLOTSTREAM_OPT_VERIFY_SPLIT", fallback: result.verifySplitAttention ?? false) ? true : nil
+        let splitContextKey = "SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT"
+        recognized.insert(splitContextKey)
+        if let value = env[splitContextKey] {
+            guard let n = Int(value), n >= 0, n <= ContextPolicy.modelLimit else {
+                throw ModelError("\(splitContextKey) must be a key count from 0 to \(ContextPolicy.modelLimit)")
+            }
+            result.verifySplitMinContext = n
+        }
+        result.rowInvariantProjection = try flag("SLOTSTREAM_OPT_ROW_INVARIANT", fallback: result.rowInvariantProjection ?? false) ? true : nil
         let visionPaddingKey = "SLOTSTREAM_OPT_VISION_PADDING"
         recognized.insert(visionPaddingKey)
         if let value = env[visionPaddingKey] {

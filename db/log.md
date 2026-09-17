@@ -1576,6 +1576,18 @@ Introduction pass recorded: what left the README, where it lives, and the four c
 ## [2026-09-17 02:24] validate | db
 README introduction pass: dbmd validate --all with zero errors and the two preserved historical log warnings; claims gate 227 checks, 0 failures.
 
+## [2026-09-17 02:31] update | sources/runs/2026/09/2026-09-16-sevra-mac-thinking
+Appended the offscreen UI check of the thinking controls: Tools/check_sevra_thinking_ui.sh renders the production views over the scripted engine, clicks each control by its rendered label, 24 checks pass, six light and dark snapshots hashed; not a VoiceOver pass.
+
+## [2026-09-17 02:31] update | records/design/sevra-spec/ui-contract
+Thinking controls: the offscreen UI check now verifies the switch, hints, clock, Answer now, working notes and receipt; VoiceOver pass and live-app review still required before the UI gates are claimed.
+
+## [2026-09-17 02:31] update | records/design/sevra-spec/implementation-status
+Thinking before answers: offscreen UI check passing and wired into Tools/check_sevra_mac.sh; open items narrowed to a VoiceOver pass, live-app review, tool-loop thinking, a heavier level and an automatic mode.
+
+## [2026-09-17 02:31] validate | db
+dbmd validate db after the thinking UI check evidence: 0 errors, 0 warnings.
+
 ## [2026-09-17 02:35] update | README.md
 Second introduction pass: model name linked and introduced, Sevra note shorter, the 96 GB case in one sentence, no arrow, installer sentence gone, plainer auto-mode sentence, guides table groups the coding agents and names fx, request budget moved to the guides. 334 to 325 lines; 50 links and every anchor checked.
 
@@ -1608,4 +1620,121 @@ Release 0.2.20 records: dbmd validate --all with zero errors and the two preserv
 
 ## [2026-09-17 03:22] update | records/measurements/release-0-2-20-published-2026-09-16
 Correction to the previous validate entry: two new summaries were over 200 characters when it was written; this run's and this measurement's summaries are trimmed, and dbmd validate --all now shows zero errors and only the two preserved historical warnings.
+
+## [2026-09-17 07:39] create | sources/runs/2026/09/2026-09-17-sevra-mac-basics
+Sevra Mac basics receipt: Tools/check_sevra_mac.sh exit 0 with 141 PASS lines in a snapshot matching apps/macos and engine commit 6e25b00, offscreen mini-app isolation and review checks, helper mode matrix, app bundle build and helper self-test, three mutation checks and the doctor window comparison. The real-model basics check was not run while another local model process was active; the Xcode project was not built because Xcode is not installed.
+
+## [2026-09-17 07:39] create | records/claims
+Five claims for the limits docs/SEVRA-MAC.md now states: eight attachments per thread, 8 MB text files, 64 MB documents, 40 recognized pages per request and 2,000 files per folder. Each is a configured bound pinned by sevra-mac-checks --basics, not a measured optimum.
+
+## [2026-09-17 07:39] update | records/design/sevra-spec/runtime-contract
+Replaced the outdated source-tool paragraphs and added sections for sources and helper isolation, reviewed file changes, knowledge bases, skills and mini-apps, and context and job budgets; the thinking section now says plain turns use the new reply budgets.
+
+## [2026-09-17 07:39] update | records/design/sevra-spec/ui-contract
+Added Sources, reviews, apps and skills: attachment chips and access, the Changes, App review and Skill review panels, Apps & Skills and the app canvas, with the offscreen check that covers them; VoiceOver and live-app review still required.
+
+## [2026-09-17 07:39] update | records/design/sevra-spec/implementation-status
+Added the reading, reviewed changes, knowledge bases, skills and mini-apps section: what was implemented, the scripted and offscreen evidence, defects found and fixed, and the open items.
+
+## [2026-09-17 07:39] update | records/design/sevra-spec/mac-platform
+The planning window is now 32,768 tokens instead of 8,192, linked to the runtime contract's budgets.
+
+## [2026-09-17 07:39] update | records/design/sevra-spec/overview
+The overview names the September 17 additions and the runtime contract's wider scope.
+
+## [2026-09-17 07:39] index-rebuild | db
+Full rebuild after moving the new run receipt from records/run/, where dbmd write filed it, to sources/runs/2026/09/; the generated records/run folder was removed. The rebuild also refreshed the stale index summary of the September 16 thinking run.
+
+## [2026-09-17 07:39] validate | db
+Sevra Mac basics records: dbmd validate --all with zero errors and the two preserved historical warnings; claims gate 236 checks, 0 failures; projections and llms-full.txt current.
+
+## [2026-09-17 08:42] update | sources/runs/2026/09/2026-09-17-sevra-mac-basics
+Receipt regenerated on the final build: Tools/check_sevra_mac.sh exit 0 with 143 PASS lines; the app write budget check fails without the budget and the save-echo check failed before its fix; the bundle was rebuilt from the same sources. Added two real-model runs at the 10 GB plan, both passing all twelve checks: the first on an earlier build, whose counter app lost its count in the new app-under-test mode, and the second on the final build, whose app kept its count and one record. A recorded replay showed the model's first file.edit call carries a stray parameter tag. Frontmatter binary, command, tool and summary updated.
+
+## [2026-09-17 08:42] update | records/design/sevra-spec/runtime-contract
+Skills and mini-apps: Sevra assigns record ids and the app guidance says how to keep one value; change events reach an open app only for changes it did not make; each app has a write budget that invalid writes also spend; the review preview follows the same rules.
+
+## [2026-09-17 08:42] update | records/design/sevra-spec/implementation-status
+Reading and apps section: both real-model runs and the app-under-test results, the write budget and save-echo checks, the edit-call replay; removed the superseded preview-redraw item; the pending real-run item is replaced by a first edit call that needs no host correction.
+
+## [2026-09-17 08:42] validate | db
+Sevra Mac basics final records: dbmd validate --all with zero errors and the two preserved historical warnings; claims gate 236 checks, 0 failures; projections and llms-full.txt current.
+
+## [2026-09-17 14:55] update | sources/runs/2026/09/2026-09-17-sevra-mac-basics
+Correction and trace: the malformed first file.edit call is not the model's preference. Read fresh, the same prompt gives a correct call and the flipped token scores 4%; only the app's cached sequence of read and decoded turns flips it, because the engine's arithmetic and expert routing depend on how tokens are grouped. Added the raw call text, token scores, cache-history runs, routing drift, twelve fresh reads, eight cached chains and a test showing that resuming from 256-token boundaries reproduces a fresh read exactly. Replaces the earlier explanation that the model wrote a stray tag between old and new.
+
+## [2026-09-17 14:55] update | records/design/sevra-spec/implementation-status
+Corrected the edit-call finding: it comes from the engine's cached continuation, not the model's preference; the open item is now engine results that do not depend on cache history, with boundary resume as the proposed fix.
+
+## [2026-09-17 14:55] validate | db
+After the edit-call correction: dbmd validate --all with zero errors and the two preserved historical warnings; claims gate 236 checks, 0 failures; projections current. llms-full.txt is stale from another session's uncommitted docs edits, not from these records.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-16-verify-attention-modes-passcost
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-16-small-row-matmul-and-attention-microbench
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-16-verify-pass-dispatch-census
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-17-verify-pass-split-crossover-rungs
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-17-mtp-rowcheck-gate
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-17-fused-hyper-connection-read
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-17-verify-pass-decode-16k-first-build
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-17-verify-pass-decode-32k-loaded-machine
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | sources/runs/2026/09/2026-09-17-verify-pass-rows-check
+Raw output behind the speculative verify-pass measurement; see the run body for command, binary and machine state.
+
+## [2026-09-17 17:20] create | records/measurements/speculative-verify-pass-split-attention-2026-09-17
+The verify pass splits its attention from 6,144 tokens by default: a verification round 12% cheaper at 16k, 11.80 against 10.93 tok/s at 22 GB; an opt-in exact mode, which attends one row per call and gathers the small dense matmuls, makes speculative output equal plain output for draft depths up to 4. Pricing, a clean 32k comparison and the battery follow.
+
+## [2026-09-17 17:20] create | records/decisions/verify-pass-split-attention-default
+Split verify attention joins the deployment family from 6,144 tokens; the exact mode stays opt-in because it moves plain decode's rounding and costs speed.
+
+## [2026-09-17 17:20] create | records/claims
+Five claims for the verify-pass change: the 6,144-token threshold, 11.80 against 10.93 tok/s at 16k, the fetch-free pass 32% and 45% cheaper at 32k and 65k, 128 of 128 exact-mode tokens, and the exact mode's draft depths up to 4 (derived from the backend's quantized batch limits).
+
+## [2026-09-17 20:18] create | sources/runs/2026/09/2026-09-17-dense-matmul-row-invariance-python
+Raw output on the final verify-pass build; see the run body for command, binary and machine state.
+
+## [2026-09-17 20:18] create | sources/runs/2026/09/2026-09-17-verify-pass-mode-pricing
+Raw output on the final verify-pass build; see the run body for command, binary and machine state.
+
+## [2026-09-17 20:18] create | sources/runs/2026/09/2026-09-17-verify-pass-checks-and-battery
+Raw output on the final verify-pass build; see the run body for command, binary and machine state.
+
+## [2026-09-17 20:18] create | sources/runs/2026/09/2026-09-17-verify-pass-decode-final-build
+Raw output on the final verify-pass build; see the run body for command, binary and machine state.
+
+## [2026-09-17 20:18] create | records/claims/verify-split-32k-decode-x1-37
+The split verify attention measured x1.37 against the dense pass at 32,740 tokens, paired within rounds (1.41 and 1.37); the run's absolute rates are not claimed.
+
+## [2026-09-17 20:18] create | sources/artifacts/speculative-verify-pass-2026-09-17
+Evidence archive for the verify-pass work: 141 members (logs, scripts, prompts, check output, static gates, the battery, the three builds' identities and source archives), round trip verified, final binary 8d86f10f5b6696d4.
+
+## [2026-09-17 20:18] update | records/measurements/speculative-verify-pass-split-attention-2026-09-17
+Added the mode pricing at 4k and 16k, the 32k decode ratios on the final build, the battery result (247 checks, no failure) and the catalogue and static gates.
+
+## [2026-09-17 20:18] update | records/decisions/verify-pass-split-attention-default
+Added the 32k paired ratios to the evidence.
+
+## [2026-09-17 20:18] validate | db
+Verify-pass records complete: dbmd validate --all with zero errors and the two preserved historical warnings; claims gate 252 needles, 0 failures; projections current; llms-full.txt regenerated.
+
+## [2026-09-17 20:21] update | sources/artifacts/speculative-verify-pass-2026-09-17
+Repacked before commit so the archive carries both source diffs: 7a58174->8d86f10f and 8d86f10f->8ea3c360959fd20c, the comment-only change the run record cites. 143 members, round trip verified; the 141-member entry above describes the superseded pack.
+
+## [2026-09-17 20:27] update | sources/runs/2026/09/2026-09-17-verify-pass-checks-and-battery
+Static gates re-run on the tree after the documentation reflow: 44 checks, zero failures, STATIC GATES PASS.
 

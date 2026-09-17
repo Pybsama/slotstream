@@ -2,11 +2,22 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-17T03:21:42.302009Z
+updated: 2026-09-17T20:17:20.711829Z
 ---
 
 # records/claims
 
+- [[records/claims/verify-split-32k-decode-x1-37]] — Speculative decode with the split verify attention measured x1.37 against the dense pass with a 32,740-token prompt at a 22 GB target
+- [[records/claims/exact-mode-draft-depths-up-to-4]] — The exact mode's equality holds for draft depths up to 4
+- [[records/claims/exact-mode-128-of-128-tokens]] — In the exact mode a speculative run matched a plain run on 128 of 128 tokens in the 16k comparison
+- [[records/claims/verify-split-fetch-free-pass-32-and-45-percent]] — The fetch-free three-row verify pass is 32% cheaper split at 32,740 tokens and 45% at 65,508
+- [[records/claims/verify-split-16k-decode-11-80-tok-s]] — Speculative decode with the split verify attention measured 11.80 against 10.93 tok/s (x1.079) at a 22 GB target with a 16,356-token prompt
+- [[records/claims/verify-split-from-6144-tokens]] — The speculative verify pass splits its attention from 6,144 tokens of context by default
+- [[records/claims/sevra-mac-folders-2000-files]] — Sevra reads folders of up to 2,000 files
+- [[records/claims/sevra-mac-recognition-40-pages]] — Sevra recognizes text on at most 40 pages per request
+- [[records/claims/sevra-mac-documents-64-mb]] — Sevra reads rich documents up to 64 MB
+- [[records/claims/sevra-mac-text-files-8-mb]] — Sevra reads text and code files up to 8 MB each
+- [[records/claims/sevra-mac-eight-attachments]] — A Sevra thread holds up to eight attachments
 - [[records/claims/responses-default-output-budget]] — The API reference caps the default Responses reply budget at 8,192 tokens
 - [[records/claims/responses-progress-event-interval]] — The API reference says streamed Responses replies carry a progress event every 10 seconds during a prompt read
 - [[records/claims/codex-guide-progress-event-interval]] — The Codex guide says a progress event arrives every ten seconds during a prompt read

@@ -2,11 +2,11 @@
 type: run
 id: 01m2nxyt8xm6hdqh33qgq1gdze
 created: 2026-09-16T20:19:00.509756+00:00
-updated: 2026-09-16T20:19:29.944945+00:00
-summary: 'Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing'
+updated: 2026-09-17T02:31:54.816168+00:00
+summary: 'Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing, offscreen UI check of the production views passing'
 binary: 18572abdb6b1d725cd5d2756e2f4d2bf91ed599302916343824017f61459bf68
 captured_at: 2026-09-16
-command: swift build --package-path apps/macos; sevra-mac-checks --thinking; sevra-mac-checks; sevra-mac-checks --real-thinking --home <new> --budget 96 --answer-after 8
+command: swift build --package-path apps/macos; sevra-mac-checks --thinking; sevra-mac-checks; sevra-mac-checks --real-thinking --home <new> --budget 96 --answer-after 8; bash Tools/check_sevra_thinking_ui.sh
 discarded: false
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
 title: Sevra Mac thinking before answers
@@ -43,3 +43,36 @@ The observed thought rate at this plan was about 4 to 5 tokens per second (96 to
 ## Limits
 
 No visual or screen-reader review of the new controls was possible in this session (screen-recording permission was unavailable). The 768-token ceiling and `low` level are development operating bounds. Thinking in tool loops, a heavier level, a coordinator-proposed automatic mode and persistence of thought text across relaunch are unimplemented follow-ups that need their own measurement. Engine-level budgets and API exposure remain Slotstream work.
+
+## Offscreen UI check, later the same day
+
+The visual gap above was closed without screen-recording permission by an offscreen check of the production views: `Tools/check_sevra_thinking_ui.sh` (SHA-256 `a965c0157b3eec1c577e734060de4195af2ada069dc4429ef7b719581a4094da`) builds the debug `Sevra` product, links the app's own compiled objects with `apps/macos/NativeChecks/ThinkingUIChecks.swift` (SHA-256 `33a49e3a46275777e3775fc06cf14ce3db691b5893933ea75b82e77f6975dc0d`) and runs the real `ContentView` and `AppModel` over `ScriptedInference` in a scratch Home with the bundled fonts. The window is ordered onto the window server far outside every display, the process never activates and nothing is drawn on a screen. Each control is located by its rendered label with on-device text recognition on a 2x render and clicked with a synthesized mouse press through the window; the message is typed into the real composer text view. Exit 0 in 52 s including the debug relink; all 24 checks passed:
+
+```
+PASS: Home composer shows the Think longer switch
+PASS: Home hint stays plain while thinking is off
+PASS: a new thread starts with Think longer off
+PASS: Think longer is clickable
+PASS: the thread remembers the switch
+PASS: the hint explains the switch while it is on
+PASS: Send is clickable
+PASS: run status shows Thinking with a clock: Thinking… 0:01
+PASS: Thinking status and Answer now are visible while the thought runs
+PASS: Working notes can be opened while the thought runs
+PASS: opened working notes show the streaming thought and its privacy line
+PASS: Answer now is clickable
+PASS: the run records an Answer now receipt: Thought for 3 s, then answered when you asked.
+PASS: the answer arrived after Answer now
+PASS: the receipt line is shown under the run
+PASS: working notes stay readable and Answer now is gone
+PASS: the composer hint now quotes a typical thinking time
+PASS: Think longer is clickable again
+PASS: clicking again turns thinking off and restores the plain hint (thinking=nil)
+PASS: thinking controls render and respond in the production Mac views
+```
+
+Snapshots (1120 by 760 points at 2x, kept as build output in `.build/sevra-thinking-ui/`, not stored in this database): `01-home-idle.png` `1b775987e03cb14630061a844e1b1f11b8b1feec4ba7fb94babec825464c9d4d`, `02-thread-thinking-off.png` `5fe8a30979ca61d49c2310022e7a6cd3c964f5b703cd4cf6fbd12baf71186c02`, `03-thread-thinking-on.png` `009b4b48dcba1bd4219df485cf6f702b6f1511e0105be20eb5b1925006ca50aa`, `04-thinking-live.png` `575693c2063020cfaf19a3b1aca98de0255a338c05ec18c9747c95403b455c53`, `05-answered-receipt.png` `5d2e54e98d3e0f5b066f694cff690ff5b6f14441c117f731231e512693df5b93`, `06-answered-receipt-dark.png` `c3afa7f6557fa54a9de12573ef76ffffc0f08a5e473a050aeff89acae8de5b5d`.
+
+Observed in the renders: the switch pill darkens when on; the hint reads "Thinks before answering. Answer now ends a thought early." before any thought and "Thinks before answering. Recently about 3 s extra." afterwards; the status reads "Thinking… 0:02" beside a spinner while the scripted thought streams; "Answer now" sits beside "Stop" in the composer; the opened notes show "Not saved or remembered. Kept only while Sevra is open." above the streaming text; after Answer now the status reads "Completed" with the receipt "Thought for 3 s, then answered when you asked." and a collapsed "Working notes" disclosure. Two behaviors worth knowing rather than defects: while a run is busy the composer hint shows "Local on this Mac." instead of the thinking hint, and the disclosure opens from its chevron, not from its label, which is the standard macOS disclosure behavior.
+
+Limits of this check: it is not a VoiceOver pass and not a person's review of the live app; label recognition verifies visible text and click wiring, not pixel-exact layout; one window size, the default text size, explicit light and dark appearance, and the scripted engine rather than the model. Three probe-side false starts were fixed while building it (SwiftUI controls ignore clicks in a window the window server does not know; the app's composer-change forwarding had to be replicated; the disclosure needed its chevron). No app source changed for this check.

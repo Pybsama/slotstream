@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-09-17T02:35:56.900936Z
+updated: 2026-09-17T20:17:53.047737Z
 ---
 
 # records/decisions
 
+- [[records/decisions/verify-pass-split-attention-default]] — The speculative verify pass splits its attention from 6,144 tokens by default; the exact mode stays opt-in
 - [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 - [[records/decisions/native-stack-stated-on-every-surface]] — Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
 - [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target

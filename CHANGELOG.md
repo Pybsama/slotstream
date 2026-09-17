@@ -6,6 +6,33 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+- Faster speculative decode on long prompts. The three-row verify pass of
+  draft depth 2 no longer falls to the dense attention kernel, whose cost
+  grows with the context: from 6,144 tokens it runs two rows at a time through
+  the vector kernel, the kernel plain decode's attention uses. At a 22 GB
+  target with a 16,356-token prompt, speculative decode measured 11.80 against
+  10.93 tok/s (x1.079), and x1.37 with a 32,740-token prompt. The fetch-free
+  verify pass is 32% cheaper at 32,740 tokens and 45% at 65,508.
+  `SLOTSTREAM_OPT_VERIFY_SPLIT=0` restores the previous pass.
+- Exact mode, off by default: `SLOTSTREAM_OPT_ROW_INVARIANT=1` with
+  `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT=0` makes a speculative run's output
+  identical to a plain run's in the same mode for draft depths up to 4 (128 of
+  128 tokens in the 16k comparison). The model's small dense matmuls run
+  through one kernel at every row count, which changes plain decode's rounding
+  as well, and each verify row attends in its own call over the keys plain
+  decode reads, so the backend picks the same attention kernel.
+- New gate `mtp-rowcheck` in `Tools/verify.sh`: in exact mode, every row of a
+  two-row and a three-row verify pass, and the state a three-row pass leaves,
+  must equal the one-row passes bit for bit, on a prompt whose positions cross
+  1,024 keys, where the attention kernel changes, and one above the indexer
+  budget. The weights-free `verify-pass-rows` catalogue check holds the
+  kernels in CI, at every key count where the backend changes attention
+  kernels. `mtp-bench --arms` compares plain, shipped, split and exact decode
+  on one warm engine; `mtp-passcost` gains `--prompt-file`, `--max-context`
+  and `--attention-modes` (stock, split, exact).
+
 ## 0.2.20 - 2026-09-16
 
 - Serve the OpenAI Responses API at `POST /v1/responses`, the protocol Codex

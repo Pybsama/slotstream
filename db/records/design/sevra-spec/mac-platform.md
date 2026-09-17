@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb639kg290sh168ce1fd53
 created: 2026-09-14T16:14:44.019337+00:00
-updated: 2026-09-15T01:32:16.429043+00:00
+updated: 2026-09-17T07:31:16.943412+00:00
 summary: Mac native implementation baseline and dependency qualification
 ---
 # Mac implementation baseline
@@ -21,12 +21,14 @@ The shipping profile, signed dependencies, full acquisition qualification, broad
 [[records/design/sevra-spec/overview]]
 
 ## Adaptive memory and model readiness
-
 The native app defaults to automatic memory planning and starts the engine’s
 elastic governor. Custom limits are auto plans constrained by a RAM-share
 bound, not the CLI’s pinned explicit allocation. CLI semantics stay unchanged.
-The current text profile keeps MTP/vision off and its 8,192-token context. No
-model swap, context reduction or provider fallback occurs under pressure.
+The current text profile keeps MTP/vision off. Its planning window was 8,192
+tokens until September 17 and is now 32,768, the engine's smallest automatic
+window; see Context and job budgets in
+[[records/design/sevra-spec/runtime-contract]]. No model swap, context
+reduction or provider fallback occurs under pressure.
 
 The supported custom range rounds the engine’s minimum up to half a decimal
 GB and caps the current product profile at the lower of its measured 33 GB

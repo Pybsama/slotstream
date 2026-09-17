@@ -170,6 +170,13 @@ PYMTP
   else
     echo "FAIL  speculative decode gates"; tail -5 "$VERIFY_OUT/mtp.txt"; FAIL=$((FAIL+1))
   fi
+  # In the exact mode a multi-row verify pass must reproduce the one-row
+  # passes bit for bit (the stock deviation is reported alongside): one
+  # prompt whose positions cross 1,024 keys, where the attention kernel
+  # changes, and one above the indexer budget, where a block selection is
+  # active.
+  check "verify pass rows equal plain decode bit for bit (mtp-rowcheck)" \
+        "run_binary mtp-rowcheck --memory-gb $BIG_MEMORY"
 else
   echo "SKIP  mtp gates (no mtp.safetensors — convert with Tools/mtp_convert.py)"
 fi

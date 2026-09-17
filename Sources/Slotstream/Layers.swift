@@ -530,6 +530,23 @@ package struct QSASelection {
         self.onSpecialized = onSpecialized
     }
 
+    /// The selection a one-row pass at position `offset + r` would prepare
+    /// from the same indexer state: that row's query, the blocks complete at
+    /// its position and its key count, so the scores, the partition and the
+    /// mask run at that pass's shapes. Nil where that pass has none (its keys
+    /// fit the budget). A multi-row pass's own scores run at other shapes, and
+    /// near-tied blocks could then rank differently.
+    package func row(_ r: Int, budget: Int) -> QSASelection? {
+        let keys = offset + r + 1
+        guard keys > budget, ratio > 0 else { return nil }
+        let blocks = keys / ratio
+        return QSASelection(
+            q: q[0..., r ..< r + 1, 0..., 0...], pooled: pooled[0..., 0 ..< blocks, 0...],
+            blockStarts: blockStarts[0 ..< blocks], offset: offset + r, kvLen: keys, ratio: ratio,
+            blockTopK: blockTopK, headDim: headDim, denseBypass: denseBypass,
+            specializedSelector: specializedSelector, onSpecialized: onSpecialized)
+    }
+
     package func mask(lo: Int, hi: Int, keyEnd: Int) -> MLXArray {
         let (B, S, nBlocks) = (q.dim(0), hi - lo, pooled.dim(1))
         let qPos = MLXArray((offset + lo ..< offset + hi).map { Int32($0) })
@@ -620,6 +637,12 @@ final class QSAAttention {
     var boundedIndexer = false
     var selectedAttention = false
     private(set) var selectedAttentionTiles = 0
+    /// The short multi-row pass (the speculative verify pass): `.split` and
+    /// `.exact` keep it on the vector kernel once the context holds
+    /// `multiRowMinContext` keys; see `MultiRowAttention`.
+    var multiRowMode: MultiRowAttention.Mode = .stock
+    var multiRowMinContext = MultiRowAttention.defaultMinContext
+    private(set) var multiRowSplits = 0
     var debugSink: ((String, MLXArray) -> Void)? = nil
     let cfg: ModelConfig
     let qProj: QLinear
@@ -673,7 +696,12 @@ final class QSAAttention {
         let selection = indexer.prepare(x, rope: rope, cache: idxCache, offset: offset)
         let pruneLastQuery = lastQueryOnly && S > InferenceOptimizations.terminalQueryTile
         let useSelected = selectedAttention && S > 8 && !pruneLastQuery
-        let sparse = boundedIndexer || useSelected || pruneLastQuery ? nil : selection?.mask(lo: 0, hi: S, keyEnd: offset + S)
+        let multiRow = !pruneLastQuery && MultiRowAttention.engages(
+            mode: multiRowMode, rows: S, context: offset + S, minContext: multiRowMinContext)
+        let exactRows = multiRow && multiRowMode == .exact
+        let splitRows = multiRow && multiRowMode == .split
+        let sparse = boundedIndexer || useSelected || pruneLastQuery || exactRows
+            ? nil : selection?.mask(lo: 0, hi: S, keyEnd: offset + S)
 
         let qg = qProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, H, 2 * D])
         var q = qg[.ellipsis, 0 ..< D]
@@ -748,6 +776,17 @@ final class QSAAttention {
                 return oProj(flattened * sigmoid(gate), minimumRows: minimumProjectionRows)
             }
         }
+        if exactRows {
+            let budget = cfg.indexerBudget
+            let masks = (0 ..< S).map { r in
+                selection?.row(r, budget: budget)?.mask(lo: 0, hi: 1, keyEnd: offset + r + 1)
+            }
+            var out = MultiRowAttention.exactRows(q: q, k: k, v: v, base: offset, scale: scale, masks: masks)
+            multiRowSplits += 1
+            debugSink?("sdpaOut", out)
+            out = out.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
+            return oProj(out * sigmoid(gate), minimumRows: minimumProjectionRows)
+        }
         var out = Self.attend(
             q: q, k: k, v: v, sparse: sparse, base: offset, scale: scale,
             block: boundedIndexer && selection != nil
@@ -755,7 +794,9 @@ final class QSAAttention {
                 : AttentionTuning.queryBlock(pass: S, context: k.dim(2)),
             selection: boundedIndexer || useSelected ? selection : nil,
             selectedAttention: useSelected,
-            onSelected: { [weak self] in self?.selectedAttentionTiles += 1 })
+            onSelected: { [weak self] in self?.selectedAttentionTiles += 1 },
+            splitRows: splitRows,
+            onSplit: { [weak self] in self?.multiRowSplits += 1 })
         debugSink?("sdpaOut", out)
         out = out.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
         return oProj(out * sigmoid(gate), minimumRows: minimumProjectionRows)
@@ -821,7 +862,8 @@ final class QSAAttention {
     static func attend(
         q: MLXArray, k: MLXArray, v: MLXArray, sparse: MLXArray?, base: Int,
         scale: Float, block: Int, selection: QSASelection? = nil,
-        selectedAttention: Bool = false, onSelected: (() -> Void)? = nil
+        selectedAttention: Bool = false, onSelected: (() -> Void)? = nil,
+        splitRows: Bool = false, onSplit: (() -> Void)? = nil
     ) -> MLXArray {
         let S = q.dim(2)
         if selectedAttention, S > 8, scale == 0.0625, sparse == nil,
@@ -856,6 +898,27 @@ final class QSAAttention {
             return queries > 1 ? .causal : .none
         }
         if block >= S {
+            if splitRows {
+                // Two rows at GQA 12 is the largest chunk the vector kernel
+                // admits. Every row keeps its full key domain, so the keys it
+                // sees are a one-row pass's; the call's key count is the whole
+                // pass's, which near a kernel switch can round the row
+                // differently than its own count would. `.exact` removes that.
+                let rows = selection?.mask(lo: 0, hi: S, keyEnd: base + S) ?? sparse
+                    ?? MultiRowAttention.causalRows(rows: S, keyEnd: base + S)
+                let chunk = max(1, MultiRowAttention.vectorKernelRows / max(1, q.dim(1) / k.dim(1)))
+                var outs: [MLXArray] = []
+                var lo = 0
+                while lo < S {
+                    let hi = min(S, lo + chunk)
+                    outs.append(MLXFast.scaledDotProductAttention(
+                        queries: q[0..., 0..., lo ..< hi, 0...], keys: k, values: v, scale: scale,
+                        mask: .array(rows[0..., 0..., lo ..< hi, 0...])))
+                    lo = hi
+                }
+                onSplit?()
+                return concatenated(outs, axis: 2)
+            }
             return MLXFast.scaledDotProductAttention(
                 queries: q, keys: k, values: v, scale: scale, mask: mask(selection?.mask(lo: 0, hi: S, keyEnd: base + S) ?? sparse, queries: S))
         }
@@ -885,31 +948,124 @@ final class QSAAttention {
     }
 }
 
-/// How a pass is split across the sparse-attention layers.
-///
-/// **This is a bound, not an optimisation, and the measurements say so.**
-/// Splitting the queries was built expecting it to cut peak memory; measured
-/// end to end it does not, because the score matrix is not where the pass
-/// peaks. Interleaved A/B on the 7,960-token acceptance prompt at a pinned
-/// 20-experts-per-layer pool: peak 7.35/7.70/8.50 GB whole against
-/// 7.40/7.75/8.50 blocked at passes of 512/1024/2048, and a 16,384-token
-/// `context-check` read 8.58 GB whole against 8.64 GB blocked. The high-water
-/// mark sits in the MoE sweep's activations, so bounding attention lowers
-/// something that was never the maximum. Output was byte-identical throughout.
-///
-/// So the default threshold is set to make blocking a **no-op at every
-/// configuration the planner produces today**: it engages only above
-/// `PrefillSchedule.measuredQueryKeyProduct`, which is exactly where the
-/// schedule currently shrinks the pass instead. That keeps the measured
-/// envelope unchanged while capping a transient that would otherwise grow
-/// without limit as the context cap rises, and it is what would let the pass
-/// stay large at a long context rather than halving. Do not turn it on below
-/// the threshold expecting memory back; it costs a few percent and returns
-/// nothing.
-///
-/// The block is a function of the pass and the context alone, never of the
-/// pool or of what is resident, so it cannot touch the golden-equivalence
-/// invariant (§6.1).
+/// How the short multi-row pass, the speculative verify pass of three to
+/// eight rows, attends. The pinned backend keeps a pass on the vector SDPA
+/// kernel only while query rows times the GQA factor stay within 32; at
+/// GQA 12 that is two rows, so the three-row depth-2 verify pass falls to the
+/// dense kernel, which reads every key and value and materializes a score row
+/// per query, a cost that grows with the context (measured 2026-09-16 on the
+/// real engine: the third row costs 12 ms at 4k and 99 ms at 65k keys on the
+/// dense kernel, 10 to 18 ms split). `.split` runs the rows through the
+/// vector kernel two at a time over the pass's keys and mask and
+/// concatenates. A row's visible keys are those of a one-row pass at its
+/// position, but the backend picks the kernel variant and its block layout
+/// from the key count (on this Mac the two-pass variant from 1,024 keys, new
+/// block counts above 1,024, 8,192, 32,768 and 65,536 keys), so near those
+/// counts a split row can round differently from the one-row pass.
+/// `.exact`, the mode `RowInvariantMatmul` selects, runs each row alone over
+/// exactly the keys and mask a one-row pass at its position uses, with that
+/// pass's indexer shapes, from two rows up: every call is then the call plain
+/// decode makes, and together with the row-invariant matmuls a pass of up to
+/// `exactMaxRows` rows reproduces the one-row passes bit for bit.
+/// `mtp-passcost --attention-modes` times the modes; `mtp-rowcheck` gates
+/// the equality and `verify-pass-rows` the kernels.
+public enum MultiRowAttention {
+    public enum Mode: String { case stock, split, exact }
+    /// Query rows times the GQA factor the vector kernel admits.
+    static let vectorKernelRows = 32
+    /// Rows at or above which the split matters; one and two rows already
+    /// take the vector kernel. Longer passes are prefill, not verify.
+    public static let minRows = 3
+    public static let maxRows = 8
+    /// Rows up to which the exact mode's equality holds on every Apple GPU in
+    /// the pinned backend's table: a quantized matmul of fewer rows than its
+    /// batch limit runs each row alone, and the smallest limit is 6 (M1 and
+    /// M2 below Ultra, outputs wider than 4,096 such as the output head).
+    public static let exactMaxRows = 5
+    /// Keys from which the split beats the dense kernel. Measured at k=3 on
+    /// the development Mac (split minus dense, ms): +6 at 4,068 keys, -1.7 at
+    /// 6,116, -3.9 at 8,183, -7.8 at 12,279, -11 at 16,356, -39 at 32,740 and
+    /// -81 at 65,508; the crossover lies near 5,700.
+    public static let defaultMinContext = 6144
+    /// The mode the optimizations select: the split, made exact by the
+    /// row-invariant projections.
+    package static func mode(splitAttention: Bool?, rowInvariant: Bool?) -> Mode {
+        splitAttention != true ? .stock : rowInvariant == true ? .exact : .split
+    }
+    package static func engages(mode: Mode, rows: Int, context: Int, minContext: Int) -> Bool {
+        switch mode {
+        case .stock: return false
+        case .split: return rows >= minRows && rows <= maxRows && context >= minContext
+        // Two rows already take the vector kernel, but over one more key than
+        // the first row's one-row pass, which can change the variant.
+        case .exact: return rows >= 2 && rows <= maxRows && context >= minContext
+        }
+    }
+    /// The exact mode's attention: row r alone over keys `[0, base + r + 1)`
+    /// with its one-row pass's mask, `.none` where that pass has no selection.
+    static func exactRows(
+        q: MLXArray, k: MLXArray, v: MLXArray, base: Int, scale: Float, masks: [MLXArray?]
+    ) -> MLXArray {
+        var outs: [MLXArray] = []
+        outs.reserveCapacity(q.dim(2))
+        for r in 0 ..< q.dim(2) {
+            let end = base + r + 1
+            let mask: MLXFast.ScaledDotProductAttentionMaskMode
+            if let m = masks[r] { mask = .array(m) } else { mask = .none }
+            outs.append(MLXFast.scaledDotProductAttention(
+                queries: q[0..., 0..., r ..< r + 1, 0...],
+                keys: k[0..., 0..., 0 ..< end, 0...], values: v[0..., 0..., 0 ..< end, 0...],
+                scale: scale, mask: mask))
+        }
+        return concatenated(outs, axis: 2)
+    }
+    /// A causal boolean mask for the last `rows` queries over `keyEnd` keys,
+    /// for a pass below the indexer budget where no selection mask exists.
+    static func causalRows(rows: Int, keyEnd: Int) -> MLXArray {
+        let keys = MLXArray((0 ..< keyEnd).map { Int32($0) })
+        let last = MLXArray((0 ..< rows).map { Int32(keyEnd - rows + $0) })
+        return (keys.expandedDimensions(axis: 0) .<= last.expandedDimensions(axis: 1)).reshaped([1, 1, rows, keyEnd])
+    }
+}
+
+/// Small dense matmuls whose per-row arithmetic does not depend on the row
+/// count. The pinned backend runs one activation row as a GEMV and two or
+/// more as a split-K GEMM, whose partial sums land in a different order, so
+/// the bf16 or fp32 result of the same row differs between a one-row decode
+/// pass and a multi-row verify pass (measured 2026-09-16: row 0 of a two-row
+/// pass sits 2 to 3% of the logit spread from the one-row pass). Enabled by
+/// `InferenceOptimizations.rowInvariantProjection`, every pass of one to
+/// eight rows goes through `gatherMM` with one row per index, whose kernel
+/// (`gather_mv`) computes each row independently with parameters that depend
+/// only on the shapes, so a row's bits are the same at any row count. The
+/// one-row pass takes the same kernel on purpose: the backend's one-row GEMV
+/// tiles differently from `gather_mv` when the input is at least 16 times
+/// wider than the output (the GDN gate, shared-expert gate and inject
+/// shapes), so a gathered multi-row pass cannot match it there. The mode
+/// therefore changes plain decode's rounding too; its contract is that a
+/// multi-row pass equals the one-row passes of the same mode. With the split
+/// verify attention on, it also selects `MultiRowAttention.Mode.exact`. The dense
+/// weights: the router and inject weights and QLinear's dense fallback (the
+/// GDN `in_proj_a`/`in_proj_b`, the shared-expert gate, the indexer
+/// projection). Prefill chunks above eight rows keep the stock matmul.
+public enum RowInvariantMatmul {
+    /// Process-wide; set from the resolved optimizations at every forward pass.
+    public package(set) static var enabled = false
+    public static let maxRows = 8
+    public private(set) static var calls = 0
+    static func rows(_ x: MLXArray, _ w: MLXArray) -> MLXArray {
+        let rows = x.size / x.dim(-1)
+        guard enabled, rows >= 1, rows <= maxRows else { return matmul(x, w) }
+        calls += 1
+        let k = x.dim(-1)
+        let out = gatherMM(
+            x.reshaped([rows, 1, k]), w.reshaped([1, k, w.dim(-1)]),
+            lhsIndices: MLXArray((0 ..< rows).map { UInt32($0) }),
+            rhsIndices: MLXArray([UInt32](repeating: 0, count: rows)))
+        return out.reshaped(Array(x.shape.dropLast()) + [w.dim(-1)])
+    }
+}
+
 public enum AttentionTuning {
     /// Below this a block stops being exact: 128 measured 1.6e-3 of logit
     /// spread against the whole pass, where 256 and up measured 0.0.
@@ -1620,7 +1776,7 @@ final class GatedResidual {
         let shape = Array(w.shape.dropLast()) + [cfg.hcCount, cfg.hiddenSize]
         let mixed = (w.reshaped(shape) * normed.reshaped(shape)).mean(axis: -2)
         guard let injW = inject else { return (mixed, nil) }
-        let projected = QLinear.withReferenceRows(normed, minimumRows: minimumProjectionRows) { matmul($0, injW.transposed()) }
+        let projected = QLinear.withReferenceRows(normed, minimumRows: minimumProjectionRows) { RowInvariantMatmul.rows($0, injW.transposed()) }
         let injected = 2 * sigmoid(projected / Float(cfg.hcCount))
         return (mixed, injected)
     }

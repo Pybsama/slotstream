@@ -49,6 +49,7 @@ extension Catalogue {
             Check("router-selection", tier: .t1) { Diagnostics.optimizationRouterSelection() },
             Check("compiled-norm", tier: .t1) { try Diagnostics.optimizationCompiledNorm() },
             Check("router-projection", tier: .t1) { Diagnostics.optimizationRouterProjection() },
+            Check("verify-pass-rows", tier: .t1) { Diagnostics.verifyPassRows() },
             Check("block-selection", tier: .t1) { Diagnostics.optimizationBlockSelection() },
             Check("indexer-visibility", tier: .t1) { Diagnostics.optimizationIndexerVisibility() },
         ] + toolCallChecks + gatewayChecks + openAIChecks + responsesChecks + weightStoreChecks

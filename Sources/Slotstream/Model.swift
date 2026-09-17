@@ -46,6 +46,10 @@ public final class Qwen4ExpModel {
     public var selectedAttentionTiles: Int {
         qsa.values.reduce(0) { $0 + $1.selectedAttentionTiles } + (mtpHead?.attn.selectedAttentionTiles ?? 0)
     }
+    /// Multi-row verify passes (per attention layer) that took the split or exact vector-kernel path.
+    public var multiRowSplits: Int {
+        qsa.values.reduce(0) { $0 + $1.multiRowSplits } + (mtpHead?.attn.multiRowSplits ?? 0)
+    }
     public private(set) var terminalQueryRowsSkipped = 0
     public private(set) var terminalMoERowsSkipped = 0
     private enum HiddenDemand { case fullMulti, stateOnly, lastRow }
@@ -74,6 +78,13 @@ public final class Qwen4ExpModel {
         mtpHead?.attnHC.compiledNormFinish = compiledNorm
         mtpHead?.mlpHC.compiledNormFinish = compiledNorm
         mtpHead?.mixer.compiledNormFinish = compiledNorm
+        let multiRow = MultiRowAttention.mode(
+            splitAttention: optimizations.verifySplitAttention, rowInvariant: optimizations.rowInvariantProjection)
+        let multiRowContext = optimizations.verifySplitMinContext ?? MultiRowAttention.defaultMinContext
+        for layer in qsa.values { layer.multiRowMode = multiRow; layer.multiRowMinContext = multiRowContext }
+        mtpHead?.attn.multiRowMode = multiRow
+        mtpHead?.attn.multiRowMinContext = multiRowContext
+        RowInvariantMatmul.enabled = optimizations.rowInvariantProjection == true
         ngram.ringEvictionOrder = optimizations.ngramRingOrder
         pool.denseLookup = optimizations.denseExpertLookup
         pool.sparsePinClearing = optimizations.sparsePoolPins

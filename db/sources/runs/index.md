@@ -2,14 +2,28 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-17T03:22:19.428877Z
+updated: 2026-09-17T20:18:44.385870Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-17-verify-pass-checks-and-battery]] — Check catalogue, static gates and verify battery on the final verify-pass build
+- [[sources/runs/2026/09/2026-09-17-verify-pass-decode-final-build]] — Decode comparisons at 16k and 32k on the final build: dense, split and exact
+- [[sources/runs/2026/09/2026-09-17-verify-pass-mode-pricing]] — Fetch-free verify pass cost of the stock, split and exact modes at 4k and 16k tokens
+- [[sources/runs/2026/09/2026-09-17-dense-matmul-row-invariance-python]] — Dense matmul row invariance under Python MLX: stock, gathered and one-row kernels
+- [[sources/runs/2026/09/2026-09-17-verify-pass-split-crossover-rungs]] — Split verify attention crossover rungs at 13 GB, 4k to 16k tokens
+- [[sources/runs/2026/09/2026-09-17-verify-pass-rows-check]] — Verify-pass kernel self-check verify-pass-rows on the first and final builds
+- [[sources/runs/2026/09/2026-09-17-verify-pass-decode-16k-first-build]] — Decode comparison at 16k on the first build: plain, dense, split and exact
+- [[sources/runs/2026/09/2026-09-17-mtp-rowcheck-gate]] — Row-equality gate mtp-rowcheck, four versions at 10 GB
+- [[sources/runs/2026/09/2026-09-17-fused-hyper-connection-read]] — Fused hyper-connection read against the eager read at 16k and 4k tokens
+- [[sources/runs/2026/09/2026-09-16-verify-pass-dispatch-census]] — Metal dispatch census of plain and speculative decode
+- [[sources/runs/2026/09/2026-09-16-verify-attention-modes-passcost]] — Verify pass cost by attention mode from 4k to 65k tokens: dense, split and gathered keys
+- [[sources/runs/2026/09/2026-09-16-small-row-matmul-and-attention-microbench]] — Small-row quantized matmul and multi-row attention microbenchmarks under Python MLX
+- [[sources/runs/2026/09/2026-09-17-verify-pass-decode-32k-loaded-machine]] — Decode comparison at 32k on a loaded machine, discarded for timing
+- [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]] — Sevra Mac basics: full scripted suite, offscreen checks and two real-model runs pass for documents, reviewed changes, knowledge bases, skills and mini-apps
 - [[sources/runs/2026/09/2026-09-16-release-0-2-20-published-and-installed]] — v0.2.20 acceptance: CI artifact 25/25, Codex and SDK 9/9 before the tag, attestation, install, installed e2e 31/31, prefix 11/11, doctor and pull --verify.
 - [[sources/runs/2026/09/2026-09-16-codex-on-installed-0-2-20]] — Codex 0.148.0 and the OpenAI Python SDK 3.14.1 on the installed 0.2.20: file create and update through apply_patch, commands, an attached picture and view_image, and 11 strict SDK checks; 18 of 18.
-- [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]] — Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing
+- [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]] — Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing, offscreen UI check of the production views passing
 - [[sources/runs/2026/09/2026-09-16-release-0-2-19-published-and-installed]] — v0.2.19 acceptance: CI artifact 25/25, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary, doctor at 22 GB shows the corrected forecast.
 - [[sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb]] — 0.2.19 release benchmark at 22 GB: the shipping build's default 1.108 over the 0.2.18 forecast (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-b1-cohort-20gb]] — Taps B1 at 20 GB: aggregate 1.058 (bootstrap 1.031 to 1.088), families 1.019 to 1.105, 36 of 36 outputs identical; r0033 kept one counted pair, so the pairs condition fails
@@ -493,22 +507,8 @@ updated: 2026-09-17T03:22:19.428877Z
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-tower-counterexample]] — Vision tower numerical counterexample and rebuilt ordinary integration
 - [[sources/runs/2026/09/2026-09-06-slotpack-mac-and-final-candidate-acceptance]] — Complete fresh-to-resumed public Mac installation verifies all original files; final API, HTTP, memory, coverage, external consumer and loaded-model gates pass.
 - [[sources/runs/2026/09/2026-09-06-optimization-guarded-vision-capacity]] — Guarded measurement refusal and maximum vision attention
-- [[sources/runs/2026/09/2026-09-05-slotpack-public-cdn-and-linux-qualification]] — Complete fresh Linux CDN pull and independent original-file hashes pass; cache hits, raw/CDN route probes and actual CLI choices are captured.
-- [[sources/runs/2026/09/2026-09-06-optimization-complete-repeat-contention]] — Complete-prompt repeat study excluded by swap and competing work
-- [[sources/runs/2026/09/2026-09-06-optimization-complete-prompt-integration]] — Complete-prompt checkpoints pass ordinary and MTP integration
-- [[sources/runs/2026/09/2026-09-06-optimization-compute-and-cpu-successors]] — Contiguous CPU correctness and excluded compute screen
-- [[sources/runs/2026/09/2026-09-05-slotpack-memory-counterexample-and-repair]] — A guarded counterexample catches retained completed buffers; the fixed sustained transfer and full original-file reconstruction pass.
-- [[sources/runs/2026/09/2026-09-05-slotpack-package-and-regressions]] — Complete identical Mac/Linux package; codec sanitizers, malformed inputs, manifests, compressed HTTP and raw multi-chunk checks pass.
-- [[sources/runs/2026/09/2026-09-06-optimization-cpu-serving-and-integrated]] — CPU slot serving rejected; rebuilt ordinary integration passes
-- [[sources/runs/2026/09/2026-09-06-optimization-cpu-slot-integration]] — CPU slot-write integration correctness V108
-- [[sources/runs/2026/09/2026-09-05-hermes-release-published-install]] — Hermes 0.2.8: public release and installed-client verification
-- [[sources/runs/2026/09/2026-09-06-optimization-components-and-mtp]] — Native components, dense projection counterexample and combined MTP V107
-- [[sources/runs/2026/09/2026-09-05-hermes-release-client-acceptance]] — Hermes 0.2.8 clean release: real clients and regression acceptance
-- [[sources/runs/2026/09/2026-09-06-optimization-integrated-state-entry]] — Combined ordinary state-entry regression V104
-- [[sources/runs/2026/09/2026-09-06-optimization-native-source-closure]] — Native source closure and pending compute/CPU-slot prototypes
-- [[sources/runs/2026/09/2026-09-05-hermes-release-context-and-gates]] — Hermes clean release candidate: full context and local gates
 
 ## More
 
-This folder has 596 files. The 500 most recent are listed above.
+This folder has 610 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

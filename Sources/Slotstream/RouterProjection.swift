@@ -32,6 +32,6 @@ package final class RouterProjection {
             let output = matmul(padded.asType(.float32), (promoted ?? original).transposed())[0 ..< rows]
             return output.reshaped(Array(x.shape.dropLast()) + [original.dim(0)])
         }
-        return matmul(x.asType(.float32), (promoted ?? original).transposed())
+        return RowInvariantMatmul.rows(x.asType(.float32), (promoted ?? original).transposed())
     }
 }

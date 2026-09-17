@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-17T03:22:19.449717Z
+updated: 2026-09-17T20:17:53.070292Z
 ---
 
 # records/measurements
 
+- [[records/measurements/speculative-verify-pass-split-attention-2026-09-17]] — Split verify attention from 6,144 tokens: a verification round 12% cheaper at 16k and 11.80 against 10.93 tok/s at 22 GB; an opt-in exact mode makes speculative output equal plain output
 - [[records/measurements/release-0-2-20-published-2026-09-16]] — v0.2.20 published, installed and accepted: 25/25 model gates on the CI artifact, 31/31 installed checks, 11 prefix checks, Codex and the OpenAI SDK 18/18 on the installed binary
 - [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/release-0-2-19-published-2026-09-16]] — v0.2.19 published, installed and accepted: 25 of 25 model gates on the CI artifact, 31 of 31 installed-release checks, 11 prefix checks, corrected forecast planned at 22 GB

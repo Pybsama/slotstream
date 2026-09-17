@@ -223,7 +223,8 @@ checkpoints, bounded output buffering and memory-governor response. Long
 prompt grouping is admitted only when its additional workspace fits; ordinary
 chronological passes remain the fallback. Explicit prefill and optimization
 controls retain their precedence and validation. With the draft head, the
-[decode lookahead](#decode-lookahead) is on by default too.
+[decode lookahead](#decode-lookahead) is on by default too, and so is the
+[split verify attention](#speculative-decode) from 6,144 tokens of context.
 
 Prompt checkpoints help only when the token and image history actually
 matches. Use `--no-prefix-cache` for comparisons that require fresh prompt
@@ -264,6 +265,9 @@ See
 | `SLOTSTREAM_PREFILL_CACHE_MB` | engine | MLX buffer-cache cap while a prompt is read. The plan sets 512 at targets of 12 GB and under (the sweep's varying array sizes otherwise fill the 2 GB cache, 1.7 GB of peak at the floor) and no cap above, where it costs ~6% of prefill; this forces a value at any target. |
 | `SLOTSTREAM_OPT_EXPERT_PREFETCH` | engine | `0` turns off the decode lookahead and its 373 MiB charge (409 MiB with the checkpoint's forecast correction file). `1` selects an experimental prefetch configuration from the `SLOTSTREAM_EXPERT_PREFETCH_*` tuning variables instead; for comparisons only. |
 | `SLOTSTREAM_OPT_ROUTER_WEIGHTS` | engine | `0` or `1` overrides the FP32 router weight cache that the decode lookahead turns on. |
+| `SLOTSTREAM_OPT_VERIFY_SPLIT` | engine | `0` runs the speculative verify pass through the dense attention kernel at every context, the previous behavior. The default splits it into two-row vector-kernel calls from 6,144 tokens of context. |
+| `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT` | engine | Context, in tokens, from which the verify pass splits (default 6144, the measured crossover on the development Mac); `0` splits at every context. |
+| `SLOTSTREAM_OPT_ROW_INVARIANT` | engine | `1` selects the exact mode: the model's small dense matmuls run through one kernel at every row count, and the split verify attention makes one call per row. With `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT=0`, speculative and plain decode give identical output for draft depths up to 4. It changes plain decode's rounding, so it is off by default. |
 | `SLOTSTREAM_DECODE_BARRIER_LAYERS` | engine | Layers between GPU drains, 1…48. The decode lookahead uses 4; `1` drains after every layer. A pass that could not keep that many layers of experts pinned drains after every layer anyway. |
 | `SLOTSTREAM_EXPERT_PREFETCH_TAP` | engine | `boundary` keeps the 0.2.16 forecast (the layer-boundary router forecast at stride 2) when the correction file is present, charging 373 MiB instead of 409; the configuration 0.2.19 was benchmarked against. Other values belong to the experimental configuration and are for comparisons only. |
 | `SLOTSTREAM_ROOT_DIR` | installer | Install somewhere other than `~/.slotstream`. |
@@ -317,9 +321,38 @@ See [Testing](TESTING.md) for the full suites.
   The floor is separate from draft depth. The historical one-draft measurement
   at the former 28 GB memory target was ×1.24 decode; MEASUREMENTS.md M9
   preserves its configuration, ladder and ceiling.
-- `mtp-parity`, `mtp-accept`, `mtp-check`: the draft head's parity with the
-  Python reference, its measured accept rate (`--depth`, default 4), and the
-  speculative-decode gates.
+- `mtp-parity`, `mtp-accept`, `mtp-check`, `mtp-rowcheck`: the draft head's
+  parity with the Python reference, its measured accept rate (`--depth`,
+  default 4), the speculative-decode gates, and the row-equality gate: in the
+  exact mode, every row of a two-row and a three-row verify pass must equal
+  the one-row pass at its position in the same mode bit for bit, and the
+  state a three-row pass leaves must equal the state three one-row passes
+  leave, on a prompt whose positions cross 1,024 keys (`--cross`), where the
+  attention kernel changes, and one above the indexer budget (the stock
+  deviation is reported alongside).
+- The verify pass checks the drafts in one pass of draft depth plus one rows.
+  The backend's vector attention kernel takes at most two such rows at this
+  model's head layout, so a three-row pass used to fall to the dense kernel,
+  which reads every cached key and whose cost grows with the context. From
+  6,144 tokens of context the pass now runs two rows at a time through the
+  vector kernel, the kernel plain decode's attention uses. At a 22 GB target
+  with a 16,356-token prompt, speculative decode measured 11.80 against 10.93
+  tok/s (x1.079), and x1.37 with a 32,740-token prompt. The fetch-free pass is
+  32% cheaper at 32,740 tokens and 45% at 65,508.
+  `SLOTSTREAM_OPT_VERIFY_SPLIT=0` restores the dense pass. Below the threshold
+  the dense kernel is faster
+  ([measurement](../db/records/measurements/speculative-verify-pass-split-attention-2026-09-17.md)).
+- Exact mode: a multi-row pass rounds a little differently from one-row
+  passes, so speculative and plain decode can pick different tokens at near
+  ties. `SLOTSTREAM_OPT_ROW_INVARIANT=1` with
+  `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT=0` removes the difference for draft
+  depths up to 4. The small dense matmuls use one kernel at every row count,
+  and each verify row attends in its own call over the keys plain decode
+  reads, so the backend picks the same attention kernel. Every row of a verify
+  pass then equals plain decode in the same mode, and a speculative run's
+  output equals a plain run's. The mode changes plain decode's rounding too,
+  and it costs 4 to 6% of plain decode's speed, so it is off by default;
+  `mtp-rowcheck` gates it.
 - `SLOTSTREAM_DRAFT_DEPTH`: draft chain depth, 1–16 (default 2).
   Two drafts are the adopted operating choice for mixed workloads. The recent
   automatic-memory comparison found two and three effectively tied overall;

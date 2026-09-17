@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-09-16T20:19:00.539192+00:00
+updated: 2026-09-17T14:55:23.061681+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -167,4 +167,53 @@ loaded. These scoped checks do not close the broader product, sustained-load,
 IME/VoiceOver or signed-release gates, or qualify concurrent root engine work.
 
 ## Thinking before answers
-Opt-in thinking is implemented as specified in [[records/design/sevra-spec/runtime-contract]] and [[records/design/sevra-spec/ui-contract]]: a sticky per-thread "Think longer" switch, off by default and off for tool turns; an explicit `low` effort with a 768-token thought ceiling and forced closure; Answer now; a live clock and working-notes disclosure; a per-run receipt with no persisted thought text; Incognito isolation; local endpoint and internal CLI intents. The scripted suite gained `--thinking` and the check runner gained `--real-thinking`. Full scripted suite and the real-model check pass on the development Mac at the bounded 10 GB plan: in the final run all four phases completed: a 96-token forced close answered correctly after 20.9 s of thought, Answer now ended a thought at 8.2 s and the answer followed, the app's own budget closed naturally after 34 tokens, a plain turn followed in the same thread, three receipts persisted and no thought text reached any Home file. Earlier runs found and fixed a clock that included prompt reading, a misleading receipt after a failed answer phase, and a sampled answer phase that outran the reply cap. Visual and screen-reader review of the new controls, thinking in tool loops, a heavier level and an automatic mode remain open. Evidence: [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]].
+Opt-in thinking is implemented as specified in [[records/design/sevra-spec/runtime-contract]] and [[records/design/sevra-spec/ui-contract]]: a sticky per-thread "Think longer" switch, off by default and off for tool turns; an explicit `low` effort with a 768-token thought ceiling and forced closure; Answer now; a live clock and working-notes disclosure; a per-run receipt with no persisted thought text; Incognito isolation; local endpoint and internal CLI intents. The scripted suite gained `--thinking` and the check runner gained `--real-thinking`. Full scripted suite and the real-model check pass on the development Mac at the bounded 10 GB plan: in the final run all four phases completed: a 96-token forced close answered correctly after 20.9 s of thought, Answer now ended a thought at 8.2 s and the answer followed, the app's own budget closed naturally after 34 tokens, a plain turn followed in the same thread, three receipts persisted and no thought text reached any Home file. Earlier runs found and fixed a clock that included prompt reading, a misleading receipt after a failed answer phase, and a sampled answer phase that outran the reply cap. The offscreen UI check (`Tools/check_sevra_thinking_ui.sh`, now part of `Tools/check_sevra_mac.sh`) passes its 24 checks against the production views with light and dark snapshots: the switch turns on and off from its own control, Send starts a thought whose clock and Answer now button appear, the working notes open from their chevron and show the streaming thought with its privacy line, Answer now ends the thought and the receipt line and the typical-time hint follow. A VoiceOver pass and a person's review of the live app, thinking in tool loops, a heavier level and an automatic mode remain open. Evidence: [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]].
+
+## Reading, reviewed changes, knowledge bases, skills and mini-apps
+Implemented on September 17 as specified in [[records/design/sevra-spec/runtime-contract]] and [[records/design/sevra-spec/ui-contract]]:
+
+- Up to eight file, folder and db.md store attachments per thread, each read only or changeable.
+- PDF, Word, RTF, OpenDocument text, Excel and EPUB reading with page citations, and text recognition for images and scanned pages when a read covers them.
+- The sandboxed `sevra-extract` helper, built, copied and signed into the app by `Tools/build_sevra_mac.sh` and the Xcode project.
+- Staged file and record changes with a line-diff review, digest-bound writes, reporting after a crash mid-write, and undo that restores previous versions and moves new files to the Trash.
+- db.md search, query and record changes through the pinned dbmd inside the helper sandbox.
+- `/skill` and `/app` proposals with create-only versioned publication, activation and removal.
+- Mini-apps in an offline web host with device-local data grants and db.md-backed records, plus a live preview on scratch data during review. An open app hears only about changes it did not make, and a write budget contains a runaway app.
+- A 32,768-token planning window and larger reply budgets for documents, changes and apps.
+
+This replaces the "Rich extraction containment" and "skills/mini-app sandbox/version/data lifecycle" gaps listed under Adversarial Mac app review with the scripted evidence below. That table keeps its original wording.
+
+Verification on the development Mac, with the real bundled dbmd, in an isolated snapshot whose `apps/macos` and check scripts match the source exactly. Inference is scripted except in the real-model runs:
+
+- `Tools/check_sevra_mac.sh` passes. It includes every earlier suite and the new basics suite: the helper sandbox self-test and its process-group memory measurement; reading and search; tool groups and cancelled document reading; change review and exact writes; conflicts, links and review across restart; process death while writing; knowledge bases, including a record edited while earlier records are written; skills; and the app data lifecycle.
+- The offscreen apps check (`Tools/check_sevra_apps_ui.sh`) loads a hostile page twice into the production app host. The page tries fetch, XHR, WebSocket, EventSource, workers, beacons, peer connections from the page and from a fresh frame, popups, storage, undeclared and read-only collections, a link click with a ping, a form, location changes and a meta refresh. A loopback TCP listener and a UDP socket saw no connection and no datagram. The check then clicks through the change review and the app review flows in the production views, including a second app that sees the first app's saved record, with light and dark snapshots.
+- Removing the new record re-check, measuring only the helper process for its memory limit, leaving link preconnects on or allowing every app write makes the corresponding check fail. Before the echo fix, the check that reproduces a save-on-change app counted 40 records within about four seconds; afterwards it counts one.
+- On an earlier build of this work, the real-model basics check passed all twelve of its checks in 544 seconds at the 10 GB plan, with a peak physical footprint of 7.4 GB and no swap growth. The model answered the PDF question with the budget and page 2 from a PDF citation. It staged the exact status edit after one bounded correction of a malformed argument name. It proposed a 4,521-byte counter app with no review notes, which was turned on. Run in the production host by the new app-under-test mode, that app counted to 3 but showed 0 after reopening and left two records, because it looked for a record id it had chosen itself. The app guidance now explains host-assigned ids and change events.
+- On the final build, the same check passed again in 512 seconds with the same peak footprint and no swap growth. Its counter app followed the corrected guidance and passed the app-under-test mode, showing 3 after reopening with one saved record. The PDF answer and the edit trace matched the first run byte for byte, because answers are decoded greedily. A traced replay showed that the malformed edit call comes from the engine's cached continuation, not from the model's preference. Read fresh, the same prompt gives a correct call, and the flipped token scores 4%.
+
+Defects found and fixed while verifying:
+
+- A draft app could open network connections despite the content rules and security policy: a peer connection from a child frame, and a TCP connection from a link-click preconnect. WebKit's network feature switches, a refusing proxy and the bridge in every frame now stop them, and the host refuses to run an app unless WebKit reads back peer connections, link preconnects and DNS prefetching as off.
+- After a restart, a run waiting for review blocked attaching the folder it needed, so the review could never be applied. Only working runs block attachment changes now.
+- The knowledge helper waited for input it never received. It now reads input only when a record body is passed.
+- A helper killed mid-request left its work folder behind. Later helpers remove such folders after 15 minutes.
+- Tool results escaped the slashes in paths. Model-facing output now keeps plain slashes while stored Home bytes stay unchanged.
+- A record edited while earlier records in the same set were written would have been overwritten, because dbmd has no compare-and-set. Each record's base is now checked again just before dbmd writes it.
+- The helper memory limit ignored a dbmd process the helper starts. The whole process group is now measured.
+- The app review said an app cannot reach other apps, while collections are shared by name. The review now counts records already saved in each requested collection and says that apps using a collection share its records.
+- The host echoed an app's own saves back as change events, so an app that saves on every change could create records in a loop until the collection limit. Open apps now hear only about changes they did not make, the preview follows the same rule, and each app has a write budget.
+- Single-suite check modes signaled completion before removing their temporary folder, leaving files behind. The signal now follows cleanup.
+
+Still open:
+
+- Engine results that do not depend on cache history. A cached continuation groups a conversation's tokens differently from a fresh read, and the resulting drift flips the check's edit call. Resuming each turn from the last 256-token pass boundary reproduced a fresh read exactly in an emulation, so that is the proposed engine fix. Until then the host's one correction recovers the call, at the cost of a full prompt re-read.
+- A VoiceOver pass and a person's review of the new panels in the live app.
+- App Sandbox, signing and notarization for the app and its helper.
+- An Xcode build of the project. Xcode is not installed on this Mac; the project's structure and its helper build phase were checked without it.
+- A recheck of WebKit's private feature switches on each macOS release.
+- The documented helper residuals: global metadata reads and folder listing in the dbmd modes.
+- The narrow window between the record re-check and dbmd's own write.
+- Measured revision of the new operating bounds and of the larger window's first-token cost.
+- Local-model task reliability with these tools.
+
+Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]].

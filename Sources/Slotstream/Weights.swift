@@ -28,7 +28,7 @@ public struct QLinear {
                 x, w, scales: s, biases: biases, transpose: true,
                 groupSize: groupSize, bits: bits)
         }
-        return matmul(x, w.transposed())
+        return RowInvariantMatmul.rows(x, w.transposed())
     }
 
     /// Keep the established row dispatch for a token-wise projection. Dummy

@@ -190,7 +190,20 @@ including when their `--mtp` option is left at `auto`; explicit `off` is
 incompatible. The full `mtp-check` includes vision and uses an explicit 12 GB
 target after a 15 GB reclaimable preflight. Its text-only leg can be selected
 with `--vision off` under the ordinary 10 GB test target. A text-only pass does
-not prove the combined image/MTP leg.
+not prove the combined image/MTP leg. `mtp-rowcheck` runs under the ordinary
+10 GB target: it synthesizes one prompt below and one above the indexer budget
+and requires that, in the exact mode, every row of a two-row and a three-row
+verify pass reproduces the one-row pass at its position in the same mode bit
+for bit, and that a three-row pass leaves the state three one-row passes leave
+(checked through the next token's logits); the stock pass's deviation is
+printed beside it. The shorter prompt is extended to just below 1,024 keys and
+its positions advance one token at a time across that count, where the
+backend switches attention kernels. The weights-free `verify-pass-rows` check
+(T1) holds the kernels: every dense matmul shape, the exact mode's attention
+at each key count where the backend changes kernels or block layout, its
+indexer selection with tied blocks at the budget, and quantized products of
+up to five rows. It also counts what the split and whole-pass paths change at
+those points.
 
 The full original vision-serving photographs need a separate profile:
 `--memory-gb 14.5` with `SLOTSTREAM_PREFILL_CHUNK=3072`, MTP off, and a

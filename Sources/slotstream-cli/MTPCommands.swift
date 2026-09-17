@@ -296,12 +296,35 @@ struct MTPBench: ParsableCommand {
     @Option var maxTokens: Int = 192
     @Option(help: "A/B pairs to run") var pairs: Int = 3
     @Option var prompt: String = "Explain how a transistor works, in about 300 words."
+    @Option(help: "Read the prompt from this file instead of --prompt (long-context runs)") var promptFile: String?
+    @Option(help: "Prompt plus reply context window: auto or tokens") var maxContext: ContextWindowArgument = .automatic
     @Flag(help: "Sample with the server's defaults (temperature 0.7, top-p 0.8, top-k 20, presence 1.5) instead of greedy; a fixed seed keeps both paths on one token stream")
     var sample = false
     @Option(help: "Seed for --sample") var seed: UInt64 = 1
+    @Option(help: "Comma-separated arms per round instead of the plain/speculative pair: plain, spec (the configured verify pass; SLOTSTREAM_OPT_VERIFY_SPLIT=0 makes it the dense pass), split (split verify attention at its measured threshold), exact (the exact mode at every context: row-invariant projections and one attention call per row), plain-exact (plain decode under the exact controls). Order rotates per round; outputs are compared token by token.")
+    var arms: String = ""
+
+    enum Arm: String, CaseIterable {
+        case plain, spec, split, exact
+        case plainExact = "plain-exact"
+        var speculative: Bool { self == .spec || self == .split || self == .exact }
+    }
 
     func run() throws {
-        let plan = try model.announcedPlan(requireMTP: true)
+        let plan: MemoryPlan
+        if let tokens = maxContext.tokens {
+            plan = try model.announcedPlan(maxContext: tokens, requireMTP: true)
+        } else {
+            plan = try model.announcedPlan(requireMTP: true)
+        }
+        let promptText = try promptFile.map { try String(contentsOfFile: $0, encoding: .utf8) } ?? prompt
+        var armList: [Arm] = []
+        for name in arms.split(separator: ",") {
+            guard let arm = Arm(rawValue: name.trimmingCharacters(in: .whitespaces)) else {
+                throw ModelError("unknown arm '\(name)': use plain, spec, split, exact or plain-exact")
+            }
+            if !armList.contains(arm) { armList.append(arm) }
+        }
         let sem = DispatchSemaphore(value: 0)
         var result: Result<Void, Error> = .success(())
         Task {
@@ -311,7 +334,14 @@ struct MTPBench: ParsableCommand {
                 if sample { params.seed = seed }
                 params.maxTokens = maxTokens
                 let ids = try engine.encodeChat(
-                    [ChatMessage(role: "user", content: prompt)], thinking: false)
+                    [ChatMessage(role: "user", content: promptText)], thinking: false)
+
+                if !armList.isEmpty {
+                    try compareArms(armList, engine: engine, ids: ids, params: params, plan: plan)
+                    result = .success(())
+                    sem.signal()
+                    return
+                }
 
                 func once(spec: Bool) -> GenStats {
                     engine.generator.speculationEnabled = spec
@@ -347,6 +377,92 @@ struct MTPBench: ParsableCommand {
         sem.wait()
         try result.get()
     }
+
+    /// Every arm once per round on the same warm engine, order rotating per
+    /// round, after one untimed warm-up of each arm. The configured
+    /// optimizations are the base; the split and exact arms change only the
+    /// verify-pass controls. Outputs are compared against the first plain run
+    /// (and the exact arm against plain-exact when both ran).
+    func compareArms(_ armList: [Arm], engine: Engine, ids: [Int], params: SampleParams, plan: MemoryPlan) throws {
+        let m = engine.model
+        let base = m.optimizations
+        var splitEngaged = Set<Arm>()
+        func configure(_ arm: Arm) {
+            var o = base
+            switch arm {
+            case .plain, .spec:
+                break
+            case .split:
+                o.verifySplitAttention = true
+                o.verifySplitMinContext = nil
+            case .exact, .plainExact:
+                o.verifySplitAttention = true
+                o.verifySplitMinContext = 0
+                o.rowInvariantProjection = true
+            }
+            m.optimizations = o
+            engine.generator.speculationEnabled = arm.speculative
+        }
+        func once(_ arm: Arm) -> ([Int], GenStats) {
+            configure(arm)
+            let splitsBefore = m.multiRowSplits
+            let (out, stats) = engine.generator.generate(promptIds: ids, params: params, eosIds: engine.eosIds)
+            if arm.speculative, m.multiRowSplits > splitsBefore { splitEngaged.insert(arm) }
+            return (out, stats)
+        }
+        print("prompt: \(ids.count) tokens; context window \(plan.maxContextTokens); ~\(Int(plan.expertsPerLayerCached)) experts/layer; arms: \(armList.map(\.rawValue).joined(separator: ","))")
+        for arm in armList { _ = once(arm) }  // warm-up, untimed
+        var tps: [Arm: [Double]] = [:]
+        var outputs: [Arm: [[Int]]] = [:]
+        for round in 0 ..< max(1, pairs) {
+            let shift = round % armList.count
+            let order = Array(armList[shift...]) + Array(armList[..<shift])
+            var line = "round \(round + 1):"
+            for arm in order {
+                let (out, stats) = once(arm)
+                tps[arm, default: []].append(stats.decodeTPS)
+                outputs[arm, default: []].append(out)
+                line += String(format: " %@ %.2f tok/s", arm.rawValue, stats.decodeTPS)
+                if arm.speculative {
+                    line += String(format: " (accept %.1f%%, %d passes)", stats.draftAcceptRate * 100, stats.verifyPasses)
+                }
+                line += ";"
+            }
+            print(line)
+        }
+        m.optimizations = base
+        engine.generator.speculationEnabled = true
+        func median(_ a: [Double]) -> Double { let s = a.sorted(); return s.isEmpty ? 0 : s[s.count / 2] }
+        func firstDifference(_ a: [Int], _ b: [Int]) -> String {
+            if a == b { return "identical (\(a.count) tokens)" }
+            let n = zip(a, b).prefix { $0 == $1 }.count
+            return "differs from token \(n) of \(min(a.count, b.count))"
+        }
+        print("medians (tok/s) over \(max(1, pairs)) rounds, greedy=\(params.temperature <= 0):")
+        let reference = tps[.spec].map(median)
+        for arm in armList {
+            var line = "  " + arm.rawValue.padding(toLength: 12, withPad: " ", startingAt: 0)
+                + String(format: "%7.2f", median(tps[arm] ?? []))
+            if let r = reference, arm != .spec, r > 0 { line += String(format: "   x%.3f against spec", median(tps[arm] ?? []) / r) }
+            print(line)
+        }
+        let consistent = armList.allSatisfy { arm in Set(outputs[arm] ?? []).count <= 1 }
+        print("  every arm repeats its own output across rounds: \(consistent)")
+        if let plain = outputs[.plain]?.first {
+            for arm in armList where arm != .plain {
+                if let o = outputs[arm]?.first { print("  \(arm.rawValue) against plain: \(firstDifference(o, plain))") }
+            }
+        }
+        if let pe = outputs[.plainExact]?.first, let ex = outputs[.exact]?.first {
+            print("  exact against plain-exact: \(firstDifference(ex, pe))")
+        }
+        print("  split verify attention engaged in: \(armList.filter { splitEngaged.contains($0) }.map(\.rawValue).joined(separator: ",").ifEmpty("none"))")
+    }
+}
+
+
+private extension String {
+    func ifEmpty(_ fallback: String) -> String { isEmpty ? fallback : self }
 }
 
 // MARK: mtp-check
@@ -684,6 +800,18 @@ struct MTPCheck: ParsableCommand {
 /// same pass twice from one checkpoint and time the second, when every expert
 /// it needs is already resident (the miss counter proves it). Positions come
 /// from a real greedy continuation so routing is realistic.
+/// One timed configuration of the verify pass: its multi-row attention.
+struct PassVariant: Hashable {
+    let attention: MultiRowAttention.Mode
+    static let stock = PassVariant(attention: .stock)
+    var name: String { attention.rawValue }
+    init(attention: MultiRowAttention.Mode) { self.attention = attention }
+    init?(name: String) {
+        guard let mode = MultiRowAttention.Mode(rawValue: name) else { return nil }
+        self.init(attention: mode)
+    }
+}
+
 struct MTPPassCost: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "mtp-passcost",
@@ -694,9 +822,30 @@ struct MTPPassCost: ParsableCommand {
     @Option(help: "Measurement positions (after one warm-up position)") var positions: Int = 8
     @Option(help: "Largest pass to time (the verify pass is draft depth + 1)") var maxBatch: Int = 5
     @Option var prompt: String = "Explain how a transistor works, in about 300 words."
+    @Option(help: "Read the prompt from this file instead of --prompt (long-context runs)") var promptFile: String?
+    @Option(help: "Prompt plus reply context window: auto (32768 for this diagnostic) or tokens")
+    var maxContext: ContextWindowArgument = .automatic
+    @Option(help: "Comma-separated verify-pass modes to time per pass (stock,split,exact) at every context; each mode sets the split and row-invariant controls itself; stock is always the reference and rebuild timings are skipped")
+    var attentionModes: String = ""
 
     func run() throws {
-        let plan = try model.announcedPlan(requireMTP: true)
+        let plan: MemoryPlan
+        if let tokens = maxContext.tokens {
+            plan = try model.announcedPlan(maxContext: tokens, requireMTP: true)
+        } else {
+            plan = try model.announcedPlan(requireMTP: true)
+        }
+        let promptText = try promptFile.map { try String(contentsOfFile: $0, encoding: .utf8) } ?? prompt
+        var modes: [PassVariant] = []
+        if !attentionModes.isEmpty {
+            for name in attentionModes.split(separator: ",") {
+                guard let mode = PassVariant(name: name.trimmingCharacters(in: .whitespaces)) else {
+                    throw ModelError("unknown attention mode '\(name)': use stock, split or exact")
+                }
+                if !modes.contains(mode) { modes.append(mode) }
+            }
+            if !modes.contains(.stock) { modes.insert(.stock, at: 0) }
+        }
         let sem = DispatchSemaphore(value: 0)
         var result: Result<Void, Error> = .success(())
         Task {
@@ -707,7 +856,8 @@ struct MTPPassCost: ParsableCommand {
                 var params = SampleParams.greedy
                 params.maxTokens = maxTokens
                 let ids = try engine.encodeChat(
-                    [ChatMessage(role: "user", content: prompt)], thinking: false)
+                    [ChatMessage(role: "user", content: promptText)], thinking: false)
+                print("prompt: \(ids.count) tokens; context window \(plan.maxContextTokens); modes: \(modes.isEmpty ? "stock only" : modes.map(\.name).joined(separator: ","))")
                 engine.generator.speculationEnabled = false
                 let (out, _) = engine.generator.generate(
                     promptIds: ids, params: params, eosIds: engine.eosIds)
@@ -742,6 +892,26 @@ struct MTPPassCost: ParsableCommand {
                 var verify: [Int: [(Double, Int, Double, Int)]] = [:]
                 var rebuild: [Int: [(Double, Int)]] = [:]
                 var draft: [Double] = []
+                // per "mode/k": warm ms; max |logit delta| over the stock logit spread; top-1 flips
+                var modeMs: [String: [Double]] = [:]
+                var modeDiff: [String: [Double]] = [:]
+                var modeFlips: [String: Int] = [:]
+                // row 0 of a k-row pass against the same position's 1-row stock pass:
+                // how far each mode's multi-row pass sits from plain decode
+                var rowDiff: [String: [Double]] = [:]
+                var rowFlips: [String: Int] = [:]
+                var plainRef: MLXArray? = nil
+                // the stock pass against its own cold run at the same k: run-to-run determinism
+                var coldDiff: [Int: [Double]] = [:]
+                var coldFlips: [Int: Int] = [:]
+                func key(_ mode: PassVariant, _ k: Int) -> String { "\(mode.name)/\(k)" }
+                // Modes are timed at every context, so the split's threshold is lifted
+                // here; each mode sets both verify-pass controls.
+                func setMode(_ mode: PassVariant) {
+                    m.optimizations.verifySplitAttention = mode.attention == .stock ? nil : true
+                    m.optimizations.verifySplitMinContext = mode.attention == .stock ? nil : 0
+                    m.optimizations.rowInvariantProjection = mode.attention == .exact ? true : nil
+                }
 
                 var p = ids.count
                 for pos in 0 ... positions {  // position 0 is the warm-up (kernel compiles)
@@ -749,36 +919,94 @@ struct MTPPassCost: ParsableCommand {
                     for k in 1 ... maxBatch {
                         let chunk = Array(seq[p ..< p + k])
                         let ck = state.checkpoint()
+                        setMode(.stock)
                         m.pool.resetStats()
+                        var coldLogits: MLXArray? = nil
                         let cold = timed {
                             let (l, mu) = m.allLogitsWithMulti(chunk, state: state)
                             eval(l, mu)
+                            coldLogits = l
                         }
                         let coldMiss = m.pool.misses
                         state.restore(ck)
-                        m.pool.resetStats()
-                        let warm = timed {
-                            let (l, mu) = m.allLogitsWithMulti(chunk, state: state)
-                            eval(l, mu)
-                        }
-                        let warmMiss = m.pool.misses
-                        state.restore(ck)
-                        if record { verify[k, default: []].append((cold, coldMiss, warm, warmMiss)) }
-                        if k < maxBatch {
-                            // The rebuild after a rejection re-runs the kept tokens without logits.
-                            _ = timed {
-                                let (_, mu) = m.hiddenStatesWithMulti(chunk, state: state)
-                                eval(mu)
-                            }
-                            state.restore(ck)
+                        if modes.isEmpty {
                             m.pool.resetStats()
-                            let rw = timed {
-                                let (_, mu) = m.hiddenStatesWithMulti(chunk, state: state)
-                                eval(mu)
+                            let warm = timed {
+                                let (l, mu) = m.allLogitsWithMulti(chunk, state: state)
+                                eval(l, mu)
                             }
-                            let rm = m.pool.misses
+                            let warmMiss = m.pool.misses
                             state.restore(ck)
-                            if record { rebuild[k, default: []].append((rw, rm)) }
+                            if record { verify[k, default: []].append((cold, coldMiss, warm, warmMiss)) }
+                            if k < maxBatch {
+                                // The rebuild after a rejection re-runs the kept tokens without logits.
+                                _ = timed {
+                                    let (_, mu) = m.hiddenStatesWithMulti(chunk, state: state)
+                                    eval(mu)
+                                }
+                                state.restore(ck)
+                                m.pool.resetStats()
+                                let rw = timed {
+                                    let (_, mu) = m.hiddenStatesWithMulti(chunk, state: state)
+                                    eval(mu)
+                                }
+                                let rm = m.pool.misses
+                                state.restore(ck)
+                                if record { rebuild[k, default: []].append((rw, rm)) }
+                            }
+                        } else {
+                            // Every mode, warm, from the same checkpoint; the order rotates per
+                            // position so no mode always follows the cold run.
+                            let shift = pos % modes.count
+                            let order = Array(modes[shift...]) + Array(modes[..<shift])
+                            var logitsByMode: [PassVariant: MLXArray] = [:]
+                            for mode in order {
+                                setMode(mode)
+                                m.pool.resetStats()
+                                var logits: MLXArray? = nil
+                                let warm = timed {
+                                    let (l, mu) = m.allLogitsWithMulti(chunk, state: state)
+                                    eval(l, mu)
+                                    logits = l
+                                }
+                                let warmMiss = m.pool.misses
+                                state.restore(ck)
+                                if record {
+                                    modeMs[key(mode, k), default: []].append(warm)
+                                    if mode == .stock { verify[k, default: []].append((cold, coldMiss, warm, warmMiss)) }
+                                }
+                                logitsByMode[mode] = logits
+                            }
+                            setMode(.stock)
+                            if k == 1 { plainRef = logitsByMode[.stock]?.asType(.float32) }
+                            if record, let c = coldLogits?.asType(.float32), let w = logitsByMode[.stock]?.asType(.float32) {
+                                let spread = (w.max() - w.min()).item(Float.self)
+                                coldDiff[k, default: []].append(spread > 0 ? Double(abs(c - w).max().item(Float.self) / spread) : 0)
+                                coldFlips[k, default: 0] += Int((argMax(c, axis: -1) .!= argMax(w, axis: -1)).asType(.int32).sum().item(Int32.self))
+                            }
+                            if record, let plain = plainRef {
+                                let spread = (plain.max() - plain.min()).item(Float.self)
+                                let plainTop = argMax(plain, axis: -1)
+                                for mode in modes {
+                                    guard let l = logitsByMode[mode]?.asType(.float32) else { continue }
+                                    let row0 = l[0..., 0 ..< 1, 0...]
+                                    let d = abs(row0 - plain).max().item(Float.self)
+                                    let f = (argMax(row0, axis: -1) .!= plainTop).asType(.int32).sum().item(Int32.self)
+                                    rowDiff[key(mode, k), default: []].append(spread > 0 ? Double(d / spread) : 0)
+                                    rowFlips[key(mode, k), default: 0] += Int(f)
+                                }
+                            }
+                            if record, let ref = logitsByMode[.stock]?.asType(.float32) {
+                                let spread = (ref.max() - ref.min()).item(Float.self)
+                                let refTop = argMax(ref, axis: -1)
+                                for mode in modes where mode != .stock {
+                                    guard let l = logitsByMode[mode]?.asType(.float32) else { continue }
+                                    let maxDiff = abs(l - ref).max().item(Float.self)
+                                    let flips = (argMax(l, axis: -1) .!= refTop).asType(.int32).sum().item(Int32.self)
+                                    modeDiff[key(mode, k), default: []].append(spread > 0 ? Double(maxDiff / spread) : 0)
+                                    modeFlips[key(mode, k), default: 0] += Int(flips)
+                                }
+                            }
                         }
                     }
                     // One draft-head step (everything resident: it never fetches).
@@ -817,17 +1045,259 @@ struct MTPPassCost: ParsableCommand {
                         Int(median(w.map { Double($0.3) })), median(w.map { $0.0 }),
                         Int(median(w.map { Double($0.1) }))))
                 }
-                for k in 1 ..< maxBatch {
-                    let r = rebuild[k]!
-                    print(String(
-                        format: "  rebuild k=%d: %7.1f ms  x%.2f   [warm misses %d]",
-                        k, median(r.map { $0.0 }), median(r.map { $0.0 }) / t1,
-                        Int(median(r.map { Double($0.1) }))))
+                if modes.isEmpty {
+                    for k in 1 ..< maxBatch {
+                        let r = rebuild[k]!
+                        print(String(
+                            format: "  rebuild k=%d: %7.1f ms  x%.2f   [warm misses %d]",
+                            k, median(r.map { $0.0 }), median(r.map { $0.0 }) / t1,
+                            Int(median(r.map { Double($0.1) }))))
+                    }
                 }
                 print(String(
                     format: "  draft step:   %7.1f ms  x%.2f   (one head step + lm_head, resident)",
                     median(draft), median(draft) / t1))
+                if !modes.isEmpty {
+                    print("multi-row attention modes at \(ids.count) prompt tokens (warm ms, median of \(positions) positions; diff = max |logit delta| / stock logit spread, median; flips = top-1 changes over all rows and positions):")
+                    for k in 1 ... maxBatch {
+                        for mode in modes {
+                            let ms = median(modeMs[key(mode, k)] ?? [])
+                            var line = "  " + mode.name.padding(toLength: 8, withPad: " ", startingAt: 0)
+                            line += String(format: " k=%d: %7.1f ms  x%.2f", k, ms, ms / t1)
+                            if mode != .stock {
+                                line += String(format: "   diff %.2e  flips %d",
+                                    median(modeDiff[key(mode, k)] ?? []), modeFlips[key(mode, k)] ?? 0)
+                            }
+                            print(line)
+                        }
+                    }
+                    print("  stock pass, cold run against warm run at the same k (max |delta| / spread, median; top-1 flips over all rows):")
+                    for k in 1 ... maxBatch {
+                        print(String(format: "  stock  k=%d cold-vs-warm: diff %.2e  flips %d", k, median(coldDiff[k] ?? []), coldFlips[k] ?? 0))
+                    }
+                    print("  row 0 against the same position's 1-row stock pass (max |delta| / spread, median; top-1 flips):")
+                    for k in 2 ... maxBatch {
+                        for mode in modes {
+                            print("  " + mode.name.padding(toLength: 8, withPad: " ", startingAt: 0)
+                                + String(format: " k=%d row0: diff %.2e  flips %d", k,
+                                    median(rowDiff[key(mode, k)] ?? []), rowFlips[key(mode, k)] ?? 0))
+                        }
+                    }
+                    print("  engaged: split or exact attention in \(m.multiRowSplits) layer passes; row-invariant matmul in \(RowInvariantMatmul.calls) calls")
+                }
                 result = .success(())
+            } catch { result = .failure(error) }
+            sem.signal()
+        }
+        sem.wait()
+        try result.get()
+    }
+}
+
+/// Gate: in the exact mode (the split verify attention at every context with
+/// the row-invariant projections, which runs one attention call per row),
+/// every row of a k-row verify pass equals the one-row pass of the same mode at
+/// that row's position bit for bit, and the state a k-row pass leaves behind is
+/// the state k one-row passes leave behind (checked through the next token's
+/// logits), so speculative decode in that mode cannot say anything plain
+/// decode in that mode would not. It runs a prompt below the indexer budget,
+/// whose positions advance one token at a time across 1,024 keys, where the
+/// backend changes its attention kernel, and one above the budget (a real
+/// selection). The stock deviation is reported alongside, the size of what
+/// the controls remove.
+struct MTPRowCheck: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "mtp-rowcheck",
+        abstract: "Gate: multi-row verify passes reproduce one-row decode bit for bit")
+    @OptionGroup var model: ModelOptions
+    @Option(help: "Prompt lengths to synthesize, comma-separated: one below the indexer budget and one above it")
+    var promptTokens: String = "900,2600"
+    @Option(help: "Positions compared per prompt (after one warm-up position)") var positions: Int = 4
+    @Option(help: "Largest pass compared (the verify pass is draft depth + 1)") var maxBatch: Int = 3
+    @Option(help: "Prompt plus reply context window: auto or tokens") var maxContext: ContextWindowArgument = .automatic
+    @Option(help: "Key count to cross: a prompt that ends before it is extended to just below it and its positions advance one token at a time, so the passes' key counts straddle it (the backend changes its attention kernel at 1,024 keys); 0 keeps the usual stride")
+    var cross: Int = 1024
+
+    /// Deterministic prose: distinct entries, no repetition the indexer could collapse.
+    static func prose(entries: Int) -> String {
+        let subjects = ["The archive", "A courier", "The harbor office", "Every ledger", "The night clerk",
+                        "An old survey", "The lighthouse keeper", "The tram depot", "A visiting auditor"]
+        let verbs = ["recorded", "questioned", "measured", "misplaced", "compared", "reported", "restored", "counted"]
+        let objects = ["the winter inventory", "a set of brass keys", "the tide tables", "three sealed crates",
+                       "the eastern fence line", "a damaged pump", "the morning manifest", "the reservoir gauges",
+                       "the granary receipts", "two borrowed lanterns", "the ferry schedule"]
+        let tails = ["before the first frost.", "without telling the council.", "against last year's totals.",
+                     "while the bridge was closed.", "under a borrowed lamp.", "as the ferry came in.",
+                     "after the audit ended.", "for the third time that month.", "despite the storm warning."]
+        var text = ""
+        for i in 0 ..< entries {
+            var sentences: [String] = []
+            for j in 0 ..< 5 {
+                let n = i * 5 + j
+                sentences.append("\(subjects[(n * 7 + i) % subjects.count]) \(verbs[(n * 3 + j) % verbs.count]) "
+                    + "\(objects[(n * 5 + i * 2) % objects.count]) \(tails[(n * 11 + j * 3) % tails.count])")
+            }
+            text += "Entry \(i + 1). " + sentences.joined(separator: " ") + "\n\n"
+        }
+        return text + "Summarize these entries in detail, one paragraph per entry."
+    }
+
+    func run() throws {
+        let plan: MemoryPlan
+        if let tokens = maxContext.tokens {
+            plan = try model.announcedPlan(maxContext: tokens, requireMTP: true)
+        } else {
+            plan = try model.announcedPlan(requireMTP: true)
+        }
+        guard maxBatch >= 2, maxBatch <= RowInvariantMatmul.maxRows, positions >= 1 else {
+            throw ModelError("--max-batch must be 2 to \(RowInvariantMatmul.maxRows) and --positions at least 1")
+        }
+        let lengths = promptTokens.split(separator: ",").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        guard !lengths.isEmpty, lengths.allSatisfy({ $0 > 0 }) else {
+            throw ModelError("--prompt-tokens needs positive token counts")
+        }
+        let sem = DispatchSemaphore(value: 0)
+        var result: Result<Void, Error> = .success(())
+        Task {
+            do {
+                let engine = try await Engine(modelDir: model.modelURL, plan: plan)
+                let m = engine.model
+                guard let head = m.mtpHead else { throw ModelError("draft head not loaded") }
+                var failures: [String] = []
+                func check(_ name: String, _ ok: Bool) {
+                    print(ok ? "PASS  \(name)" : "FAIL  \(name)")
+                    if !ok { failures.append(name) }
+                }
+                func configure(exact: Bool) {
+                    m.optimizations.verifySplitAttention = exact ? true : nil
+                    m.optimizations.verifySplitMinContext = exact ? 0 : nil
+                    m.optimizations.rowInvariantProjection = exact ? true : nil
+                }
+                struct Worst { var diff = 0.0; var flips = 0 }
+                func compare(_ got: MLXArray, _ ref: MLXArray, spread: Float, into worst: inout Worst) {
+                    let d = spread > 0 ? Double(abs(got - ref).max().item(Float.self) / spread) : 0
+                    let f = Int((argMax(got, axis: -1) .!= argMax(ref, axis: -1)).asType(.int32).sum().item(Int32.self))
+                    worst.diff = max(worst.diff, d)
+                    worst.flips += f
+                }
+                for target in lengths {
+                    var entries = max(2, target / 62)
+                    var ids: [Int] = []
+                    while true {
+                        ids = try engine.encodeChat(
+                            [ChatMessage(role: "user", content: Self.prose(entries: entries))], thinking: false)
+                        if ids.count >= target || entries > 4096 { break }
+                        entries += max(1, entries / 8)
+                    }
+                    let above = ids.count > m.cfg.indexerBudget
+                    // Positions start at `start`: the prompt's end, or just below the
+                    // crossing so the recorded rows' key counts run up to it.
+                    let crossing = cross > 0 && ids.count <= cross - maxBatch - 2
+                    let start = crossing ? cross - maxBatch - 2 : ids.count
+                    let stride = crossing ? 1 : maxBatch + 1
+                    let label = "\(ids.count)-token prompt, \(above ? "above" : "below") the indexer budget"
+                        + (crossing ? ", rows across \(cross) keys" : "")
+                    print("prompt: \(label) (\(m.cfg.indexerBudget)); positions from \(start) every \(stride) tokens; context window \(plan.maxContextTokens)")
+                    configure(exact: false)
+                    let need = start + stride * (positions + 1) + maxBatch + 1
+                    var params = SampleParams.greedy
+                    params.maxTokens = need - ids.count + 16
+                    engine.generator.speculationEnabled = false
+                    let (out, _) = engine.generator.generate(promptIds: ids, params: params, eosIds: engine.eosIds)
+                    engine.generator.speculationEnabled = true
+                    let seq = ids + out
+                    guard seq.count >= need else {
+                        throw ModelError("continuation too short: \(out.count) tokens; lower --positions")
+                    }
+
+                    let state = m.makeState()
+                    let mtpState = MTPState()
+                    state.mtp = mtpState
+                    let prefix = Array(seq[0 ..< start])
+                    let (_, pm) = m.hiddenStatesWithMulti(prefix, state: state)
+                    eval(pm)
+                    state.lastMulti = head.consume(
+                        chunk: prefix, chunkMulti: pm, prevMulti: nil,
+                        resident: m.resident, rope: m.sharedRope, state: mtpState)
+
+                    /// Logits of a pass over `chunk`; the state advances by the chunk.
+                    func pass(_ chunk: [Int]) -> MLXArray {
+                        let (l, mu) = m.allLogitsWithMulti(chunk, state: state)
+                        eval(l, mu)
+                        return l.asType(.float32)
+                    }
+                    let splitsBefore = m.multiRowSplits, rowCallsBefore = RowInvariantMatmul.calls
+                    // per k: every row of the k-row pass against the one-row pass at its position
+                    var exactRows: [Int: Worst] = [:], stockRows: [Int: Worst] = [:]
+                    // the next token after a maxBatch-row advance against after maxBatch one-row advances
+                    var exactState = Worst(), stockState = Worst()
+                    var p = start
+                    for pos in 0 ... positions {  // position 0 is the warm-up (kernel compiles)
+                        let record = pos > 0
+                        let ck = state.checkpoint()
+                        // References per mode: one-row passes at p ... p+maxBatch in that mode;
+                        // the last one reads the carried state. The exact mode changes one-row
+                        // rounding too, so each mode is held to its own one-row passes.
+                        var refs: [Bool: [MLXArray]] = [:]
+                        for exact in [true, false] {
+                            configure(exact: exact)
+                            var r: [MLXArray] = []
+                            for i in 0 ... maxBatch { r.append(pass([seq[p + i]])) }
+                            state.restore(ck)
+                            refs[exact] = r
+                        }
+                        let spreads = refs[false]!.map { ($0.max() - $0.min()).item(Float.self) }
+                        for k in 2 ... maxBatch {
+                            let chunk = Array(seq[p ..< p + k])
+                            for exact in [true, false] {
+                                configure(exact: exact)
+                                let l = pass(chunk)
+                                state.restore(ck)
+                                guard record, let ref = refs[exact] else { continue }
+                                for r in 0 ..< k {
+                                    let row = l[0..., r ..< r + 1, 0...]
+                                    if exact { compare(row, ref[r], spread: spreads[r], into: &exactRows[k, default: Worst()]) }
+                                    else { compare(row, ref[r], spread: spreads[r], into: &stockRows[k, default: Worst()]) }
+                                }
+                            }
+                        }
+                        for exact in [true, false] {
+                            configure(exact: exact)
+                            _ = pass(Array(seq[p ..< p + maxBatch]))
+                            let next = pass([seq[p + maxBatch]])
+                            state.restore(ck)
+                            guard record, let ref = refs[exact] else { continue }
+                            if exact { compare(next, ref[maxBatch], spread: spreads[maxBatch], into: &exactState) }
+                            else { compare(next, ref[maxBatch], spread: spreads[maxBatch], into: &stockState) }
+                        }
+                        // Advance for real by the stride so the next position is fresh.
+                        configure(exact: false)
+                        let step = Array(seq[p ..< p + stride])
+                        let (_, mu) = m.hiddenStatesWithMulti(step, state: state)
+                        eval(mu)
+                        state.lastMulti = head.consume(
+                            chunk: step, chunkMulti: mu, prevMulti: state.lastMulti,
+                            resident: m.resident, rope: m.sharedRope, state: mtpState)
+                        p += stride
+                    }
+                    check("\(label): exact verify attention engaged (\(m.multiRowSplits - splitsBefore) layer passes)",
+                        m.multiRowSplits > splitsBefore)
+                    check("\(label): row-invariant projections engaged (\(RowInvariantMatmul.calls - rowCallsBefore) matmuls)",
+                        RowInvariantMatmul.calls > rowCallsBefore)
+                    for k in 2 ... maxBatch {
+                        let e = exactRows[k] ?? Worst(diff: .infinity, flips: -1), s = stockRows[k] ?? Worst()
+                        check("\(label): k=\(k), every row equals the one-row pass at its position over \(positions) positions "
+                            + String(format: "(max deviation %.3g of the logit spread, %d top-1 flips; stock %.3g, %d flips)",
+                                e.diff, e.flips, s.diff, s.flips), e.diff == 0 && e.flips == 0)
+                    }
+                    check("\(label): the state after a \(maxBatch)-row pass equals the state after \(maxBatch) one-row passes, "
+                        + String(format: "through the next token's logits (max deviation %.3g, %d flips; stock %.3g, %d flips)",
+                            exactState.diff, exactState.flips, stockState.diff, stockState.flips),
+                        exactState.diff == 0 && exactState.flips == 0)
+                }
+                configure(exact: false)
+                if failures.isEmpty { print("MTP ROWCHECK PASS") }
+                else { throw ModelError("MTP ROWCHECK FAIL: " + failures.joined(separator: "; ")) }
             } catch { result = .failure(error) }
             sem.signal()
         }

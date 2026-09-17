@@ -167,7 +167,17 @@ extension Diagnostics {
             c.equal("explicit one restores only \(name)",
                 try InferenceOptimizations.resolving(environment: [name: "1"], defaults: disabled), candidate)
         }
+        c.expect("combined candidate splits the speculative verify attention", candidate.verifySplitAttention == true)
+        var noSplit = candidate; noSplit.verifySplitAttention = nil
+        c.equal("explicit zero disables only SLOTSTREAM_OPT_VERIFY_SPLIT",
+            try InferenceOptimizations.resolving(environment: ["SLOTSTREAM_OPT_VERIFY_SPLIT": "0"], defaults: candidate), noSplit)
+        c.equal("explicit one restores only SLOTSTREAM_OPT_VERIFY_SPLIT",
+            try InferenceOptimizations.resolving(environment: ["SLOTSTREAM_OPT_VERIFY_SPLIT": "1"], defaults: noSplit), candidate)
+        var anyContext = candidate; anyContext.verifySplitMinContext = 0
+        c.equal("the verify split threshold override leaves the family intact",
+            try InferenceOptimizations.resolving(environment: ["SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT": "0"], defaults: candidate), anyContext)
         var referenceOverrides = Dictionary(uniqueKeysWithValues: candidateFlags.map { ($0.0, "0") })
+        referenceOverrides["SLOTSTREAM_OPT_VERIFY_SPLIT"] = "0"
         referenceOverrides["SLOTSTREAM_OPT_PREFIX_CHECKPOINT"] = "0"
         referenceOverrides["SLOTSTREAM_OPT_AUTO_READ_SCOPE"] = "0"
         referenceOverrides["SLOTSTREAM_OPT_VISION_QUERY_TILE"] = "0"
@@ -213,6 +223,46 @@ extension Diagnostics {
             try environmentFunction([:]), InferenceOptimizations.deploymentCandidate())
         c.expect("typed override enables compaction", try InferenceOptimizations.environment([
             "SLOTSTREAM_OPT_COMPACT_STATE": "1"]).compactStateWindows)
+        // Verify-pass controls are optional, so control sets saved before them decode unchanged.
+        let reference = InferenceOptimizations()
+        c.expect("reference leaves the verify-pass controls unset",
+            reference.verifySplitAttention == nil && reference.verifySplitMinContext == nil
+                && reference.rowInvariantProjection == nil)
+        c.equal("explicit verify split threshold is read", try InferenceOptimizations.resolving(
+            environment: ["SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT": "0"], defaults: reference).verifySplitMinContext, 0)
+        for bad in ["-1", "x", "1.5", ""] {
+            do {
+                _ = try InferenceOptimizations.resolving(environment: ["SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT": bad], defaults: reference)
+                c.expect("verify split threshold rejects \(bad.isEmpty ? "an empty value" : bad)", false)
+            } catch { c.expect("verify split threshold rejects \(bad.isEmpty ? "an empty value" : bad)", true) }
+        }
+        c.expect("explicit one enables row-invariant projections", try InferenceOptimizations.resolving(
+            environment: ["SLOTSTREAM_OPT_ROW_INVARIANT": "1"], defaults: reference).rowInvariantProjection == true)
+        var invariant = reference; invariant.rowInvariantProjection = true
+        c.equal("explicit zero returns row-invariant projections to unset", try InferenceOptimizations.resolving(
+            environment: ["SLOTSTREAM_OPT_ROW_INVARIANT": "0"], defaults: invariant), reference)
+        c.expect("row-invariant projections stay off unless selected", !RowInvariantMatmul.enabled)
+        // The verify-pass attention policy: which mode the controls select and
+        // which passes it engages for.
+        typealias MRA = MultiRowAttention
+        c.expect("verify split engages from 6,144 keys by default", MRA.defaultMinContext == 6144)
+        c.expect("exact mode promises passes of up to five rows", MRA.exactMaxRows == 5)
+        c.expect("no split control selects the stock verify attention",
+            MRA.mode(splitAttention: nil, rowInvariant: nil) == .stock && MRA.mode(splitAttention: nil, rowInvariant: true) == .stock)
+        c.expect("the split control alone selects the split", MRA.mode(splitAttention: true, rowInvariant: nil) == .split)
+        c.expect("the split with row-invariant projections selects the exact mode",
+            MRA.mode(splitAttention: true, rowInvariant: true) == .exact)
+        c.expect("stock never engages", !MRA.engages(mode: .stock, rows: 3, context: 1 << 20, minContext: 0))
+        c.expect("the split engages for three to eight rows from its threshold",
+            MRA.engages(mode: .split, rows: 3, context: 6144, minContext: 6144)
+                && MRA.engages(mode: .split, rows: 8, context: 6144, minContext: 6144)
+                && !MRA.engages(mode: .split, rows: 2, context: 1 << 20, minContext: 0)
+                && !MRA.engages(mode: .split, rows: 9, context: 1 << 20, minContext: 0)
+                && !MRA.engages(mode: .split, rows: 3, context: 6143, minContext: 6144))
+        c.expect("the exact mode engages from two rows, never for one",
+            MRA.engages(mode: .exact, rows: 2, context: 1, minContext: 0)
+                && !MRA.engages(mode: .exact, rows: 1, context: 1 << 20, minContext: 0)
+                && !MRA.engages(mode: .exact, rows: 9, context: 1 << 20, minContext: 0))
         do {
             _ = try InferenceOptimizations.environment(["SLOTSTREAM_OPT_COMPACT_STATE": "yes"])
             c.expect("malformed override refused", false)

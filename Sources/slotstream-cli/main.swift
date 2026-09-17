@@ -15,7 +15,7 @@ struct Slotstream: ParsableCommand {
             Run.self, Serve.self, Pull.self, Doctor.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
             PrefixCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
-            MTPParity.self, MTPAccept.self, MTPCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
+            MTPParity.self, MTPAccept.self, MTPCheck.self, MTPRowCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
             ContextCheck.self, PrefillScheduleCommand.self, SweepCheck.self,
             VisionParity.self, OptimizationStateCheck.self, PackExperts.self,
             ExpertLookaheadCapture.self, ExpertLookaheadBench.self, ExpertLookaheadCheck.self, ExpertLookaheadPredict.self,
