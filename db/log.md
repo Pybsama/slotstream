@@ -1588,3 +1588,24 @@ Second introduction pass recorded.
 ## [2026-09-17 02:35] validate | db
 README second pass: dbmd validate --all with zero errors and the two preserved historical log warnings; claims gate 226 checks, 0 failures.
 
+## [2026-09-17 03:21] create | sources/runs/2026/09/2026-09-16-release-0-2-20-published-and-installed
+v0.2.20 release acceptance: CI 35153305706 on f92021a, candidate verified against a clean export (178 files), 25/25 model gates on the CI binary, Codex and SDK 9/9 on it before the tag, publication and SLSA attestation, install 0.2.19 to 0.2.20, installed e2e 31/31, persistent prefix 11/11, doctor at 22 GB and pull --verify pass.
+
+## [2026-09-17 03:21] create | sources/runs/2026/09/2026-09-16-codex-on-installed-0-2-20
+Codex 0.148.0 and the OpenAI Python SDK 3.14.1 on the installed 0.2.20, following docs/CODEX.md with the catalog script from main: create and update a file, an attached picture, view_image, and 11 strict SDK checks; 18 of 18.
+
+## [2026-09-17 03:21] create | records/measurements/release-0-2-20-published-2026-09-16
+v0.2.20 published, installed and accepted (order 1500): the release qualification table, the Codex jobs on the installed binary, the documented constants and the limits.
+
+## [2026-09-17 03:21] create | records/claims
+Five claims for the numbers the Codex guide and the Responses API section introduced: the verified Codex version, the provider idle timeout, the progress event interval on both surfaces, and the 8,192-token default reply ceiling.
+
+## [2026-09-17 03:21] index-rebuild | db
+sources/runs and the records layer rebuilt after dbmd write placed the two run files under records/run/; they were moved to sources/runs/2026/09/ and the generated records/run folder removed.
+
+## [2026-09-17 03:22] validate | db
+Release 0.2.20 records: dbmd validate --all with zero errors and the two preserved historical log warnings; projections current and 231 claim checks pass.
+
+## [2026-09-17 03:22] update | records/measurements/release-0-2-20-published-2026-09-16
+Correction to the previous validate entry: two new summaries were over 200 characters when it was written; this run's and this measurement's summaries are trimmed, and dbmd validate --all now shows zero errors and only the two preserved historical warnings.
+

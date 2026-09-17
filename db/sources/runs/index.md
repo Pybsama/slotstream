@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-16T20:19:29.944945Z
+updated: 2026-09-17T03:22:19.428877Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-16-release-0-2-20-published-and-installed]] — v0.2.20 acceptance: CI artifact 25/25, Codex and SDK 9/9 before the tag, attestation, install, installed e2e 31/31, prefix 11/11, doctor and pull --verify.
+- [[sources/runs/2026/09/2026-09-16-codex-on-installed-0-2-20]] — Codex 0.148.0 and the OpenAI Python SDK 3.14.1 on the installed 0.2.20: file create and update through apply_patch, commands, an attached picture and view_image, and 11 strict SDK checks; 18 of 18.
 - [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]] — Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing
 - [[sources/runs/2026/09/2026-09-16-release-0-2-19-published-and-installed]] — v0.2.19 acceptance: CI artifact 25/25, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary, doctor at 22 GB shows the corrected forecast.
 - [[sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb]] — 0.2.19 release benchmark at 22 GB: the shipping build's default 1.108 over the 0.2.18 forecast (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
@@ -505,10 +507,8 @@ updated: 2026-09-16T20:19:29.944945Z
 - [[sources/runs/2026/09/2026-09-06-optimization-integrated-state-entry]] — Combined ordinary state-entry regression V104
 - [[sources/runs/2026/09/2026-09-06-optimization-native-source-closure]] — Native source closure and pending compute/CPU-slot prototypes
 - [[sources/runs/2026/09/2026-09-05-hermes-release-context-and-gates]] — Hermes clean release candidate: full context and local gates
-- [[sources/runs/2026/09/2026-09-05-optimization-combined-first-pass]] — First combined-runtime correctness pass V103
-- [[sources/runs/2026/09/2026-09-05-optimization-output-queue-confirmation]] — Bounded-output latency nonregression qualification V102
 
 ## More
 
-This folder has 594 files. The 500 most recent are listed above.
+This folder has 596 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

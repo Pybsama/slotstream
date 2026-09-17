@@ -2908,7 +2908,8 @@ tests in the [Hermes engineering notes](HERMES-NOTES.md).
 
 Run OpenAI's Codex CLI on the model Slotstream serves. Codex edits files and
 runs commands through its own tools; Slotstream provides the model over the
-OpenAI Responses API on your Mac, with no account and no network access.
+OpenAI Responses API on your Mac. No OpenAI account or API key is needed, and
+the model runs offline; only the one-time catalog step below downloads a file.
 
 ## Before you start
 

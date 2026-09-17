@@ -2,11 +2,16 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-17T02:34:06.462685Z
+updated: 2026-09-17T03:21:42.302009Z
 ---
 
 # records/claims
 
+- [[records/claims/responses-default-output-budget]] — The API reference caps the default Responses reply budget at 8,192 tokens
+- [[records/claims/responses-progress-event-interval]] — The API reference says streamed Responses replies carry a progress event every 10 seconds during a prompt read
+- [[records/claims/codex-guide-progress-event-interval]] — The Codex guide says a progress event arrives every ten seconds during a prompt read
+- [[records/claims/codex-stream-idle-timeout]] — The Codex guide sets the stream idle timeout to 1,800,000 ms
+- [[records/claims/codex-guide-verified-version]] — The Codex guide was verified with Codex 0.148.0
 - [[records/claims/context-default-wait-policy]] — Default request to first token wait policy
 - [[records/claims/automatic-context-window-262144-from-96-gb]] — Auto takes the full 262,144-token window from 96 GB
 - [[records/claims/draft-depth-default-two]] — The adopted speculative draft-chain default is two tokens
