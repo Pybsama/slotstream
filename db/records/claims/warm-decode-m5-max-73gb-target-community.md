@@ -2,13 +2,13 @@
 type: claim
 id: 01m2djq8q1qy27npgezb1nwtkg
 created: 2026-09-13T14:28:43.361532+00:00
-updated: 2026-09-13T14:28:43.361532+00:00
+updated: 2026-09-17T02:14:32.054273+00:00
 summary: 'M5 Max community report: 31.5 tok/s at a 73 GB target'
 basis: measured
 gate: none
 needle: ~31.5 tok/s
 supported_by: '[[records/measurements/c2-macbook-pro-m5-max-128gb-community]]'
-surfaces: README.md, docs/HARDWARE.md
+surfaces: docs/HARDWARE.md
 title: 'M5 Max community report: 31.5 tok/s at a 73 GB target'
 status: current
 ---

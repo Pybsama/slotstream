@@ -2,13 +2,13 @@
 type: claim
 id: 01m2dg6wf704aw10fjxyymy0mq
 created: 2026-09-13T13:44:49.383442+00:00
-updated: 2026-09-13T16:49:56.258085+00:00
+updated: 2026-09-17T02:14:30.970638+00:00
 summary: Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
 basis: measured
 gate: none
 needle: 13.47 tok/s
 supported_by: '[[records/measurements/decode-path-serialization-b1-cohort-replication-2026-09-13]]'
-surfaces: README.md, docs/HARDWARE.md, docs/ENGINEERING.md, llms.txt
+surfaces: docs/HARDWARE.md, docs/ENGINEERING.md, llms.txt
 title: Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
 status: current
 ---

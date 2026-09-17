@@ -2,7 +2,7 @@
 type: decision
 id: 01m21jj97w5hteckpk2khdy25h
 created: 2026-09-08T22:35:06.876703+00:00
-updated: 2026-09-09T01:48:49.929701+00:00
+updated: 2026-09-17T02:14:32.183186+00:00
 summary: Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 decided_on: 2026-09-08
 reversible_if: The public setup changes or users demonstrate that a different entry point makes installation and first use clearer.
@@ -48,3 +48,18 @@ origin story, author, contributions, and support visible. Link to complete
 recipes and engineering methods. Useful links and sections need no arbitrary
 count limit. The live star badge and existing weekly chart are project
 metadata, not evidence of adoption or model quality.
+
+## Sub-document pass, 2026-09-16
+
+Carlos asked for a simpler README that surfaces what matters and points to
+sub-documents for the rest, compelling without selling. The README keeps the
+sections the balance correction names and now carries one performance
+paragraph (the 0.2.19 release benchmark), the planning-range table with a
+two-sentence basis, and a short memory-and-context summary. The measured
+results table with its credits and notes, the estimate rationale, the tested
+macOS versions and the prompt-reading estimates live in `docs/HARDWARE.md`,
+which was already their home; the release-by-release lookahead history lives
+in `docs/EXPERT-LOOKAHEAD.md`. Twelve claims whose numbers left the README
+dropped it from their surfaces and keep their other surfaces; every old README
+anchor and linked heading was preserved. The README went from 455 to 350
+lines.

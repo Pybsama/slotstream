@@ -1552,3 +1552,15 @@ sources/runs index was stale for the 2026-09-16 sevra-mac-thinking run after an 
 ## [2026-09-16 21:21] validate | db
 dbmd validate --all: zero errors and the two preserved historical log warnings; claims gate 243 checks, projections regenerated
 
+## [2026-09-17 02:15] update | README.md
+Simplified from 455 to 350 lines at Carlos's request: one performance paragraph (the 0.2.19 release benchmark), the planning-range table with a two-sentence basis and a short memory-and-context summary; the measured-results table, estimate rationale, tested macOS versions and prompt-reading estimates are pointed to in docs/HARDWARE.md, the lookahead history in docs/EXPERT-LOOKAHEAD.md. Every old anchor and linked heading kept.
+
+## [2026-09-17 02:15] update | records/claims
+Twelve claims dropped README.md from their surfaces after the README simplification (38 minutes, 1.11x, 11.79 to 13.47 tok/s, about 3 and about 8 minutes, 1.41, 12, 13.47, 6.22, 21–22, ~26.9 and ~31.5 tok/s); each keeps its other surfaces, and the gate passes with 231 checks.
+
+## [2026-09-17 02:15] update | records/decisions/newcomer-documentation
+Sub-document pass recorded: the README carries the summary and pointers, the hardware guide the results table, estimate basis and prompt-reading estimates.
+
+## [2026-09-17 02:15] validate | db
+README simplification: dbmd validate --all with zero errors and the two preserved historical log warnings; llms-full, projections and 231 claim checks pass.
+

@@ -2,13 +2,13 @@
 type: claim
 id: 01m2dg6wfstjy618dgtd9qm2n0
 created: 2026-09-13T13:44:49.401736+00:00
-updated: 2026-09-14T13:50:37.657437+00:00
+updated: 2026-09-17T02:14:29.396134+00:00
 summary: Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
 basis: measured
 gate: none
 needle: 11.79 to 13.47 tok/s
 supported_by: '[[records/measurements/decode-path-serialization-b1-cohort-replication-2026-09-13]]'
-surfaces: README.md, docs/HARDWARE.md, docs/ENGINEERING.md, CHANGELOG.md, docs/EXPERT-LOOKAHEAD.md
+surfaces: docs/HARDWARE.md, docs/ENGINEERING.md, CHANGELOG.md, docs/EXPERT-LOOKAHEAD.md
 title: Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
 status: current
 ---

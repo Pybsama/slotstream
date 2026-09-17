@@ -2,13 +2,13 @@
 type: claim
 id: 01m2dxrk5aa43kpw46s5kgevvv
 created: 2026-09-13T17:41:41.162114+00:00
-updated: 2026-09-13T17:41:41.162114+00:00
+updated: 2026-09-17T02:14:28.861107+00:00
 summary: A 131,072-token prompt took 38 minutes to read at a 16 GB target
 basis: measured
 gate: none
 needle: 38 minutes
 supported_by: '[[records/measurements/automatic-context-window-131072-read-2026-09-13]]'
-surfaces: README.md, docs/HARDWARE.md
+surfaces: docs/HARDWARE.md
 title: A 131,072-token prompt took 38 minutes to read at a 16 GB target
 status: current
 ---

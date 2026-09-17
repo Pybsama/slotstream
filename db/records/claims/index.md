@@ -2,11 +2,23 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-16T21:10:05.461135Z
+updated: 2026-09-17T02:14:32.054273Z
 ---
 
 # records/claims
 
+- [[records/claims/warm-decode-m5-max-73gb-target-community]] — M5 Max community report: 31.5 tok/s at a 73 GB target
+- [[records/claims/warm-decode-m5-max-48gb-target-community]] — M5 Max community report: 26.9 tok/s at a 48 GB target
+- [[records/claims/warm-decode-m5-max-128gb-community]] — M5 Max community report: 21 to 22 tok/s
+- [[records/claims/warm-decode-m5-air-32gb-community]] — M5 Air community report: 6.22 tok/s
+- [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
+- [[records/claims/warm-decode-12-tok-s-on-48-gb]] — Warm decode is about 12 tok/s on the 48 GB dev Mac
+- [[records/claims/warm-decode-1-41-tok-s-on-a-16-gb-mac-mini-m2]] — Warm decode 1.41 tok/s on a base-storage Mac mini M2, 16 GB — the first community measurement of a tier row.
+- [[records/claims/full-context-wait-about-8-minutes-at-65536]] — M5 Pro-based prefill estimate is about 8 minutes near the larger window from a 24 GB simulation
+- [[records/claims/full-context-wait-about-3-minutes-from-24-gb]] — M5 Pro-based prefill estimate is about 3 minutes near the default window from a 24 GB simulation
+- [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
+- [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
+- [[records/claims/context-read-38-minutes-at-131072]] — A 131,072-token prompt took 38 minutes to read at a 16 GB target
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
 - [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
@@ -31,10 +43,7 @@ updated: 2026-09-16T21:10:05.461135Z
 - [[records/claims/expert-lookahead-default-four-layer-drain]] — The qualified decode lookahead normally drains GPU work every four layers
 - [[records/claims/expert-lookahead-prefetch-b0-1-105x]] — Slot-adoption prefetch achieved 1.105x decode throughput in the B0 cohort
 - [[records/claims/lookahead-parts-add-about-2-percent-each]] — The router weight cache and the deferred GPU drains each add about 2% over prefetch
-- [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
 - [[records/claims/decode-lookahead-charges-373-mib]] — The decode lookahead charges 373 MiB to the memory plan
-- [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
-- [[records/claims/context-read-38-minutes-at-131072]] — A 131,072-token prompt took 38 minutes to read at a 16 GB target
 - [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-target-54-7-gb-from-96-gb]] — Auto targets 54.7 GB from 96 GB with the full window
 - [[records/claims/automatic-target-43-2-gb-at-64-gb]] — Auto targets 43.2 GB at 64 GB with its 131,072-token window
@@ -44,20 +53,15 @@ updated: 2026-09-16T21:10:05.461135Z
 - [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the 32,768-token window
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
-- [[records/claims/warm-decode-13-5-tok-s-with-the-decode-lookahead]] — Warm decode is 13.47 tok/s with decode lookahead at a 20 GB target on the development Mac
 - [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Small-memory planner estimates use the M5 Pro curve; README has broader ranges
 - [[records/claims/hardware-planning-range-low]] — Estimated warm reply range for 16 to less than 24 GB Macs
-- [[records/claims/full-context-wait-about-8-minutes-at-65536]] — M5 Pro-based prefill estimate is about 8 minutes near the larger window from a 24 GB simulation
-- [[records/claims/full-context-wait-about-3-minutes-from-24-gb]] — M5 Pro-based prefill estimate is about 3 minutes near the default window from a 24 GB simulation
 - [[records/claims/context-state-27-kib-per-token]] — Main sequence-cache capacity costs about 27 KiB per allocated token
 - [[records/claims/engine-start-about-2-s]] — Historical engine load is about 2 s; current startup verification is additional
 - [[records/claims/mtp-auto-floor-76-per-layer-21-gb-target]] — Auto turns speculative decode on when the cache still reaches 76 experts per layer after the head, a 21 GB target
 - [[records/claims/output-byte-identical-across-cache-sizes]] — Greedy output is byte-identical across cache sizes and live resizes
 - [[records/claims/vision-tower-0-9-gb-resident]] — The vision tower costs 0.9 GB, and only when an image arrives
 - [[records/claims/io-queue-depth-flat-from-12-to-32]] — Historical development-Mac I/O concurrency comparison; no universal SSD optimum.
-- [[records/claims/warm-decode-m5-max-73gb-target-community]] — M5 Max community report: 31.5 tok/s at a 73 GB target
-- [[records/claims/warm-decode-m5-max-48gb-target-community]] — M5 Max community report: 26.9 tok/s at a 48 GB target
 - [[records/claims/auto-floor-76-experts-per-layer]] — The draft head's automatic floor is 76 experts per layer
 - [[records/claims/speculative-decode-x1-24-at-auto-floor]] — Speculative decode multiplied decode by 1.24 at the former auto floor on the dev Mac
 - [[records/claims/full-context-wait-6-4-min-on-16-gb]] — A full 32k prompt waits about 6.4 min on a 16 GB Mac
@@ -70,10 +74,6 @@ updated: 2026-09-16T21:10:05.461135Z
 - [[records/claims/hermes-auxiliary-timeout]] — Hermes guide sets explicit auxiliary timeouts
 - [[records/claims/hermes-title-output-budget]] — Hermes guide bounds local title output
 - [[records/claims/hermes-explicit-output-budget]] — Hermes guide sends a 4096-token output ceiling
-- [[records/claims/warm-decode-m5-max-128gb-community]] — M5 Max community report: 21 to 22 tok/s
-- [[records/claims/warm-decode-m5-air-32gb-community]] — M5 Air community report: 6.22 tok/s
-- [[records/claims/warm-decode-1-41-tok-s-on-a-16-gb-mac-mini-m2]] — Warm decode 1.41 tok/s on a base-storage Mac mini M2, 16 GB — the first community measurement of a tier row.
-- [[records/claims/warm-decode-12-tok-s-on-48-gb]] — Warm decode is about 12 tok/s on the 48 GB dev Mac
 - [[records/claims/weights-on-disk-105-3-gb]] — The weights are 105.3 GB across 25 files
 - [[records/claims/vision-follow-up-turn-reuses-the-state]] — A follow-up turn about the same picture takes 1.8 s where the first took 15.4 s
 - [[records/claims/pull-verify-re-hashes-in-8-s]] — pull --verify re-hashes the whole copy in about 8 s on the dev Mac

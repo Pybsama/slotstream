@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-09-16T21:18:52.009560Z
+updated: 2026-09-17T02:14:32.183186Z
 ---
 
 # records/decisions
 
+- [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 - [[records/decisions/native-stack-stated-on-every-surface]] — Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
 - [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
 - [[records/decisions/corrected-decode-forecast-default-with-the-sidecar]] — The lookahead forecasts from the previous layer's attention output with a rank-128 correction shipped as a pinned sidecar; 1.111 over the previous configuration, identical output, 409 MiB
@@ -22,7 +23,6 @@ updated: 2026-09-16T21:18:52.009560Z
 - [[records/decisions/guillermo-rauch-grant-acknowledgment]] — Credit Guillermo Rauch personally using his official GitHub photo, full name and the verified Slotstream grant listing.
 - [[records/decisions/auto-target-is-the-33-gb-knee-not-70-percent-of-ram]] — Auto retains the evidence-based 33 GB default; larger-target predictions do not prove a universal performance plateau.
 - [[records/decisions/benchmark-startup-swapin-exclusion-2026-09-09]] — Explicit paired benchmark startup swap-in exclusion with unchanged hard resource limits
-- [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 - [[records/decisions/bounded-mtp-tail-excluded-from-combined]] — Preserve the original MTP verification shape after exact-output counterexamples
 - [[records/decisions/compact-ngram-storage-and-ring-disposition-2026-09-07]] — Select exact compact BF16 storage and reject ring eviction variants
 - [[records/decisions/hugging-face-lossless-download-default]] — Use the unchanged compressed Hugging Face package by default, preserving exact original bytes while removing metered R2 model hosting.
