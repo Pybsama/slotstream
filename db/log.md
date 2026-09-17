@@ -1576,3 +1576,15 @@ Introduction pass recorded: what left the README, where it lives, and the four c
 ## [2026-09-17 02:24] validate | db
 README introduction pass: dbmd validate --all with zero errors and the two preserved historical log warnings; claims gate 227 checks, 0 failures.
 
+## [2026-09-17 02:35] update | README.md
+Second introduction pass: model name linked and introduced, Sevra note shorter, the 96 GB case in one sentence, no arrow, installer sentence gone, plainer auto-mode sentence, guides table groups the coding agents and names fx, request budget moved to the guides. 334 to 325 lines; 50 links and every anchor checked.
+
+## [2026-09-17 02:35] update | records/claims
+context-default-wait-policy drops README.md from its surfaces; the 30-minute budget stays in the API, CLI, Hermes and troubleshooting guides and llms.txt. Claims gate 226 checks, 0 failures.
+
+## [2026-09-17 02:35] update | records/decisions/newcomer-documentation
+Second introduction pass recorded.
+
+## [2026-09-17 02:35] validate | db
+README second pass: dbmd validate --all with zero errors and the two preserved historical log warnings; claims gate 226 checks, 0 failures.
+

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-17T02:23:22.107819Z
+updated: 2026-09-17T02:34:06.462685Z
 ---
 
 # records/claims
 
+- [[records/claims/context-default-wait-policy]] — Default request to first token wait policy
 - [[records/claims/automatic-context-window-262144-from-96-gb]] — Auto takes the full 262,144-token window from 96 GB
 - [[records/claims/draft-depth-default-two]] — The adopted speculative draft-chain default is two tokens
 - [[records/claims/corrected-forecast-0-2-19-medians-tok-s]] — Median decode rose from 14.38 to 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target
@@ -100,7 +101,6 @@ updated: 2026-09-17T02:23:22.107819Z
 - [[records/claims/full-vision-verification-target]] — Full original image verification uses an explicit 14.5 GB target
 - [[records/claims/context-diagnostic-default-wall]] — Diagnostic independent wall ceiling default
 - [[records/claims/context-diagnostic-default-reply]] — Diagnostic required reply default
-- [[records/claims/context-default-wait-policy]] — Default request to first token wait policy
 - [[records/claims/openai-inference-error-status]] — Non-streamed OpenAI inference failures return HTTP 500
 - [[records/claims/hermes-local-stream-watchdog]] — Hermes example sets a bounded local stream watchdog
 - [[records/claims/openai-tool-sampling-defaults]] — OpenAI tool requests reuse the native agent sampler
