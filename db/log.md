@@ -1738,3 +1738,24 @@ Repacked before commit so the archive carries both source diffs: 7a58174->8d86f1
 ## [2026-09-17 20:27] update | sources/runs/2026/09/2026-09-17-verify-pass-checks-and-battery
 Static gates re-run on the tree after the documentation reflow: 44 checks, zero failures, STATIC GATES PASS.
 
+## [2026-09-17 23:23] create | sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck
+Decode comparisons re-run on a quiet machine after the commit: 16k x1.013 over three rounds, 32k x1.294 over two, plus two ordinary runs.
+
+## [2026-09-17 23:23] update | records/claims/verify-split-16k-decode-11-80-tok-s
+Withdrawn: the quiet-machine re-run measured 11.82 against 11.67 tok/s (x1.013); the earlier pair ran on a loaded machine.
+
+## [2026-09-17 23:23] update | records/claims/verify-split-32k-decode-x1-37
+Withdrawn: the quiet-machine re-run measured x1.29; both arms still run 57 passes at equal acceptance.
+
+## [2026-09-17 23:23] create | records/claims/verify-split-16k-decode-11-82-tok-s
+Corrected 16k decode claim from the quiet-machine re-run.
+
+## [2026-09-17 23:23] create | records/claims/verify-split-32k-decode-x1-29
+Corrected 32k decode claim from the quiet-machine re-run.
+
+## [2026-09-17 23:23] update | records/measurements/speculative-verify-pass-split-attention-2026-09-17
+Added the quiet-machine recheck section and re-anchored the two decode ratios; the pass-cost tables are unchanged.
+
+## [2026-09-17 23:23] update | records/decisions/verify-pass-split-attention-default
+Evidence re-anchored to the quiet-machine ratios; the default stands on the per-pass saving that grows with context.
+

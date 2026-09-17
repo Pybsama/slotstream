@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-17T20:18:44.385870Z
+updated: 2026-09-17T23:22:20.231946Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck]] — Decode comparisons re-run on a quiet machine after the commit: 16k and 32k
 - [[sources/runs/2026/09/2026-09-17-verify-pass-checks-and-battery]] — Check catalogue, static gates and verify battery on the final verify-pass build
 - [[sources/runs/2026/09/2026-09-17-verify-pass-decode-final-build]] — Decode comparisons at 16k and 32k on the final build: dense, split and exact
 - [[sources/runs/2026/09/2026-09-17-verify-pass-mode-pricing]] — Fetch-free verify pass cost of the stock, split and exact modes at 4k and 16k tokens
@@ -506,9 +507,8 @@ updated: 2026-09-17T20:18:44.385870Z
 - [[sources/runs/2026/09/2026-09-06-optimization-complete-repeat-guarded-stop]] — Complete-prompt confirmation stopped by renewed competing work
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-tower-counterexample]] — Vision tower numerical counterexample and rebuilt ordinary integration
 - [[sources/runs/2026/09/2026-09-06-slotpack-mac-and-final-candidate-acceptance]] — Complete fresh-to-resumed public Mac installation verifies all original files; final API, HTTP, memory, coverage, external consumer and loaded-model gates pass.
-- [[sources/runs/2026/09/2026-09-06-optimization-guarded-vision-capacity]] — Guarded measurement refusal and maximum vision attention
 
 ## More
 
-This folder has 610 files. The 500 most recent are listed above.
+This folder has 611 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

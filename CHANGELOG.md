@@ -11,10 +11,14 @@ determines which version the installer downloads.
 - Faster speculative decode on long prompts. The three-row verify pass of
   draft depth 2 no longer falls to the dense attention kernel, whose cost
   grows with the context: from 6,144 tokens it runs two rows at a time through
-  the vector kernel, the kernel plain decode's attention uses. At a 22 GB
-  target with a 16,356-token prompt, speculative decode measured 11.80 against
-  10.93 tok/s (x1.079), and x1.37 with a 32,740-token prompt. The fetch-free
-  verify pass is 32% cheaper at 32,740 tokens and 45% at 65,508.
+  the vector kernel, the kernel plain decode's attention uses. The gain grows
+  with the context, because it is the dense kernel's growth that it removes.
+  On a quiet machine at a 22 GB target, speculative decode measured 11.82
+  against 11.67 tok/s (x1.013) with a 16,356-token prompt and x1.29 with a
+  32,740-token prompt, and the fetch-free verify pass is 32% cheaper at 32,740
+  tokens and 45% at 65,508. The split changes which drafts are accepted, so at
+  16k the end-to-end gain is small and depends on the prompt; at 32k both arms
+  accept alike and the ratio is the pass saving.
   `SLOTSTREAM_OPT_VERIFY_SPLIT=0` restores the previous pass.
 - Exact mode, off by default: `SLOTSTREAM_OPT_ROW_INVARIANT=1` with
   `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT=0` makes a speculative run's output

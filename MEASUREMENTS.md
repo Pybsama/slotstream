@@ -5365,7 +5365,7 @@ The Codex guide and the API reference state four configuration facts. None is a 
 No clean-timing or throughput qualification is claimed. Acceptance shared the machine with ordinary work and with another session's model runs, and each phase waited until the model lock had been free for two minutes. The Codex job durations include prompt reads of about 10,000 tokens at a 12 GB target and describe this run only. The installed-release checks ran at a 32,768-token window and a 10 GB target, without the lookahead the automatic plan enables at larger targets. The Codex checks cover one Codex version, and Codex changes quickly.
 
 ## Speculative verify pass: split attention by default and an exact mode
-**Outcome: the speculative verify pass now splits its attention from 6,144 tokens of context. At the 22 GB default profile with a 16,356-token prompt, a verification round takes 12% less time and speculative decode ran at 11.80 instead of 10.93 tok/s (x1.079); with a 32,740-token prompt the paired ratio was 1.41 and 1.37.** The three-row pass of draft depth 2 had been falling off the backend's vector attention kernel onto the dense kernel, whose cost grows with the context. Run two rows at a time through the vector kernel, the fetch-free pass stays nearly flat: 32% cheaper at 32,740 tokens and 45% at 65,508. An opt-in exact mode goes further: a speculative run's output is identical to a plain run's in that mode (128 of 128 tokens at 16k), which no earlier pass guaranteed. Default: the split joins the deployment family (`SLOTSTREAM_OPT_VERIFY_SPLIT`, threshold `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT`); the exact mode stays off (`SLOTSTREAM_OPT_ROW_INVARIANT`) because it changes plain decode's rounding and costs speed. New gates: `mtp-rowcheck` in `Tools/verify.sh` and the weights-free `verify-pass-rows` catalogue check. Measured and not shipped: a gathered-key attention and a fused hyper-connection read.
+**Outcome: the speculative verify pass now splits its attention from 6,144 tokens of context. At the 22 GB default profile a verification round takes 12% less time at 16k, and on a quiet machine speculative decode ran at 11.82 against 11.67 tok/s (x1.013) with a 16,356-token prompt and x1.29 with a 32,740-token prompt.** The three-row pass of draft depth 2 had been falling off the backend's vector attention kernel onto the dense kernel, whose cost grows with the context. Run two rows at a time through the vector kernel, the fetch-free pass stays nearly flat: 32% cheaper at 32,740 tokens and 45% at 65,508. An opt-in exact mode goes further: a speculative run's output is identical to a plain run's in that mode (128 of 128 tokens at 16k), which no earlier pass guaranteed. Default: the split joins the deployment family (`SLOTSTREAM_OPT_VERIFY_SPLIT`, threshold `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT`); the exact mode stays off (`SLOTSTREAM_OPT_ROW_INVARIANT`) because it changes plain decode's rounding and costs speed. New gates: `mtp-rowcheck` in `Tools/verify.sh` and the weights-free `verify-pass-rows` catalogue check. Measured and not shipped: a gathered-key attention and a fused hyper-connection read.
 
 **Why the pass grew with the context.** The pinned backend admits its vector attention kernel only while query rows times the GQA factor is at most 32 (`scaled_dot_product_attention.cpp`); at this model's GQA of 12 that is two rows. A three-row pass takes the dense kernel, which reads every cached key and value of the twelve sparse-attention layers and builds the full score matrix. The audit of 2026-09-04 named this (§5). Synthetically, one layer's masked attention at three rows costs 0.32 ms at 4k keys, 1.16 at 16k, 2.31 at 32k, 5.29 at 65k and 15.78 at 131k.
 
@@ -5438,3 +5438,28 @@ The equality is promised for passes of up to five rows, draft depth 4 or less: q
 **Gates on the shipped build.** `Tools/verify.sh` passed on the frozen final build with the split on by default: 247 checks, no failure and no skip, including the Python-reference goldens, the streaming and elastic-pool equality, the governor drill, the prefix and sweep controls, the draft-head parity, the speculative gates with the new `mtp-rowcheck`, the memory-target promises, the long-prompt recall where speculative decode runs above the threshold, `context-check`, serving robustness, the symlinked model directory and the vision serving suite. The T0 and T1 check catalogue passes on the same build (61 checks, 30,634 assertions), and so do the static gates, whose claims gate holds 249 needles on the public surfaces.
 
 **Limits.** One machine; four to eight positions per rung; synthetic prose prompts; the crossover moves with content and was measured for draft depth 2 only (deeper drafts split into more calls and were not timed). The fetch-free table and the crossover rungs ran on development builds with the same split code; the decode comparisons ran on the final build. Each decode comparison is one run of two rounds, and its arms decode slightly different texts, so the ratios carry acceptance differences. A first 32k comparison on an earlier build ran on a loaded machine (both arms 15% slower in its second round) and is discarded.
+
+
+## Quiet-machine recheck after the change was committed
+
+The two decode comparisons were re-run on a quiet machine after the commit
+([[sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck]], binary
+`8ea3c360959fd20c`, same protocol, 1-minute load 1.89 to 2.29 and 35 GB
+reclaimable at each start).
+
+| prompt tokens | rounds | dense | split | ratio |
+| ---: | ---: | ---: | ---: | ---: |
+| 16,356 | 3 | 11.67 | 11.82 | x1.013 |
+| 32,740 | 2 | 8.98 | 11.63 | x1.294 |
+
+The 16k ratio replaces the x1.079 measured earlier the same day, when both
+arms ran about 10% slower on a busy machine. The cause of the small 16k gain
+is visible in the arms' own acceptance: the split accepts 63.4% of drafts on
+that prompt against the dense arm's 69.8%, so it runs 56 verify passes to the
+dense arm's 53 and the cheaper pass mostly pays for the extra passes. That
+difference is a rounding artifact of this prompt and can fall either way. At
+32k both arms run 57 passes at 61.4% and 62.3%, so the ratio there is the
+per-pass saving and nothing else, and it is the ratio that carries the change.
+A first 64-token attempt at 16k reported x0.936; 25 to 29 verify passes with a
+10% swing between rounds is too short a sample, and the 128-token steps
+replace it.

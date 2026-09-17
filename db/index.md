@@ -1,20 +1,20 @@
 ---
 type: index
 scope: root
-updated: 2026-09-17T20:18:44.385870Z
+updated: 2026-09-17T23:22:48.870645Z
 ---
 
 # Knowledge base index
 
-## Sources (616)
+## Sources (617)
 - [[sources/community/index|Community]] (3) — measurement reports from other people's Macs, verbatim
 - [[sources/docs/index|Docs]] (2) — frozen snapshots of the documents the records were lifted from
 - [[sources/references/index|References]] (1) — vendor documentation and prior art cited by measurements and design
-- [[sources/runs/index|Runs]] (610) — raw tool output captured before a number was transcribed
+- [[sources/runs/index|Runs]] (611) — raw tool output captured before a number was transcribed
 
-## Records (357)
+## Records (359)
 - [[records/analyses/index|Analyses]] (3)
-- [[records/claims/index|Claims]] (115) — every number on a public surface, with the measurement that supports it and the gate that guards it
+- [[records/claims/index|Claims]] (117) — every number on a public surface, with the measurement that supports it and the gate that guards it
 - [[records/decisions/index|Decisions]] (34) — what was decided, on which evidence, and what would reverse it
 - [[records/design/index|Design]] (31) — PLAN.md's design sections: goal, ground truth, byte math, architecture, correctness strategy, references
 - [[records/machines/index|Machines]] (6) — the machines measurements ran on
