@@ -1759,3 +1759,6 @@ Added the quiet-machine recheck section and re-anchored the two decode ratios; t
 ## [2026-09-17 23:23] update | records/decisions/verify-pass-split-attention-default
 Evidence re-anchored to the quiet-machine ratios; the default stands on the per-pass saving that grows with context.
 
+## [2026-09-17 23:41] index-rebuild | db
+Rebuilt the record indexes after the claim withdrawals and the measurement summary were edited in place; the pinned 0.13.4 gate caught the stale entries that the local 0.13.5-dev.4 build does not report.
+

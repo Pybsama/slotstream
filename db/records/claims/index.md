@@ -9,11 +9,11 @@ updated: 2026-09-17T23:22:48.870645Z
 
 - [[records/claims/verify-split-32k-decode-x1-29]] — Speculative decode with the split verify attention measured x1.29 against the dense pass with a 32,740-token prompt
 - [[records/claims/verify-split-16k-decode-11-82-tok-s]] — Speculative decode with the split verify attention measured 11.82 against 11.67 tok/s (x1.013) at a 22 GB target with a 16,356-token prompt
+- [[records/claims/verify-split-16k-decode-11-80-tok-s]] — Speculative decode with the split verify attention measured 11.80 against 10.93 tok/s (x1.079) at a 22 GB target with a 16,356-token prompt
 - [[records/claims/verify-split-32k-decode-x1-37]] — Speculative decode with the split verify attention measured x1.37 against the dense pass with a 32,740-token prompt at a 22 GB target
 - [[records/claims/exact-mode-draft-depths-up-to-4]] — The exact mode's equality holds for draft depths up to 4
 - [[records/claims/exact-mode-128-of-128-tokens]] — In the exact mode a speculative run matched a plain run on 128 of 128 tokens in the 16k comparison
 - [[records/claims/verify-split-fetch-free-pass-32-and-45-percent]] — The fetch-free three-row verify pass is 32% cheaper split at 32,740 tokens and 45% at 65,508
-- [[records/claims/verify-split-16k-decode-11-80-tok-s]] — Speculative decode with the split verify attention measured 11.80 against 10.93 tok/s (x1.079) at a 22 GB target with a 16,356-token prompt
 - [[records/claims/verify-split-from-6144-tokens]] — The speculative verify pass splits its attention from 6,144 tokens of context by default
 - [[records/claims/sevra-mac-folders-2000-files]] — Sevra reads folders of up to 2,000 files
 - [[records/claims/sevra-mac-recognition-40-pages]] — Sevra recognizes text on at most 40 pages per request
