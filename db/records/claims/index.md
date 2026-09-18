@@ -46,6 +46,9 @@ updated: 2026-09-17T23:54:21.255997Z
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
 - [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
+- [[records/claims/persistent-prefix-default-minimum-tokens]] — The opt-in persistent prefix cache writes states of 2048 tokens or more by default
+- [[records/claims/shared-prefix-save-grid-256-tokens]] — A shared prefix is saved at the last existing prefill pass end at or before its boundary, the 256-token grid by default
+- [[records/claims/shared-prefix-minimum-512-tokens]] — A shared prefix is kept from 512 tokens; the disk tier's own minimum applies on top
 - [[records/claims/hardware-planning-range-ultra]] — Estimated warm reply range for 96 GB or more Macs
 - [[records/claims/warm-decode-0-2-19-at-22-gb]] — Warm decode is 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target on the development Mac
 - [[records/claims/expert-lookahead-default-two-layer-forecast]] — The qualified expert lookahead forecasts two layers ahead
@@ -59,7 +62,6 @@ updated: 2026-09-17T23:54:21.255997Z
 - [[records/claims/decode-forecast-attention-tap-b1-1-058x]] — The attention tap decoded 1.058x on B1, a run that failed its hygiene condition
 - [[records/claims/decode-forecast-attention-tap-agreement-0-62-to-0-73]] — The attention tap raised forecast agreement from 0.62 to 0.73
 - [[records/claims/persistent-prefix-default-max-age]] — The opt-in persistent prefix cache removes states unused for 30 days by default
-- [[records/claims/persistent-prefix-default-minimum-tokens]] — The opt-in persistent prefix cache writes states of 2048 tokens or more by default
 - [[records/claims/persistent-prefix-default-disk-quota]] — The opt-in persistent prefix cache disk quota defaults to 20 GB
 - [[records/claims/expert-lookahead-guide-b1-benchmark-scope]] — The final expert lookahead benchmark scope is one M5 Pro and twelve held-out prompts
 - [[records/claims/expert-lookahead-default-four-layer-drain]] — The qualified decode lookahead normally drains GPU work every four layers

@@ -238,6 +238,8 @@ network code is no longer represented only by weights-free catalogue coverage.
 | `Tools/verify.sh` | the acceptance battery: provenance, goldens, byte-equality across cache sizes and live resizes, MTP, the memory promise, long context | **yes** | dev Mac |
 | `Tools/api_robustness.sh` | Serving regressions against a live server | **yes** | dev Mac |
 | `optimization-state-check --variant persistent-prefix[-mtp]` | a persisted state restores with the saved representation; a disk hit continues exactly like a memory hit; that continuation, written as reused plus new rows, restores exactly; a regenerated reply resumes the kept parent; a request that keeps its state off disk writes nothing; draft cache included | **yes** | dev Mac |
+| `optimization-state-check --variant shared-prefix[-mtp]` | a prompt's system message is kept during its own prefill at the last 256-token pass end at or before its boundary, forked into memory and written to disk as a shared prefix; a second conversation reuses it from memory and a fresh cache restores it from disk, both continuing exactly like the cold prompt; a prompt sharing only a head with a kept state writes that head; a `sharedPrefixTokens` hint replaces the system boundary; a request kept off disk writes nothing; the shared prefix outlives later turns and is classed after conversations; draft cache included | **yes** | dev Mac |
+| `Tools/shared_prefix_e2e.py` | shared prefixes through `serve`: the first conversation writes its system prompt during prefill; a second one in the same process reuses it from memory; a restarted server restores it from disk; a conversation whose system prompt shares only a head writes that head and its own system prompt; another restarted server reuses those; later turns leave the shared prefixes in place and `prefix-cache` lists them; reused conversations' output ids equal a server without a prefix cache exactly | **yes** | dev Mac |
 | `Tools/persistent_prefix_e2e.py` | the disk prefix cache through `serve` over three turns: later turns write only their new rows; a restarted server must restore the turn-2 state from its segments and match the first server's turn-3 prompt and output ids exactly; another restarted server regenerating turn 3 must restore the kept parent and match again; `prefix-cache` lists and clears copies; a cold server shows the prompt cost it saves | **yes** | dev Mac |
 | `Tools/vision_ref.py` | the vision tower against an independent float32 implementation of the reference | tower only (0.9 GB) | dev Mac |
 | `Tools/vision_serving.py` | every dialect with a real picture, against a live server | **yes** | dev Mac |
@@ -266,7 +268,68 @@ stream equivalence, and the separate default/maximum context budgets. The
 `responses-request`, `responses-events`, `responses-codex-tools`, and
 `responses-codex-fixture` checks cover the Responses API that Codex uses:
 item and tool parsing, the event stream and its response object, Codex's
-real tool schemas, and a captured Codex first-turn request.
+real tool schemas, and a captured Codex first-turn request. The
+`anthropic-request` and `anthropic-events` checks cover the Messages API that
+Claude Code uses, with fixtures in the shapes Claude Code 2.1.270 sends: the
+system prompt and its attribution line, tool loops with replayed thinking
+signatures, images, documents and errors, and the streamed events and
+non-streamed message. `think-split-stream` checks that streamed reasoning and
+answer split exactly as a whole reply does, wherever deltas break.
+`serving-edges` covers tool arguments the model writes out of range, stop
+sequences after reasoning, and the request line of refused requests.
+`launch-plans` builds every `slotstream launch` plan without a server, tool or
+file system: the connection each agent receives, the routes to cloud
+providers each plan closes, Codex's `-c` placement under its subcommands, the
+Pi models file edited in place with its order and numbers kept, the opencode
+configuration, Hermes's folder, profile and side-task pins, dry-run redaction,
+and the refusals. `launch-server` covers the server `slotstream launch`
+starts: its command line, paths and messages, when a running server is
+restarted or left alone, the agent picker, the `/slotstream/status` body, and
+the idle policy with a fake clock and fake processes, including a process id
+reused by another program and a child that exited but was not collected.
+
+`slotstream launch` itself is accepted against a real model with every agent
+installed:
+
+```sh
+AGENT_PATH=/path/with/claude/codex/pi/opencode/hermes/and/node \
+  Tools/coding_agents_gate.sh .build/arm64-apple-macosx/release/slotstream /tmp/coding-agents
+```
+
+It starts one server at `MEMORY_GB` (default 12) behind
+`Tools/token_usage_proxy.py`, which records each request's prompt and reused
+tokens. Each agent, in a throwaway home, creates `hello.txt` with the line
+`SLOTSTREAM OK` and reads it back in one session, then reads a note in a
+second session that must start from the instructions the first one read;
+Claude Code also reads a picture, and runs again across a server restart
+with `--prefix-cache-dir`. The Anthropic Python SDK's stream accumulator, a
+tool result and a token count run against the same server when
+`ANTHROPIC_SDK_PYTHON` names a Python that has the SDK. Name phases after the
+output folder to run only some of them; `FAKE=1` swaps the model for
+`Tools/launch_fake_server.py` to check the script's own plumbing. Follow the
+repository's model-process and memory rules before running it. Its launches
+pass `--no-start`, so they use only the server the script measures.
+
+The server `slotstream launch` starts on its own is accepted with Claude Code,
+Pi and Hermes installed:
+
+```sh
+AGENT_PATH=/path/with/claude/pi/hermes/and/node \
+  Tools/launch_start_gate.sh .build/arm64-apple-macosx/release/slotstream /tmp/launch-start
+```
+
+It uses port 11531 and a throwaway home whose model folder links to the real
+one. Its phases, in order: `--no-start` refuses and starts nothing; a dry run
+describes the server and starts nothing; a terminal is asked which agent to
+start; a Hermes folder the launch cannot use is refused before any server
+starts; the first launch starts the server in its own session and answers; a
+second launch reuses it; Hermes restarts it with a 65,536-token window;
+`slotstream stop` stops it; two Pi launches at once start one server; a
+server with a short `--idle-exit` stops by itself only after its agent exits;
+a server started by hand is never restarted; Control-C during a start stops
+that server; and `slotstream stop` during a start stops it too. Name phases
+after the output folder to run only some of them. Each phase that loads the
+model first waits until no other model process runs.
 
 Against an already-running server, run `python3 Tools/openai_tools_gate.py
 --output /tmp/openai-tools.jsonl`. This exercises the real model and HTTP/SSE
@@ -290,6 +353,9 @@ initialization. The configuration gate uses synthetic HTTP responses with real
 network access disabled. It checks output limits, optional reasoning, stale
 custom-provider settings, an explicit profile override, missing/disabled providers, unavailable endpoints,
 title fallback, auxiliary timeouts, and preservation after failed summaries.
+It also checks that the guide pins every side task Hermes defines to the main
+model, and that with the server failing or stopped the command-approval check
+asks the user instead of sending the command to another provider.
 Run it separately against each supported Hermes checkout.
 
 The integration gate uses a real model and requires the larger context in the

@@ -120,6 +120,16 @@ public struct GenStats: Codable {
     public var prefixCheckpointErrors = 0
     public var completePromptHits = 0
     public var completePromptStores = 0
+    /// Shared prefixes: where the system prompt ended, the longest start the
+    /// prompt had in common with a held state, the pass boundaries at or
+    /// before those where this request kept a state, and how the in-memory
+    /// checkpoints of those fared. Disk outcomes are in `persistentPrefix`.
+    public var sharedPrefixHint: Int?
+    public var sharedPrefixCommon: Int?
+    public var sharedPrefixBoundaries: [Int] = []
+    public var sharedPrefixStores = 0
+    public var sharedPrefixRefusals = 0
+    public var sharedPrefixErrors = 0
     public var embeddingRowsEnabled = false
     /// Unique lookup rows served/read within this request, including MTP.
     public var embeddingRowHits = 0
@@ -200,6 +210,9 @@ public struct GenStats: Codable {
     public var prefillTokens = 0
     /// Prompt tokens served from the retained state of a previous request.
     public var reusedPrefixTokens = 0
+    /// The caller's stop sequence that ended the reply, when one did. The
+    /// Anthropic Messages API reports it back as `stop_sequence`.
+    public var stopSequence: String?
     public var prefillSeconds = 0.0
     public var decodeTokens = 0
     public var decodeSeconds = 0.0
@@ -397,6 +410,15 @@ public final class Generator {
     /// Gate for the speculative path — `mtp-check` compares speculative
     /// against plain decode on the same loaded model by flipping this.
     public var speculationEnabled = true
+    /// The template's system-message ids, set by the engine, so a prompt's
+    /// system prompt can be kept as a shared prefix. Nil finds no system
+    /// boundary; requests can still name one through `sharedPrefixTokens`.
+    public var sharedPrefixMarkers: SharedPrefixMarkers?
+    /// Shortest shared prefix worth a state: below this the fixed recurrent
+    /// state costs more to keep than the prefill it saves. The disk tier's
+    /// own `minimumTokens` applies on top. Provisional; `records/design/
+    /// measured-operating-policies` states the tradeoff.
+    public static var sharedPrefixMinimumTokens = 512
     /// Optional observer, disabled in ordinary inference. A/B its overhead.
     public var footprintSampling = false
     /// Deterministic cost injection for state-transition diagnostics only.
@@ -654,6 +676,10 @@ public final class Generator {
         stats.reusedPrefixTokens = reused
         stats.prefixCheckpointForks = (cache?.checkpointHits ?? 0) - checkpointHitsBefore
         stats.completePromptHits = hit?.logits == nil ? 0 : 1
+        // Boundaries inside this prompt that other conversations start with,
+        // ascending. Each is kept at the last completed pass at or before it.
+        var pendingShared = sharedPrefixTargets(cache: cache, promptIds: promptIds, images: images, reused: reused,
+            request: request, stats: &stats)
         MLX.Memory.peakMemory = 0
         // Zero before prefill, not only after: otherwise these carry the
         // previous request's decode phase into this request's prefill split.
@@ -811,6 +837,20 @@ public final class Generator {
                 passes = PrefillSchedule.preservingCheckpoint(passes, from: i,
                     checkpoint: executionOptimizations.prefixCheckpointTokens)
             }
+            // The next shared-prefix save point: the last chronological pass
+            // end at or before the nearest target. Groups end there as well,
+            // and the automatic scope receives it below, so nothing steps over
+            // it; no pass is reshaped to reach the exact target.
+            let sharedCheckpoint: Int? = pendingShared.first.flatMap {
+                PrefillSchedule.lastPassEnd(atOrBefore: $0, from: i, remaining: promptIds.count - i,
+                    maxChunk: prefillChunk, tailAware: executionOptimizations.tailAwarePrefill)
+            }.flatMap { $0 > i ? $0 : nil }
+            if let sharedCheckpoint {
+                passes = PrefillSchedule.preservingCheckpoint(passes, from: i, checkpoint: sharedCheckpoint)
+            }
+            let fixedCheckpoint: Int? = cache?.enabled == true && (cache?.maxTokens ?? 0) > 0
+                && configuredOptimizations.prefixCheckpointTokens > i ? configuredOptimizations.prefixCheckpointTokens : nil
+            let scopeCheckpoint = [fixedCheckpoint, sharedCheckpoint].compactMap { $0 }.min()
             model.smallPrefillSweep = PrefillSchedule.chunk(at: i, maxChunk: 256) < 256
             if model.smallPrefillSweep {
                 model.stableSmallPrefillRouting = true
@@ -868,8 +908,7 @@ public final class Generator {
                    !configuredOptimizations.workspacePiecewiseWrites && !configuredOptimizations.compactScopeFrontier,
                    !model.smallPrefillSweep,
                    let groups = PrefillSchedule.automaticScopeChoices(remaining: promptIds.count - i, at: i,
-                       maxChunk: prefillChunk, checkpoint: cache?.enabled == true && (cache?.maxTokens ?? 0) > 0
-                           ? configuredOptimizations.prefixCheckpointTokens : nil) {
+                       maxChunk: prefillChunk, checkpoint: scopeCheckpoint) {
                     var scoped = configuredOptimizations
                     scoped.layerExpertWorkspace = true; scoped.readScopeTokens = 4096
                     scoped.boundedIndexer = true; scoped.boundedPLE = true
@@ -891,6 +930,17 @@ public final class Generator {
                 }
                 if !checked { try request?.check(nextAllocationBytes: ordinaryBytes, phase: "prefill pass") }
             } catch { cancelledPrefill = true; continue }
+            // Shared prefixes: a target whose last pass boundary is this one
+            // is kept now, before the next pass moves past it. One this
+            // request already stepped over (a reshaped small pass) is dropped.
+            while let target = pendingShared.first, target < i + (passes.first ?? 0) {
+                pendingShared.removeFirst()
+                guard i <= target, i > reused else { continue }
+                retainSharedPrefix(cache: cache, state: state, promptIds: promptIds, at: i, images: images,
+                    reserveTokens: promptIds.count + params.maxTokens,
+                    reserveSequenceBytes: model.sequenceCapacityBytes(tokens: promptIds.count + params.maxTokens,
+                        mtp: mtpHead != nil), request: request, stats: &stats)
+            }
             let hi = i + passes.reduce(0, +)
             guard hi > i else {
                 request?.fail(RequestFailure(.contextLengthExceeded, "no bounded prefill pass fits the remaining model context"))

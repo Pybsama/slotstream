@@ -86,6 +86,10 @@ public final class Engine {
     public let generator: Generator
     public let tokenizer: any Tokenizers.Tokenizer
     public let eosIds: Set<Int>
+    /// The ids a prompt ends with when the template opens the model's
+    /// reasoning (`<think>` and a newline); empty when this tokenizer renders
+    /// them otherwise. Such a reply's stop sequences apply after `</think>`.
+    package private(set) var reasoningOpenIds: [Int] = []
     public let modelName: String
     /// Lazily-loaded vision tower (VLM). Loaded on the first request that
     /// carries an image and then cached; see `ensureVisionTower`.
@@ -211,6 +215,15 @@ public final class Engine {
             prefixCache.attachPersistent(tier)
             return tier
         }
+    }
+
+    /// Where a prompt's system message ends, when it starts with one: the
+    /// boundary the engine keeps as a shared prefix on its own. Callers whose
+    /// shared preamble ends elsewhere set `RequestController.sharedPrefixTokens`.
+    public func sharedPrefixBoundary(of promptIds: [Int]) -> Int? {
+        guard let markers = generator.sharedPrefixMarkers else { return nil }
+        return PersistentPrefixPolicy.systemPrefixBoundary(promptIds, header: markers.systemHeader,
+            turnEnd: markers.turnEnd)
     }
 
     /// nil when `promptTokens` fits, otherwise the message to return to the client.
@@ -429,6 +442,17 @@ public final class Engine {
             if let one = o["eos_token_id"] as? Int { eos.insert(one) }
         }
         self.eosIds = eos
+        // The template's system-message ids, so a prompt's system prompt can
+        // be kept as a shared prefix. A tokenizer that renders them otherwise
+        // simply finds no system boundary; explicit `sharedPrefixTokens` and
+        // the common-prefix search still apply.
+        let systemHeader = tokenizer.encode(text: "<|im_start|>system\n", addSpecialTokens: false)
+        let turnEnd = tokenizer.encode(text: "<|im_end|>\n", addSpecialTokens: false)
+        if systemHeader.count == 3, turnEnd.count == 2 {
+            generator.sharedPrefixMarkers = SharedPrefixMarkers(systemHeader: systemHeader, turnEnd: turnEnd)
+        }
+        let reasoningOpen = tokenizer.encode(text: "<think>\n", addSpecialTokens: false)
+        if reasoningOpen.count == 2 { reasoningOpenIds = reasoningOpen }
         publishPoolSnapshot()
         let monitor = DispatchSource.makeMemoryPressureSource(eventMask: [.normal, .warning, .critical],
             queue: DispatchQueue(label: "slotstream.request-pressure"))
@@ -775,6 +799,31 @@ public final class Engine {
         return try withImages(baseIds: baseIds, sources: messages.flatMap { $0.images }, request: request)
     }
 
+    /// The prompt length a conversation renders to, pictures included, as
+    /// `/v1/messages/count_tokens` reports it. No request is admitted and no
+    /// pixel is decoded: each picture's size comes from its header and goes
+    /// through the same geometry plan generation uses, so the count matches
+    /// the prompt a generation would read.
+    public func countChatTokens(
+        _ messages: [ChatMessage], tools: [ToolDefinition], thinking: Bool, effort: String?
+    ) throws -> Int {
+        var count = try encodeChat(messages, tools: tools, thinking: thinking, effort: effort).count
+        let sources = messages.flatMap { $0.images }
+        guard !sources.isEmpty else { return count }
+        guard visionAllowed else {
+            throw SlotstreamError.vision("this server was started with --vision off; images are not accepted")
+        }
+        let (visionConfig, pixelBounds) = try VisionTower.configuration(directory: modelDir)
+        for (i, source) in sources.enumerated() {
+            do {
+                let size = try VisionPreprocess.uprightDimensions(try VisionPreprocess.loadImageData(from: source))
+                let plan = try VisionTower.plan(height: size.height, width: size.width, cfg: visionConfig, bounds: pixelBounds)
+                count += plan.mergedTokens - 1
+            } catch { throw SlotstreamError.vision("image \(i + 1): \(error)") }
+        }
+        return count
+    }
+
     /// Expand each `<|image_pad|>` the template rendered into the run of
     /// placeholders its image is worth, and describe the images for the tower
     /// and the prefix cache. Shared by every surface so they cannot drift.
@@ -905,16 +954,26 @@ public final class Engine {
         return out
     }
 
-    /// Earliest position at which any stop sequence occurs, or nil.
-    private static func stopIndex(_ text: String, _ stops: [String]) -> String.Index? {
+    /// Earliest position at or after `start` at which any stop sequence
+    /// occurs, or nil.
+    package static func stopIndex(_ text: String, _ stops: [String], from start: String.Index? = nil) -> String.Index? {
         var best: String.Index?
+        let searched = (start ?? text.startIndex) ..< text.endIndex
         for s in stops {
-            if let r = text.range(of: s), best == nil || r.lowerBound < best! {
+            if let r = text.range(of: s, range: searched), best == nil || r.lowerBound < best! {
                 best = r.lowerBound
             }
         }
         return best
     }
+
+    /// Where a reply's answer starts, for stop matching: after `</think>`
+    /// when the prompt opened the reasoning, the start otherwise, and nil
+    /// while the reasoning is still open, since a stop never ends reasoning.
+    package static func answerStart(_ text: String, reasoningOpen: Bool) -> String.Index? {
+        reasoningOpen ? text.range(of: reasoningEndTag)?.upperBound : text.startIndex
+    }
+    package static let reasoningEndTag = "</think>"
 
     /// Serialized generation (single-flight; callers queue on the lock).
     ///
@@ -1036,6 +1095,10 @@ public final class Engine {
         var firstTextSeconds: Double?
         var pressureObserved: PressureTicket?
         var pressureBoundarySeconds: Double?
+        // Stops end the answer, never the reasoning before it: the client may
+        // not show the reasoning, and a match there left an empty reply.
+        let reasoningOpen = !stops.isEmpty && !reasoningOpenIds.isEmpty && promptIds.suffix(reasoningOpenIds.count) == reasoningOpenIds[...]
+        var inReasoning = reasoningOpen
 
         func observePressure() -> Bool {
             guard let ticket = pressureBoundary.snapshot() else { return false }
@@ -1059,6 +1122,20 @@ public final class Engine {
         /// Feed a stable decoded piece through the stop-sequence holdback.
         func feed(_ piece: String, final: Bool, tok: Int) -> Bool {
             withheld += piece
+            if inReasoning {
+                let tag = Self.reasoningEndTag
+                guard let r = withheld.range(of: tag) else {
+                    // Keep what could be the start of a tag split across pieces.
+                    let scalars = withheld.unicodeScalars
+                    let n = final ? scalars.count : max(0, scalars.count - (tag.unicodeScalars.count - 1))
+                    let delta = String(String.UnicodeScalarView(scalars.prefix(n)))
+                    withheld = String(String.UnicodeScalarView(scalars.dropFirst(n)))
+                    return emit(delta, tok)
+                }
+                inReasoning = false
+                guard emit(String(withheld[..<r.upperBound]), tok) else { return false }
+                withheld = String(withheld[r.upperBound...])
+            }
             if !stops.isEmpty, let cut = Self.stopIndex(withheld, stops) {
                 _ = emit(String(withheld[..<cut]), tok)
                 withheld = ""
@@ -1129,7 +1206,9 @@ public final class Engine {
             }, onToken: tokenHandler, request: control, onAdmitted: onAdmitted)
 
         var text = tokenizer.decode(tokens: ids, skipSpecialTokens: true)
-        if !stops.isEmpty, let cut = Self.stopIndex(text, stops) {
+        if !stops.isEmpty, let from = Self.answerStart(text, reasoningOpen: reasoningOpen),
+           let cut = Self.stopIndex(text, stops, from: from) {
+            stats.stopSequence = stops.first { text[cut...].hasPrefix($0) }
             text = String(text[text.startIndex ..< cut])
         }
         // The one full decode is both the non-streamed result and an exact final

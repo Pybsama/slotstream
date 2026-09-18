@@ -12,7 +12,9 @@ It tells you how the `slotstream` command was added to your shell.
 ## The server can't listen on port 11434
 
 Another app is using the address Slotstream needs. Ollama uses the same
-port by default. Stop that server, or start Slotstream on a different port:
+port by default, and `slotstream launch` may have started a Slotstream server
+there in the background; `slotstream stop` stops that one. Stop the other
+server, or start Slotstream on a different port:
 
 ```sh
 slotstream serve --port 11500
@@ -25,7 +27,10 @@ this before loading the model.
 
 Slotstream runs one model process at a time to limit memory use. Find the
 Terminal window where you started it and press **Control+C** before retrying.
-If you're unsure what's running, this command lists Slotstream processes:
+`slotstream launch` starts its server in the background, with no window;
+`slotstream stop` stops it, and `slotstream stop --port <n>` a server on
+another port. If you're unsure what's running, this command lists Slotstream
+processes:
 
 ```sh
 pgrep -fl slotstream
@@ -69,6 +74,8 @@ estimates come from the M5 Pro; slower SSDs can take longer. Follow-up turns
 reuse unchanged history while it stays in memory. To keep long conversations
 across server restarts as well, start the server with
 `--prefix-cache-dir <folder>`; see the [command reference](CLI.md#slotstream-serve).
+A server `slotstream launch` starts does this already, in
+`~/.slotstream/prefix-cache`.
 
 If Hermes or fx gives up before Slotstream replies, check the timeout
 settings in the [Hermes guide](HERMES.md#troubleshooting) or

@@ -140,11 +140,35 @@ A state is written after its reply completes, for text requests of at least
 state and only the tokens added since, keeps the previous turn's state for
 regenerating or editing the last reply, and removes older ones. `maxBytes`
 bounds the directory: when it is full, states nobody continued go first, then
-kept previous turns, then conversations, least recently used first. `maxAge`
+kept previous turns, then conversations, then shared prefixes, least recently
+used first. `maxAge`
 (30 days by default, `nil` to keep states until the quota needs room) removes
 unused states. Opening the directory removes files from other binaries, models
 or settings, expired and damaged files, and anything over the quota;
 `tier.maintenance` reports what it removed.
+
+The prefix conversations share is kept too, with or without the disk tier.
+While a prompt is processed, the head other conversations will start with is
+stored as a shared prefix: the system message when it ends
+`Generator.sharedPrefixMinimumTokens` (512) tokens or more in, and the longest
+head the prompt shares with a state already in memory or on disk. The save
+point is the last prefill pass end at or before that boundary, so no pass is
+reshaped and outputs are unchanged; the state is forked into `prefixCache` and,
+at `minimumTokens` or more, written to disk. The next conversation starting
+with the same system prompt reuses it instead of processing it again. A shared
+prefix is kept once, is never replaced by the conversations that extend it, and
+is evicted after them. An app that knows where its stable preamble ends, for
+example one without a system message, names it on the request; `0` leaves only
+the shared-head rule:
+
+```swift
+let request = try engine.beginRequest()
+request.sharedPrefixTokens = preambleTokenCount
+```
+
+`GenStats.sharedPrefixBoundaries` lists the save points a request wrote,
+`sharedPrefixHint` and `sharedPrefixCommon` the two boundaries it considered,
+and `persistentPrefix.sharedSaveOutcome` what the disk tier did with each.
 
 The directory is created owner-only and holds conversation token ids and model
 state. To keep a conversation off disk, set `persistsPrefixState = false` on the

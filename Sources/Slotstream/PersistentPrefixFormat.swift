@@ -175,7 +175,7 @@ package struct PersistentPrefixFileError: Error, CustomStringConvertible {
 }
 
 package enum PersistentPrefixFile {
-    package static let formatVersion = 2
+    package static let formatVersion = 3
     package static let headExtension = "slotprefix"
     package static let segmentExtension = "slotseg"
     package static let magic: [UInt8] = Array("SLOTPFX1".utf8)
@@ -282,6 +282,9 @@ package enum PersistentPrefixFile {
         package var tokenCount: Int
         /// The state continued an earlier persisted state of its conversation.
         package var continued: Bool
+        /// Written inside a prompt at a boundary other conversations start
+        /// with, rather than after a reply. Absent means false.
+        package var shared: Bool?
         package var compactStateWindows: Bool
         package var ngramContext: [Int64]
         package var linear: [LinearRecord]

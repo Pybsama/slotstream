@@ -1154,6 +1154,7 @@ public enum Planner {
         guard p.visionEnabled else { throw PlanError("vision is disabled") }
         if p.visionResidentReserved { return p }
         var sized: MemoryPlan
+        var notes = p.notes + ["vision tower resident memory reserved before loading"]
         if let target = p.targetGB {
             sized = try plan(expertsPerLayer: nil, poolGB: nil, memoryGB: target,
                 ramGB: p.ramGB, workingSetGB: p.workingSetGB, availableGB: p.availableGB,
@@ -1162,6 +1163,44 @@ public enum Planner {
                 maxContextTokens: p.maxContextTokens, simulated: p.simulated, qualification: p.contextQualification,
                 runtimePolicy: p.runtimeAllocationPolicy,
                 decodeLookahead: .retained(enabled: p.decodeLookahead, bytes: p.lookaheadReserveBytes))
+            // A plan that retained one complete conversation falls back to the
+            // budget share when the tower leaves no room for all of it. The
+            // pool cannot grow back here, so the memory that fallback frees
+            // would sit unused while every conversation longer than the share
+            // is read again from the start, turn after turn. Keep the largest
+            // retention that leaves the pool and the prefill pass as the
+            // fallback sizes them. Measured at a 12 GB target with a
+            // 65,536-token window: 65,536 retained before the first image,
+            // 10,807 after it, and Codex's 10,400-token turns lost all reuse.
+            // db/records/design/measured-operating-policies.md
+            if p.prefixCacheTokens > sized.prefixCacheTokens, p.prefixCacheTokens >= p.maxContextTokens {
+                let slots = min(p.slots, sized.slots), chunk = min(p.prefillChunk, sized.prefillChunk)
+                func fitting(_ floor: Int) -> MemoryPlan? {
+                    guard let candidate = try? resolvePlan(expertsPerLayer: nil, poolGB: nil, memoryGB: target,
+                        ramGB: p.ramGB, workingSetGB: p.workingSetGB, availableGB: p.availableGB, ramPercent: nil,
+                        mtp: p.mtpEnabled ? .on : .off, mtpAvailable: p.mtpEnabled,
+                        vision: .on, visionAvailable: true, visionResidentReserved: true,
+                        maxContextTokens: p.maxContextTokens, simulated: p.simulated,
+                        qualification: p.contextQualification, runtimePolicy: p.runtimeAllocationPolicy,
+                        decodeLookahead: .retained(enabled: p.decodeLookahead, bytes: p.lookaheadReserveBytes),
+                        retentionFloor: floor),
+                        candidate.slots >= slots, candidate.prefillChunk >= chunk
+                    else { return nil }
+                    return candidate
+                }
+                // More retention only ever takes memory from the pool and the
+                // prefill pass, so the floors that fit form a prefix.
+                var low = sized.prefixCacheTokens, high = p.prefixCacheTokens - 1
+                var best: MemoryPlan?
+                while low < high {
+                    let mid = low + (high - low + 1) / 2
+                    if let candidate = fitting(mid) { best = candidate; low = mid } else { high = mid - 1 }
+                }
+                if let best, best.prefixCacheTokens > sized.prefixCacheTokens {
+                    sized = best
+                    notes.append("with the vision tower loaded, follow-up turns reuse up to \(best.prefixCacheTokens) tokens")
+                }
+            }
         } else { sized = p }
         // Loading a tower never justifies restoring capacity already donated
         // by the governor. Its original target can outlive a pressure shrink.
@@ -1171,7 +1210,7 @@ public enum Planner {
             prefixCacheTokens: min(p.prefixCacheTokens, sized.prefixCacheTokens), mtpEnabled: p.mtpEnabled,
             visionEnabled: true, visionResidentReserved: true,
             maxContextTokens: p.maxContextTokens,
-            notes: p.notes + ["vision tower resident memory reserved before loading"], simulated: p.simulated,
+            notes: notes, simulated: p.simulated,
             runtimeAllocationPolicy: p.runtimeAllocationPolicy,
             maxPrefillWaitMinutes: p.maxPrefillWaitMinutes, contextQualification: p.contextQualification,
             lookaheadReserveBytes: p.lookaheadReserveBytes, decodeLookahead: p.decodeLookahead)

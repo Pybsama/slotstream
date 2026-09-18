@@ -73,6 +73,59 @@ extension Diagnostics {
         c.equal("unused checkpoint yields before older conversation", priority.heldCheckpoints, 0)
         c.equal("older ordinary conversation survives", priority.peek(extending: prompts[0]), prompts[0] + [907])
 
+        // An agent's instructions, kept like a conversation. The cache is warm
+        // with three older conversations when the first session starts, as it
+        // is after any earlier use; the optional snapshot is refused there.
+        func warm() -> PrefixCache {
+            let cache = PrefixCache(maxTokens: 8192)
+            for prompt in prompts.dropFirst() { cache.store(state: state(prompt + [907]), tokens: prompt + [907]) }
+            return cache
+        }
+        let instructions = Array(repeating: 3000, count: 40)
+        let firstSession = instructions + [11, 12], nextSession = instructions + [21, 22]
+        let optionalAgent = warm()
+        c.expect("optional: a warm cache refuses the instructions",
+            try !optionalAgent.storeReusableCheckpoint(state: state(instructions), tokens: instructions,
+                reserveTokens: firstSession.count, reserveSequenceBytes: 0))
+        let agent = warm()
+        c.expect("conversation: a warm cache keeps the instructions",
+            try agent.storeReusableCheckpoint(state: state(instructions), tokens: instructions,
+                reserveTokens: firstSession.count, reserveSequenceBytes: 0, retention: .conversation))
+        c.equal("conversation: the least recently used conversation made room",
+            prompts.dropFirst().map { agent.peek(extending: $0) != nil }, [false, true, true])
+        var last = firstSession + [907]
+        agent.store(state: state(last), tokens: last)
+        // Other clients' requests arrive while the first session goes on.
+        for (n, prompt) in prompts.prefix(2).enumerated() {
+            let aux = prompt + [700 + n]
+            _ = agent.take(matching: aux, reserveTokens: aux.count)
+            agent.store(state: state(aux), tokens: aux)
+            let turn = last + [800 + n, 800 + n]
+            let hit = agent.take(matching: turn, reserveTokens: turn.count)
+            c.equal("conversation: turn \(n + 2) of the first session continues", hit?.reused, last.count)
+            agent.store(state: state(turn), tokens: turn)
+            last = turn
+        }
+        let next = agent.take(matching: nextSession, reserveTokens: nextSession.count)
+        c.equal("conversation: the next session starts from the kept instructions", next?.reused, instructions.count)
+        c.equal("conversation: the kept instructions were a checkpoint hit", agent.checkpointHits, 1)
+        c.expect("conversation: the bounds hold", (agent.json()["conversations"] as? Int ?? 99) <= PrefixCache.maxEntries
+            && (agent.json()["charged_token_capacity"] as? Int ?? Int.max) <= agent.maxTokens)
+        let tooLarge = PrefixCache(maxTokens: 60)
+        c.expect("conversation: a checkpoint larger than the room left is still refused",
+            try !tooLarge.storeReusableCheckpoint(state: state(instructions), tokens: instructions,
+                reserveTokens: firstSession.count, reserveSequenceBytes: 0, retention: .conversation))
+        // Where a shared-prefix checkpoint of a new prompt would go: the
+        // longest start it shares with a held text state.
+        let held = PrefixCache(maxTokens: 8192)
+        c.equal("shared prefix: an empty cache shares nothing", held.longestCommonPrefix(with: nextSession), 0)
+        held.store(state: state(firstSession + [907]), tokens: firstSession + [907])
+        c.equal("shared prefix: a new session shares the held session's instructions",
+            held.longestCommonPrefix(with: nextSession), instructions.count)
+        c.equal("shared prefix: a prompt that extends the held state shares all of it",
+            held.longestCommonPrefix(with: firstSession + [907, 5]), firstSession.count + 1)
+        c.equal("shared prefix: an unrelated prompt shares nothing", held.longestCommonPrefix(with: [1, 2, 3]), 0)
+
         for adoption in 0..<3 {
             let cache = PrefixCache(maxTokens: 8192)
             if adoption == 2 { cache.store(state: state(prompts[0]), tokens: prompts[0]) }

@@ -12,9 +12,9 @@ where the model cannot fit. After a one-time download the model works
 offline, with no Python and no cloud account. The whole engine is one native
 Swift program on Apple's MLX and Metal; see [Built native](#built-native).
 
-Use it to chat, ask about pictures, or work with files through an agent such
-as Hermes or Codex. Developers can connect their own apps through its APIs or
-Swift library.
+Use it to chat, ask about pictures, or work with files through a coding agent
+such as Claude Code, Codex, Pi, opencode or Hermes. Developers can connect
+their own apps through its APIs or Swift library.
 
 [Get started](#install) · [Speed](#speed) · [Guides](#guides) · [Get help](#support)
 
@@ -96,8 +96,10 @@ why, and `--max-context 65536` sets a window yourself, up to 262,144 tokens.
 
 **Starting a reply takes time.** Slotstream first reads your question and the
 conversation history, which can take minutes for a long prompt. Follow-up
-turns reuse unchanged history, and `serve --prefix-cache-dir` keeps long
-conversations on disk so that history survives a restart. The hardware guide
+turns reuse unchanged history, a new conversation reuses the system prompt
+earlier ones started with, and `serve --prefix-cache-dir` keeps long
+conversations and shared system prompts on disk so that they survive a
+restart. The hardware guide
 has the [prompt-reading estimates](docs/HARDWARE.md#automatic-memory-plans)
 for each memory size.
 
@@ -139,13 +141,19 @@ again. Follow the [step-by-step setup](docs/GETTING-STARTED.md) for more help.
 |---|---|
 | Chat in Open WebUI or another app | [Connect a chat app](docs/CLIENTS.md) |
 | Ask about a picture | [Use an image](docs/GETTING-STARTED.md#ask-about-a-picture) |
-| Work with files and tools through an agent | [Use Hermes](docs/HERMES.md) |
+| Start a coding agent on the model, in one command | [Use coding agents](docs/CODING-AGENTS.md) |
+| Code with Claude Code | [Use Claude Code](docs/CLAUDE-CODE.md) |
 | Code with Codex | [Use Codex](docs/CODEX.md) |
+| Code with Pi or opencode | [Use Pi or opencode](docs/CODING-AGENTS.md#pi) |
+| Work with files and tools through Hermes | [Use Hermes](docs/HERMES.md) |
 | Code with fx, Vercel Labs' coding agent | [Use fx](docs/FX.md) |
 | Fix a problem, move the model, or uninstall | [Troubleshooting](docs/TROUBLESHOOTING.md) |
 
 Install chat apps and agents separately. They provide the interface and tools;
 Slotstream runs the model. Keep its server running while a connected app uses it.
+`slotstream launch claude` (or `codex`, `pi`, `opencode`, `hermes`) starts
+that agent already connected, and starts the server in the background first
+when none is running.
 
 <a id="use-it-from-swift"></a>
 <a id="testing"></a>
@@ -198,7 +206,7 @@ engines.
 - **One generation at a time:** connected apps share the same running model.
 - **Conversation length is limited:** longer histories take more memory and
   time. Auto mode picks a [window for each memory size](#speed-by-memory), and
-  the Hermes guide includes the larger window it needs.
+  the coding agent guides include the larger window agents need.
 - **No broad benchmarks yet:** image input and tool calling have integration
   tests, but there is no image-accuracy benchmark or completed comparison with
   other models on the same Mac.
@@ -254,7 +262,8 @@ Generation reads the model files without rewriting them. macOS swap adds
 writes when memory runs short. Automatic memory sizing helps, but a small
 Mac or an oversized manual setting can still swap heavily. With
 `serve --prefix-cache-dir`, Slotstream also saves long conversations to that
-folder after each reply, within a disk quota.
+folder after each reply, and the system prompts conversations share, within a
+disk quota.
 
 ### Can I run it on Linux or Windows?
 

@@ -26,7 +26,10 @@ def main():
         error = temp / 'ModelError.swift'
         error.write_text('import Foundation\n' + text[text.index(start):text.index(end)])
         binary = temp / 'process-memory-check'
+        # -package-name: the sources use `package` access, which needs the
+        # package's name outside SwiftPM.
         subprocess.run(['xcrun', 'swiftc', '-O', '-num-threads', '1', '-parse-as-library',
+                        '-package-name', 'slotstream',
                         *map(str, sources), str(error), '-o', str(binary)], check=True)
         run = subprocess.run([str(binary)], capture_output=True, text=True, timeout=30)
         result = json.loads(run.stdout)

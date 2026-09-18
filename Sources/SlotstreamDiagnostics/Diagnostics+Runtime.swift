@@ -31,6 +31,26 @@ extension Diagnostics {
             from: JSONSerialization.data(withJSONObject: oldStats))
         c.expect("statistics predating the lifetime footprint field still decode",
             oldDecoded.lifetimePhysicalFootprintPeakBytes == nil && oldDecoded.peakMemoryGB == memoryStats.peakMemoryGB)
+        var disk = PersistentPrefixObservation()
+        disk.saveOutcome = "saved"; disk.savedTokens = 2_048; disk.saveBytes = 4_096; disk.reusedBytes = 1_024
+        disk.sharedSaveOutcome = "saved"; disk.sharedSavedTokens = 768; disk.sharedSaveSeconds = 0.25
+        disk.sharedSaveBytes = 2_048
+        memoryStats.persistentPrefix = disk
+        c.equal("disk tier statistics round trip",
+            try JSONDecoder().decode(GenStats.self, from: JSONEncoder().encode(memoryStats)).persistentPrefix, disk)
+        var olderDisk = try JSONSerialization.jsonObject(with: JSONEncoder().encode(memoryStats)) as! [String: Any]
+        var olderObservation = olderDisk["persistentPrefix"] as? [String: Any] ?? [:]
+        for key in ["sharedSaveOutcome", "sharedSavedTokens", "sharedSaveSeconds", "sharedSaveBytes"] {
+            olderObservation.removeValue(forKey: key)
+        }
+        olderDisk["persistentPrefix"] = olderObservation
+        let olderDecoded = try? JSONDecoder().decode(GenStats.self,
+            from: JSONSerialization.data(withJSONObject: olderDisk))
+        var expectedOlder = disk
+        expectedOlder.sharedSaveOutcome = nil; expectedOlder.sharedSavedTokens = 0
+        expectedOlder.sharedSaveSeconds = 0; expectedOlder.sharedSaveBytes = 0
+        c.equal("disk tier statistics from 0.2.18 to 0.2.20, without shared prefixes, still decode",
+            olderDecoded?.persistentPrefix, expectedOlder)
         let start = RuntimeClock.now()
         c.expect("monotonic duration is nonnegative", RuntimeClock.seconds(since: start) >= 0)
         let sampler = FootprintSampler()

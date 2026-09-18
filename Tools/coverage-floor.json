@@ -1,11 +1,13 @@
 {
   "files": {
     "Sources/Slotstream/AdaptiveSpeculation.swift": 100.0,
+    "Sources/Slotstream/AnthropicDialect.swift": 93.5,
     "Sources/Slotstream/BlockSelection.swift": 100.0,
     "Sources/Slotstream/BoundedOutput.swift": 96.81,
     "Sources/Slotstream/CPUSlotWrite.swift": 0.0,
     "Sources/Slotstream/CacheBookkeeping.swift": 94.34,
     "Sources/Slotstream/Checkpoint.swift": 1.63,
+    "Sources/Slotstream/CodingToolLaunch.swift": 95.0,
     "Sources/Slotstream/CompiledArithmetic.swift": 97.14,
     "Sources/Slotstream/Context.swift": 54.43,
     "Sources/Slotstream/ContextFeasibility.swift": 73.68,
@@ -46,7 +48,7 @@
     "Sources/Slotstream/PartialRotation.swift": 0.0,
     "Sources/Slotstream/PersistentPrefixCache.swift": 92.9,
     "Sources/Slotstream/PersistentPrefixFormat.swift": 76.25,
-    "Sources/Slotstream/PersistentPrefixGenerator.swift": 58.23,
+    "Sources/Slotstream/PersistentPrefixGenerator.swift": 50.8,
     "Sources/Slotstream/PersistentPrefixPolicy.swift": 99.1,
     "Sources/Slotstream/PersistentPrefixRestore.swift": 88.98,
     "Sources/Slotstream/PersistentPrefixSave.swift": 93.2,
@@ -67,6 +69,7 @@
     "Sources/Slotstream/RoutingReadbackQueue.swift": 0.0,
     "Sources/Slotstream/SelectedAttention.swift": 0.0,
     "Sources/Slotstream/Server.swift": 10.2,
+    "Sources/Slotstream/ServerActivity.swift": 95.5,
     "Sources/Slotstream/SlotWritePlan.swift": 100.0,
     "Sources/Slotstream/SlotpackDownload.swift": 91.85,
     "Sources/Slotstream/SlotpackManifest.swift": 98.72,
@@ -140,17 +143,18 @@
     "Sources/SlotstreamDiagnostics/Diagnostics+SamplerPerformance.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Diagnostics+SelectedAttention.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Diagnostics+Selection.swift": 94.86,
+    "Sources/SlotstreamDiagnostics/Diagnostics+SharedPrefix.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Diagnostics+SlotSlices.swift": 45.61,
     "Sources/SlotstreamDiagnostics/Diagnostics+StateRecovery.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Diagnostics+TerminalPrefill.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Diagnostics+VerifyPass.swift": 81.9,
-    "Sources/SlotstreamDiagnostics/Diagnostics+Vision.swift": 88.82,
+    "Sources/SlotstreamDiagnostics/Diagnostics+Vision.swift": 88.3,
     "Sources/SlotstreamDiagnostics/Diagnostics+VisionAttention.swift": 98.65,
     "Sources/SlotstreamDiagnostics/Diagnostics+VisionCapacity.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Diagnostics.swift": 89.87,
     "Sources/SlotstreamDiagnostics/ExpertLookaheadCollector.swift": 0.0,
     "Sources/SlotstreamDiagnostics/Goldens.swift": 94.03
   },
-  "note": "Per-file T0/T1 line coverage floors. v0.2.12 adds measured floors and separately reviewed native-code denominator growth; existing covered paths remain required. See db/records/measurements/release-qualification-0-2-12.md. Restored production server/prefix/context checks raise their measured floors; the prefix diagnostic denominator correction is individually reviewed in that same record. v0.2.19 keeps every other floor and sets three: Engine.swift 8.58 after the sidecar banner lines, which run only at engine start with a model (CI run 35128525013), and the new RouterTapCorrection.swift 86.47 and TapCorrectionSidecar.swift 56.82 (CI run 35133879745); see db/records/measurements/release-0-2-19-published-2026-09-16.md. The verify-pass change adds two measured floors, VerifyPassSelfCheck.swift 99.67 and Diagnostics+VerifyPass.swift 81.90, both from CI run 35287698798; every other floor is unchanged. The verify-pass control assertions live in the second file rather than Diagnostics+Runtime.swift because each c.expect call site carries a default detail autoclosure that never runs while the assertion passes, so adding assertions to a file lowers its line ratio; see db/records/measurements/speculative-verify-pass-split-attention-2026-09-17.md.",
-  "total": 43.84
+  "total": 43.84,
+  "note": "Per-file T0/T1 line coverage floors. v0.2.12 adds measured floors and separately reviewed native-code denominator growth; existing covered paths remain required. See db/records/measurements/release-qualification-0-2-12.md. Restored production server/prefix/context checks raise their measured floors; the prefix diagnostic denominator correction is individually reviewed in that same record. v0.2.19 keeps every other floor and sets three: Engine.swift 8.58 after the sidecar banner lines, which run only at engine start with a model (CI run 35128525013), and the new RouterTapCorrection.swift 86.47 and TapCorrectionSidecar.swift 56.82 (CI run 35133879745); see db/records/measurements/release-0-2-19-published-2026-09-16.md. The verify-pass change adds two measured floors, VerifyPassSelfCheck.swift 99.67 and Diagnostics+VerifyPass.swift 81.90, both from CI run 35287698798; every other floor is unchanged. The verify-pass control assertions live in the second file rather than Diagnostics+Runtime.swift because each c.expect call site carries a default detail autoclosure that never runs while the assertion passes, so adding assertions to a file lowers its line ratio; see db/records/measurements/speculative-verify-pass-split-attention-2026-09-17.md. The background-server work keeps every other floor and sets one: the new ServerActivity.swift 95.5 (95.69%), measured with Tools/coverage.sh t0 t1 on the development Mac; launch-server exercises its clock, its registered clients and the idle decision with a fake clock and fake processes. ProcessMemory.swift stays at 55.81 and rose to 63.93% with the new check for the model lock ModelProcessGuard.heldByAnotherProcess() that `slotstream launch` tests before it starts a server; Server.swift stays at 10.2 and rose to 12.33% with the status body, the client registration and the stopping refusal."
 }

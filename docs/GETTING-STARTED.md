@@ -109,13 +109,18 @@ but general image-answer accuracy has not been benchmarked.
 
 ## Connect an app or agent
 
+- [Coding agents](CODING-AGENTS.md): `slotstream launch claude` (or `codex`,
+  `pi`, `opencode`, `hermes`) starts the agent connected to Slotstream, and
+  starts the server in the background first when none is running.
 - [Hermes](HERMES.md): chat and work with files and tools through a local model.
 - [Open WebUI and other chat apps](CLIENTS.md): use a chat interface with Slotstream.
 - [fx](FX.md): use a coding agent. Read its permission and long-session limitations before starting.
 
 Install the app separately, then follow its connection guide. Keep the
 Slotstream server running while the app uses it. Slotstream runs one model
-process at a time, so stop a server with **Control+C** before using `slotstream run`.
+process at a time, so stop a server before using `slotstream run`: press
+**Control+C** in its window, or run `slotstream stop`, which also stops a
+server `slotstream launch` started in the background.
 
 ## Update or get help
 

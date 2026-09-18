@@ -233,6 +233,27 @@ public struct VisionPreprocess {
         return (try upright(cg, orientation: orientation), charge)
     }
 
+    /// The width and height a picture has once decoded and turned upright,
+    /// read from its header without decoding a pixel. Token counting uses it,
+    /// so a count needs neither decoded-image memory nor the tower; the checks
+    /// mirror `decodeCGImage` so a picture it would refuse is refused here too.
+    package static func uprightDimensions(_ data: Data) throws -> (width: Int, height: Int) {
+        guard !data.isEmpty, data.count <= maxImageBytes else {
+            throw VisionError.msg("encoded image exceeds the 24 MiB limit or is empty")
+        }
+        let options = [kCGImageSourceShouldCache: false] as CFDictionary
+        guard let src = CGImageSourceCreateWithData(data as CFData, options), CGImageSourceGetCount(src) > 0,
+            CGImageSourceGetStatusAtIndex(src, 0) == .statusComplete, endMarkerPresent(data),
+            let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
+            let width = props[kCGImagePropertyPixelWidth] as? Int,
+            let height = props[kCGImagePropertyPixelHeight] as? Int
+        else { throw VisionError.msg("failed to read the image size") }
+        _ = try decodedImageCharge(width: width, height: height)
+        let orientation = (props[kCGImagePropertyOrientation] as? UInt32) ?? 1
+        // Orientations 5 to 8 rotate by a quarter turn, which swaps the sides.
+        return (5...8).contains(orientation) ? (height, width) : (width, height)
+    }
+
     /// Does the file end where its container says it should?
     ///
     /// Only the three formats with an unambiguous terminator are judged, and

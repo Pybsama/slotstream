@@ -25,6 +25,8 @@ updated: 2026-09-17T23:22:20.231946Z
 - [[sources/runs/2026/09/2026-09-16-release-0-2-20-published-and-installed]] — v0.2.20 acceptance: CI artifact 25/25, Codex and SDK 9/9 before the tag, attestation, install, installed e2e 31/31, prefix 11/11, doctor and pull --verify.
 - [[sources/runs/2026/09/2026-09-16-codex-on-installed-0-2-20]] — Codex 0.148.0 and the OpenAI Python SDK 3.14.1 on the installed 0.2.20: file create and update through apply_patch, commands, an attached picture and view_image, and 11 strict SDK checks; 18 of 18.
 - [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]] — Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing, offscreen UI check of the production views passing
+- [[sources/runs/2026/09/2026-09-16-shared-prefix-e2e]] — Shared prefix e2e at 10 GB: a 3,584-token system prompt kept during the first prefill was reused from memory and, across two restarts, from disk; output ids equal a cold server; 17 of 17 checks
+- [[sources/runs/2026/09/2026-09-16-shared-prefix-exactness]] — Shared prefix exactness at 2051 tokens, with and without the draft head: memory reuse, disk restore, shared-head and hint saves, opt-out and survival all exact; 745 and 785 assertions, none failed.
 - [[sources/runs/2026/09/2026-09-16-release-0-2-19-published-and-installed]] — v0.2.19 acceptance: CI artifact 25/25, verified attestation, installation, installed e2e 31/31 and persistent prefix e2e 11/11 on the installed binary, doctor at 22 GB shows the corrected forecast.
 - [[sources/runs/2026/09/2026-09-16-corrected-forecast-release-benchmark-22gb]] — 0.2.19 release benchmark at 22 GB: the shipping build's default 1.108 over the 0.2.18 forecast (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s
 - [[sources/runs/2026/09/2026-09-15-forecast-taps-b1-cohort-20gb]] — Taps B1 at 20 GB: aggregate 1.058 (bootstrap 1.031 to 1.088), families 1.019 to 1.105, 36 of 36 outputs identical; r0033 kept one counted pair, so the pairs condition fails
@@ -505,10 +507,8 @@ updated: 2026-09-17T23:22:20.231946Z
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-query-successor]] — Bounded original vision attention after preserved padding failures
 - [[sources/runs/2026/09/2026-09-06-slotpack-ci-interruption-fixture-correction]] — CI exposes a fixed-time interruption fixture; state-based cancellation and delayed-start compressed/raw checks pass.
 - [[sources/runs/2026/09/2026-09-06-optimization-complete-repeat-guarded-stop]] — Complete-prompt confirmation stopped by renewed competing work
-- [[sources/runs/2026/09/2026-09-06-optimization-vision-tower-counterexample]] — Vision tower numerical counterexample and rebuilt ordinary integration
-- [[sources/runs/2026/09/2026-09-06-slotpack-mac-and-final-candidate-acceptance]] — Complete fresh-to-resumed public Mac installation verifies all original files; final API, HTTP, memory, coverage, external consumer and loaded-model gates pass.
 
 ## More
 
-This folder has 611 files. The 500 most recent are listed above.
+This folder has 613 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

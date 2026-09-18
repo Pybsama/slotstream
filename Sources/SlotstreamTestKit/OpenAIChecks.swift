@@ -55,6 +55,21 @@ extension Catalogue {
             c.expect("unsupported SDK option fails explicitly: \(unsupported.keys.sorted())",
                 Server.openAINoOpError(unsupported) != nil)
         }
+        // Pi and the OpenAI SDKs send `store: false` by default (issue #19).
+        c.expect("store and the other stateless fields are read", ["store", "metadata", "prompt_cache_key",
+            "prompt_cache_retention", "safety_identifier", "service_tier", "min_p"].allSatisfy { Server.openAIChatFields.contains($0) })
+        c.expect("store false and request labels are accepted without effect",
+            Server.openAINoOpError(["store": false]) == nil
+                && Server.openAINoOpError(["metadata": ["session": "a"], "prompt_cache_key": "k",
+                    "prompt_cache_retention": "24h", "safety_identifier": "s", "service_tier": "auto"]) == nil)
+        c.expect("store true asks for a stored completion, which is refused by name",
+            Server.openAINoOpError(["store": true])?.contains("store: true") == true)
+        for malformed: [String: Any] in [["store": "no"], ["store": 0], ["metadata": ["n": 1]], ["metadata": "x"],
+            ["prompt_cache_key": 1], ["prompt_cache_retention": 24], ["safety_identifier": false], ["service_tier": ["auto"]]] {
+            c.expect("a malformed stateless field is named: \(malformed.keys.sorted())",
+                Server.openAINoOpError(malformed)?.contains(malformed.keys.first!) == true)
+        }
+        c.expect("an unknown field is still refused", !Server.openAIChatFields.contains("previous_response_id"))
         let constrained = Server.openAINoOpError(["response_format": ["type": "json_schema"]]) ?? ""
         c.expect("constrained-output error triggers Hermes's plain title fallback",
             constrained.contains("response_format is not supported"))

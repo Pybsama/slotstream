@@ -463,6 +463,41 @@ extension Diagnostics {
             c.equal("image reservation keeps context cap MTP=\(head)", image.maxContextTokens, 1024)
             c.expect("combined resident charge fits MTP=\(head)", image.expectedPeakGB <= 12)
         }
+        // A window retained whole before the first image keeps as much of it
+        // as the tower leaves room for, with at least the pool and prefill
+        // pass the budget-share fallback would give. The 12 GB case is the
+        // live one: it fell from 65,536 retained tokens to 10,807.
+        for (target, window) in [(12.0, 65_536), (16.0, 65_536), (11.0, 32_768), (24.0, 131_072), (30.0, 65_536)] {
+            let label = "\(target) GB, \(window)-token window"
+            guard let text = try? Planner.plan(expertsPerLayer: nil, poolGB: nil, memoryGB: target,
+                    ramGB: 51.5, workingSetGB: 40.2, availableGB: 33.1, visionAvailable: true,
+                    maxContextTokens: window, simulated: true),
+                let fallback = try? Planner.plan(expertsPerLayer: nil, poolGB: nil, memoryGB: target,
+                    ramGB: 51.5, workingSetGB: 40.2, availableGB: 33.1, vision: .on, visionAvailable: true,
+                    visionResidentReserved: true, maxContextTokens: window, simulated: true),
+                let image = try? Planner.loadingVision(text)
+            else { c.expect("\(label): plans exist", false); continue }
+            c.measure("\(label): retained before", Double(text.prefixCacheTokens))
+            c.measure("\(label): retained after", Double(image.prefixCacheTokens))
+            c.expect("\(label): peak within target", image.expectedPeakGB <= target, "\(image.expectedPeakGB)")
+            c.equal("\(label): pool as the fallback sizes it", image.slots, min(text.slots, fallback.slots))
+            c.expect("\(label): prefill pass at least as the fallback sizes it",
+                     image.prefillChunk >= min(text.prefillChunk, fallback.prefillChunk)
+                        && image.prefillChunk <= text.prefillChunk, "\(image.prefillChunk)")
+            c.expect("\(label): retention never below the fallback",
+                     image.prefixCacheTokens >= min(text.prefixCacheTokens, fallback.prefixCacheTokens))
+            c.expect("\(label): retention never above what was held", image.prefixCacheTokens <= text.prefixCacheTokens)
+            c.equal("\(label): reservation is idempotent", (try? Planner.loadingVision(image))?.prefixCacheTokens,
+                    image.prefixCacheTokens)
+            if target == 12 {
+                c.expect("\(label): a coding agent's opening prompt and its next turn stay retained",
+                         image.prefixCacheTokens >= 32_768, "\(image.prefixCacheTokens)")
+                c.expect("\(label): the memory the pool cannot take is used",
+                         target - image.expectedPeakGB < 0.05, "\(image.expectedPeakGB)")
+                c.expect("\(label): the plan says how much is reused",
+                         image.notes.contains { $0.contains("reuse up to \(image.prefixCacheTokens) tokens") })
+            }
+        }
 
         return c.report()
     }

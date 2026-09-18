@@ -146,6 +146,10 @@ struct OptimizationStateCheck: ParsableCommand {
             report = try Diagnostics.optimizationPersistentPrefix(modelDir: model.modelURL, tokens: tokens,
                 mtp: variant == "persistent-prefix-mtp")
         }
+        else if variant == "shared-prefix" || variant == "shared-prefix-mtp" {
+            report = try Diagnostics.optimizationSharedPrefix(modelDir: model.modelURL, tokens: tokens,
+                mtp: variant == "shared-prefix-mtp")
+        }
         else if variant == "slot-words-pool" { report = try Diagnostics.optimizationPoolRequests(modelDir: model.modelURL, wordWrites: true) }
         else if variant == "slot-words-storage" { report = try Diagnostics.optimizationReadRecovery(modelDir: model.modelURL, wordWrites: true) }
         else if variant == "slot-words-recovery" || variant == "slot-words-recovery-mtp" {

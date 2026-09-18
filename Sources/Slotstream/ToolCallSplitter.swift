@@ -438,12 +438,15 @@ public final class ToolCallSplitter {
         case .string:
             return .string(v)
         case .integer:
+            // `Int(d)` traps outside Int's range, and a model can write 1e20
+            // or inf; those stay numbers, or text, rather than end the process.
             if let i = Int(trimmed) { return .int(i) }
-            if let d = Double(trimmed), d == d.rounded() { return .int(Int(d)) }
+            if let d = Double(trimmed), d.isFinite { return Int(exactly: d).map(JSONValue.int) ?? .double(d) }
             return .string(v)
         case .number:
             if let i = Int(trimmed) { return .int(i) }
-            if let d = Double(trimmed) { return .double(d) }
+            // JSON has no infinity or NaN.
+            if let d = Double(trimmed), d.isFinite { return .double(d) }
             return .string(v)
         case .boolean:
             if trimmed == "true" { return .bool(true) }

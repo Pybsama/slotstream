@@ -49,7 +49,8 @@ public enum SlotstreamError: Error, CustomStringConvertible, Sendable {
         case let .anotherProcessHoldsModel(lockPath):
             return "another Slotstream model process is already running for this user — "
                 + "stop it before starting run, serve, parity, or a heavyweight check "
-                + "(lock: \(lockPath))"
+                + "(lock: \(lockPath)). `slotstream stop` stops a server, also one `slotstream launch` "
+                + "keeps in the background."
         case .simulatedDeviceCannotLoad:
             return "this plan was made for a simulated device, so it cannot load a model: "
                 + "a simulated availability figure still produces a real allocation. "

@@ -18,6 +18,7 @@ import traceback
 def child(source, home, case):
     sys.path.insert(0, str(source))
     requests = []
+    escaped = []
     phase = 'startup'
     agent = None
 
@@ -46,7 +47,11 @@ def child(source, home, case):
             pass
         chat = request.url.path.endswith('/chat/completions')
         if chat and not local:
+            escaped.append(str(request.url))
             raise AssertionError('Inference escaped the configured local endpoint: ' + str(request.url))
+        if chat and case == 'stopped':
+            row['status'] = 'refused'
+            raise httpx.ConnectError('Connection refused', request=request)
         status, response = 200, {}
         if not local:
             status, response = 403, {'error': 'Nonlocal metadata is unavailable in this fixture'}
@@ -117,11 +122,11 @@ def child(source, home, case):
             agent = cli.agent
             result['runtime'] = {'base_url': agent.base_url, 'context': agent.context_compressor.context_length,
                                  'reasoning': agent.reasoning_config, 'overrides': agent.request_overrides}
-            assert agent.base_url.rstrip('/') == 'http://localhost:11434/v1'
+            assert agent.base_url.rstrip('/') == os.environ['GATE_BASE_URL']
             assert agent.context_compressor.context_length == 65536
             phase = 'main'
             response = agent.run_conversation(user_message='Reply with exactly OK. Do not use tools.')
-            failed_case = case in ('unavailable', 'unauthorized')
+            failed_case = case in ('unavailable', 'unauthorized', 'stopped')
             if failed_case:
                 assert response.get('failed') or not response.get('completed'), response
             else:
@@ -160,13 +165,24 @@ def child(source, home, case):
             for r in requests:
                 if '/chat/completions' not in r['url']:
                     continue
-                assert r['url'] == 'http://localhost:11434/v1/chat/completions', r
+                assert r['url'] == os.environ['GATE_BASE_URL'] + '/chat/completions', r
                 if not r['tools_count'] and r['phase'] in ('title', 'compression'):
                     assert r['parameters']['max_tokens'] == (64 if r['phase'] == 'title' else 4096), r
                     assert r['timeout']['read'] == 1800, r
             if not failed_case:
                 titles = [r for r in requests if r['phase'] == 'title' and '/chat/completions' in r['url']]
                 assert {r['status'] for r in titles} == {400, 200} and titles[-1]['status'] == 200, titles
+            if case in ('unavailable', 'stopped'):
+                # The command-approval check is a side task too. With the
+                # server failing or stopped it must ask the user, never
+                # another provider.
+                phase = 'approval'
+                from tools.approval_smart import _smart_approve
+                verdict = _smart_approve('rm -rf /tmp/slotstream-gate', 'recursive delete')
+                assert verdict == 'escalate', verdict
+                assert any(r['phase'] == 'approval' and '/chat/completions' in r['url'] for r in requests)
+                result['approval_verdict'] = verdict
+        assert not escaped, escaped
         result['passed'] = True
     except Exception:
         result['error'] = traceback.format_exc()
@@ -184,7 +200,7 @@ def main():
     p.add_argument('output', type=Path)
     p.add_argument('--child', choices=['clean', 'conflicting_custom', 'reasoning_medium', 'changed_limit',
                                       'missing_provider', 'disabled_provider', 'unavailable', 'unauthorized',
-                                      'truncated_summary', 'empty_summary', 'sticky_profile_override'])
+                                      'stopped', 'truncated_summary', 'empty_summary', 'sticky_profile_override'])
     args = p.parse_args()
     source, out = args.source.resolve(), args.output.resolve()
     if args.child:
@@ -193,16 +209,26 @@ def main():
     guide = (Path(__file__).resolve().parents[1] / 'docs/HERMES.md').read_text()
     config = yaml.safe_load(guide.split('```yaml\n', 1)[1].split('```', 1)[0])
     rows = []
+    # A side task left on Hermes's automatic choice falls back to cloud
+    # providers when the local server fails, so the guide pins every one.
+    sys.path.insert(0, str(source))
+    from hermes_cli.config_defaults import DEFAULT_CONFIG
+    tasks = [k for k, v in DEFAULT_CONFIG['auxiliary'].items() if isinstance(v, dict) and 'provider' in v]
+    unpinned = [t for t in tasks if (config.get('auxiliary', {}).get(t) or {}).get('provider') != 'main']
+    rows.append({'case': 'side_tasks_pinned', 'passed': bool(tasks) and not unpinned,
+                 'error': None if not unpinned else 'not pinned to main: ' + ', '.join(unpinned)})
+    print(json.dumps(rows[-1]), flush=True)
     for case in ['clean', 'conflicting_custom', 'reasoning_medium', 'changed_limit',
-                 'missing_provider', 'disabled_provider', 'unavailable', 'unauthorized',
+                 'missing_provider', 'disabled_provider', 'unavailable', 'unauthorized', 'stopped',
                  'truncated_summary', 'empty_summary', 'sticky_profile_override']:
         home = out / case
         home.mkdir(parents=True, exist_ok=False)
         cfg = copy.deepcopy(config)
         env = {'PATH': str(Path(sys.executable).parent) + ':/usr/bin:/bin:/usr/sbin:/sbin',
                'HOME': str(home), 'HERMES_HOME': str(home), 'LANG': 'en_US.UTF-8',
-               'HERMES_SKIP_DEPENDENCY_CHECK': '1', 'NO_PROXY': '*'}
-        if case in ('conflicting_custom', 'unavailable', 'unauthorized'):
+               'HERMES_SKIP_DEPENDENCY_CHECK': '1', 'NO_PROXY': '*',
+               'GATE_BASE_URL': config['providers']['slotstream']['base_url'].rstrip('/')}
+        if case in ('conflicting_custom', 'unavailable', 'unauthorized', 'stopped'):
             cfg['providers']['custom'] = {'base_url': 'https://openrouter.ai/api/v1', 'api_key': 'unused'}
             cfg['custom_providers'] = [{'name': 'custom', 'base_url': 'https://openrouter.ai/api/v1', 'api_key': 'unused'}]
             env['CUSTOM_BASE_URL'] = 'https://openrouter.ai/api/v1'

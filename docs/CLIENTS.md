@@ -7,6 +7,7 @@ Install both separately, then connect the app to the running Slotstream server.
 
 | I use… | Follow… |
 |---|---|
+| Claude Code, Codex, Pi or opencode | [Coding agents](CODING-AGENTS.md): `slotstream launch` starts each one connected |
 | Hermes | [Hermes setup](HERMES.md), which includes all the settings it needs |
 | Open WebUI or the Ollama CLI | [Ollama-compatible clients](#ollama-compatible-clients) below |
 | An app with an OpenAI-compatible or custom provider | [OpenAI-compatible clients](#openai-compatible-clients) below |
@@ -47,7 +48,9 @@ OpenAI**, then enter:
 
 No OpenAI account or key is needed for this local connection. Leave `unused`
 as written. Apps that use the OpenAI Responses API work on the same base URL;
-Codex needs the provider entry in the [Codex guide](CODEX.md).
+Codex needs the setup in the [Codex guide](CODEX.md). Apps that use the
+Anthropic Messages API use `http://127.0.0.1:11434` as the base URL, without
+`/v1`; see the [Claude Code guide](CLAUDE-CODE.md).
 
 If the app asks for a **full endpoint** instead of a base URL, use:
 
@@ -96,6 +99,8 @@ it actually reads the file and returns its contents.
 | Connection refused or the wrong model appears | Keep the Slotstream server running and copy the address and model name exactly. Check for [port conflicts](TROUBLESHOOTING.md#the-server-cant-listen-on-port-11434). |
 | Tools don't work | Use OpenAI Chat Completions with Slotstream 0.2.8 or later. The Ollama connection does not support tools. |
 | The app calls `/v1/responses` | Supported from Slotstream 0.2.20. Update with the install command if `slotstream --version` is older. Codex needs the [custom provider setup](CODEX.md); it cannot use `--oss`. |
+| The app calls `/v1/messages` | The Anthropic Messages API, supported from Slotstream 0.2.21. Set the base URL without `/v1`. |
+| The app sends `store` and gets a 400 | Update Slotstream; from 0.2.21 chat completions accept `store: false` without effect. `store: true` still returns 400, since the server keeps no completions to fetch later. |
 | The conversation is too long | The window includes instructions, history, and reply. Auto picks 32,768 tokens through 32 GB of RAM and more on larger Macs; `slotstream doctor` shows yours. Hermes needs the `--max-context 65536` setup in its guide. |
 | The first answer times out | Check progress in the Slotstream window. Long prompts can take minutes. See your agent's guide for its timeout settings. |
 | Summaries stop early or use a cloud model | Check the separate summary-provider and reply-length settings. Use the full configuration in the Hermes guide; fx has known summary limitations. |

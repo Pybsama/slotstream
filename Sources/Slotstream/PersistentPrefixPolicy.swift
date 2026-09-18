@@ -17,6 +17,11 @@ package struct PersistentPrefixEntry: Equatable, Sendable {
     package let hasDraft: Bool
     /// The state continued an earlier persisted state of its conversation.
     package let continued: Bool
+    /// Written inside a prompt, at a boundary other conversations start with
+    /// (a system prompt, a shared document), rather than at the end of a
+    /// reply. A later save of a conversation that extends it never replaces
+    /// it: it is not that conversation's previous turn.
+    package let shared: Bool
     /// Sequence arrays by name, with the extents holding their rows.
     package let sequences: [String: PersistentPrefixFile.SequenceRecord]
     /// Every segment the head references.
@@ -24,10 +29,10 @@ package struct PersistentPrefixEntry: Equatable, Sendable {
 
     package init(file: String, identity: String, tokens: [Int], bytes: Int64, lastUsed: Double,
                  sequenceBytes: Int = 0, residentBytes: Int = 0, hasDraft: Bool = false, continued: Bool = false,
-                 sequences: [String: PersistentPrefixFile.SequenceRecord] = [:]) {
+                 shared: Bool = false, sequences: [String: PersistentPrefixFile.SequenceRecord] = [:]) {
         self.file = file; self.identity = identity; self.tokens = tokens; self.bytes = bytes
         self.lastUsed = lastUsed; self.sequenceBytes = sequenceBytes; self.residentBytes = residentBytes
-        self.hasDraft = hasDraft; self.continued = continued; self.sequences = sequences
+        self.hasDraft = hasDraft; self.continued = continued; self.shared = shared; self.sequences = sequences
         segments = Set(sequences.values.flatMap { $0.extents.map(\.segment) })
     }
 }
@@ -87,6 +92,10 @@ package enum PersistentPrefixValue: Int, Comparable, Sendable, CaseIterable {
     case parent
     /// The latest state of a conversation that has been continued.
     case conversation
+    /// A prefix at least two conversations that do not continue each other
+    /// start with: every later conversation that starts with it skips that
+    /// prompt, so it outlasts any single conversation.
+    case shared
 
     package static func < (a: PersistentPrefixValue, b: PersistentPrefixValue) -> Bool { a.rawValue < b.rawValue }
 
@@ -97,6 +106,7 @@ package enum PersistentPrefixValue: Int, Comparable, Sendable, CaseIterable {
         case .oneOff: return "one-off"
         case .parent: return "parent"
         case .conversation: return "conversation"
+        case .shared: return "shared prefix"
         }
     }
 }
@@ -153,12 +163,51 @@ package enum PersistentPrefixPolicy {
 
     /// Own states a save of `tokens` makes redundant: every strict prefix
     /// except the longest, which stays so the last turn can be regenerated.
+    /// A shared prefix is never one of them: it belongs to every conversation
+    /// that starts with it, not to the one saving now.
     package static func redundantAncestors(_ entries: [PersistentPrefixEntry], identity: String,
                                            by tokens: [Int]) -> [PersistentPrefixEntry] {
-        let prefixes = entries.filter { $0.identity == identity && !$0.tokens.isEmpty
+        let prefixes = entries.filter { $0.identity == identity && !$0.tokens.isEmpty && !$0.shared
             && $0.tokens.count < tokens.count && tokens.starts(with: $0.tokens) }
         guard let parent = prefixes.max(by: { ($0.tokens.count, $1.file) < ($1.tokens.count, $0.file) }) else { return [] }
         return prefixes.filter { $0.file != parent.file }
+    }
+
+    /// How many tokens the longest own unexpired state has in common with
+    /// the start of `prompt`. Zero when no state shares a first token. The
+    /// state that shares the most is usually another conversation with the
+    /// same system prompt or document: a save at that boundary lets every
+    /// later prompt that starts the same way skip it.
+    package static func longestCommonPrefix(_ entries: [PersistentPrefixEntry], identity: String, prompt: [Int],
+                                            now: Double, maxAge: TimeInterval?) -> Int {
+        var best = 0
+        for entry in entries where entry.identity == identity && !entry.tokens.isEmpty
+            && !isExpired(entry, now: now, maxAge: maxAge) {
+            best = max(best, commonPrefixLength(entry.tokens, prompt))
+        }
+        return best
+    }
+
+    package static func commonPrefixLength(_ a: [Int], _ b: [Int]) -> Int {
+        var n = 0
+        let limit = min(a.count, b.count)
+        while n < limit, a[n] == b[n] { n += 1 }
+        return n
+    }
+
+    /// Where a prompt's system message ends, when it starts with one: the
+    /// index just past the first turn end after the system header, so a state
+    /// written there is a prefix of every later conversation with the same
+    /// system prompt, whatever role follows. `header` and `turnEnd` are the
+    /// template's ids for `<|im_start|>system\n` and `<|im_end|>\n`.
+    package static func systemPrefixBoundary(_ ids: [Int], header: [Int], turnEnd: [Int]) -> Int? {
+        guard !header.isEmpty, !turnEnd.isEmpty, ids.starts(with: header) else { return nil }
+        var index = header.count
+        while index + turnEnd.count <= ids.count {
+            if ids[index ..< index + turnEnd.count].elementsEqual(turnEnd) { return index + turnEnd.count }
+            index += 1
+        }
+        return nil
     }
 
     private static func extends(_ child: PersistentPrefixEntry, _ parent: PersistentPrefixEntry) -> Bool {
@@ -172,8 +221,15 @@ package enum PersistentPrefixPolicy {
                               now: Double, maxAge: TimeInterval?) -> PersistentPrefixValue {
         if entry.identity != identity || entry.tokens.isEmpty { return .foreign }
         if isExpired(entry, now: now, maxAge: maxAge) { return .expired }
-        if entries.contains(where: { extends($0, entry) }) { return .parent }
-        return entry.continued ? .conversation : .oneOff
+        let children = entries.filter { extends($0, entry) }
+        // Lineages, not turns: a child that another child extends is the same
+        // conversation one turn earlier. Two lineages make the state shared,
+        // whether it was written as a shared prefix or as a reply that two
+        // conversations happen to continue.
+        let lineages = children.filter { child in !children.contains { extends($0, child) } }
+        if lineages.count >= 2 { return .shared }
+        if !children.isEmpty { return .parent }
+        return entry.continued && !entry.shared ? .conversation : .oneOff
     }
 
     /// Removal order when space is needed: class, then least recently used,

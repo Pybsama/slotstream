@@ -111,6 +111,7 @@ public final class PersistentPrefixCache {
     struct Counters {
         var restores = 0, restoredTokens = 0, restoredBytes: Int64 = 0, restoreFailures = 0
         var saves = 0, deltaSaves = 0, compactions = 0, writtenBytes: Int64 = 0, reusedBytes: Int64 = 0
+        var sharedSaves = 0
         var skippedSaves = 0, failedSaves = 0
         var evictions = 0, expired = 0, replaced = 0, rejected = 0, deleted = 0, removedSegments = 0
     }
@@ -271,7 +272,7 @@ public final class PersistentPrefixCache {
             }
             return .head(PersistentPrefixEntry(file: name, identity: header.identity, tokens: tokens, bytes: size,
                 lastUsed: modified, sequenceBytes: header.sequenceBytes, residentBytes: header.residentBytes,
-                hasDraft: header.draft != nil, continued: header.continued,
+                hasDraft: header.draft != nil, continued: header.continued, shared: header.shared ?? false,
                 sequences: Dictionary(uniqueKeysWithValues: header.sequences.map { ($0.name, $0) })))
         }
         guard probe.kind == .segment, PersistentPrefixFile.isSegmentName(name),
@@ -364,6 +365,21 @@ public final class PersistentPrefixCache {
             PersistentPrefixPolicy.longestExtension(heads, identity: identity.digest, of: prefix, now: now,
                 maxAge: configuration.maxAge)
         }
+    }
+
+    /// How many leading tokens of `prompt` some own unexpired state shares:
+    /// the boundary a shared-prefix save of this prompt would use.
+    package func longestCommonPrefix(with prompt: [Int]) -> Int {
+        let now = Self.now()
+        return lock.withLock {
+            PersistentPrefixPolicy.longestCommonPrefix(heads, identity: identity.digest, prompt: prompt, now: now,
+                maxAge: configuration.maxAge)
+        }
+    }
+
+    /// Own states written as shared prefixes.
+    public var storedSharedStates: Int {
+        lock.withLock { heads.filter { $0.identity == identity.digest && $0.shared }.count }
     }
 
     /// The removal class of each own state, for reports and checks.
@@ -515,6 +531,8 @@ public final class PersistentPrefixCache {
                 "conversations": classes[.conversation] ?? 0,
                 "parents": classes[.parent] ?? 0,
                 "one_off": classes[.oneOff] ?? 0,
+                "shared": classes[.shared] ?? 0,
+                "shared_prefixes": own.filter(\.shared).count,
                 "held_tokens": own.reduce(0) { $0 + $1.tokens.count },
                 "segments": segments.count,
                 "bytes": headBytes + segmentBytes,
@@ -529,6 +547,7 @@ public final class PersistentPrefixCache {
                 "restore_failures": c.restoreFailures,
                 "saves": c.saves,
                 "delta_saves": c.deltaSaves,
+                "shared_saves": c.sharedSaves,
                 "compactions": c.compactions,
                 "written_bytes": c.writtenBytes,
                 "reused_bytes": c.reusedBytes,
@@ -563,6 +582,8 @@ extension PersistentPrefixCache {
             public let lastUsed: Date
             public let continued: Bool
             public let hasDraft: Bool
+            /// Written inside a prompt, at a boundary other conversations start with.
+            public let shared: Bool
             public let segments: Int
         }
         public var states: [State] = []
@@ -598,7 +619,7 @@ extension PersistentPrefixCache {
                 case .head(let entry):
                     result.states.append(.init(identity: entry.identity, tokens: entry.tokens.count, headBytes: entry.bytes,
                         lastUsed: Date(timeIntervalSince1970: entry.lastUsed), continued: entry.continued,
-                        hasDraft: entry.hasDraft, segments: entry.segments.count))
+                        hasDraft: entry.hasDraft, shared: entry.shared, segments: entry.segments.count))
                 case .segment(let segment):
                     result.segments += 1
                     result.segmentBytes += segment.bytes

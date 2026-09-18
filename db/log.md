@@ -1621,7 +1621,26 @@ Release 0.2.20 records: dbmd validate --all with zero errors and the two preserv
 ## [2026-09-17 03:22] update | records/measurements/release-0-2-20-published-2026-09-16
 Correction to the previous validate entry: two new summaries were over 200 characters when it was written; this run's and this measurement's summaries are trimmed, and dbmd validate --all now shows zero errors and only the two preserved historical warnings.
 
-## [2026-09-17 07:39] create | sources/runs/2026/09/2026-09-17-sevra-mac-basics
+## [2026-09-17 05:24] create | sources/runs/2026/09/2026-09-16-shared-prefix-exactness.md
+shared-prefix state-check variants at 2051 tokens, with and without the draft head: 745 and 785 assertions, none failed
+
+## [2026-09-17 05:24] create | sources/runs/2026/09/2026-09-16-shared-prefix-e2e.md
+shared prefixes through serve: memory reuse, two restarts, a sibling system prompt and a cold control, 17 of 17 checks
+
+## [2026-09-17 05:24] create | records/measurements/shared-prefix-cache-2026-09-16.md
+shared prefixes measured: exact reuse from memory and disk, identical output ids, first token 2.6 to 4.4 s against 21 to 52 s cold
+
+## [2026-09-17 05:24] create | records/claims/shared-prefix-minimum-512-tokens.md
+claim: shared prefixes are kept from 512 tokens
+
+## [2026-09-17 05:24] create | records/claims/shared-prefix-save-grid-256-tokens.md
+claim: shared prefixes are saved on the 256-token prefill pass grid
+
+## [2026-09-17 05:24] update | records/claims/persistent-prefix-default-minimum-tokens.md
+needle reworded: the disk minimum applies to shared prefixes too
+
+## [2026-09-17 05:24] update | records/design/measured-operating-policies.md
+shared prefix rows: kept once and never replaced, 512-token minimum, pass-grid save point; eviction order gains shared prefixes## [2026-09-17 07:39] create | sources/runs/2026/09/2026-09-17-sevra-mac-basics
 Sevra Mac basics receipt: Tools/check_sevra_mac.sh exit 0 with 141 PASS lines in a snapshot matching apps/macos and engine commit 6e25b00, offscreen mini-app isolation and review checks, helper mode matrix, app bundle build and helper self-test, three mutation checks and the doctor window comparison. The real-model basics check was not run while another local model process was active; the Xcode project was not built because Xcode is not installed.
 
 ## [2026-09-17 07:39] create | records/claims
@@ -1767,4 +1786,3 @@ A second 16k prompt: x1.085, the arms accepting 70.8% and 73.1%; with the first 
 
 ## [2026-09-17 23:54] update | sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck
 Added the second 16k prompt's raw output.
-

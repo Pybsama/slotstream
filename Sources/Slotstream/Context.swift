@@ -177,6 +177,23 @@ public enum PrefillSchedule {
         return passes
     }
 
+    /// The last pass end at or before `target` when reading from `position`
+    /// with the chronological schedule, `position` itself when the first
+    /// pass already reaches past it, nil when the target is behind. A shared
+    /// prefix is saved there: the boundary inside the prompt that costs no
+    /// reshaped pass, at most one pass short of the exact one.
+    package static func lastPassEnd(atOrBefore target: Int, from position: Int, remaining: Int,
+                                    maxChunk: Int, tailAware: Bool) -> Int? {
+        guard position >= 0, target >= position else { return nil }
+        var end = position, left = remaining
+        while left > 0 {
+            let count = next(remaining: left, at: end, maxChunk: maxChunk, tailAware: tailAware)
+            guard count > 0, end + count <= target else { break }
+            end += count; left -= count
+        }
+        return end
+    }
+
     /// The passes that reading `tokens` new tokens from `position` runs.
     public static func passes(tokens: Int, from position: Int = 0, maxChunk: Int, tailAware: Bool = false) -> [Int] {
         computePasses(tokens: tokens, from: position, maxChunk: maxChunk, tailAware: tailAware).map(\.tokens)

@@ -15,6 +15,11 @@ and expanded `context-check` flags below are available starting in Slotstream 0.
 |---|---|
 | `~/.slotstream/bin/` | Symlink to the active release: the `slotstream` binary and its `mlx.metallib`. |
 | `~/.slotstream/releases/<sha256>-macos<NN>/` | Each installed release, content-addressed. The installer stages a release here, verifies it, then switches the `bin` symlink. |
+| `~/.slotstream/launch/codex/` | The model descriptions and base instructions `slotstream launch codex` gives Codex, one per Codex version and window. |
+| `~/.slotstream/launch/server-<port>.json` | The server `slotstream launch` started on that port, by process id and start time, so a later launch knows it may restart it. |
+| `~/.slotstream/launch/start-<port>.lock` | Held while a launch may start a server on that port, so a second launch waits for that server. |
+| `~/.slotstream/logs/serve.log` | The log of the server `slotstream launch` started (`serve-<port>.log` on another port), with the previous start's as `.1`. |
+| `~/.slotstream/prefix-cache/` | Prompt caches the server `slotstream launch` started keeps on disk: token ids and model state, 20 GB at most. `slotstream prefix-cache` lists or clears them. |
 | `~/.slotstream/models/qwen38-flash-next-mlx-4bit/` | The weights: 25 files, 105.3 GB (the 1.5 GB draft head is optional). Compressed pulls use `.slotpack-state.json` and `.slotpack.part` files while in progress; legacy raw pulls use `.partmap` and `.part`. |
 | `/usr/local/bin/slotstream`, or a PATH line in `~/.zshrc` / `~/.bash_profile` | How the installer puts the command on your PATH (the wrapper when `/usr/local/bin` is writable, the profile line otherwise). |
 | `/tmp/slotstream-model-<uid>.lock` | The one-process lock, held while a model is loaded. |
@@ -68,12 +73,82 @@ and OpenAI endpoints and the [fx guide](FX.md) for the AI SDK gateway.
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including queueing, tokenization and images. Default 30 minutes; `0` disables only time. |
 | `--no-elastic` | Pin the cache at its startup size. By default an auto-sized cache resizes between requests as memory pressure changes; explicit sizes are always pinned. |
 | `--no-prefix-cache` | Process each prompt from scratch. Useful for reproducibility comparisons. |
-| `--prefix-cache-dir <dir>` | Also keep conversation states on disk, so a restarted server, or a conversation longer than the in-memory cache holds, resumes from its last committed state instead of processing its prompt again. Off unless set. A state is written after its reply completes. The first write stores the fixed recurrent state and every cached token; each later turn writes the recurrent state plus only the tokens it added, keeps the previous turn's state so that reply can still be regenerated after a restart, and removes older states of the conversation. Files hold the conversation's token ids and model state and are used only by the same binary, model files and settings that wrote them; starting the server removes files from other builds. Requests with images are not written. `slotstream prefix-cache` lists or clears the directory. |
-| `--prefix-cache-disk-gb <gb>` | Disk quota for `--prefix-cache-dir` (default 20), applied at startup and before each write. When it is full, states nobody continued go first, then previous-turn states kept for regenerating, then conversations, least recently used first within each. |
-| `--prefix-cache-min-tokens <n>` | Shortest conversation written to `--prefix-cache-dir` (default 2048 tokens). |
+| `--prefix-cache-dir <dir>` | Also keep conversation states on disk, so a restarted server, or a conversation longer than the in-memory cache holds, resumes from its last committed state instead of processing its prompt again. Off unless set. A state is written after its reply completes. The first write stores the fixed recurrent state and every cached token; each later turn writes the recurrent state plus only the tokens it added, keeps the previous turn's state so that reply can still be regenerated after a restart, and removes older states of the conversation. Files hold the conversation's token ids and model state and are used only by the same binary, model files and settings that wrote them; starting the server removes files from other builds. Requests with images are not written. The prefix conversations share is written too: when a prompt's system message ends 512 tokens or more in, or a prompt shares at least 512 tokens with a state already kept, that head is stored during the prompt's own prefill, rounded down to the prefill pass grid, the 256-token grid by default, so the next conversation with the same system prompt resumes from it, in the same process or after a restart. A shared prefix is kept once, is never replaced by the conversations that extend it, and is listed as such. `slotstream prefix-cache` lists or clears the directory. |
+| `--prefix-cache-disk-gb <gb>` | Disk quota for `--prefix-cache-dir` (default 20), applied at startup and before each write. When it is full, states nobody continued go first, then previous-turn states kept for regenerating, then conversations, then the prefixes several conversations start from, least recently used first within each. |
+| `--prefix-cache-min-tokens <n>` | Shortest state written to `--prefix-cache-dir` (default 2048 tokens), for conversation states and shared prefixes alike; a shorter shared prefix is still kept in memory. |
 | `--prefix-cache-max-age-days <days>` | Remove states in `--prefix-cache-dir` unused for this many days (default 30), at startup and before writes. `0` keeps them until the quota needs room. |
+| `--idle-exit <minutes>` | Stop after this many minutes with no request and no registered agent still running (default 0, keep serving). `slotstream launch` starts its server with 30 and registers each agent it opens through `POST /slotstream/clients`. The log says why the server stopped. |
 
 Plus the memory options.
+
+### `slotstream launch [agent] [arguments...]`
+
+Start a coding agent connected to Slotstream. The agent is `claude`, `codex`,
+`pi`, `opencode` or `hermes`; everything after its name is passed to it.
+Without a name, the command lists the agents installed and asks which one to
+start. It asks the server for its model, context window and reply limit,
+prepares the agent's connection, and replaces itself with the agent, so the
+agent runs in the same Terminal window. [Coding agents](CODING-AGENTS.md)
+describes what each agent receives and which files are written.
+
+When no server answers on the port, the command starts one in the background
+and shows its start until it answers:
+
+- with the window the agent needs (the automatic window, or 65,536 tokens for
+  Hermes when the automatic one is smaller) and the `--memory-gb` given here;
+- with prompt caches kept on disk in `~/.slotstream/prefix-cache`
+  (`--prefix-cache-dir`, 20 GB at most), so a restarted server does not read an
+  agent's instructions again;
+- with its log in `~/.slotstream/logs/serve.log` (`serve-<port>.log` on another
+  port), the previous start's kept as `.1`;
+- in its own session, so Control-C and a closed Terminal reach only the agent.
+
+That server keeps running while any agent `slotstream launch` opened is
+running, and stops 30 minutes after the last one exits and its last request
+ends (`--idle-exit`). `slotstream stop` stops it sooner. Control-C while it
+starts stops it too. A server you started yourself is used as it is; the
+command never restarts it. Two launches at the same time start one server:
+the second waits for the first to finish starting, then uses its server.
+
+| Flag | Meaning |
+|---|---|
+| `--port <n>` | The port the server listens on (default 11434). |
+| `--memory-gb <gb>` | Memory target for a server this command starts, as in `serve`. Default: automatic. When a server with another target is already running, it is left as it is and a note names its target. |
+| `--idle-exit <minutes>` | How long a server this command starts keeps running after its last agent exits (default 30, at most 10080); `0` keeps it running until `slotstream stop`. |
+| `--no-start` | Use a running server only; never start or restart one. |
+| `--dry-run` | Print the server it would start, the command, the variables it sets or removes, the files it would write, and notes; start, download and write nothing. Keys and tokens in the output are hidden, and for Pi only the `slotstream` entry of its models file is shown. |
+
+The served window must reach the agent's minimum: 32,768 tokens for Claude Code
+and Codex, 16,384 for Pi and opencode, 65,536 for Hermes. When the running
+server's window is smaller, a server this command started and no agent is
+using is restarted with the larger window; any other server is left running,
+and the message says how to restart it.
+
+It stops with a message, before starting the agent, when another server
+answers on the port, when the server is busy with every connection it takes,
+when another Slotstream model process runs for this user, when the model is
+not downloaded and there is no terminal to ask on (with one, it asks first),
+when the server is too old for the agent's API, or when the agent is not on
+`PATH`. It also refuses what would not run on this Mac: `codex cloud`, Codex's
+`--output-schema`, Pi with another `--provider` and no `--model`, and a Hermes
+configuration whose `context_length` is larger than the served window. The
+agent's arguments and files are checked before a server starts, so these
+refusals come before the server's start, and before the model download is
+offered. Codex needs its version's base instructions for the model
+description; the first launch of each Codex version downloads them from the
+Codex repository and keeps them under `~/.slotstream/launch/codex/`.
+
+### `slotstream stop`
+
+Stop the Slotstream server on a port: the one `slotstream launch` started in
+the background, also while it is still starting, or one running in a Terminal
+window. The server's requests end at once; prompt caches already on disk stay
+for the next server. When no server answers, it says so and exits
+successfully.
+
+| Flag | Meaning |
+|---|---|
+| `--port <n>` | The port the server listens on (default 11434). |
 
 ### `slotstream prefix-cache`
 
@@ -82,7 +157,7 @@ loaded, so this works while no server runs; listing also works while one does.
 
 | Flag | Meaning |
 |---|---|
-| `--dir <path>` | The directory given to `--prefix-cache-dir`. |
+| `--dir <path>` | The directory given to `--prefix-cache-dir`. Default: `~/.slotstream/prefix-cache`, the one servers that `slotstream launch` starts use. |
 | `--clear` | Remove every state file. Refused while a server or app holds the directory. |
 | `--json` | Print JSON instead of text. |
 

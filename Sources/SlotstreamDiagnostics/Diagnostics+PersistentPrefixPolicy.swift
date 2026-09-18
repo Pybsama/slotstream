@@ -15,6 +15,8 @@ extension Diagnostics {
         c.equal("default maximum age", PersistentPrefixConfiguration.defaultMaxAge, 30 * 86_400)
         c.equal("a configuration forgets after the default age",
             PersistentPrefixConfiguration(directory: URL(fileURLWithPath: "/nonexistent")).maxAge, 30 * 86_400)
+        c.equal("default minimum shared prefix", Generator.sharedPrefixMinimumTokens, 512)
+        c.equal("default prefill pass, the shared save grid", PrefillTuning.chunk, 256)
         typealias Policy = PersistentPrefixPolicy
         typealias File = PersistentPrefixFile
         let now = 10_000_000.0, day = 86_400.0
@@ -28,9 +30,9 @@ extension Diagnostics {
                 axis: 2, base: base, live: segments.count * 10, extents: extents)]
         }
         func entry(_ file: String, _ tokens: [Int], identity: String = "own", used: Double, draft: Bool = true,
-                   continued: Bool = false, segments: [String] = []) -> PersistentPrefixEntry {
+                   continued: Bool = false, shared: Bool = false, segments: [String] = []) -> PersistentPrefixEntry {
             PersistentPrefixEntry(file: file, identity: identity, tokens: tokens, bytes: 100, lastUsed: used,
-                hasDraft: draft, continued: continued, sequences: records(segments))
+                hasDraft: draft, continued: continued, shared: shared, sequences: records(segments))
         }
 
         let all = [entry("a", [1, 2, 3], used: now - 3), entry("b", [1, 2, 3, 4, 5], used: now - 5),
@@ -64,6 +66,44 @@ extension Diagnostics {
         c.expect("an unrelated save replaces nothing",
             Policy.redundantAncestors(all, identity: "own", by: [7, 7, 7, 7, 7]).isEmpty)
 
+        // Shared prefixes: a head other conversations start with, kept during
+        // the prompt's own prefill. Never redundant; found by the system
+        // boundary or the longest head a prompt shares with a kept state;
+        // saved at the last existing pass end at or before that target.
+        let sharedHead = entry("g", [1, 2], used: now - 2, shared: true)
+        c.equal("a save never replaces a shared prefix",
+            Set(Policy.redundantAncestors(all + [sharedHead], identity: "own", by: prompt).map(\.file)), ["a", "b"])
+        c.equal("the longest head a prompt shares with a live own state",
+            Policy.longestCommonPrefix(all, identity: "own", prompt: [1, 2, 3, 4, 5, 6, 9], now: now, maxAge: nil), 6)
+        c.equal("a head shorter than every state still counts",
+            Policy.longestCommonPrefix(all, identity: "own", prompt: [1, 2, 9], now: now, maxAge: nil), 2)
+        c.equal("another identity shares nothing",
+            Policy.longestCommonPrefix([all[3]], identity: "own", prompt: prompt, now: now, maxAge: nil), 0)
+        c.equal("an expired state shares nothing",
+            Policy.longestCommonPrefix([stale], identity: "own", prompt: prompt, now: now, maxAge: 30 * day), 0)
+        c.equal("a common prefix stops at the first difference", Policy.commonPrefixLength([1, 2, 3], [1, 2, 4]), 2)
+        c.equal("an empty list shares nothing", Policy.commonPrefixLength([], [1]), 0)
+        let header = [10, 11, 12], turnEnd = [20, 21]
+        c.equal("the system boundary is just past the first turn end after the header",
+            Policy.systemPrefixBoundary([10, 11, 12, 5, 6, 20, 21, 7, 20, 21], header: header, turnEnd: turnEnd), 7)
+        c.expect("a prompt without a system message has no system boundary",
+            Policy.systemPrefixBoundary([10, 11, 13, 5, 20, 21], header: header, turnEnd: turnEnd) == nil)
+        c.expect("an unfinished system message has no system boundary",
+            Policy.systemPrefixBoundary([10, 11, 12, 5, 6, 20], header: header, turnEnd: turnEnd) == nil)
+        c.equal("a save point is the last pass end at or before its target",
+            PrefillSchedule.lastPassEnd(atOrBefore: 3000, from: 0, remaining: 3600, maxChunk: 256, tailAware: false), 2816)
+        c.equal("a target on a pass end is kept exactly",
+            PrefillSchedule.lastPassEnd(atOrBefore: 2816, from: 0, remaining: 3600, maxChunk: 256, tailAware: false), 2816)
+        c.equal("a target inside the first pass has no save point yet",
+            PrefillSchedule.lastPassEnd(atOrBefore: 100, from: 0, remaining: 3600, maxChunk: 256, tailAware: false), 0)
+        c.expect("a target behind the position has none",
+            PrefillSchedule.lastPassEnd(atOrBefore: 100, from: 256, remaining: 3344, maxChunk: 256, tailAware: false) == nil)
+        c.equal("a save point never passes the prompt end",
+            PrefillSchedule.lastPassEnd(atOrBefore: 5000, from: 0, remaining: 600, maxChunk: 256, tailAware: false), 600)
+        c.equal("read scopes end at the shared save point",
+            PrefillSchedule.automaticScopeChoices(remaining: 3600, at: 0, maxChunk: 256, checkpoint: 2816)?.first,
+            Array(repeating: 256, count: 11))
+
         // Removal classes: other build, expired, one-off, parent, conversation.
         let classes = [entry("x", [1, 2, 3], used: now - 1), entry("y", [1, 2, 3, 4], used: now - 9, continued: true),
                        entry("z", [7, 7, 7], used: now - 2), entry("w", [5, 5], identity: "other", used: now),
@@ -77,10 +117,31 @@ extension Diagnostics {
         c.equal("another identity is another build", value(3), .foreign)
         c.equal("an unused state past the age is expired", value(4), .expired)
         c.equal("removal classes are ordered", PersistentPrefixValue.allCases.sorted().map(\.label),
-            ["other build", "expired", "one-off", "parent", "conversation"])
+            ["other build", "expired", "one-off", "parent", "conversation", "shared prefix"])
         c.equal("class decides before recency",
             Policy.evictionOrder(classes, identity: "own", now: now, maxAge: 30 * day).map(\.file),
             ["w", "v", "z", "x", "y"])
+        // Lineages, not turns, decide what is shared: a head two conversations
+        // start from goes last; one nobody started from is one-off.
+        let lineages = [entry("p", [1, 2], used: now - 9, shared: true),
+                        entry("q", [1, 2, 3], used: now - 1, continued: true),
+                        entry("r", [1, 2, 4], used: now - 2, continued: true),
+                        entry("t", [1, 2, 3, 5], used: now, continued: true),
+                        entry("o", [8, 8], used: now - 3, shared: true)]
+        func lineageValue(_ index: Int) -> PersistentPrefixValue {
+            Policy.value(of: lineages[index], in: lineages, identity: "own", now: now, maxAge: 30 * day)
+        }
+        c.equal("a state two conversations start from is a shared prefix", lineageValue(0), .shared)
+        c.equal("a state one conversation continues is a parent", lineageValue(1), .parent)
+        c.equal("a shared prefix nobody started from is one-off", lineageValue(4), .oneOff)
+        c.equal("a shared prefix goes last",
+            Policy.evictionOrder(lineages, identity: "own", now: now, maxAge: 30 * day).map(\.file),
+            ["o", "q", "r", "t", "p"])
+        let regenerated = [entry("m", [1, 2, 3], used: now - 5, continued: true),
+                           entry("n1", [1, 2, 3, 4], used: now - 1, continued: true),
+                           entry("n2", [1, 2, 3, 6], used: now, continued: true)]
+        c.equal("a reply two conversations continue is shared too",
+            Policy.value(of: regenerated[0], in: regenerated, identity: "own", now: now, maxAge: nil), .shared)
 
         // Quota over shared segments: h2 continues h1 and shares its segment.
         let (s1, s2, s3) = (segment(1), segment(2), segment(3))

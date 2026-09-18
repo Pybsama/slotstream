@@ -123,19 +123,38 @@ public enum ProcessMemory {
 /// into compressor/swap thrash. The lock is process-wide, so multiple model
 /// objects inside one verification process remain possible, while a second
 /// Slotstream process fails before allocating resident weights or a pool.
-enum ModelProcessGuard {
+package enum ModelProcessGuard {
     private static let stateLock = NSLock()
     private static var lockFD: Int32 = -1
+
+    // Diagnostic override for a bench whose previous engine child is stuck
+    // exiting inside the kernel and still holds the default lock: the bench
+    // verifies that no live model process exists before pointing here.
+    private static var path: String {
+        let override = ProcessInfo.processInfo.environment["SLOTSTREAM_MODEL_LOCK_PATH"] ?? ""
+        return override.isEmpty ? "/tmp/slotstream-model-\(getuid()).lock" : override
+    }
+
+    /// Whether another process holds the lock now, as a server on another
+    /// port, `slotstream run` or a check would. Trying the lock is the only
+    /// test `flock` offers, so a free lock is held for that instant and
+    /// released at once; it is never kept.
+    package static func heldByAnotherProcess() -> Bool {
+        let fd = open(path, O_RDONLY)
+        guard fd >= 0 else { return false }
+        defer { close(fd) }
+        if flock(fd, LOCK_EX | LOCK_NB) == 0 {
+            flock(fd, LOCK_UN)
+            return false
+        }
+        return errno == EWOULDBLOCK
+    }
 
     static func acquire() throws {
         stateLock.lock()
         defer { stateLock.unlock() }
         if lockFD >= 0 { return }
-        // Diagnostic override for a bench whose previous engine child is stuck
-        // exiting inside the kernel and still holds the default lock: the bench
-        // verifies that no live model process exists before pointing here.
-        let override = ProcessInfo.processInfo.environment["SLOTSTREAM_MODEL_LOCK_PATH"] ?? ""
-        let path = override.isEmpty ? "/tmp/slotstream-model-\(getuid()).lock" : override
+        let path = self.path
         let fd = open(path, O_RDWR | O_CREAT, 0o600)
         guard fd >= 0 else {
             throw ModelError("cannot create model-process lock at \(path): \(String(cString: strerror(errno)))")
@@ -144,7 +163,8 @@ enum ModelProcessGuard {
             close(fd)
             throw ModelError(
                 "another Slotstream model process is already running for this user — "
-                    + "stop it before starting run, serve, parity, or a heavyweight check")
+                    + "stop it before starting run, serve, parity, or a heavyweight check. "
+                    + "`slotstream stop` stops a server, also one `slotstream launch` keeps in the background.")
         }
         lockFD = fd
     }

@@ -12,7 +12,7 @@ struct Slotstream: ParsableCommand {
         abstract: "Qwen3.8-Flash-Next on Apple Silicon via SSD-streamed experts + cache slots.",
         version: SlotstreamBuild.version,
         subcommands: [
-            Run.self, Serve.self, Pull.self, Doctor.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
+            Run.self, Serve.self, Launch.self, Stop.self, Pull.self, Doctor.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
             PrefixCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPRowCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
@@ -196,6 +196,26 @@ struct ModelOptions: ParsableArguments {
         }
         FileHandle.standardError.write(announce.data(using: .utf8)!)
         return plan
+    }
+
+    /// The window `serve --max-context auto` would choose on this Mac now,
+    /// with these options. Prints nothing and downloads nothing.
+    func automaticWindow() throws -> Int {
+        let request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB,
+            maxRAMPercent: maxRAMPercent, mtp: try mtpMode(), vision: try visionMode())
+        return try Planner.resolveContextWindow(.automatic, request: request, on: .current(),
+            mtpAvailable: MTPWeights.present(modelDir: modelURL), visionAvailable: visionAvailable(),
+            runtimePolicy: try runtimePolicy(),
+            decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: modelURL)).plan.maxContextTokens
+    }
+
+    /// Whether the pinned model still has files to download. An explicit
+    /// directory counts as present when it holds a config.
+    func weightsMissing() -> Bool {
+        guard model == PinnedModel.name || model == PinnedModel.dirName else {
+            return !FileManager.default.fileExists(atPath: modelURL.appendingPathComponent("config.json").path)
+        }
+        return WeightStore.remainingBytes(at: modelURL) > 0
     }
 
     /// The announce, doctor and serving metadata share the same reservation
@@ -526,7 +546,7 @@ struct Serve: ParsableCommand {
           help: "Pin the cache at its startup size. Default: an auto-sized cache resizes itself between requests as memory pressure and availability change (explicit size flags are always pinned).")
     var noElastic = false
     @Flag(name: .customLong("no-prefix-cache"),
-          help: "Re-prefill every request from scratch. Default: the state of one request is reused by the next when that request's prompt extends it, so a chat turn only prefills what is new.")
+          help: "Re-prefill every request from scratch. Default: the state of one request is reused by the next when that request's prompt extends it, so a chat turn only prefills what is new, and a prefix that conversations share, such as a system prompt, is kept once for all of them.")
     var noPrefixCache = false
     @Option(name: .customLong("prefix-cache-dir"),
             help: ArgumentHelp(
@@ -534,21 +554,43 @@ struct Serve: ParsableCommand {
                 discussion: """
                     Off unless a directory is named. Files hold each conversation's token ids \
                     and model state; delete the directory to erase them. A file is used only \
-                    by the same binary, model files and settings that wrote it.
+                    by the same binary, model files and settings that wrote it. A prefix that \
+                    conversations share, such as a system prompt or a document they all start \
+                    with, is written once as a shared prefix and reused by every later \
+                    conversation that starts with it.
                     """))
     var prefixCacheDir: String?
     @Option(name: .customLong("prefix-cache-disk-gb"),
-            help: "Disk quota for --prefix-cache-dir in GB. When it is full, files of other builds go first, then states nobody continued, then parents kept for regenerating a reply, then conversations, least recently used first.")
+            help: "Disk quota for --prefix-cache-dir in GB. When it is full, files of other builds go first, then states nobody continued, then parents kept for regenerating a reply, then conversations, then prefixes several conversations start with, least recently used first.")
     var prefixCacheDiskGB = Double(PersistentPrefixConfiguration.defaultMaxBytes) / 1e9
     @Option(name: .customLong("prefix-cache-min-tokens"),
-            help: "Shortest conversation state written to --prefix-cache-dir, in tokens.")
+            help: "Shortest state written to --prefix-cache-dir, in tokens; applies to conversation states and shared prefixes alike.")
     var prefixCacheMinTokens = PersistentPrefixConfiguration.defaultMinimumTokens
     @Option(name: .customLong("prefix-cache-max-age-days"),
             help: "Remove states in --prefix-cache-dir unused for this many days; 0 keeps them until the quota needs room.")
     var prefixCacheMaxAgeDays = Double(PersistentPrefixConfiguration.defaultMaxAgeDays)
+    @Option(name: .customLong("idle-exit"),
+            help: ArgumentHelp(
+                "Stop after this many minutes with no requests and no registered agent still running; 0 keeps serving.",
+                discussion: """
+                    Off by default. `slotstream launch` starts its server with 30 and registers \
+                    each agent it opens (POST /slotstream/clients), so the server stays while \
+                    an agent is open and stops that long after the last one exits.
+                    """))
+    var idleExit = 0.0
 
     func run() throws {
         if let tokens = maxContext.tokens, let why = ContextPolicy.validationError(tokens) { throw PlanError(why) }
+        guard idleExit.isFinite, idleExit >= 0, idleExit <= CodingToolLaunch.maximumIdleMinutes else {
+            throw PlanError("--idle-exit must be between 0 and \(Int(CodingToolLaunch.maximumIdleMinutes)) minutes")
+        }
+        // `slotstream stop` sends SIGTERM, also while the model loads. Say so
+        // in the log, then leave at once: disk cache files are written whole
+        // or detected as torn.
+        signal(SIGTERM, SIG_IGN)
+        let terminate = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .global())
+        terminate.setEventHandler { Self.leave("stopping: asked to stop (SIGTERM)") }
+        terminate.resume()
         var persistentConfiguration: PersistentPrefixConfiguration?
         if let dir = prefixCacheDir {
             guard !noPrefixCache else {
@@ -647,7 +689,27 @@ struct Serve: ParsableCommand {
         let server = Server(
             engine: engine, port: port, weightsBytes: Int(PinnedModel.totalBytes),
             listenFD: listenFD)
-        try server.run()
+        if idleExit > 0 {
+            let minutes = idleExit
+            server.idleExit = (minutes * 60, {
+                Self.leave("stopping: no requests and no agents for \(String(format: "%g", minutes)) minutes (--idle-exit)")
+            })
+            FileHandle.standardError.write(Data(("idle exit: stops after \(String(format: "%g", minutes)) minutes "
+                + "with no requests and no registered agent still running\n").utf8))
+        }
+        try withExtendedLifetime(terminate) {
+            try server.run()
+        }
+    }
+
+    /// Log why the server stops and end the process without running exit
+    /// handlers, which could race the engine's own threads.
+    static func leave(_ reason: String) -> Never {
+        let stamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        FileHandle.standardError.write(Data("[\(stamp)] \(reason)\n".utf8))
+        fflush(stdout)
+        fflush(stderr)
+        _exit(0)
     }
 }
 

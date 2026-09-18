@@ -14,8 +14,9 @@ struct PrefixCacheCommand: ParsableCommand {
             refuses while a server or app holds the directory.
             """)
 
-    @Option(name: .customLong("dir"), help: "The directory given to serve --prefix-cache-dir.")
-    var dir: String
+    @Option(name: .customLong("dir"),
+            help: "The directory given to serve --prefix-cache-dir. Default: the one servers that `slotstream launch` starts use, ~/.slotstream/prefix-cache.")
+    var dir: String = CodingToolLaunch.BackgroundServer.prefixCacheDirectory(home: ModelLocator.home.path)
 
     @Flag(help: "Remove every state file in the directory.")
     var clear = false
@@ -51,20 +52,23 @@ struct PrefixCacheCommand: ParsableCommand {
                 "states": states.map {
                     ["identity": $0.identity, "tokens": $0.tokens, "head_bytes": $0.headBytes,
                      "last_used": formatter.string(from: $0.lastUsed), "continued": $0.continued,
-                     "draft": $0.hasDraft, "segments": $0.segments] as [String: Any]
+                     "draft": $0.hasDraft, "shared": $0.shared, "segments": $0.segments] as [String: Any]
                 },
             ])
             return
         }
-        print("\(url.path): \(states.count) state\(states.count == 1 ? "" : "s") and \(report.segments) "
-            + "segment\(report.segments == 1 ? "" : "s"), \(Self.gigabytes(report.totalBytes))")
+        let sharedCount = states.filter(\.shared).count
+        print("\(url.path): \(states.count) state\(states.count == 1 ? "" : "s")"
+            + (sharedCount > 0 ? " (\(sharedCount) shared prefix\(sharedCount == 1 ? "" : "es"))" : "")
+            + " and \(report.segments) segment\(report.segments == 1 ? "" : "s"), \(Self.gigabytes(report.totalBytes))")
         if report.inUse { print("  in use by a running server or app, so the contents may be changing") }
         if !states.isEmpty {
             let dates = DateFormatter()
             dates.dateFormat = "yyyy-MM-dd HH:mm"
             print("  build         tokens      head  last used         ")
             for state in states {
-                let details = [state.continued ? "continued" : nil, state.hasDraft ? "draft" : nil].compactMap { $0 }
+                let details = [state.shared ? "shared prefix" : nil, state.continued ? "continued" : nil,
+                               state.hasDraft ? "draft" : nil].compactMap { $0 }
                 print("  " + String(state.identity.prefix(12)) + "  "
                     + String(repeating: " ", count: max(0, 8 - "\(state.tokens)".count)) + "\(state.tokens)"
                     + "  " + String(format: "%6.1f MB", Double(state.headBytes) / 1e6)

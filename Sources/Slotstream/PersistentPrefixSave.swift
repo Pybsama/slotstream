@@ -21,11 +21,14 @@ extension PersistentPrefixCache {
     /// holds the same ids with at least the same draft state. Rows below the
     /// state's lineage boundary are referenced, not written. Never throws: a
     /// state that cannot be written leaves the request and memory unchanged.
-    package func save(state: Qwen4ExpModel.State, tokens: [Int]) -> SaveResult {
-        operations.withLock { saveHoldingOperations(state: state, tokens: tokens) }
+    /// `shared` marks a state written inside a prompt at a boundary other
+    /// conversations start with; later saves of conversations that extend it
+    /// keep it, and it is classed by how many lineages start with it.
+    package func save(state: Qwen4ExpModel.State, tokens: [Int], shared: Bool = false) -> SaveResult {
+        operations.withLock { saveHoldingOperations(state: state, tokens: tokens, shared: shared) }
     }
 
-    private func saveHoldingOperations(state: Qwen4ExpModel.State, tokens: [Int]) -> SaveResult {
+    private func saveHoldingOperations(state: Qwen4ExpModel.State, tokens: [Int], shared: Bool) -> SaveResult {
         let start = RuntimeClock.now()
         var removed = 0, written: Int64 = 0, reused: Int64 = 0, compacted = false
         func finish(_ outcome: SaveOutcome) -> SaveResult {
@@ -38,6 +41,7 @@ extension PersistentPrefixCache {
                     counters.reusedBytes += reused
                     if reused > 0 { counters.deltaSaves += 1 }
                     if compacted { counters.compactions += 1 }
+                    if shared { counters.sharedSaves += 1 }
                 case .skipped: counters.skippedSaves += 1
                 case .failed: counters.failedSaves += 1
                 case .present: break
@@ -175,6 +179,7 @@ extension PersistentPrefixCache {
             var arrays = plan.arrays
             var header = plan.header
             header.continued = continued
+            header.shared = shared ? true : nil
             header.sequences = sequences
             let temp = temporary(name)
             defer { unlink(temp) }
@@ -193,7 +198,7 @@ extension PersistentPrefixCache {
             written += size
             entry = PersistentPrefixEntry(file: name, identity: identity.digest, tokens: tokens, bytes: size,
                 lastUsed: Self.now(), sequenceBytes: header.sequenceBytes, residentBytes: header.residentBytes,
-                hasDraft: header.draft != nil, continued: continued,
+                hasDraft: header.draft != nil, continued: continued, shared: shared,
                 sequences: Dictionary(uniqueKeysWithValues: sequences.map { ($0.name, $0) }))
         } catch {
             if let newSegment {
@@ -211,7 +216,8 @@ extension PersistentPrefixCache {
         let older = redundant.map(\.file).filter { $0 != name }
         removed += remove(heads: older, .replaced)
         let result = finish(.saved)
-        report("saved \(tokens.count) tokens (\(Self.megabytes(written)) written"
+        report((shared ? "saved shared \(tokens.count)-token prefix (" : "saved \(tokens.count) tokens (")
+            + "\(Self.megabytes(written)) written"
             + (reused > 0 ? ", \(Self.megabytes(reused)) of rows reused" : "")
             + (compacted ? ", rows rewritten" : "") + ") in \(String(format: "%.2f", result.seconds)) s"
             + (removed > 0 ? ", removed \(removed) older file\(removed == 1 ? "" : "s")" : ""))

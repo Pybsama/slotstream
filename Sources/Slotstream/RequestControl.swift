@@ -170,6 +170,11 @@ public final class RequestController: @unchecked Sendable {
         return Double(now >= started ? now - started : 0) / 1e9
     }
     public var failure: RequestFailure? { lock.withLock { failureValue } }
+    private var admittedReusedValue: Int?
+    /// Prompt tokens this request resumes from a retained state, known once it
+    /// is admitted; nil before. Streams that report usage at their start read
+    /// it in the admission callback.
+    public var admittedReusedTokens: Int? { lock.withLock { admittedReusedValue } }
     public var mayRetainState: Bool { failure == nil }
     private var persistsValue = true
     /// Whether this request's committed state may be written to the persistent
@@ -180,6 +185,27 @@ public final class RequestController: @unchecked Sendable {
     public var persistsPrefixState: Bool {
         get { lock.withLock { persistsValue } }
         set { lock.withLock { persistsValue = newValue } }
+    }
+    private var sharedPrefixValue: Int?
+    /// How many leading prompt tokens other conversations will start with,
+    /// such as a stable system prompt or a shared document: the engine keeps a
+    /// reusable state at the last completed prefill pass at or before that
+    /// boundary, in memory and, with a persistent tier, on disk. Unset, the
+    /// engine finds the end of the prompt's system message and the longest
+    /// start it shares with a state a tier already holds. `persistsPrefixState`
+    /// false keeps the shared state off disk too.
+    public var sharedPrefixTokens: Int? {
+        get { lock.withLock { sharedPrefixValue } }
+        set { lock.withLock { sharedPrefixValue = newValue } }
+    }
+    private var sharedPrefixRetentionValue = SharedPrefixRetention.optional
+    /// How the memory tier holds the shared prefix this request keeps. The
+    /// server asks for `.conversation` when a request declares tools: an
+    /// agent's instructions start every later session, and as an optional
+    /// snapshot they were the first state other conversations displaced.
+    public var sharedPrefixRetention: SharedPrefixRetention {
+        get { lock.withLock { sharedPrefixRetentionValue } }
+        set { lock.withLock { sharedPrefixRetentionValue = newValue } }
     }
     @discardableResult public func fail(_ error: RequestFailure) -> RequestFailure {
         lock.withLock {
@@ -302,11 +328,19 @@ public final class RequestController: @unchecked Sendable {
         try check(phase: "admission")
         let estimate = PrefillSchedule.estimateSeconds(tokens: missingTokens, from: position,
             maxChunk: maxChunk, tailAware: tailAware)
-        lock.withLock { estimateValue = estimate }
+        lock.withLock { estimateValue = estimate; admittedReusedValue = position }
         let limit = configuration.maxPrefillWaitMinutes * 60
         if limit > 0, let estimate, elapsedSeconds + estimate > limit {
-            var error = RequestFailure(.prefillWaitExceeded,
-                "estimated missing-context prefill exceeds the remaining wait budget; send less, reuse a valid prefix, or raise --max-prefill-wait")
+            // When the prefill alone fits the budget, the time this request
+            // already spent waiting for the one generation is what ran out:
+            // the same request can succeed once the server is free, so it is
+            // the retryable deadline rather than a request that never fits.
+            let waited = estimate <= limit
+            var error = waited
+                ? RequestFailure(.prefillDeadlineExceeded,
+                    "the request waited for other work until its estimated prefill no longer fits the wait budget; retry when the server is free, or raise --max-prefill-wait")
+                : RequestFailure(.prefillWaitExceeded,
+                    "estimated missing-context prefill exceeds the remaining wait budget; send less, reuse a valid prefix, or raise --max-prefill-wait")
             error.elapsedSeconds = elapsedSeconds; error.limitSeconds = limit; error.estimatedSeconds = estimate
             throw fail(error)
         }

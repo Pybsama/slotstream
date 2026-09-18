@@ -52,7 +52,7 @@ extension Catalogue {
             Check("verify-pass-rows", tier: .t1) { Diagnostics.verifyPassRows() },
             Check("block-selection", tier: .t1) { Diagnostics.optimizationBlockSelection() },
             Check("indexer-visibility", tier: .t1) { Diagnostics.optimizationIndexerVisibility() },
-        ] + toolCallChecks + gatewayChecks + openAIChecks + responsesChecks + weightStoreChecks
+        ] + toolCallChecks + gatewayChecks + openAIChecks + responsesChecks + anthropicChecks + launchChecks + weightStoreChecks
     }
 
     /// The automatic context window on simulated Macs: each tier's choice, the

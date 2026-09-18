@@ -19,7 +19,46 @@ public struct PersistentPrefixObservation: Codable, Equatable, Sendable {
     /// Row bytes the written heads reference in segments already on disk.
     public var reusedBytes: Int64?
     public var removedFiles = 0
+    /// A shared prefix written inside this prompt, at a boundary other
+    /// conversations start with: the outcome and, when saved, its length.
+    public var sharedSaveOutcome: String?
+    public var sharedSavedTokens = 0
+    public var sharedSaveSeconds = 0.0
+    public var sharedSaveBytes: Int64 = 0
     public init() {}
+
+    /// Statistics written by 0.2.18 to 0.2.20 have no shared-prefix fields,
+    /// and the generated decoder refuses a missing key even when the property
+    /// has a default. A missing key keeps its default instead.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        restoredTokens = try c.decodeIfPresent(Int.self, forKey: .restoredTokens) ?? 0
+        restoreSeconds = try c.decodeIfPresent(Double.self, forKey: .restoreSeconds) ?? 0
+        restoreBytes = try c.decodeIfPresent(Int64.self, forKey: .restoreBytes) ?? 0
+        restoreFailure = try c.decodeIfPresent(String.self, forKey: .restoreFailure)
+        saveOutcome = try c.decodeIfPresent(String.self, forKey: .saveOutcome)
+        savedTokens = try c.decodeIfPresent(Int.self, forKey: .savedTokens) ?? 0
+        saveSeconds = try c.decodeIfPresent(Double.self, forKey: .saveSeconds) ?? 0
+        saveBytes = try c.decodeIfPresent(Int64.self, forKey: .saveBytes) ?? 0
+        reusedBytes = try c.decodeIfPresent(Int64.self, forKey: .reusedBytes)
+        removedFiles = try c.decodeIfPresent(Int.self, forKey: .removedFiles) ?? 0
+        sharedSaveOutcome = try c.decodeIfPresent(String.self, forKey: .sharedSaveOutcome)
+        sharedSavedTokens = try c.decodeIfPresent(Int.self, forKey: .sharedSavedTokens) ?? 0
+        sharedSaveSeconds = try c.decodeIfPresent(Double.self, forKey: .sharedSaveSeconds) ?? 0
+        sharedSaveBytes = try c.decodeIfPresent(Int64.self, forKey: .sharedSaveBytes) ?? 0
+    }
+}
+
+/// The template's ids around a system message, so the engine can find where
+/// a prompt's system prompt ends without rendering anything.
+public struct SharedPrefixMarkers: Equatable, Sendable {
+    /// `<|im_start|>system\n`
+    public var systemHeader: [Int]
+    /// `<|im_end|>\n`
+    public var turnEnd: [Int]
+    public init(systemHeader: [Int], turnEnd: [Int]) {
+        self.systemHeader = systemHeader; self.turnEnd = turnEnd
+    }
 }
 
 extension Generator {
@@ -70,25 +109,82 @@ extension Generator {
     }
 
     /// Write the committed state of a text request long enough to be worth
-    /// it, unless its controller keeps the conversation off disk.
+    /// it, unless its controller keeps the conversation off disk. `shared`
+    /// writes a prefix other conversations start with, from inside a prompt.
     func persistPrefix(cache: PrefixCache?, state: Qwen4ExpModel.State, tokens: [Int], images: [ImageSegment],
-                       request: RequestController?, stats: inout GenStats) {
+                       request: RequestController?, stats: inout GenStats, shared: Bool = false) {
         guard let tier = persistentTier(cache, images: images),
               tokens.count >= tier.configuration.minimumTokens else { return }
         var observation = stats.persistentPrefix ?? PersistentPrefixObservation()
         defer { stats.persistentPrefix = observation }
         guard request?.persistsPrefixState != false else {
-            observation.saveOutcome = PersistentPrefixCache.SaveOutcome
-                .skipped("this request does not persist its state").description
+            let skipped = PersistentPrefixCache.SaveOutcome.skipped("this request does not persist its state").description
+            if shared { observation.sharedSaveOutcome = skipped } else { observation.saveOutcome = skipped }
             return
         }
-        let result = tier.save(state: state, tokens: tokens)
-        observation.saveOutcome = result.outcome.description
-        observation.savedTokens = result.outcome == .saved ? result.tokens : 0
-        observation.saveSeconds += result.seconds
-        observation.saveBytes += result.bytes
+        let result = tier.save(state: state, tokens: tokens, shared: shared)
+        if shared {
+            observation.sharedSaveOutcome = result.outcome.description
+            observation.sharedSavedTokens = result.outcome == .saved ? result.tokens : 0
+            observation.sharedSaveSeconds += result.seconds
+            observation.sharedSaveBytes += result.bytes
+        } else {
+            observation.saveOutcome = result.outcome.description
+            observation.savedTokens = result.outcome == .saved ? result.tokens : 0
+            observation.saveSeconds += result.seconds
+            observation.saveBytes += result.bytes
+        }
         observation.reusedBytes = (observation.reusedBytes ?? 0) + result.reusedBytes
         observation.removedFiles += result.removedFiles
+    }
+
+    /// Boundaries inside this prompt worth a shared-prefix state, ascending:
+    /// where its system prompt ends, and the longest start it has in common
+    /// with a state some tier already holds. Both are the exact boundaries;
+    /// the prefill loop saves at the last completed pass at or before each,
+    /// so no pass is ever reshaped for a save. Text prompts only, and only
+    /// beyond what this request already reuses.
+    func sharedPrefixTargets(cache: PrefixCache?, promptIds: [Int], images: [ImageSegment], reused: Int,
+                             request: RequestController?, stats: inout GenStats) -> [Int] {
+        guard let cache, cache.enabled, images.isEmpty else { return [] }
+        var targets = Set<Int>()
+        let hint = request?.sharedPrefixTokens ?? sharedPrefixMarkers.flatMap {
+            PersistentPrefixPolicy.systemPrefixBoundary(promptIds, header: $0.systemHeader, turnEnd: $0.turnEnd)
+        }
+        if let hint { targets.insert(hint) }
+        var common = cache.longestCommonPrefix(with: promptIds)
+        if let tier = persistentTier(cache, images: images) {
+            common = max(common, tier.longestCommonPrefix(with: promptIds))
+        }
+        if common > 0 { targets.insert(common) }
+        stats.sharedPrefixHint = hint
+        stats.sharedPrefixCommon = common
+        return targets.filter { $0 > reused && $0 < promptIds.count && $0 >= Self.sharedPrefixMinimumTokens }.sorted()
+    }
+
+    /// Keep the state at a completed pass boundary as a shared prefix: on
+    /// disk for later processes, and as a reusable checkpoint for the
+    /// conversations that follow in this one. Disk first, so the live state
+    /// carries the lineage of the shared head and this request's own save
+    /// then writes only the rows after it.
+    func retainSharedPrefix(cache: PrefixCache?, state: Qwen4ExpModel.State, promptIds: [Int], at boundary: Int,
+                            images: [ImageSegment], reserveTokens: Int, reserveSequenceBytes: Int,
+                            request: RequestController?, stats: inout GenStats) {
+        guard let cache, boundary > 0, boundary < promptIds.count, state.tokenCount == boundary,
+              !stats.sharedPrefixBoundaries.contains(boundary) else { return }
+        let tokens = Array(promptIds.prefix(boundary))
+        Stream.gpu.synchronize()
+        persistPrefix(cache: cache, state: state, tokens: tokens, images: images, request: request,
+            stats: &stats, shared: true)
+        do {
+            let retained = try cache.storeReusableCheckpoint(state: state, tokens: tokens, images: images,
+                reserveTokens: reserveTokens, reserveSequenceBytes: reserveSequenceBytes,
+                retention: request?.sharedPrefixRetention ?? .optional)
+            if retained { stats.sharedPrefixStores += 1 } else { stats.sharedPrefixRefusals += 1 }
+        } catch {
+            stats.sharedPrefixErrors += 1
+        }
+        stats.sharedPrefixBoundaries.append(boundary)
     }
 }
 

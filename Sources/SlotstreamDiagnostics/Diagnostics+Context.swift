@@ -248,6 +248,49 @@ extension Diagnostics {
                 }
             }
         }
+        // Admission names a wait failure by its cause. A prompt whose own
+        // estimate exceeds the budget never fits; one that fits alone but
+        // waited behind other work gets the retryable deadline instead.
+        do {
+            let budget = try ContextConfiguration(maxPrefillWaitMinutes: 1)
+            let reused = 512, missing = 1_024, chunk = 256
+            if let estimate = PrefillSchedule.estimateSeconds(tokens: missing, from: reused, maxChunk: chunk),
+               estimate > 0, estimate < 30 {
+                var tick: UInt64 = 0
+                let waited = RequestController(configuration: budget, slackBytes: 0, clock: { tick }, availableGB: { 1 })
+                c.equal("reused prompt tokens are unknown before admission", waited.admittedReusedTokens, nil)
+                c.equal("a request keeps no shared prefix hint by default", waited.sharedPrefixTokens, nil)
+                c.equal("a request's shared prefix is optional by default", waited.sharedPrefixRetention, .optional)
+                waited.sharedPrefixTokens = 700
+                waited.sharedPrefixRetention = .conversation
+                c.equal("a shared prefix hint is kept", waited.sharedPrefixTokens, 700)
+                c.equal("a request with tools keeps its shared prefix like a conversation",
+                    waited.sharedPrefixRetention, .conversation)
+                tick = 55_000_000_000
+                do {
+                    try waited.admit(missingTokens: missing, from: reused, maxChunk: chunk)
+                    c.expect("a prefill that no longer fits after waiting is refused", false)
+                } catch let error as RequestFailure {
+                    c.equal("waiting behind other work is the retryable deadline", error.code, .prefillDeadlineExceeded)
+                    c.expect("the deadline says to retry when the server is free",
+                        error.message.contains("retry when the server is free"), error.message)
+                }
+                c.equal("admission records the reused prompt tokens", waited.admittedReusedTokens, reused)
+                let fresh = RequestController(configuration: budget, slackBytes: 0, clock: { 0 }, availableGB: { 1 })
+                try fresh.admit(missingTokens: missing, from: reused, maxChunk: chunk)
+                c.equal("an unqueued request that fits is admitted", fresh.failure, nil)
+                c.equal("the admitted request reports its reused tokens", fresh.admittedReusedTokens, reused)
+                let long = RequestController(configuration: budget, slackBytes: 0, clock: { 0 }, availableGB: { 1 })
+                do {
+                    try long.admit(missingTokens: 32_000, from: 0, maxChunk: chunk)
+                    c.expect("a prefill longer than the budget is refused", false)
+                } catch let error as RequestFailure {
+                    c.equal("a prefill longer than the budget never fits", error.code, .prefillWaitExceeded)
+                }
+            } else {
+                c.expect("a 1,024-token prefill estimate fits well inside a minute", false)
+            }
+        }
         // The single-choice cases above exercise the same delegated guards.
         // Multiple choices must retain preference order and atomically own
         // only the selected workspace, including retained preparations.

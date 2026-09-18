@@ -25,6 +25,13 @@ public final class Server {
     /// Package-only observation for real-socket lifecycle diagnostics. Install
     /// before handling connections; it never changes queue limits or payloads.
     package var outputObserver: ((Int32, BoundedOutput) -> Void)?
+    /// Requests in flight and the clients registered through
+    /// `POST /slotstream/clients`; `/slotstream/status` reports both.
+    public let activity = ServerActivity()
+    /// Stop after this many seconds with no request and no registered client
+    /// that is still running. `stop` runs once, on a watcher thread, after new
+    /// requests are refused. Set before `run()`.
+    public var idleExit: (seconds: Double, stop: () -> Void)?
 
     private func makeOutput(_ fd: Int32, streaming: Bool = true) -> BoundedOutput? {
         guard streaming, engine.model.optimizations.boundedOutputQueue else { return nil }
@@ -38,7 +45,15 @@ public final class Server {
             ?? RequestFailure(.invalidConfiguration, String(describing: error))
         guard failure.code != .clientCancelled else { return }
         let body: [String: Any]
-        if dialect == "ollama" {
+        if dialect == "anthropic" {
+            // Claude Code compacts and retries when the message says the
+            // prompt is too long, so an overflow found during preparation
+            // carries those words too.
+            let message = failure.code == .contextLengthExceeded
+                ? "prompt is too long: " + failure.message : failure.message
+            body = AnthropicDialect.errorBody(type: AnthropicDialect.errorType(httpStatus: failure.httpStatus),
+                                              message: message)
+        } else if dialect == "ollama" {
             body = ["error": failure.message, "code": failure.code.rawValue, "details": failure.json]
         } else if dialect == "gateway" {
             var gateway = GatewayDialect.Failure(failure.code.rawValue, failure.message).body
@@ -85,13 +100,14 @@ public final class Server {
             }
         }
         guard rc == 0 else {
-            let why = String(cString: strerror(errno))
+            let code = errno
             close(fd)
             throw ServerError(
-                "cannot listen on 127.0.0.1:\(port): \(why)"
-                    + (errno == EADDRINUSE
-                        ? " — another slotstream (or Ollama) is already there; "
-                            + "stop it or pass --port" : ""))
+                "cannot listen on 127.0.0.1:\(port): \(String(cString: strerror(code)))"
+                    + (code == EADDRINUSE
+                        ? ". Another server, such as Slotstream or Ollama, is already there; stop it or pass --port. "
+                            + "`slotstream stop\(port == 11434 ? "" : " --port \(port)")` stops a Slotstream server, "
+                            + "also one `slotstream launch` started in the background." : ""))
         }
         return fd
     }
@@ -120,6 +136,18 @@ public final class Server {
         or point any Ollama or OpenAI client at http://localhost:\(port)
         """)
         fflush(stdout)  // visible immediately even when stdout is a file/pipe
+        if let idleExit, idleExit.seconds > 0 {
+            let interval = min(15, max(0.5, idleExit.seconds / 4))
+            Thread.detachNewThread { [activity] in
+                while true {
+                    Thread.sleep(forTimeInterval: interval)
+                    if activity.stopIfIdle(for: idleExit.seconds) {
+                        idleExit.stop()
+                        return
+                    }
+                }
+            }
+        }
         while true {
             let fd = accept(listenFD, nil, nil)
             if fd < 0 { continue }
@@ -170,7 +198,20 @@ public final class Server {
     enum ReadOutcome {
         case ok(Request)
         case closed
-        case fail(status: String, message: String)
+        /// `target` is the request line's target, when it was read, so the
+        /// refusal can take the shape of the API the client called.
+        case fail(status: String, message: String, target: String?)
+    }
+
+    /// The most an oversized upload is read and discarded before its 413, so
+    /// the client, still sending, gets the answer instead of a reset. Read in
+    /// fixed chunks and dropped; never held.
+    static let maxDrainBytes = 256 << 20
+
+    /// The target of a request head's first line.
+    package static func requestTarget(_ head: String) -> String? {
+        let first = head.prefix { $0 != "\r" && $0 != "\n" }.split(separator: " ")
+        return first.count >= 2 ? String(first[1]) : nil
     }
 
     private func readRequest(_ fd: Int32) -> ReadOutcome {
@@ -185,7 +226,8 @@ public final class Server {
             if headerEnd == nil, buf.count > 64 << 10 {
                 return .fail(
                     status: "431 Request Header Fields Too Large",
-                    message: "request headers are larger than 64 KiB")
+                    message: "request headers are larger than 64 KiB",
+                    target: Self.requestTarget(String(decoding: buf.prefix(8192), as: UTF8.self)))
             }
         }
         let headData = buf[..<headerEnd!.lowerBound]
@@ -193,7 +235,22 @@ public final class Server {
         let req: Request
         let contentLength: Int
         switch Self.parseHead(head) {
-        case let .fail(status, message): return .fail(status: status, message: message)
+        case let .fail(status, message):
+            if status.hasPrefix("413"), let declared = head.split(separator: "\r\n").lazy
+                .compactMap({ line -> Int? in
+                    let kv = line.split(separator: ":", maxSplits: 1)
+                    guard kv.count == 2, kv[0].trimmingCharacters(in: .whitespaces).lowercased() == "content-length"
+                    else { return nil }
+                    return Int(kv[1].trimmingCharacters(in: .whitespaces))
+                }).first {
+                var left = min(declared, Self.maxDrainBytes) - (buf.count - headerEnd!.upperBound)
+                while left > 0 {
+                    let n = read(fd, &tmp, min(tmp.count, left))
+                    if n <= 0 { break }
+                    left -= n
+                }
+            }
+            return .fail(status: status, message: message, target: Self.requestTarget(head))
         case let .ok(parsed, length):
             req = parsed
             contentLength = length
@@ -275,6 +332,54 @@ public final class Server {
         return p.count > 1 && p.hasSuffix("/") ? String(p.dropLast()) : p
     }
 
+    /// Whether a request counts as use of the server. A status check does
+    /// not: `slotstream stop` and launch read it, and a status display may
+    /// poll it.
+    package static func countsAsActivity(_ path: String) -> Bool {
+        routePath(path) != "/slotstream/status"
+    }
+
+    /// The 503 every request but the status gets once an idle stop is decided.
+    package static let stoppingMessage = "the server is stopping; start it again, or run `slotstream launch`"
+
+    /// `POST /slotstream/clients` with `{"pid": n}`: keep the server running
+    /// while that process of this user runs.
+    package static func registerClient(_ json: [String: Any],
+                                       activity: ServerActivity) -> (status: String, body: [String: Any]) {
+        guard let pid = int(json["pid"]), pid > 0, pid <= Int(Int32.max) else {
+            return ("400 Bad Request", ["error": "pid must be a positive process id"])
+        }
+        guard activity.register(pid: Int32(pid)) else {
+            return ("400 Bad Request", ["error": "no running process \(pid) of this user"])
+        }
+        return ("200 OK", ["clients": activity.snapshot().clients])
+    }
+
+    /// `GET /slotstream/status`: what `slotstream stop` and `slotstream
+    /// launch` need to find this process and see whether it is in use.
+    /// `memorySource` is what sized the memory plan (`--memory-gb`, `auto`,
+    /// ...) and `memoryTargetGB` its whole-process target, when it has one.
+    package static func statusBody(pid: Int32, port: Int, version: String, model: String, contextWindow: Int,
+                                   startedAt: Int, activity: ServerActivity.Snapshot,
+                                   idleExitSeconds: Double?, memorySource: String? = nil,
+                                   memoryTargetGB: Double? = nil) -> [String: Any] {
+        [
+            "server": "slotstream",
+            "version": version,
+            "pid": Int(pid),
+            "port": port,
+            "model": model,
+            "context_window": contextWindow,
+            "started_at": startedAt,
+            "active_requests": activity.activeRequests,
+            "clients": activity.clients,
+            "idle_seconds": (activity.idleSeconds * 10).rounded() / 10,
+            "idle_exit_minutes": idleExitSeconds.map { $0 / 60 } ?? NSNull(),
+            "memory_source": memorySource ?? NSNull(),
+            "memory_target_gb": memoryTargetGB ?? NSNull(),
+        ]
+    }
+
     private func send(_ fd: Int32, _ data: Data) -> Bool {
         var sent = 0
         return data.withUnsafeBytes { raw -> Bool in
@@ -348,10 +453,23 @@ public final class Server {
         switch readRequest(fd) {
         case .ok(let r): req = r
         case .closed: return
-        case .fail(let status, let message):
-            respondJSON(fd, ["error": message], status: status)
+        case .fail(let status, let message, let target):
+            // Claude Code reads the error type of a refused Messages request
+            // to recover from it, so these answer in Anthropic's shape.
+            if let target, Self.routePath(target).hasPrefix("/v1/messages") {
+                respondJSON(fd, AnthropicDialect.errorBody(type: AnthropicDialect.errorType(httpStatus: status),
+                                                           message: message), status: status)
+            } else {
+                respondJSON(fd, ["error": message], status: status)
+            }
             return
         }
+        let tracked = Self.countsAsActivity(req.path)
+        if tracked, !activity.begin() {
+            respondJSON(fd, ["error": Self.stoppingMessage], status: "503 Service Unavailable")
+            return
+        }
+        defer { if tracked { activity.end() } }
         let origin = req.headers["origin"]
         guard let cors = Self.corsHeaders(origin: origin) else {
             respondJSON(
@@ -370,10 +488,11 @@ public final class Server {
         }
         let path = Self.routePath(req.path)
         let inferencePaths = ["/api/chat", "/api/generate", "/v1/chat/completions", "/v1/responses",
-                              "/v3/ai/language-model", "/v1/ai/language-model"]
+                              "/v1/messages", "/v3/ai/language-model", "/v1/ai/language-model"]
         let control: RequestController?
         if req.method == "POST", inferencePaths.contains(path) {
             let dialect = path == "/v1/chat/completions" || path == "/v1/responses" ? "openai"
+                : path == "/v1/messages" ? "anthropic"
                 : path.hasSuffix("/language-model") ? "gateway" : "ollama"
             do {
                 let accepted = try engine.beginRequest(connected: { self.peerAlive(fd) })
@@ -385,8 +504,11 @@ public final class Server {
         } else { control = nil }
         let parsed = (try? JSONSerialization.jsonObject(with: req.body)) as? [String: Any]
         if req.method == "POST", !req.body.isEmpty, parsed == nil {
-            respondJSON(
-                fd, ["error": "invalid JSON body"], status: "400 Bad Request", cors: cors)
+            let anthropic = path == "/v1/messages" || path == "/v1/messages/count_tokens"
+            let body: [String: Any] = anthropic
+                ? AnthropicDialect.errorBody(type: "invalid_request_error", message: "invalid JSON body")
+                : ["error": "invalid JSON body"]
+            respondJSON(fd, body, status: "400 Bad Request", cors: cors)
             return
         }
         let json = parsed ?? [:]
@@ -396,6 +518,7 @@ public final class Server {
             case "/api/generate": apiGenerate(fd, json, cors: cors, control: control)
             case "/v1/chat/completions": v1Chat(fd, json, cors: cors, control: control)
             case "/v1/responses": v1Responses(fd, json, cors: cors, control: control)
+            case "/v1/messages": v1Messages(fd, json, cors: cors, control: control)
             default: gatewayChat(fd, json, headers: req.headers, cors: cors, control: control)
             }
             return
@@ -489,6 +612,18 @@ public final class Server {
                         "max_output_tokens": GatewayDialect.outputBudget(contextCap: engine.maxContextTokens),
                     ]],
                 ], cors: cors)
+        case ("POST", "/v1/messages/count_tokens"):
+            v1CountTokens(fd, json, cors: cors)
+        case ("GET", "/slotstream/status"):
+            let now = activity.snapshot(), plan = engine.currentPlan
+            respondJSON(fd, Self.statusBody(
+                pid: getpid(), port: Int(port), version: SlotstreamBuild.version, model: engine.modelName,
+                contextWindow: engine.maxContextTokens, startedAt: startedAt, activity: now,
+                idleExitSeconds: idleExit?.seconds, memorySource: plan?.source.rawValue,
+                memoryTargetGB: plan?.targetGB), cors: cors)
+        case ("POST", "/slotstream/clients"):
+            let answer = Self.registerClient(json, activity: activity)
+            respondJSON(fd, answer.body, status: answer.status, cors: cors)
         case ("POST", "/api/embed"), ("POST", "/api/embeddings"):
             respondJSON(
                 fd, ["error": "model does not support embeddings"],
@@ -503,7 +638,7 @@ public final class Server {
             // for — a blanket 200 told every client that every path existed.
             let known: Set<String> = [
                 "/", "/api/version", "/api/tags", "/api/ps", "/v1/models",
-                "/coding-agent/v1/models", "/coding-agent/v1/credits",
+                "/coding-agent/v1/models", "/coding-agent/v1/credits", "/slotstream/status",
             ]
             let status = known.contains(path) ? "200 OK" : "404 Not Found"
             let head = "HTTP/1.1 \(status)\r\nContent-Type: application/json\r\n" + cors
@@ -842,22 +977,46 @@ public final class Server {
         if json["user"] != nil, json["user"] as? String == nil {
             return "user must be text"
         }
+        // `store: false` is what Pi and the OpenAI SDKs send by default
+        // (issue #19), so refusing it refused those clients outright. `true`
+        // asks for a stored completion to fetch later, which this server
+        // cannot give.
+        if json["store"] != nil, let store = bool(json["store"]) {
+            if store { return "store: true is not supported; this server keeps no completions" }
+        } else if json["store"] != nil {
+            return "store must be true or false"
+        }
+        if let v = json["metadata"] {
+            guard let map = v as? [String: Any], map.values.allSatisfy({ $0 is String }) else {
+                return "metadata must be an object of text values"
+            }
+        }
+        for key in ["prompt_cache_key", "prompt_cache_retention", "safety_identifier", "service_tier"]
+        where json[key] != nil && json[key] as? String == nil {
+            return "\(key) must be text"
+        }
         return nil
     }
 
+    /// The top-level fields `/v1/chat/completions` reads; anything else is
+    /// refused by name.
+    package static let openAIChatFields: Set<String> = [
+        "model", "messages", "stream", "temperature", "top_p", "top_k",
+        "presence_penalty", "max_tokens", "max_completion_tokens", "seed",
+        "stop", "stream_options", "min_p",
+        // Accepted only at the value this server already implements; see
+        // openAINoOpError. Stock SDKs send these on every call.
+        "n", "frequency_penalty", "logprobs", "top_logprobs", "logit_bias",
+        "response_format", "tools", "tool_choice", "parallel_tool_calls", "user",
+        "reasoning_effort", "think", "options",
+        // Accepted without effect; see openAINoOpError. Pi sends
+        // `prompt_cache_retention` when told to keep its cache longer.
+        "store", "metadata", "prompt_cache_key", "prompt_cache_retention", "safety_identifier", "service_tier",
+    ]
+
     private func openAIValidationError(_ json: [String: Any]) -> String? {
         if let e = modelError(json) { return e }
-        let allowed: Set<String> = [
-            "model", "messages", "stream", "temperature", "top_p", "top_k",
-            "presence_penalty", "max_tokens", "max_completion_tokens", "seed",
-            "stop", "stream_options",
-            // Accepted only at the value this server already implements; see
-            // openAINoOpError. Stock SDKs send these on every call.
-            "n", "frequency_penalty", "logprobs", "top_logprobs", "logit_bias",
-            "response_format", "tools", "tool_choice", "parallel_tool_calls", "user",
-            "reasoning_effort", "think", "options",
-        ]
-        if let e = Self.unsupportedKey(json, allowed: allowed) { return e }
+        if let e = Self.unsupportedKey(json, allowed: Self.openAIChatFields) { return e }
         if let e = Self.openAINoOpError(json) { return e }
         do { _ = try OpenAIDialect.conversation(json, contextLimit: engine.maxContextTokens) }
         catch { return "\(error)" }
@@ -1325,6 +1484,7 @@ public final class Server {
         // context — never the 512-token Ollama default, which truncates every
         // real edit.
         var params = SampleParams.agent
+        if !renderTools.isEmpty { control.sharedPrefixRetention = .conversation }
         let room = max(1, engine.maxContextTokens - ids.count)
         params.maxTokens = min(
             request.maxOutputTokens ?? GatewayDialect.outputBudget(
@@ -1570,10 +1730,16 @@ public final class Server {
             return fail("prompt is \(ids.count) tokens, leaving no reply room in the requested context limit \(request.contextLimit)", code: "context_length_exceeded")
         }
         var params = renderTools.isEmpty ? (request.thinking ? SampleParams.thinking : .instruct) : .agent
+        if !renderTools.isEmpty { control.sharedPrefixRetention = .conversation }
         if let v = Self.num(json["temperature"]) { params.temperature = Float(v) }
         if let v = Self.num(json["top_p"]) { params.topP = Float(v) }
         if let v = Self.int(json["top_k"]) { params.topK = v }
         if let v = Self.num(json["presence_penalty"]) { params.presencePenalty = Float(v) }
+        if let v = Self.num(json["min_p"]) { params.minP = Float(v) }
+        // Without a limit the reply gets the budget `/v1/models` advertises,
+        // as on /v1/responses: agents' summary requests often send none, and
+        // the 512-token chat default cut them off.
+        params.maxTokens = GatewayDialect.outputBudget(contextCap: engine.maxContextTokens)
         if let v = Self.int(json["max_tokens"]) { params.maxTokens = v }
         if let v = Self.int(json["max_completion_tokens"]) { params.maxTokens = v }
         if let v = Self.int(json["seed"]) { params.seed = UInt64(bitPattern: Int64(v)) }
@@ -1741,6 +1907,7 @@ public final class Server {
         // gateway's advertised budget bounded by the room left in the window,
         // never the 512-token chat default, which truncates every real edit.
         var params = renderTools.isEmpty ? (request.thinking ? SampleParams.thinking : .instruct) : .agent
+        if !renderTools.isEmpty { control.sharedPrefixRetention = .conversation }
         let room = max(1, engine.maxContextTokens - ids.count)
         params.maxTokens = min(
             request.maxOutputTokens ?? GatewayDialect.outputBudget(contextCap: engine.maxContextTokens), room)
@@ -1863,30 +2030,284 @@ public final class Server {
             respondJSON(fd, response.finished(engineReason: stats.finishReason, usage: usage), cors: cors)
         }
     }
+
+    // MARK: /v1/messages
+
+    /// Field names unknown to the Anthropic dialect that were already logged,
+    /// so a client that sends one on every request logs it once.
+    private static var loggedIgnoredFields = Set<String>()
+    private static let ignoredFieldsLock = NSLock()
+
+    /// Names safe to repeat in a header and a log line. They come from the
+    /// client's JSON, so anything but a plain identifier is left out.
+    package static func headerSafeFieldNames(_ names: [String]) -> [String] {
+        Array(names.filter { name in
+            !name.isEmpty && name.count <= 64
+                && name.unicodeScalars.allSatisfy { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || "_-.".unicodeScalars.contains($0)) }
+        }.prefix(16))
+    }
+
+    /// The conversation and tools a Messages request renders, with the tool
+    /// choice written into the system prompt as the other dialects do.
+    private func anthropicPrompt(_ request: AnthropicDialect.Request) -> ([ChatMessage], [ToolDefinition]) {
+        let renderTools = request.choice == .disabled ? [] : request.tools
+        var messages = request.messages
+        if case .tool(let name) = request.choice {
+            messages = Self.instructing(messages, "You must call the \(name) tool now.")
+        } else if request.choice == .required {
+            messages = Self.instructing(messages, "You must call one of the available tools now.")
+        }
+        if !request.parallel && !renderTools.isEmpty {
+            messages = Self.instructing(messages, "Call at most one tool in this response.")
+        }
+        return (messages, renderTools)
+    }
+
+    private func v1Messages(_ fd: Int32, _ rawJSON: [String: Any], cors baseCors: String, control: RequestController) {
+        var cors = baseCors
+        func fail(_ failure: AnthropicDialect.Failure) {
+            respondJSON(fd, failure.body, status: failure.status, cors: cors)
+        }
+        if let e = modelError(rawJSON) {
+            return fail(AnthropicDialect.Failure("model: \(e)", type: "not_found_error", status: "404 Not Found"))
+        }
+        let request: AnthropicDialect.Request
+        do { request = try AnthropicDialect.parse(rawJSON) }
+        catch let failure as AnthropicDialect.Failure { return fail(failure) }
+        catch { return fail(AnthropicDialect.Failure("\(error)")) }
+        let ignored = Self.headerSafeFieldNames(request.ignored)
+        if !ignored.isEmpty {
+            cors += "X-Slotstream-Ignored-Fields: \(ignored.joined(separator: ", "))\r\n"
+            let fresh = Self.ignoredFieldsLock.withLock { () -> [String] in
+                // Bounded: a client inventing names cannot grow it forever.
+                guard Self.loggedIgnoredFields.count < 256 else { return [] }
+                let new = ignored.filter { !Self.loggedIgnoredFields.contains($0) }
+                Self.loggedIgnoredFields.formUnion(new)
+                return new
+            }
+            if !fresh.isEmpty {
+                print("/v1/messages: ignoring request field(s) this server does not know: \(fresh.joined(separator: ", "))")
+                fflush(stdout)
+            }
+        }
+        let (messages, renderTools) = anthropicPrompt(request)
+
+        let ids: [Int]
+        var vision: VisionPrompt?
+        do {
+            if request.hasImages {
+                (ids, vision) = try engine.encodeChatWithVision(
+                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort, request: control)
+            } else {
+                try control.checkInputBytes(ContextInputMemory.bytes(messages: messages, tools: renderTools))
+                ids = try engine.encodeChatSpliced(
+                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort)
+            }
+        } catch let failure as RequestFailure {
+            requestRefusal(fd, failure, dialect: "anthropic", cors: cors)
+            return
+        } catch let e as SlotstreamError {
+            // Claude Code removes the pictures and retries on these words;
+            // any other wording repeats the failure on every later turn.
+            return fail(AnthropicDialect.Failure("Could not process image: \(e)"))
+        } catch {
+            return fail(AnthropicDialect.Failure("the conversation could not be rendered: \(error)"))
+        }
+        guard !ids.isEmpty else { return fail(AnthropicDialect.Failure("messages: the prompt is empty")) }
+        let window = engine.maxContextTokens
+        if ids.count >= window {
+            return fail(AnthropicDialect.Failure(AnthropicDialect.promptTooLong(tokens: ids.count, maximum: window - 1)))
+        }
+        if let e = engine.contextError(promptTokens: ids.count) {
+            return fail(AnthropicDialect.Failure(e))
+        }
+
+        // `max_tokens` is a ceiling, and Claude Code asks for 32,000 whatever
+        // the window; the reply gets what the window has left, and a reply
+        // that reaches that point ends with `max_tokens`.
+        var params = renderTools.isEmpty ? (request.thinking ? SampleParams.thinking : .instruct) : .agent
+        if !renderTools.isEmpty { control.sharedPrefixRetention = .conversation }
+        let room = max(1, window - ids.count)
+        params.maxTokens = request.maxTokens
+        if let v = request.temperature { params.temperature = v }
+        if let v = request.topP { params.topP = v }
+        if let v = request.topK { params.topK = v }
+        params.stop = request.stopSequences
+        params.seed = Self.randomSeed()
+        params = params.sanitized()
+        // A reply the window cuts short ends with
+        // `model_context_window_exceeded`, not `max_tokens`.
+        let windowLimited = params.maxTokens > room
+        params.maxTokens = min(params.maxTokens, room)
+
+        let stream = request.stream
+        let message = AnthropicDialect.MessageStream(model: engine.modelName, showThinking: request.showThinking)
+        var headersStarted = false
+        let output = makeOutput(fd, streaming: stream)
+        defer { output?.finish() }
+        @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
+        func endOutput() { self.endChunked(fd, writer: output) }
+        var alive = true
+        // The frames are built whether or not they are written: the
+        // non-streaming reply is the message the stream would have described.
+        func emit(_ frames: [String]) {
+            guard stream, alive else { return }
+            for f in frames {
+                alive = writeChunk(Data(f.utf8))
+                if !alive { break }
+            }
+        }
+        let accumulated = OpenAIOutput(tools: renderTools, choice: request.choice, parallel: request.parallel)
+        let thinker = request.thinking ? ThinkSplitter() : nil
+        let parser = renderTools.isEmpty ? nil : ToolCallSplitter(tools: renderTools.map { $0.schema },
+            idFactory: { AnthropicDialect.toolUseID() })
+        var publishedCalls = 0
+        func publish(_ deltas: [[String: Any]]) {
+            for delta in deltas {
+                if let t = delta["content"] as? String { emit(message.text(t)) }
+                if delta["tool_calls"] != nil, publishedCalls < accumulated.calls.count {
+                    emit(message.toolUse(accumulated.calls[publishedCalls]))
+                    publishedCalls += 1
+                }
+            }
+        }
+        func think(_ thought: String) {
+            guard !thought.isEmpty else { return }
+            _ = accumulated.reasoningDelta(thought)
+            emit(message.thinking(thought))
+        }
+        func consume(_ delta: String) {
+            var body = delta
+            if let thinker {
+                let (thought, content) = thinker.push(delta)
+                think(thought)
+                body = content
+            }
+            if !body.isEmpty { publish(accumulated.consume(parser?.push(body) ?? [.text(body)])) }
+        }
+        let incremental = stream || (!request.parallel && !renderTools.isEmpty)
+        let callback: ((Int, String) -> Bool)? = incremental ? { _, delta in
+            if output?.alive == false { alive = false }
+            guard alive else { return false }
+            consume(delta)
+            return accumulated.error == nil && !accumulated.finishedSingleCall && alive
+        } : nil
+        var lastKeepalive = RuntimeClock.now()
+        let (text, _, stats) = engine.generate(promptIds: ids, params: params, vision: vision,
+            shouldContinue: {
+                // The hook that runs during prefill. A cold prompt is read for
+                // minutes; a ping every ten seconds keeps the stream visibly
+                // alive for Claude Code's idle abort and for any proxy.
+                if headersStarted && RuntimeClock.seconds(since: lastKeepalive) >= 10 {
+                    lastKeepalive = RuntimeClock.now()
+                    emit([message.keepalive()])
+                }
+                return alive && (output?.alive ?? true) && self.peerAlive(fd)
+                    && accumulated.error == nil && !accumulated.finishedSingleCall
+            }, onToken: callback, request: control, onAdmitted: {
+                guard stream else { return true }
+                headersStarted = self.startChunked(fd, contentType: "text/event-stream", cors: cors)
+                guard headersStarted else { return false }
+                emit(message.start(promptTokens: ids.count, reused: control.admittedReusedTokens ?? 0))
+                return alive
+            })
+        if let error = stats.runtimeError {
+            let failure = stats.requestFailure ?? RequestFailure(.inferenceError, error)
+            if headersStarted {
+                emit(message.fail(type: AnthropicDialect.errorType(httpStatus: failure.httpStatus), message: failure.message))
+                endOutput()
+            } else { requestRefusal(fd, failure, dialect: "anthropic", cors: cors) }
+            return
+        }
+        if !incremental { consume(text) }
+        if let thinker {
+            let (thought, body) = thinker.flush()
+            think(thought)
+            if !body.isEmpty { publish(accumulated.consume(parser?.push(body) ?? [.text(body)])) }
+        }
+        if let parser { publish(accumulated.consume(parser.flush())) }
+        _ = accumulated.finishReason(stats.finishReason)
+        if let error = accumulated.error {
+            // A reply that ran out of room inside a call, or before the call
+            // a tool choice demanded, stopped for length: the partial call is
+            // withheld and the client sees `max_tokens`, which Claude Code
+            // knows how to continue from. Anything else is a failure.
+            let truncated = stats.finishReason == "length"
+                && (error.hasPrefix("model produced an incomplete") || error.hasPrefix("model did not satisfy tool_choice"))
+            if !truncated {
+                if stream {
+                    emit(message.fail(type: "api_error", message: error))
+                    endOutput()
+                } else if alive {
+                    fail(AnthropicDialect.Failure(error, type: "api_error", status: "500 Internal Server Error"))
+                }
+                return
+            }
+        }
+        let usage = AnthropicDialect.Usage(prompt: stats.promptTokens, cached: stats.reusedPrefixTokens,
+                                           output: stats.decodeTokens)
+        if stream {
+            if alive {
+                emit(message.finish(engineReason: stats.finishReason, stopSequence: stats.stopSequence, usage: usage,
+                                    windowLimited: windowLimited))
+                endOutput()
+            }
+        } else if alive {
+            respondJSON(fd, message.message(engineReason: stats.finishReason, stopSequence: stats.stopSequence,
+                                            usage: usage, windowLimited: windowLimited), cors: cors)
+        }
+    }
+
+    /// `POST /v1/messages/count_tokens`: the prompt length a Messages request
+    /// renders to, with no request admitted and nothing generated.
+    private func v1CountTokens(_ fd: Int32, _ rawJSON: [String: Any], cors: String) {
+        func fail(_ failure: AnthropicDialect.Failure) {
+            respondJSON(fd, failure.body, status: failure.status, cors: cors)
+        }
+        if let e = modelError(rawJSON) {
+            return fail(AnthropicDialect.Failure("model: \(e)", type: "not_found_error", status: "404 Not Found"))
+        }
+        let request: AnthropicDialect.Request
+        do { request = try AnthropicDialect.parse(rawJSON, counting: true) }
+        catch let failure as AnthropicDialect.Failure { return fail(failure) }
+        catch { return fail(AnthropicDialect.Failure("\(error)")) }
+        let (messages, renderTools) = anthropicPrompt(request)
+        do {
+            let count = try engine.countChatTokens(messages, tools: renderTools, thinking: request.thinking,
+                                                   effort: request.effort)
+            respondJSON(fd, ["input_tokens": count], cors: cors)
+        } catch let e as SlotstreamError {
+            fail(AnthropicDialect.Failure("Could not process image: \(e)"))
+        } catch {
+            fail(AnthropicDialect.Failure("the conversation could not be rendered: \(error)"))
+        }
+    }
 }
 
 
 /// Qwen emits its reasoning first and closes it with `</think>`. Ollama's
 /// protocol carries that in `message.thinking` (`thinking` on /api/generate),
 /// never in the answer. One instance follows one response.
-final class ThinkSplitter {
+package final class ThinkSplitter {
     private static let tag = "</think>"
     private var buf = ""
     private var closed = false
+    private var answered = false
+
+    package init() {}
 
     /// Splits one delta into (thinking, content). Until the tag arrives the
     /// last few characters are withheld, so a tag straddling two deltas is
     /// never emitted as reasoning text.
-    func push(_ s: String) -> (String, String) {
-        if closed { return ("", s) }
+    package func push(_ s: String) -> (String, String) {
+        if closed { return ("", answer(s)) }
         buf += s
         if let r = buf.range(of: Self.tag) {
             let think = String(buf[..<r.lowerBound])
-            var rest = String(buf[r.upperBound...])
-            while rest.hasPrefix("\n") { rest.removeFirst() }
+            let rest = String(buf[r.upperBound...])
             buf = ""
             closed = true
-            return (think, rest)
+            return (think, answer(rest))
         }
         let keep = min(buf.count, Self.tag.count - 1)
         let emit = String(buf.dropLast(keep))
@@ -1894,16 +2315,25 @@ final class ThinkSplitter {
         return (emit, "")
     }
 
+    /// The answer without the newlines the model puts after `</think>`,
+    /// which can arrive in the deltas after the tag; `split` drops them too.
+    private func answer(_ s: String) -> String {
+        if answered { return s }
+        let rest = s.drop { $0 == "\n" }
+        if !rest.isEmpty { answered = true }
+        return String(rest)
+    }
+
     /// Whatever is still withheld when generation ends. A response that never
     /// closed its reasoning is all thinking and no answer, and says so.
-    func flush() -> (String, String) {
+    package func flush() -> (String, String) {
         let rest = buf
         buf = ""
-        return closed ? ("", rest) : (rest, "")
+        return closed ? ("", answer(rest)) : (rest, "")
     }
 
     /// The same split over a whole non-streamed response.
-    static func split(_ text: String) -> (String, String) {
+    package static func split(_ text: String) -> (String, String) {
         guard let r = text.range(of: tag) else { return (text, "") }
         var content = String(text[r.upperBound...])
         while content.hasPrefix("\n") { content.removeFirst() }

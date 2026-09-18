@@ -246,6 +246,23 @@ extension Diagnostics {
             c.equal("its save writes every row", tier.save(state: fixture, tokens: base).reusedBytes, 0)
         }
 
+        // A prefix other conversations start with is saved as shared, and a
+        // new prompt finds the longest start it has in common with a state.
+        let sharedDirectory = root.appendingPathComponent("shared")
+        do {
+            let tier = try PersistentPrefixCache(configuration: configuration(sharedDirectory), identity: identity)
+            c.equal("an empty directory shares no prefix", tier.longestCommonPrefix(with: base), 0)
+            let prefix = Array(base.prefix(1200))
+            let saved = tier.save(state: Qwen4ExpModel.State.persistenceFixture(tokens: prefix.count),
+                tokens: prefix, shared: true)
+            c.equal("a shared prefix is saved", saved.outcome, .saved)
+            c.equal("it counts as a shared state", tier.storedSharedStates, 1)
+            c.equal("a conversation that starts with it shares all of it", tier.longestCommonPrefix(with: base), prefix.count)
+            c.equal("a prompt that diverges inside it shares up to the divergence",
+                tier.longestCommonPrefix(with: Array(prefix.prefix(700)) + [7]), 700)
+            c.equal("an unrelated prompt shares nothing", tier.longestCommonPrefix(with: ids(1500, seed: 8)), 0)
+        }
+
         // A state unused past the maximum age is removed on open.
         let expiryDirectory = root.appendingPathComponent("expiry")
         do {

@@ -99,7 +99,9 @@ public enum OpenAIDialect {
             guard let role = m["role"] as? String, ["system", "developer", "user", "assistant", "tool"].contains(role) else {
                 throw Failure("messages[\(i)].role must be system, developer, user, assistant, or tool")
             }
-            var allowed: Set<String> = ["role", "content", "images"]
+            // Hermes's iteration-limit summary leaves three of its own
+            // bookkeeping fields on messages; they carry nothing for the model.
+            var allowed: Set<String> = ["role", "content", "images", "effect_disposition", "display_kind", "display_metadata"]
             if role == "assistant" { allowed.formUnion(["tool_calls", "reasoning_content", "reasoning"]) }
             if role == "tool" { allowed.formUnion(["tool_call_id", "name"]) }
             let extra = Set(m.keys).subtracting(allowed)

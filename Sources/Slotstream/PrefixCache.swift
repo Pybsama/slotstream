@@ -110,6 +110,19 @@ public struct ImageSegment: Hashable, Sendable {
 /// identical prompt cannot reuse that longer state. An optional shorter input
 /// checkpoint can be forked at its exact committed boundary; its remaining
 /// prompt is still evaluated before any new output is sampled.
+/// How the memory tier holds a shared-prefix checkpoint.
+/// db/records/design/measured-operating-policies.md
+public enum SharedPrefixRetention: Sendable, Equatable {
+    /// A speculative snapshot: kept only in room no conversation needs, and
+    /// the first state given up when room is needed. Right for chat, where
+    /// the conversations themselves are what clients come back to.
+    case optional
+    /// Kept and evicted like a conversation, least recently used first. Right
+    /// for an agent's instructions and tools, which every later session,
+    /// subagent and compaction request starts with.
+    case conversation
+}
+
 public final class PrefixCache {
     /// Main-model KV + raw indexer bytes per logical token. Retention is
     /// charged in these units using actual allocated sequence capacity, so
@@ -308,6 +321,7 @@ public final class PrefixCache {
             clock += 1
             entries[i].used = clock
             entries[i].wasUsedOrReturned = true
+            keepPrefixesCurrent(of: promptIds, images: images)
             // Charge a complete future active branch in addition to retained
             // checkpoints. If it cannot remain, transfer the original entry
             // after eviction; do not create a fifth state or an unbudgeted fork.
@@ -330,6 +344,8 @@ public final class PrefixCache {
             return (selected.state, selected.tokens.count, logits)
         }
         let e = entries.remove(at: i)
+        clock += 1
+        keepPrefixesCurrent(of: promptIds, images: images)
         // A reused state grows too. Reserve its complete incoming prompt and
         // permitted reply before handing it out, just as on a miss.
         reserveActiveTokens(max(promptIds.count, reserveTokens ?? promptIds.count, Self.tokenUnits(reserveSequenceBytes ?? 0), Self.charge(e)))
@@ -360,6 +376,21 @@ public final class PrefixCache {
             guard _enabled, let i = bestEntry(matching: promptIds, images: images,
                 completePromptKey: completePromptKey, modelIdentity: modelIdentity) else { return 0 }
             return entries[i].tokens.count
+        }
+    }
+
+    /// How many leading tokens of a text prompt some held text state shares:
+    /// the boundary a shared-prefix checkpoint of this prompt would use. A
+    /// state that the prompt extends outright shares all of its tokens, which
+    /// the caller already reuses; the value matters when it exceeds that.
+    package func longestCommonPrefix(with promptIds: [Int]) -> Int {
+        lock.withLock {
+            guard _enabled else { return 0 }
+            var best = 0
+            for entry in entries where entry.images.isEmpty {
+                best = max(best, PersistentPrefixPolicy.commonPrefixLength(entry.tokens, promptIds))
+            }
+            return best
         }
     }
 
@@ -459,6 +490,7 @@ public final class PrefixCache {
         } else {
             entries.append(Entry(state: s, tokens: t, images: images, used: clock))
         }
+        keepPrefixesCurrent(of: t, images: images)
         while entries.count > Self.maxEntries
             || entries.reduce(0, { $0 + Self.charge($1) }) > _maxTokens
         {
@@ -476,10 +508,10 @@ public final class PrefixCache {
     @discardableResult
     public func storeReusableCheckpoint(
         state s: Qwen4ExpModel.State, tokens t: [Int], images: [ImageSegment] = [],
-        reserveTokens: Int, reserveSequenceBytes: Int
+        reserveTokens: Int, reserveSequenceBytes: Int, retention: SharedPrefixRetention = .optional
     ) throws -> Bool {
         try storeCheckpoint(state: s, tokens: t, images: images, reserveTokens: reserveTokens,
-            reserveSequenceBytes: reserveSequenceBytes, logits: nil, promptKey: nil)
+            reserveSequenceBytes: reserveSequenceBytes, logits: nil, promptKey: nil, retention: retention)
     }
 
     @discardableResult
@@ -501,7 +533,8 @@ public final class PrefixCache {
 
     private func storeCheckpoint(
         state s: Qwen4ExpModel.State, tokens t: [Int], images: [ImageSegment],
-        reserveTokens: Int, reserveSequenceBytes: Int, logits: MLXArray?, promptKey: PromptCheckpointKey?
+        reserveTokens: Int, reserveSequenceBytes: Int, logits: MLXArray?, promptKey: PromptCheckpointKey?,
+        retention: SharedPrefixRetention = .optional
     ) throws -> Bool {
         guard !t.isEmpty, s.tokenCount == t.count else {
             throw ModelError("a reusable checkpoint needs its exact committed token count")
@@ -531,13 +564,16 @@ public final class PrefixCache {
                 && $0.state.modelIdentity == s.modelIdentity && $0.reusable && $0.promptKey == promptKey }) {
             let retained = entries[existing].state
             clock += 1; entries[existing].used = clock
+            if retention == .conversation { entries[existing].wasUsedOrReturned = true }
             reserveActiveTokens(active)
             if entries.contains(where: { $0.state === retained && $0.reusable && $0.promptKey == promptKey }) { return true }
         }
         // Plan room before changing anything. Creating an unused checkpoint
         // may replace its own exact duplicate or other unused checkpoints, but
         // cannot evict unrelated conversations or checkpoints with actual hits.
-        // The active producer outside the cache still occupies the fourth slot.
+        // One kept like a conversation may then also replace the least
+        // recently used of those, as storing a conversation does. The active
+        // producer outside the cache still occupies the fourth slot.
         var victims = Set<Int>()
         var inheritedConversationValue = false
         if let duplicate = entries.firstIndex(where: { $0.tokens == t && $0.images == committedImages
@@ -547,8 +583,15 @@ public final class PrefixCache {
         }
         var remainingCount = entries.count - victims.count
         var remainingCharge = entries.enumerated().reduce(0) { $0 + (victims.contains($1.offset) ? 0 : Self.charge($1.element)) }
-        for candidate in entries.enumerated().filter({ $0.element.reusable && !$0.element.wasUsedOrReturned
-                && !victims.contains($0.offset) }).sorted(by: { $0.element.used < $1.element.used }) {
+        let optional = entries.enumerated().filter { $0.element.reusable && !$0.element.wasUsedOrReturned }
+        var candidates = optional.filter { !victims.contains($0.offset) }.sorted { $0.element.used < $1.element.used }
+        if retention == .conversation {
+            let optionalIndices = Set(optional.map(\.offset))
+            candidates += entries.enumerated()
+                .filter { !optionalIndices.contains($0.offset) && !victims.contains($0.offset) }
+                .sorted { $0.element.used < $1.element.used }
+        }
+        for candidate in candidates {
             if remainingCount < Self.maxEntries - 1 && remainingCharge <= allowance - charge { break }
             victims.insert(candidate.offset); remainingCount -= 1
             remainingCharge -= Self.charge(candidate.element)
@@ -560,10 +603,22 @@ public final class PrefixCache {
         if let frozenLogits { eval(frozenLogits) }
         clock += 1
         entries.append(Entry(state: frozen, tokens: t, images: committedImages, used: clock, reusable: true,
-            wasUsedOrReturned: inheritedConversationValue,
+            wasUsedOrReturned: inheritedConversationValue || retention == .conversation,
             lastLogits: frozenLogits, promptKey: promptKey))
         _checkpointStores += 1
         return true
+    }
+
+    /// A checkpoint that a live conversation starts with stays as recent as
+    /// that conversation, so an older, unrelated state goes before the start
+    /// its next sibling (a new session, a subagent, a compaction request) will
+    /// want. Called with the lock held, after `clock` has moved.
+    private func keepPrefixesCurrent(of tokens: [Int], images: [ImageSegment]) {
+        for i in entries.indices where entries[i].reusable && entries[i].tokens.count < tokens.count
+            && tokens.starts(with: entries[i].tokens)
+            && Self.imagesAgree(entry: entries[i].images, prompt: images, upTo: entries[i].tokens.count) {
+            entries[i].used = max(entries[i].used, clock)
+        }
     }
 
     private func evictLRU() {

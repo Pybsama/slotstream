@@ -33,6 +33,137 @@ determines which version the installer downloads.
   kernels. `mtp-bench --arms` compares plain, shipped, split and exact decode
   on one warm engine; `mtp-passcost` gains `--prompt-file`, `--max-context`
   and `--attention-modes` (stock, split, exact).
+- Start a coding agent already connected to Slotstream with
+  `slotstream launch claude`, `codex`, `pi`, `opencode` or `hermes`, or
+  `slotstream launch` to pick from the agents installed. When no server is
+  running, the command starts one in the background first and shows its start
+  until the model answers: with the automatic window, or the one the agent
+  needs when that is larger, shared prompts kept on disk in
+  `~/.slotstream/prefix-cache`, and its log in
+  `~/.slotstream/logs/serve.log`. The server keeps running while any agent
+  the command opened runs, and stops 30 minutes after the last one exits
+  (`--idle-exit`); Control-C while it starts stops it. The agent's settings
+  are checked before the server starts, the model is never downloaded without
+  asking, a server you started yourself is used as it is, and a server the
+  command started is restarted only when its window is too small and no agent
+  uses it. Two launches at the same time start one server between them.
+  `--memory-gb` sets the new server's memory target, `--no-start` uses a
+  running server only, and `--port` names the server's port, whose log is
+  `serve-<port>.log`. Thinking starts off, and the agents get timeouts long
+  enough for a first prompt: Claude Code runs with `MAX_THINKING_TOKENS=0`,
+  30-minute request and stream timeouts and its nonessential network traffic
+  off.
+  The command reads the served model, window and reply limit, connects the
+  agent for that run without changing its own configuration (Pi's models file gains
+  a `slotstream` provider; Hermes gets its own `~/.hermes-slotstream`
+  folder), and replaces itself with the agent. Codex gets a model catalog
+  with its own version's base instructions, downloaded once; Claude Code gets
+  its connection through `--settings`, so its settings files cannot redirect
+  it. No prompt leaves the Mac by a side route: Claude Code's cloud provider
+  switches are turned off and its API key and key helper cleared, the hosted
+  WebSearch tool is denied, opencode enables only the `slotstream` provider
+  through `OPENCODE_CONFIG_CONTENT` (an exported one is merged, not replaced)
+  and points its build and plan agents at the model, Hermes pins every side
+  task (including the command-approval check) to the model, and `codex
+  cloud` is refused. Pi's models file keeps every other entry as written,
+  down to key order and number formatting, and a symlinked file stays a
+  symlink. `--dry-run` prints the plan with keys hidden and downloads
+  nothing.
+  New guides: [Claude Code](docs/CLAUDE-CODE.md) and
+  [coding agents](docs/CODING-AGENTS.md) for Pi and opencode; the Codex and
+  Hermes guides start with the command.
+- `slotstream stop` stops the Slotstream server on a port (`--port`), whoever
+  started it, including one `slotstream launch` is still starting, and says
+  so when nothing runs there. The refusal when another model process holds
+  the lock names it too.
+- `slotstream serve --idle-exit <minutes>` stops the server after that long
+  with no request and no registered process still running. Once it decides,
+  new requests get a 503 instead of starting. `GET /slotstream/status`
+  reports the server's process, window, requests and idle time, and
+  `POST /slotstream/clients` registers a process to wait for; see
+  [server status](docs/API.md#server-status), including what sized its
+  memory plan. The server logs a line when `SIGTERM` stops it, also while the
+  model loads, and a port already in use names `slotstream stop`.
+- `slotstream prefix-cache` lists `~/.slotstream/prefix-cache` when no
+  `--dir` is given, the directory servers started by `slotstream launch` use.
+- Serve the Anthropic Messages API at `POST /v1/messages` and
+  `POST /v1/messages/count_tokens`, the protocol Claude Code and the Anthropic
+  SDKs use. Streaming follows Anthropic's event order with a `ping` every 10
+  seconds during a long prompt read; tools, `tool_choice`, images, plain-text
+  documents, thinking with replayable signatures, stop sequences and usage
+  with the reused prompt as `cache_read_input_tokens` are supported. Unknown
+  top-level fields are ignored and named in `X-Slotstream-Ignored-Fields`,
+  Claude Code's per-conversation attribution line is dropped, and an
+  oversized prompt fails with the `prompt is too long` message Claude Code
+  compacts on. Anthropic's hosted server tools (`web_search_*`, `web_fetch_*`,
+  `code_execution_*`, `tool_search_tool_*`, `mcp_toolset`, `advisor_*`) run on
+  Anthropic's servers, so they are dropped from a request rather than
+  answered, and naming one in `tool_choice` is an error; `container` and
+  `mcp_servers` are refused with what they ask for.
+- `/v1/chat/completions` accepts `store: false`, `metadata`,
+  `prompt_cache_key`, `prompt_cache_retention`, `safety_identifier` and
+  `service_tier` without effect, applies `min_p`, and takes the
+  `effect_disposition`, `display_kind` and `display_metadata` bookkeeping
+  Hermes puts on a message. Pi and the OpenAI SDKs
+  send `store: false`, and it was refused
+  ([#19](https://github.com/carloslfu/slotstream/issues/19)). `store: true`
+  still returns 400, since no completion is kept to fetch.
+- `/v1/chat/completions` without `max_tokens` lets a reply use a quarter of
+  the served window, up to 8,192 tokens, as `/v1/responses` already did; the
+  512-token default cut agents' edits short. The Ollama endpoints keep 512.
+- A request that waits behind others until its estimated prefill no longer
+  fits the wait budget now fails with the retryable 503
+  `prefill_deadline_exceeded` instead of a 400.
+- A request body over the 32 MiB limit is read and discarded before the 413
+  answer, up to 256 MiB, so the client reads the error instead of losing the
+  connection.
+- Library: an app that embeds Slotstream can count a chat request's prompt
+  tokens (`Engine.countChatTokens`), find where a prompt's shared head ends
+  (`Engine.sharedPrefixBoundary`), name a request's shared prefix and how long
+  it is kept (`RequestControl.sharedPrefixTokens`, `.sharedPrefixRetention`,
+  `SharedPrefixRetention`), store a checkpoint with that retention
+  (`PrefixCache.storeReusableCheckpoint(…retention:)`), read the shared states
+  on disk (`PersistentPrefixCache.storedSharedStates`), and see the save
+  points and the stop sequence a generation used (`GenStats.sharedPrefix…`,
+  `GenStats.stopSequence`). A server can report and bound its own use:
+  `Server.activity`, `Server.idleExit`, `ServerActivity` and
+  `ProcessIdentity`. Existing signatures are unchanged, and disk-tier
+  statistics written by 0.2.18 to 0.2.20 still decode.
+- Once the first image loads the vision tower, a server that retained whole
+  conversations keeps the largest retention that fits beside it, instead of
+  the much smaller budget share. At `--memory-gb 12` with a 65,536-token
+  window, the share left coding agents' conversations too long to keep, so
+  every later turn read the whole prompt again.
+- A stop sequence is no longer matched inside the reasoning that precedes an
+  answer.
+- A tool call whose integer or number argument the model writes outside the
+  range of a 64-bit integer, such as `1e20`, or as `inf`, no longer stops the
+  server; the value is kept as a number, or as text when JSON has none.
+- Streamed answers after reasoning no longer start with the blank lines the
+  model writes after `</think>`, matching non-streamed answers.
+- Reuse a shared system prompt across conversations
+  ([#18](https://github.com/carloslfu/slotstream/issues/18)). While a prompt
+  is processed, the head other conversations will start with is kept as a
+  shared prefix: the system message when it ends 512 tokens or more in, and
+  the longest head the prompt shares with a state already kept. The save point
+  is the last prefill pass end at or before that boundary (the 256-token grid
+  by default), so no pass is reshaped and outputs are unchanged. The state is
+  forked into the in-memory prefix cache and, with `--prefix-cache-dir` and
+  `--prefix-cache-min-tokens` or more tokens, written to disk. The next
+  conversation with the same system prompt resumes from it instead of
+  processing it again, in the same process or after a restart. Shared prefixes
+  are kept once, are never replaced by the conversations that extend them, go
+  after conversations when the disk quota needs room, and `slotstream
+  prefix-cache` lists them, with their own row, a count in its summary and a
+  `shared` field in `--json`, and `optimization-state-check shared-prefix`
+  and `shared-prefix-mtp` hold the behavior on the model. Library callers name
+  the shared head with `request.sharedPrefixTokens`; `GenStats` reports the
+  save points. A request
+  that declares tools, as coding agents' requests do, keeps its shared prefix
+  in memory like a conversation (`request.sharedPrefixRetention`), and a
+  shared prefix stays as recent as the conversation that continues from it,
+  so other conversations no longer displace an agent's instructions before
+  its next session starts.
 
 ## 0.2.20 - 2026-09-16
 

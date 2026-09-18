@@ -8,16 +8,19 @@ use `--port N` to choose another port. It has no authentication, so local
 processes can use it. Browser requests must come from an allowed loopback
 origin. See [Security](../SECURITY.md).
 
-This page covers the Ollama-style `/api/*` and OpenAI-style `/v1/*` endpoints.
-For the AI SDK gateway, see the [fx guide](FX.md). OpenAI tool calling is
-described below. The OpenAI tool and reasoning additions require Slotstream
-0.2.8 or later; the Responses API requires Slotstream 0.2.20 or later.
-Use `qwen3.8-flash-next:4bit` as the model name.
+This page covers the Ollama-style `/api/*` endpoints, the OpenAI-style
+`/v1/*` endpoints, and the Anthropic Messages API at `/v1/messages`. For the
+AI SDK gateway, see the [fx guide](FX.md). OpenAI tool calling is described
+below. The OpenAI tool and reasoning additions require Slotstream 0.2.8 or
+later; the Responses API requires Slotstream 0.2.20 or later; the Messages
+API requires Slotstream 0.2.21 or later. Use `qwen3.8-flash-next:4bit` as the
+model name.
 
 Unknown fields, unsupported features, and malformed values return a 400
-error describing the problem. A wrong model name returns 400, or 404 on
-`/api/show`. Some client compatibility fields are accepted without an effect;
-these are listed below.
+error describing the problem, except on `/v1/messages`, which ignores unknown
+top-level fields as described there. A wrong model name returns 400, or 404
+on `/api/show` and `/v1/messages`. Some client compatibility fields are
+accepted without an effect; these are listed below.
 
 ## Endpoints
 
@@ -28,6 +31,8 @@ these are listed below.
 | `POST /v1/chat/completions` | Chat completion in OpenAI format; doesn't stream by default |
 | `POST /v1/responses` | Response in OpenAI Responses format, the API Codex uses; doesn't stream by default |
 | `GET`/`DELETE /v1/responses/{id}` | Returns 404; responses aren't stored |
+| `POST /v1/messages` | Message in Anthropic Messages format, the API Claude Code uses; doesn't stream by default |
+| `POST /v1/messages/count_tokens` | Counts a Messages request's prompt tokens |
 | `GET /v1/models` | Lists the model in OpenAI format |
 | `GET /api/tags` | Lists the model in Ollama format |
 | `GET /api/ps` | Reports the loaded model and its current memory use |
@@ -35,6 +40,8 @@ these are listed below.
 | `GET /api/version` | Returns `{"version": "..."}` |
 | `POST /api/embed`, `/api/embeddings` | Returns 400; embeddings aren't supported |
 | `POST /api/pull`, `/api/create` | Returns 501; use `slotstream pull` on the host |
+| `GET /slotstream/status` | Reports the server's process, window and use; see [server status](#server-status) |
+| `POST /slotstream/clients` | Keeps a server started with `--idle-exit` running while a process runs |
 
 `/api/show` accepts `model` (or the deprecated `name` alias) and optional
 `verbose`. Empty `system`, `template`, and `options` fields are accepted for
@@ -100,17 +107,24 @@ print(reply.choices[0].message.content)
 ```
 
 Accepted fields: `model`, `messages`, `stream`, `temperature`, `top_p`,
-`top_k`, `presence_penalty`, `max_tokens` / `max_completion_tokens`, `seed`,
-`stop`, `stream_options` (`{"include_usage": true}`), `tools`, `tool_choice`,
-`parallel_tool_calls`, and `reasoning_effort`. `top_k`, `think` (boolean),
-and `options.num_ctx` are slotstream extensions. `num_ctx` may lower the
+`top_k`, `min_p`, `presence_penalty`, `max_tokens` / `max_completion_tokens`,
+`seed`, `stop`, `stream_options` (`{"include_usage": true}`), `tools`,
+`tool_choice`, `parallel_tool_calls`, and `reasoning_effort`. `top_k`,
+`min_p`, `think` (boolean), and `options.num_ctx` are slotstream extensions.
+Without `max_tokens` or `max_completion_tokens`, a reply may use a quarter of
+the served window, at most 8,192 tokens and never more than the room the
+prompt leaves. `num_ctx` may lower the
 request's prompt-plus-reply budget; it cannot exceed the served context.
 JSON `null` is treated as unset.
 
 For SDK compatibility, these fields are accepted only at the listed values:
 `n: 1`, `frequency_penalty: 0`, `logprobs: false`, `logit_bias: {}`,
-`response_format: {"type": "text"}`. `user` accepts any string and has no
-effect. Other values for these options return 400.
+`response_format: {"type": "text"}`. Other values for these options return
+400. These are accepted and have no effect, because nothing is stored or
+billed: `store: false`, `metadata` (an object of text values), and the text
+fields `user`, `prompt_cache_key`, `prompt_cache_retention`,
+`safety_identifier` and `service_tier`. `store: true` returns 400: it asks
+for a completion to fetch later, and the server keeps none.
 
 Function tools use OpenAI's `{"type":"function","function":{"name":...,
 "description":...,"parameters":...}}` shape. The server renders their schemas
@@ -224,6 +238,124 @@ with no `response.completed` after it. Function calls are delivered whole:
 `response.output_item.added`, one arguments delta, `arguments.done`, and
 `output_item.done`, only once the model's call block is complete.
 
+## `/v1/messages`
+
+The Anthropic Messages API, which Claude Code and the Anthropic SDKs use. Set
+the client's base URL to `http://127.0.0.1:11434`, without `/v1`; any API key
+or token works. For Claude Code, follow the [Claude Code guide](CLAUDE-CODE.md).
+
+```bash
+curl localhost:11434/v1/messages -H 'content-type: application/json' -d '{
+  "model": "qwen3.8-flash-next:4bit",
+  "max_tokens": 256,
+  "messages": [{"role": "user", "content": "What is 2+2?"}]
+}'
+```
+
+With the Python SDK:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(base_url="http://127.0.0.1:11434", api_key="unused")
+reply = client.messages.create(
+    model="qwen3.8-flash-next:4bit",
+    max_tokens=256,
+    messages=[{"role": "user", "content": "Hello"}],
+)
+print(reply.content[0].text)
+```
+
+Accepted fields: `model`, `messages`, `max_tokens` (required), `system` (text
+or text blocks), `stop_sequences`, `stream` (default `false`), `temperature`,
+`top_p`, `top_k`, `tools`, `tool_choice`, `thinking`, and
+`output_config.effort`. JSON `null` is treated as unset. `metadata`,
+`context_management` and `service_tier` are accepted without effect.
+`container`, `mcp_servers` and `output_config.format` return 400, because
+they ask for work this server cannot do.
+
+Other top-level fields are ignored rather than refused, because Claude Code
+adds request fields in most releases. The reply names them in an
+`X-Slotstream-Ignored-Fields` header, and the server's output, in its window
+or its log, names each one once. Inside messages and tools, an unknown content block type or tool
+type returns 400, and other fields, such as `cache_control`, are ignored.
+Headers such as `anthropic-version` and `anthropic-beta` are not required
+and have no effect.
+
+Messages alternate between `user` and `assistant`; consecutive assistant
+messages are joined. User content is text or blocks: `text`, `image` (a
+`base64` source in JPEG, PNG, GIF or WebP; see [Images](#images)),
+`document`, `search_result` (read as its title, source and text), and
+`tool_result`. A `document` with a plain-text source is read inline; a PDF,
+URL or file document is replaced by a note telling the model it cannot see
+it, so the conversation can go on. Assistant content is
+`text`, `thinking`, `redacted_thinking` (skipped, since it is encrypted by
+another provider) and `tool_use`. A `system` message before the conversation
+joins `system`; a later one renders as user text, which is where Claude Code
+puts its environment details. Its `tool_addition` and `tool_removal` blocks
+are skipped, and any other non-text block returns 400. `cache_control`
+markers have no effect: the server reuses prompts on its own. Image `url` and
+`file` sources return 400, and so does a conversation that ends with an
+assistant message, except in a token count.
+
+Every `tool_use` needs a `tool_result` with its id in the next user message,
+and the results may come in any order. A result's content is text or `text`,
+`image`, `document`, `search_result` and `tool_reference` blocks (read as
+`Tool available: <name>`); `is_error: true` prefixes the text with `Error:`.
+Tools use `name`, `description` and `input_schema`. Server tools the API runs
+itself, such as `web_search`, `code_execution` and `advisor`, are dropped
+because the model cannot run them, and a `tool_choice` that names one returns
+400; other typed tools return 400. `strict` is
+accepted but not enforced: calls are checked to be complete JSON objects,
+not validated against the schema. `tool_choice` accepts `auto`, `any`,
+`none`, and `{"type": "tool", "name": ...}`, with
+`disable_parallel_tool_use`, and is prompted and checked as on
+`/v1/chat/completions`.
+
+Thinking is off unless `thinking` asks for it. `{"type": "adaptive"}` turns
+it on at `output_config.effort` (`high` when absent), and `{"type":
+"enabled", "budget_tokens": N}` at an effort chosen from the budget; both use
+the same model mapping as `reasoning_effort` on the chat endpoint.
+`{"type": "disabled"}` turns it off. `display: "omitted"` returns thinking
+blocks with empty text; any other `display` value shows it. Each thinking block carries a `signature` that holds
+its reasoning, so a client that sends the block back, even with its text
+omitted as Claude Code does, gives the model its earlier reasoning.
+
+Without a stop, the reply ends with `stop_reason` `end_turn`, or `tool_use`
+after a complete tool call, `max_tokens` when the budget runs out, or
+`stop_sequence` with the matched `stop_sequence`. When `max_tokens` was
+larger than the room the prompt left in the window and the reply filled that
+room, the reason is `model_context_window_exceeded` instead of
+`max_tokens`. `usage` reports
+`input_tokens` (the prompt tokens read for this request),
+`cache_read_input_tokens` (the tokens reused from an earlier request),
+`cache_creation_input_tokens` (always 0) and `output_tokens`; the first two
+add up to the whole prompt.
+
+A streamed reply is Server-Sent Events in Anthropic's order:
+`message_start` (sent once the request is admitted), `ping`,
+`content_block_start`, `content_block_delta` (`thinking_delta`,
+`signature_delta`, `text_delta` or `input_json_delta`), `content_block_stop`,
+`message_delta` with `stop_reason` and `usage`, and `message_stop`. During a
+long prompt read the server sends a `ping` every 10 seconds, or, while a
+thinking block with omitted text is open, an empty `thinking_delta`.
+`message_start` reports the prompt tokens read and reused for the request. A tool call is
+delivered whole: its start, one `input_json_delta` with the complete input,
+and its stop, once the model's call block is complete. An inference failure
+after the stream starts is an `error` event, and nothing follows it.
+
+Errors use Anthropic's shape, `{"type": "error", "error": {"type": ...,
+"message": ...}}`, with `invalid_request_error` for 400, `not_found_error`
+for 404, `request_too_large` for 413, `api_error` for 500, and
+`overloaded_error` for 503. A prompt longer than the served window fails
+with `prompt is too long: N tokens > M maximum`, the message Claude Code
+reads to compact its conversation.
+
+`POST /v1/messages/count_tokens` takes the same body without `max_tokens`
+and returns `{"input_tokens": N}`: the prompt the model would read, with the
+same template, tools, thinking setting and images. It needs no generation and
+answers while another request runs.
+
 ## Sampling defaults
 
 The table applies to ordinary chat. Tool-enabled requests default to temperature
@@ -238,7 +370,7 @@ values override these defaults.
 | `top_k` | 20 |
 | `min_p` | 0 |
 | `presence_penalty` | 1.5 |
-| `num_predict` / `max_tokens` | 512. Nonpositive Ollama `num_predict` uses the remaining context; OpenAI output limits must be positive. |
+| `num_predict` / `max_tokens` | 512 on the Ollama endpoints; a nonpositive `num_predict` uses the remaining context. On `/v1/chat/completions` and `/v1/responses`, a quarter of the served window, at most 8,192 tokens; their output limits must be positive. |
 | `seed` | Random for each request |
 | `stop` | None |
 
@@ -335,6 +467,56 @@ a request is rejected before dispatch if its budget or real headroom is insuffic
 the matching conversation remains cached; image identity is checked by a
 digest of its bytes.
 
+<a id="server-status"></a>
+
+## Server status and idle stop
+
+These endpoints are available starting in Slotstream 0.2.21. `slotstream
+launch` and `slotstream stop` use them to find the server's process and to
+see whether it is in use.
+
+`GET /slotstream/status` returns:
+
+```json
+{
+  "server": "slotstream",
+  "version": "0.2.21",
+  "pid": 4242,
+  "port": 11434,
+  "model": "qwen3.8-flash-next:4bit",
+  "context_window": 32768,
+  "started_at": 1789660800,
+  "active_requests": 0,
+  "clients": 1,
+  "idle_seconds": 0,
+  "idle_exit_minutes": 30,
+  "memory_source": "--memory-gb",
+  "memory_target_gb": 12
+}
+```
+
+`started_at` is in Unix seconds. `active_requests` counts requests being
+handled, other than status checks. `clients` counts registered processes
+still running. `idle_seconds` is how long the server has had neither, and 0
+while it has either. `idle_exit_minutes` is the `serve --idle-exit` setting,
+or `null` when the server does not stop by itself. `memory_source` says what
+sized the memory plan (`--memory-gb`, `auto`, `--pool-gb` or
+`--experts-per-layer`) and `memory_target_gb` the whole-process target, or
+`null` for a plan without one. Reading the status is not activity.
+
+`POST /slotstream/clients` with `{"pid": 4242}` registers a running process
+of the user the server runs as, and returns `{"clients": 1}`, the number
+registered. A server started with `--idle-exit` keeps running while any
+registered process runs, and counts from the last one's exit. A pid that is
+not a positive process id, or not a running process of that user, returns
+400. `slotstream launch` registers the agent it starts this way.
+
+Once a server with `--idle-exit` has decided to stop, every request other
+than the status returns 503 with `the server is stopping`, and the process
+exits. A request that is running when the server decides has already made it
+not idle, so the stop never interrupts one. `slotstream stop` sends the
+process `SIGTERM`, which stops it at once, also during a request.
+
 <a id="errors"></a>
 <a id="limits"></a>
 
@@ -342,7 +524,8 @@ digest of its bytes.
 
 Ollama errors use `{"error": "message"}`. OpenAI errors use
 `{"error": {"message": "..."}}`; validation failures also include
-`"type": "invalid_request_error"`.
+`"type": "invalid_request_error"`. Anthropic errors use the shape described
+under [`/v1/messages`](#v1messages).
 
 | Status | Meaning |
 |---|---|
@@ -351,7 +534,7 @@ Ollama errors use `{"error": "message"}`. OpenAI errors use
 | 411 | Chunked request body; send `Content-Length` instead |
 | 413 | Request body exceeds 32 MiB |
 | 431 | Request headers exceed 64 KiB |
-| 503 | Too many open connections, insufficient memory, or an expired request-to-first-token deadline |
+| 503 | Too many open connections, insufficient memory, an expired request-to-first-token deadline, including a request that waited behind others until its prefill no longer fit the wait budget, or a server that is [stopping by itself](#server-status) |
 
 A query string doesn't affect routing. `HEAD` returns 200 or 404 for the
 requested path.
@@ -391,9 +574,9 @@ independent of the wait policy.
 | Code | Before streaming headers | Action |
 |---|---|---|
 | `context_length_exceeded` | 400 | Send less input or restart with a supported larger window. |
-| `prefill_wait_exceeded` | 400 | Reduce missing input, reuse a valid prefix or raise the wait budget. |
+| `prefill_wait_exceeded` | 400 | The estimated prefill alone exceeds the wait budget. Reduce missing input, reuse a valid prefix or raise the wait budget. |
 | `insufficient_memory` | 503 | Free memory, lower the target/context, or resize an image. |
-| `prefill_deadline_exceeded` | 503 | Retry with less work or a deliberate longer wait budget. |
+| `prefill_deadline_exceeded` | 503 | The deadline passed, or the request waited behind others until its estimated prefill no longer fit. Retry when the server is free, with less work, or with a deliberate longer wait budget. |
 | `inference_error` | 500 | Inspect the error and retry after correcting its cause. |
 
 After headers, failures use the dialect's terminal error frame and close the
