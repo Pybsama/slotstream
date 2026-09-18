@@ -250,7 +250,7 @@ extension Diagnostics {
         let arrival = scheduler(configuration)
         func settle(_ keys: [ExpertKey]) {
             for key in keys {
-                for _ in 0 ..< 400 where arrival.diagnosticState(key) == .reading { usleep(5000) }
+                for _ in 0 ..< 4000 where arrival.diagnosticState(key) == .reading { usleep(5000) }
             }
         }
         arrival.beginPass(id: 1, features: [])
@@ -389,7 +389,7 @@ extension Diagnostics {
         scheduler.forecast(target: 3, ids: [1, 2, 3, 4], margins: [4, 3, 2, 1])
         // Let the fake reads finish so expiry frees bytes deterministically.
         for key in [ExpertKey(1, 6), ExpertKey(2, 1), ExpertKey(2, 2)] {
-            for _ in 0 ..< 400 where scheduler.diagnosticState(key) == .reading { usleep(5000) }
+            for _ in 0 ..< 4000 where scheduler.diagnosticState(key) == .reading { usleep(5000) }
         }
         scheduler.layerCompleted(1)
         c.expect("target-1 ticket expired at its layer", scheduler.diagnosticState(ExpertKey(1, 6)) == nil)
@@ -400,7 +400,7 @@ extension Diagnostics {
         c.equal("byte cap refused the rest of target 3", scheduler.observation.capRefusals, 1)
         c.equal("live tickets at the byte cap", scheduler.liveTickets, 4)
         for key in [ExpertKey(2, 1), ExpertKey(2, 2), ExpertKey(2, 9), ExpertKey(3, 1)] {
-            for _ in 0 ..< 400 where scheduler.diagnosticState(key) == .reading { usleep(5000) }
+            for _ in 0 ..< 4000 where scheduler.diagnosticState(key) == .reading { usleep(5000) }
         }
         scheduler.layerCompleted(2)
         c.expect("after the refusal the target still issues at the next tick", scheduler.diagnosticState(ExpertKey(3, 2)) != nil)
@@ -418,11 +418,15 @@ extension Diagnostics {
         splitConfiguration.lanes = 1
         splitConfiguration.capRecords = 4
         splitConfiguration.issueCapPerTarget = 4
+        // The hold occupies the single lane until this check releases it. Its
+        // timeout only keeps a wedged check from waiting forever: expiring it
+        // early would free the lane and take away what the check is measuring,
+        // so it is far longer than a loaded machine needs.
         let holdGate = DispatchSemaphore(value: 0)
         let entered = DispatchSemaphore(value: 0)
         let holdKey = ExpertKey(1, 1)
         let holding: ExpertPieceReader = { key, piece, destination, shouldContinue in
-            if key == holdKey, piece == 1 { entered.signal(); _ = holdGate.wait(timeout: .now() + 3) }
+            if key == holdKey, piece == 1 { entered.signal(); _ = holdGate.wait(timeout: .now() + 60) }
             guard shouldContinue() else { throw CheckpointReadError.cancelled }
             fill(destination, key: key, piece: piece, bytes: pieces[piece])
         }
@@ -431,7 +435,7 @@ extension Diagnostics {
         split.beginPass(id: 3, features: [])
         split.forecast(target: 1, ids: [1, 2], margins: [1, 1])
         split.layerCompleted(0)
-        c.expect("holding ticket entered its second piece", entered.wait(timeout: .now() + 5) == .success)
+        c.expect("holding ticket entered its second piece", entered.wait(timeout: .now() + 60) == .success)
         c.expect("second ticket waits for the single lane with no progress", split.diagnosticState(ExpertKey(1, 2)) == .reading)
         let claimed = split.claimSplit([holdKey, ExpertKey(1, 2), ExpertKey(1, 9)])
         c.equal("ticket with progress returned for a later join", claimed.reading.count, 1)
@@ -502,7 +506,7 @@ extension Diagnostics {
         usleep(20_000)
         c.equal("waiter still blocked behind demand", lanes.snapshot.speculativeInUse, 0)
         lanes.endDemand()
-        c.expect("waiter acquired after demand ended", waited.wait(timeout: .now() + 5) == .success && lateAcquired)
+        c.expect("waiter acquired after demand ended", waited.wait(timeout: .now() + 60) == .success && lateAcquired)
         lanes.releaseSpeculative()
         c.expect("speculative resumes after demand", lanes.acquireSpeculative { true })
         lanes.releaseSpeculative()
@@ -571,7 +575,7 @@ extension Diagnostics {
         }
         let during = ExpertPrefetchTicket(key: ExpertKey(2, 2), pass: 1, revision: 1, pieceBytes: pieces, accounting: accounting)!
         during.start(reader: slow, lanes: lanes)
-        c.expect("worker entered the read", entered.wait(timeout: .now() + 5) == .success)
+        c.expect("worker entered the read", entered.wait(timeout: .now() + 60) == .success)
         during.discard()
         c.expect("discard while reading does not free under the worker", during.ownsBuffers)
         c.equal("buffers still charged while the worker holds them", accounting.liveBytes, record)
@@ -604,7 +608,7 @@ extension Diagnostics {
         }
         let interrupted = ExpertPrefetchTicket(key: ExpertKey(5, 5), pass: 1, revision: 1, pieceBytes: pieces, accounting: accounting)!
         interrupted.start(reader: interrupting, lanes: lanes)
-        c.expect("EINTR seam entered", interruptEntered.wait(timeout: .now() + 5) == .success)
+        c.expect("EINTR seam entered", interruptEntered.wait(timeout: .now() + 60) == .success)
         interrupted.discard()
         interrupted.join()
         c.expect("cancellation stops repeated EINTR", interrupted.state.rawValue == "discarded")
@@ -724,7 +728,7 @@ extension Diagnostics {
         let (cancelTicket, cancelMemory) = backedTicket(slot: 9, key: ExpertKey(9, 9))
         defer { cancelMemory.deallocate() }
         cancelTicket.start(reader: slowSlot, lanes: lanes, scratch: scratch)
-        c.expect("slot worker entered the read", cancelEntered.wait(timeout: .now() + 5) == .success)
+        c.expect("slot worker entered the read", cancelEntered.wait(timeout: .now() + 60) == .success)
         cancelTicket.discard()
         c.expect("slot not returned while the worker still writes", returnLock.withLock { returned }.isEmpty)
         cancelGate.signal()
@@ -762,7 +766,7 @@ extension Diagnostics {
         var slowKey: ExpertKey? = nil
         let reader: ExpertPieceReader = { key, piece, destination, shouldContinue in
             if piece == 0 { lock.withLock { reads[key, default: 0] += 1 } }
-            if lock.withLock({ slowKey }) == key, piece == 0 { _ = slowGate.wait(timeout: .now() + 2) }
+            if lock.withLock({ slowKey }) == key, piece == 0 { _ = slowGate.wait(timeout: .now() + 60) }
             guard shouldContinue() else { throw CheckpointReadError.cancelled }
             fill(destination, key: key, piece: piece, bytes: pieces[piece])
         }
@@ -780,7 +784,7 @@ extension Diagnostics {
             scheduler.liveTickets, 3)
         // Claim at layer 0 once the ticket is complete: the duplicate key
         // adopts once; an unknown key is demand.
-        for _ in 0 ..< 400 where scheduler.diagnosticState(ExpertKey(0, 1)) != .ready { usleep(5000) }
+        for _ in 0 ..< 4000 where scheduler.diagnosticState(ExpertKey(0, 1)) != .ready { usleep(5000) }
         c.expect("first ticket completed on its own", scheduler.diagnosticState(ExpertKey(0, 1)) == .ready)
         let claimed = scheduler.claim([ExpertKey(0, 1), ExpertKey(0, 1), ExpertKey(0, 9)])
         c.equal("one ticket per distinct key", claimed.count, 1)
@@ -889,7 +893,7 @@ extension Diagnostics {
         pools.removeAll()
         Stream.gpu.synchronize()
         MLX.Memory.clearCache()
-        for _ in 0 ..< 200 where accounting.liveBytes != 0 { usleep(5000) }
+        for _ in 0 ..< 2000 where accounting.liveBytes != 0 { usleep(5000) }
         let released = accounting.liveBytes == 0
         c.expect("finalizer pays the accounting back after the graph releases the bytes", released,
             "live \(accounting.liveBytes) of \(record)")
@@ -925,7 +929,7 @@ extension Diagnostics {
         staged2.removeAll(); pools2.removeAll()
         Stream.gpu.synchronize()
         MLX.Memory.clearCache()
-        for _ in 0 ..< 200 where accounting.liveBytes != 0 { usleep(5000) }
+        for _ in 0 ..< 2000 where accounting.liveBytes != 0 { usleep(5000) }
         c.expect("batched adoption pays the accounting back", accounting.liveBytes == 0, "live \(accounting.liveBytes)")
         c.expect("wrong shape count refuses adoption", {
             let other = ExpertPrefetchTicket(key: key, pass: 1, revision: 1, pieceBytes: pieces, accounting: accounting)!

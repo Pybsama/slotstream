@@ -32,7 +32,9 @@ def main():
                        '--sim-ram', str(physical), '--sim-working-set', str(physical * .75),
                        '--sim-available', str(available if available is not None else physical * .9),
                        '--max-context', str(context), '--mtp', mtp, *flags]
-            result = subprocess.run(command, env=env, text=True, capture_output=True, timeout=15)
+            # The timeout only catches a hang: an absurd target such as 1e300 plans
+            # for several seconds, and a loaded runner multiplies that.
+            result = subprocess.run(command, env=env, text=True, capture_output=True, timeout=120)
             row = {'case': label, 'flags': flags, 'ram_gib': ram, 'available_gb': available,
                    'context': context, 'mtp': mtp, 'exit_code': result.returncode}
             try:
