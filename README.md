@@ -222,27 +222,25 @@ their settings determine what those tools send.
 
 ### Why doesn't Slotstream use all of my RAM?
 
-Auto has a **33 GB** base memory ceiling, or **34.6 GB** with speculative
-decoding at the 32,768-token window, and the larger windows add their own
-state. The default comes from the development Mac's measurements and leaves
-memory for other apps. It is not a limit on what memory can do: the
-[M5 Max cache sweep](docs/HARDWARE.md#does-more-memory-help) reports faster
-replies with larger targets, though how much a larger cache helps depends on
-the chip, SSD and workload. If your Mac has spare memory, stop any running
-server and preview a larger target without loading the model:
+`--memory-gb 48` is a maximum process budget, not a promise to keep 48 GB
+resident. Slotstream allocates the expert cache at load, while conversation
+state and temporary work grow only when a request needs them. A short request
+can therefore peak well below the target. The startup report shows the budget,
+expert cache, runtime allowances and safety headroom separately.
+
+Without an explicit target, Auto uses a **33 GB** base ceiling, or **34.6 GB**
+with speculative decoding at the 32,768-token window. This measured default
+leaves memory for other apps. To use more, stop any running server and preview
+the plan without loading the model:
 
 ```sh
 slotstream doctor --memory-gb 40
 ```
 
-If the plan fits with headroom, `slotstream serve --memory-gb 40` uses it.
-The flag is a total process budget. The startup report separates the allocated
-expert cache from allowances for conversation state and temporary work, which
-short requests may not use. Auto keeps extra expert cache when the speed
-estimate cannot price the cost of replacing it with a larger context window.
-Choose `--max-context N` explicitly when you prefer that tradeoff.
-An explicit target keeps the cache fixed and disables automatic resizing, so
-leave room for macOS and other apps. See the
+If it fits with headroom, `slotstream serve --memory-gb 40` uses that budget.
+Auto keeps expert cache when a larger automatic context would trade it away
+without a measured benefit. Use `--max-context N` when you explicitly want a
+longer window. Leave room for macOS and other apps. See the
 [memory options](docs/CLI.md#memory-options) for details.
 
 ### Is Slotstream the fastest way to run this model?

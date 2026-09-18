@@ -2,7 +2,7 @@
 type: measurement
 id: 01m2sdtw104bms93qfrsyg36rz
 created: 2026-09-18T04:54:11.742766+00:00
-updated: 2026-09-18T18:57:02.939049+00:00
+updated: 2026-09-18T19:52:21.496081+00:00
 summary: A continued conversation now computes what a cold one computes, bit for bit; a follow-up turn pays one partial prefill pass, 2.47 s against 8.56 s at 961 slots
 date: 2026-09-17
 doc: measurements
@@ -10,7 +10,7 @@ level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
 note: One development Mac shared with other sessions; the prefill comparison is a single run of each arm on the same prompts, and the machine was thermally loaded by the end of the day.
 order: '1570'
-runs: '[[sources/runs/2026/09/2026-09-17-conversation-resume-exactness]], [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]]'
+runs: '[[sources/runs/2026/09/2026-09-17-conversation-resume-exactness]], [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]], [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]]'
 title: 'Conversation resume: exact against a cold read, at one partial pass per turn'
 status: measured
 ---
@@ -50,3 +50,6 @@ A turn re-reads from the last boundary, so it pays for wherever its prompt ends 
 **Not changed.** Different pass sizes still give different logits inside the same band, and the rule does not and cannot make them equal; `prefix-check` still measures that band (4.37% against a 5.90% control). A conversation shorter than one pass has no boundary and resumes nothing, which is why `prefix-check`'s own chat carries a longer history now.
 
 **The disk tier.** The optional persistent tier follows the same rule: it writes the boundary snapshot rather than the consumed conversation, and restores only a length that is a boundary of the incoming prompt. The snapshot is written before it is forked into the cache, so the state the next turn resumes carries its disk lineage and that turn's save references those rows instead of writing them again: 130 MB of new rows instead of a 236 MB full write. `Tools/persistent_prefix_e2e.py` passes its twelve checks, restart and regenerate included, with both turn-3 prompt and output ids equal to the first server's. Its conversation now carries a round of notes per turn, because a turn that adds only a short question stays inside the pass band its parent already wrote and correctly writes nothing.
+
+## v0.2.22 release-candidate recheck
+The final v0.2.22 candidate repeats `prefix-exact-check` with 0.000000% prompt-logit deltas on every continued turn. Both follow-up turns resume their own prefill boundaries, edited history rebuilds, repeated prompts use their complete checkpoint and another conversation reuses its shared prefix. In this shared-machine run, the three-turn follow-up prefill took 7.87 seconds against 28.20 seconds cold. The complete native battery passes 27 top-level gates with no failures. Evidence: [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]].

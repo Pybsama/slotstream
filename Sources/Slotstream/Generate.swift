@@ -1099,7 +1099,7 @@ public final class Generator {
             }
             progress(i - reused, RuntimeClock.seconds(since: t0))
         }
-        if reused < promptIds.count, let cache, let completeKey {
+        if reused < promptIds.count, let cache, completeKey != nil {
             // Reuse the actual complete prefill boundary, without splitting
             // or replaying a pass. State alone cannot supply the first token;
             // retain its compact raw logits too, before any sampling mutation.

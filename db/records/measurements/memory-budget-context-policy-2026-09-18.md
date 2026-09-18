@@ -2,14 +2,14 @@
 type: measurement
 id: 01m2tmg5t1yqhsmbq9s63cetr8
 created: 2026-09-18T16:09:55.777897+00:00
-updated: 2026-09-18T17:09:36.034135+00:00
+updated: 2026-09-18T19:52:21.242116+00:00
 summary: 'Memory budget: preserve expert cache when context cost is unmeasured'
 date: 2026-09-18
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
 order: '1580'
-runs: '[[sources/runs/2026/09/2026-09-18-memory-budget-regression]], [[sources/runs/2026/09/2026-09-18-memory-budget-software-verification]], [[sources/runs/2026/09/2026-09-18-memory-budget-native-verification]], [[sources/runs/2026/09/2026-09-18-memory-budget-final-reporting]]'
+runs: '[[sources/runs/2026/09/2026-09-18-memory-budget-regression]], [[sources/runs/2026/09/2026-09-18-memory-budget-software-verification]], [[sources/runs/2026/09/2026-09-18-memory-budget-native-verification]], [[sources/runs/2026/09/2026-09-18-memory-budget-final-reporting]], [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]]'
 title: 'Memory budget: preserve expert cache when context cost is unmeasured'
 status: measured
 ---
@@ -40,3 +40,10 @@ The final report shows planned expert cache at load, non-cache allowances and re
 The reporting build passes 319 memory-override cases, 90 planner checks, 130 context CLI assertions and 964,237 production-source policy assertions. Its 48 T0 groups pass 28,623 assertions, including 85 in the memory-budget regression. The delivered build has the identical allocation and reporting sources; only two CLI help wording corrections differ. Exact archived-source comparison, a repeated T0 catalogue and context CLI suite, and direct human/JSON UX checks pass on that delivered binary.
 
 Evidence: [[sources/runs/2026/09/2026-09-18-memory-budget-final-reporting]]. These results supplement the earlier full native run; they do not reclassify its known image-reuse failure as a pass. The final source and binary remain local and are not a published release.
+
+## v0.2.22 release-candidate qualification
+The v0.2.22 candidate closes the one known failure from the earlier native run. The old image-reuse fixture was shorter than the configured 3,072-token prefill pass, so it could not leave a stable boundary containing the complete image. Exact resume correctly rebuilt instead of reusing an inexact state. The corrected fixture crosses a real boundary without reshaping a pass and proves the first request stored it. The follow-up reused the prefix, skipped the vision tower and completed in 3.4 seconds. The complete vision suite passes 25 of 25.
+
+The full native battery now passes 27 top-level gates with no failures. It also repeats the pinned-weight hashes, parity, exact conversation resume, short- and long-request 10 GB bounds, speculative decoding, 74 serving checks and 15 behavioral probes. The repository gates pass 319 memory cases, 90 planner cases and 69 catalogue groups with 31,261 assertions. Evidence: [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]].
+
+This qualifies the release candidate functionally on the shared 48 GB development Mac. It remains neither a native 48 GB allocation measurement nor 64 GB hardware qualification.

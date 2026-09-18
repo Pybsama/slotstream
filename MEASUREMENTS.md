@@ -5627,6 +5627,9 @@ A turn re-reads from the last boundary, so it pays for wherever its prompt ends 
 
 **The disk tier.** The optional persistent tier follows the same rule: it writes the boundary snapshot rather than the consumed conversation, and restores only a length that is a boundary of the incoming prompt. The snapshot is written before it is forked into the cache, so the state the next turn resumes carries its disk lineage and that turn's save references those rows instead of writing them again: 130 MB of new rows instead of a 236 MB full write. `Tools/persistent_prefix_e2e.py` passes its twelve checks, restart and regenerate included, with both turn-3 prompt and output ids equal to the first server's. Its conversation now carries a round of notes per turn, because a turn that adds only a short question stays inside the pass band its parent already wrote and correctly writes nothing.
 
+## v0.2.22 release-candidate recheck
+The final v0.2.22 candidate repeats `prefix-exact-check` with 0.000000% prompt-logit deltas on every continued turn. Both follow-up turns resume their own prefill boundaries, edited history rebuilds, repeated prompts use their complete checkpoint and another conversation reuses its shared prefix. In this shared-machine run, the three-turn follow-up prefill took 7.87 seconds against 28.20 seconds cold. The complete native battery passes 27 top-level gates with no failures. Evidence: [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]].
+
 ## Memory budget: preserve expert cache when context cost is unmeasured
 The automatic context selector used a speed estimate that is deliberately flat above the last measured cache anchor. Comparing two such plans treated removing useful expert slots as having no cost. A fixed process budget could therefore become reservations for a much longer context while a short request used far less memory.
 
@@ -5655,3 +5658,10 @@ The final report shows planned expert cache at load, non-cache allowances and re
 The reporting build passes 319 memory-override cases, 90 planner checks, 130 context CLI assertions and 964,237 production-source policy assertions. Its 48 T0 groups pass 28,623 assertions, including 85 in the memory-budget regression. The delivered build has the identical allocation and reporting sources; only two CLI help wording corrections differ. Exact archived-source comparison, a repeated T0 catalogue and context CLI suite, and direct human/JSON UX checks pass on that delivered binary.
 
 Evidence: [[sources/runs/2026/09/2026-09-18-memory-budget-final-reporting]]. These results supplement the earlier full native run; they do not reclassify its known image-reuse failure as a pass. The final source and binary remain local and are not a published release.
+
+## v0.2.22 release-candidate qualification
+The v0.2.22 candidate closes the one known failure from the earlier native run. The old image-reuse fixture was shorter than the configured 3,072-token prefill pass, so it could not leave a stable boundary containing the complete image. Exact resume correctly rebuilt instead of reusing an inexact state. The corrected fixture crosses a real boundary without reshaping a pass and proves the first request stored it. The follow-up reused the prefix, skipped the vision tower and completed in 3.4 seconds. The complete vision suite passes 25 of 25.
+
+The full native battery now passes 27 top-level gates with no failures. It also repeats the pinned-weight hashes, parity, exact conversation resume, short- and long-request 10 GB bounds, speculative decoding, 74 serving checks and 15 behavioral probes. The repository gates pass 319 memory cases, 90 planner cases and 69 catalogue groups with 31,261 assertions. Evidence: [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]].
+
+This qualifies the release candidate functionally on the shared 48 GB development Mac. It remains neither a native 48 GB allocation measurement nor 64 GB hardware qualification.

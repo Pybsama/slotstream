@@ -6,7 +6,7 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## 0.2.21 - 2026-09-18
+## 0.2.22 - 2026-09-18
 
 - Automatic context selection no longer trades away expert cache above the
   measured decode range on the assumption that its flat speed estimate means
@@ -34,6 +34,9 @@ determines which version the installer downloads.
   New gate `slotstream prefix-exact-check`, and the weights-free
   `aligned-prefix-resume` catalogue check holds the policy in CI;
   `SLOTSTREAM_OPT_ALIGNED_RESUME=0` restores the previous reuse.
+
+## 0.2.21 - 2026-09-18
+
 - Faster speculative decode on long prompts. The three-row verify pass of
   draft depth 2 no longer falls to the dense attention kernel, whose cost
   grows with the context: from 6,144 tokens it runs two rows at a time through

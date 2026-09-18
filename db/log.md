@@ -1839,3 +1839,15 @@ v0.2.21 published, installed and accepted; qualification caught a real 413 regre
 
 ## [2026-09-18 17:41] create | sources/runs/2026/09/2026-09-18-release-0-2-21-published-and-installed
 Raw acceptance for 0.2.21: CI, candidate, model battery, publication, install, installed e2e and the launch gate.
+
+## [2026-09-18 19:52] create | sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate
+v0.2.22 candidate passes 27 of 27 native gates, the repository gates, public library smoke test and the Sevra Mac development checks.
+
+## [2026-09-18 19:52] update | records/measurements/memory-budget-context-policy-2026-09-18
+The corrected exact image-reuse fixture passes; the v0.2.22 full native battery is now 27 of 27 with no failure.
+
+## [2026-09-18 19:52] update | records/measurements/conversation-resume-exactness
+The v0.2.22 candidate repeats zero prompt-logit delta on every continued turn and passes the complete native battery.
+
+## [2026-09-18 19:52] validate | db
+v0.2.22 candidate evidence complete: zero validation errors, two declared historical warnings, 299 claim needles current and projections regenerated.

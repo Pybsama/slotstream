@@ -389,12 +389,14 @@ def main():
         reply[:160])
     print(f"      -> {reply.strip()[:100]!r}")
 
-    # 7. Prefix reuse. A follow-up turn extends the previous prompt, so the
-    #    state is handed over whole: the tower does not run again and prefill
-    #    reads only new text. Benchmark observations prove reuse directly;
-    #    a short elapsed time alone is not evidence that a cache was used.
+    # 7. Exact prefix reuse. The image and enough text cross a real prefill
+    #    boundary, so the retained state contains the complete image without
+    #    reshaping a pass. A follow-up may resume there and skip the tower.
+    #    Benchmark observations prove reuse directly; a short elapsed time
+    #    alone is not evidence that a cache was used.
+    filler = "context " * 2800
     history = [
-        {"role": "user", "content": "Say only: ok",
+        {"role": "user", "content": filler + "\nIgnore the context above. Say only: ok",
          "images": [dog]},
     ]
     st, obj, first_secs, _ = chat(port, history)
@@ -406,10 +408,12 @@ def main():
     check("a follow-up turn on the same picture succeeds", st == 200, raw[:200])
     check(
         "and reuses the state instead of re-running the tower",
-        first_stats.get('encodedImages') == 1 and second_stats.get('encodedImages') == 0
+        first_stats.get('encodedImages') == 1 and first_stats.get('prefixCheckpointStores', 0) > 0
+        and second_stats.get('encodedImages') == 0
         and second_stats.get('reusedPrefixTokens', 0) > 0 and second_stats.get('prefixSkippedImages') == 1,
         f"encoded first={first_stats.get('encodedImages')}, follow-up={second_stats.get('encodedImages')}, "
-        f"reused={second_stats.get('reusedPrefixTokens')}; requires SLOTSTREAM_BENCH_DETAILS=1")
+        f"stored={first_stats.get('prefixCheckpointStores')}, reused={second_stats.get('reusedPrefixTokens')}; "
+        "requires SLOTSTREAM_BENCH_DETAILS=1")
     print(f"      -> first {first_secs:.1f}s, follow-up {second_secs:.1f}s")
 
     # 8. The same ids with a different picture must NOT reuse. Both images
