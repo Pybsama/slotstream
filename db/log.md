@@ -1815,3 +1815,10 @@ A second 16k prompt: x1.085, the arms accepting 70.8% and 73.1%; with the first 
 
 ## [2026-09-17 23:54] update | sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck
 Added the second 16k prompt's raw output.
+
+## [2026-09-18 17:41] create | records/measurements/release-0-2-21-published-2026-09-18
+v0.2.21 published, installed and accepted; qualification caught a real 413 regression and two flaky gates.
+
+## [2026-09-18 17:41] create | sources/runs/2026/09/2026-09-18-release-0-2-21-published-and-installed
+Raw acceptance for 0.2.21: CI, candidate, model battery, publication, install, installed e2e and the launch gate.
+

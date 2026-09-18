@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-17T23:22:20.231946Z
+updated: 2026-09-18T17:41:02.390398Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-18-release-0-2-21-published-and-installed]] — v0.2.21 acceptance: CI artifact 24/25 in one run plus vision parity beside it, attestation, install, installed e2e 31/31, launch gate 48/54 with the Pi race phase driven by Claude Code 5/5.
 - [[sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck]] — Decode comparisons re-run on a quiet machine after the commit: 16k and 32k
 - [[sources/runs/2026/09/2026-09-17-verify-pass-checks-and-battery]] — Check catalogue, static gates and verify battery on the final verify-pass build
 - [[sources/runs/2026/09/2026-09-17-verify-pass-decode-final-build]] — Decode comparisons at 16k and 32k on the final build: dense, split and exact
@@ -506,9 +507,8 @@ updated: 2026-09-17T23:22:20.231946Z
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-resource-counterexample]] — Whole-request vision resource qualification fails its frozen saving and clean-pair gates
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-serving-nonregression]] — Query-tiled vision: small-image nonregression and swap-excluded maximum request
 - [[sources/runs/2026/09/2026-09-06-optimization-resident-overlap]] — Bounded resident expert overlap: exact mixed-cache computation and checked failure joins
-- [[sources/runs/2026/09/2026-09-06-optimization-state-lineage]] — Model-bound prefix state and live-ancestor checkpoint recovery
 
 ## More
 
-This folder has 619 files. The 500 most recent are listed above.
+This folder has 620 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

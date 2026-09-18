@@ -2,7 +2,7 @@
 type: index
 scope: layer
 folder: records
-updated: 2026-09-18T13:22:36.019024Z
+updated: 2026-09-18T17:41:08.620952Z
 ---
 
 # records
@@ -12,5 +12,5 @@ updated: 2026-09-18T13:22:36.019024Z
 - [[records/decisions/index|Decisions]] (34) — what was decided, on which evidence, and what would reverse it
 - [[records/design/index|Design]] (31) — PLAN.md's design sections: goal, ground truth, byte math, architecture, correctness strategy, references
 - [[records/machines/index|Machines]] (6) — the machines measurements ran on
-- [[records/measurements/index|Measurements]] (143) — every MEASUREMENTS.md section as a record: what was measured, how, on which machine, and whether it still stands
+- [[records/measurements/index|Measurements]] (144) — every MEASUREMENTS.md section as a record: what was measured, how, on which machine, and whether it still stands
 - [[records/plan/index|Plan]] (28) — PLAN.md's operating sections: status tracker, milestones, the ordered queue, risks, done criteria, open questions

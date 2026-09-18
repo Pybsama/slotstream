@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-18T13:22:36.019024Z
+updated: 2026-09-18T17:41:08.620952Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-21-published-2026-09-18]] — v0.2.21 published, installed and accepted: every model gate on the CI artifact, 31/31 installed checks, launch gate 48/54 with the Pi phase unrunnable here and its race driven by Claude Code 5/5.
 - [[records/measurements/coding-agents-background-server-2026-09-17]] — slotstream launch starts, keeps, restarts and stops its own server: 54 of 54 live checks at 12 GB, and why the window stays automatic
 - [[records/measurements/coding-agents-launch-2026-09-17]] — Coding agents at 12 GB: Claude Code, Codex, Pi, opencode and Hermes pass every task via slotstream launch; second sessions reuse 84 to 98% of the opening prompt, also after a picture
 - [[records/measurements/speculative-verify-pass-split-attention-2026-09-17]] — Split verify attention from 6,144 tokens: a verification round 12% cheaper at 16k, x1.013 there and x1.29 at 32k on a quiet machine; an opt-in exact mode makes speculative output equal plain output
