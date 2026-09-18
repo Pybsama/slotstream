@@ -110,19 +110,6 @@ public struct ImageSegment: Hashable, Sendable {
 /// identical prompt cannot reuse that longer state. An optional shorter input
 /// checkpoint can be forked at its exact committed boundary; its remaining
 /// prompt is still evaluated before any new output is sampled.
-/// How the memory tier holds a shared-prefix checkpoint.
-/// db/records/design/measured-operating-policies.md
-public enum SharedPrefixRetention: Sendable, Equatable {
-    /// A speculative snapshot: kept only in room no conversation needs, and
-    /// the first state given up when room is needed. Right for chat, where
-    /// the conversations themselves are what clients come back to.
-    case optional
-    /// Kept and evicted like a conversation, least recently used first. Right
-    /// for an agent's instructions and tools, which every later session,
-    /// subagent and compaction request starts with.
-    case conversation
-}
-
 public final class PrefixCache {
     /// Main-model KV + raw indexer bytes per logical token. Retention is
     /// charged in these units using actual allocated sequence capacity, so

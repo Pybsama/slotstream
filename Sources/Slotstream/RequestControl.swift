@@ -125,6 +125,19 @@ package final class RequestMemoryReservations: @unchecked Sendable {
 
 }
 
+/// How the memory tier holds a shared-prefix checkpoint.
+/// db/records/design/measured-operating-policies.md
+public enum SharedPrefixRetention: Sendable, Equatable {
+    /// A speculative snapshot: kept only in room no conversation needs, and
+    /// the first state given up when room is needed. Right for chat, where
+    /// the conversations themselves are what clients come back to.
+    case optional
+    /// Kept and evicted like a conversation, least recently used first. Right
+    /// for an agent's instructions and tools, which every later session,
+    /// subagent and compaction request starts with.
+    case conversation
+}
+
 /// One accepted request owns one monotonic clock, including all queue and
 /// preparation work. Neither transport activity nor prefix reuse restarts it.
 /// Injectable observations exercise refusal without stressing the machine.
