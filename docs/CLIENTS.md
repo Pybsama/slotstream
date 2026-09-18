@@ -101,7 +101,7 @@ it actually reads the file and returns its contents.
 | The app calls `/v1/responses` | Supported from Slotstream 0.2.20. Update with the install command if `slotstream --version` is older. Codex needs the [custom provider setup](CODEX.md); it cannot use `--oss`. |
 | The app calls `/v1/messages` | The Anthropic Messages API, supported from Slotstream 0.2.21. Set the base URL without `/v1`. |
 | The app sends `store` and gets a 400 | Update Slotstream; from 0.2.21 chat completions accept `store: false` without effect. `store: true` still returns 400, since the server keeps no completions to fetch later. |
-| The conversation is too long | The window includes instructions, history, and reply. Auto picks 32,768 tokens through 32 GB of RAM and more on larger Macs; `slotstream doctor` shows yours. Hermes needs the `--max-context 65536` setup in its guide. |
+| The conversation is too long | The window includes instructions, history, and reply. Auto picks it per Mac, often 32,768 tokens; `slotstream doctor` shows yours. Hermes needs the `--max-context 65536` setup in its guide. |
 | The first answer times out | Check progress in the Slotstream window. Long prompts can take minutes. See your agent's guide for its timeout settings. |
 | Summaries stop early or use a cloud model | Check the separate summary-provider and reply-length settings. Use the full configuration in the Hermes guide; fx has known summary limitations. |
 | The app requires strict structured output | JSON-schema constrained output and strict tool schemas are unsupported. The app needs a mode that works without that requirement. |

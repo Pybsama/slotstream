@@ -1860,3 +1860,18 @@ Raw v0.2.22 publication and installed acceptance: exact candidate, release prove
 
 ## [2026-09-18 21:11] validate | db
 v0.2.22 publication evidence complete: zero validation errors, two declared historical warnings, 299 claim needles current, projections regenerated, acceptance harness tests 28 of 28 and installed end to end 31 of 31.
+
+## [2026-09-18 21:50] update | records/claims/automatic-context-at-48-gb
+Added docs/API.md and docs/HERMES.md as surfaces. Both still implied 65,536 tokens from 36 GB after 0.2.22 set the 48 GB tier to 32,768, so the gate now holds them to this needle.
+
+## [2026-09-18 21:50] update | records/claims/automatic-context-at-36-gb
+Added docs/API.md as a surface; its automatic window list now uses the gated tier phrasing.
+
+## [2026-09-18 21:50] update | records/claims/context-cap-32768-tokens
+Body adds the 0.2.22 reason auto keeps 32,768 tokens: a larger window would remove expert cache above the measured decode range, as at 48 GB.
+
+## [2026-09-18 21:50] update | records/claims/context-opt-in-65536
+Body no longer says auto picks 65,536 tokens or more from 36 GB; at 48 GB it picks 32,768.
+
+## [2026-09-18 21:50] validate | db
+Automatic window docs aligned with 0.2.22: zero validation errors, two declared historical warnings, 302 claim needles current and llms-full.txt regenerated.

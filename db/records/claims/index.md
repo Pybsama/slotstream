@@ -2,13 +2,15 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-18T16:12:53.469274Z
+updated: 2026-09-18T21:49:31.700660Z
 ---
 
 # records/claims
 
-- [[records/claims/automatic-context-at-48-gb]] — Automatic context preserves unmeasured cache at the simulated 48 GB tier
+- [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
+- [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-context-at-36-gb]] — Automatic context at the simulated 36 GB tier
+- [[records/claims/automatic-context-at-48-gb]] — Automatic context preserves unmeasured cache at the simulated 48 GB tier
 - [[records/claims/automatic-context-window-tolerance-10-percent]] — A larger automatic window may add at most 10% to a typical request
 - [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
 - [[records/claims/malformed-tool-call-token-scores]] — The token a continued turn flipped: a fresh read scored > at 0.9576 and ] at 0.0421
@@ -87,12 +89,10 @@ updated: 2026-09-18T16:12:53.469274Z
 - [[records/claims/expert-lookahead-prefetch-b0-1-105x]] — Slot-adoption prefetch achieved 1.105x decode throughput in the B0 cohort
 - [[records/claims/lookahead-parts-add-about-2-percent-each]] — The router weight cache and the deferred GPU drains each add about 2% over prefetch
 - [[records/claims/decode-lookahead-charges-373-mib]] — The decode lookahead charges 373 MiB to the memory plan
-- [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-target-54-7-gb-from-96-gb]] — Auto targets 54.7 GB from 96 GB with the full window
 - [[records/claims/automatic-target-43-2-gb-at-64-gb]] — Auto targets 43.2 GB at 64 GB with its 131,072-token window
 - [[records/claims/automatic-context-window-131072-at-64-gb]] — Auto takes a 131,072-token window at 64 GB
 - [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the 32,768-token window
-- [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Small-memory planner estimates use the M5 Pro curve; README has broader ranges
 - [[records/claims/hardware-planning-range-low]] — Estimated warm reply range for 16 to less than 24 GB Macs

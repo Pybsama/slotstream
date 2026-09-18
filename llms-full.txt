@@ -1685,7 +1685,7 @@ it actually reads the file and returns its contents.
 | The app calls `/v1/responses` | Supported from Slotstream 0.2.20. Update with the install command if `slotstream --version` is older. Codex needs the [custom provider setup](CODEX.md); it cannot use `--oss`. |
 | The app calls `/v1/messages` | The Anthropic Messages API, supported from Slotstream 0.2.21. Set the base URL without `/v1`. |
 | The app sends `store` and gets a 400 | Update Slotstream; from 0.2.21 chat completions accept `store: false` without effect. `store: true` still returns 400, since the server keeps no completions to fetch later. |
-| The conversation is too long | The window includes instructions, history, and reply. Auto picks 32,768 tokens through 32 GB of RAM and more on larger Macs; `slotstream doctor` shows yours. Hermes needs the `--max-context 65536` setup in its guide. |
+| The conversation is too long | The window includes instructions, history, and reply. Auto picks it per Mac, often 32,768 tokens; `slotstream doctor` shows yours. Hermes needs the `--max-context 65536` setup in its guide. |
 | The first answer times out | Check progress in the Slotstream window. Long prompts can take minutes. See your agent's guide for its timeout settings. |
 | Summaries stop early or use a cloud model | Check the separate summary-provider and reply-length settings. Use the full configuration in the Hermes guide; fx has known summary limitations. |
 | The app requires strict structured output | JSON-schema constrained output and strict tool schemas are unsupported. The app needs a mode that works without that requirement. |
@@ -2721,10 +2721,11 @@ A query string doesn't affect routing. `HEAD` returns 200 or 404 for the
 requested path.
 
 Prompt plus completion is capped by the served window. By default the server
-picks it for the Mac: 32,768 tokens through 32 GB of RAM, 65,536 from 36 GB,
-131,072 at 64 GB and 262,144 from 96 GB, or less on a Mac that is busy at
-startup. Use `serve --max-context 65536` to fix a 65,536-token window, or any
-size from 1 to 262,144. Requests with images stay within 65,536 tokens. The
+picks it for the Mac: 32,768 tokens through 32 GB of RAM, 65,536 at 36 GB,
+32,768 at 48 GB, 131,072 at 64 GB and 262,144 from 96 GB, or less on a Mac
+that is busy at startup. Use `serve --max-context 65536` to fix a
+65,536-token window, or any size from 1 to 262,144. Requests with images stay
+within 65,536 tokens. The
 planner charges extra state and transient memory before allocating the pool.
 A prompt over the configured cap returns 400 with the actual limit. A known
 prefill estimate can also refuse work that exceeds the remaining wait budget. `/v1/models` and `/api/show` report the actual served window;
@@ -3386,8 +3387,9 @@ slotstream serve --max-context 65536
 Wait until you see `slotstream listening on http://127.0.0.1:11434`, and
 leave the window open; `slotstream launch hermes` then uses this server as it
 is. Slotstream chooses its memory plan and whether to use speculative
-decoding automatically. Auto already picks 65,536 tokens or more from 36 GB of
-RAM; the flag keeps the window Hermes is configured for on every Mac. Press
+decoding automatically. Without the flag the window depends on the Mac, for
+example 32,768 at 48 GB; the flag keeps the window Hermes is configured for on
+every Mac. Press
 **Control+C** in the window, or run `slotstream stop`, to stop the server.
 
 <a id="start-hermes-yourself"></a>

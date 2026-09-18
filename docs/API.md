@@ -540,10 +540,11 @@ A query string doesn't affect routing. `HEAD` returns 200 or 404 for the
 requested path.
 
 Prompt plus completion is capped by the served window. By default the server
-picks it for the Mac: 32,768 tokens through 32 GB of RAM, 65,536 from 36 GB,
-131,072 at 64 GB and 262,144 from 96 GB, or less on a Mac that is busy at
-startup. Use `serve --max-context 65536` to fix a 65,536-token window, or any
-size from 1 to 262,144. Requests with images stay within 65,536 tokens. The
+picks it for the Mac: 32,768 tokens through 32 GB of RAM, 65,536 at 36 GB,
+32,768 at 48 GB, 131,072 at 64 GB and 262,144 from 96 GB, or less on a Mac
+that is busy at startup. Use `serve --max-context 65536` to fix a
+65,536-token window, or any size from 1 to 262,144. Requests with images stay
+within 65,536 tokens. The
 planner charges extra state and transient memory before allocating the pool.
 A prompt over the configured cap returns 400 with the actual limit. A known
 prefill estimate can also refuse work that exceeds the remaining wait budget. `/v1/models` and `/api/show` report the actual served window;
