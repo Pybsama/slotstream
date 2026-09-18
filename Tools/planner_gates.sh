@@ -222,11 +222,11 @@ check "16 GB Mac: automatic window is 32,768"                  "auto_window_is 3
 check "24 GB Mac: automatic window is 32,768"                  "auto_window_is 32768 --sim-ram 24"
 check "32 GB Mac: automatic window is 32,768 (65,536 drops the head)" "auto_window_is 32768 --sim-ram 32"
 check "36 GB Mac: automatic window is 65,536"                  "auto_window_is 65536 --sim-ram 36"
-check "48 GB Mac: automatic window is 65,536"                  "auto_window_is 65536 --sim-ram 48"
+check "48 GB Mac: auto preserves cache with unmeasured benefit" "auto_window_is 32768 --sim-ram 48"
 check "64 GB Mac: automatic window is 131,072"                 "auto_window_is 131072 --sim-ram 64"
 check "96 GB Mac: automatic window is 262,144"                 "auto_window_is 262144 --sim-ram 96"
 check "128 GB Mac: automatic window is 262,144"                "auto_window_is 262144 --sim-ram 128"
-check "--max-context auto is the default"                      "auto_window_is 65536 --sim-ram 48 --max-context auto"
+check "--max-context auto is the default"                      "auto_window_is 32768 --sim-ram 48 --max-context auto"
 check "a fixed cache size keeps the default window"            "auto_window_is 32768 --sim-ram 128 --experts-per-layer 120"
 check "an explicit window is reported as explicit"             "auto_window_is explicit --sim-ram 128 --max-context 65536"
 run_binary doctor $M --sim-ram 128 > "$T/auto128" 2>&1
@@ -234,7 +234,7 @@ check "128 GB: the window rides above the knee and doctor marks the choice" \
       "grep -q 'target: 54.7' $T/auto128 && grep -q 'context window: automatic, 262144' $T/auto128 && grep -q '<- auto' $T/auto128"
 run_binary doctor $M --sim-ram 128 --sim-available 40 > "$T/autobusy" 2>&1
 check "a busy big Mac lowers the automatic window and keeps the head" \
-      "grep -q 'lowered to 131072 tokens right now' $T/autobusy && grep -q 'draft head on' $T/autobusy"
+      "grep -q 'lowered to 32768 tokens right now' $T/autobusy && grep -q 'draft head on' $T/autobusy && grep -q 'automatic context window lowered from 262144 to 32768' $T/autobusy"
 run_binary doctor $M --sim-ram 17.2 --sim-working-set 11.8 --sim-available 12.5 --max-context 65536 > "$T/ret16" 2>&1
 check "an explicit window too large to retain says how much follow-ups reuse" \
       "grep -q 'does not fit retained at this size' $T/ret16"

@@ -15,6 +15,8 @@ struct MacCommand {
         .init(title: "Focus Conversation", key: "l", modifiers: [.command, .shift], shortcut: "⌘⇧L"),
         .init(title: "Jump to Latest Message", key: "\u{F701}", modifiers: [.command, .control], shortcut: "⌃⌘↓"),
         .init(title: "Home", key: "1", shortcut: "⌘1"),
+        .init(title: "Apps & Skills", key: "2", shortcut: "⌘2"),
+        .init(title: "Attach Files…", key: "a", modifiers: [.command, .shift], shortcut: "⌘⇧A"),
         .init(title: "Toggle Sidebar", key: "s", modifiers: [.command, .control], shortcut: "⌃⌘S")
     ]
     static let reference = owned + [

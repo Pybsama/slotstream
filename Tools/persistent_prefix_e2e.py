@@ -237,6 +237,13 @@ def main():
     parser.add_argument("--port", type=int, default=11537)
     parser.add_argument("--memory-gb", type=float, default=10.0)
     parser.add_argument("--words", type=int, default=2400, help="approximate length of the shared notes")
+    # Each turn carries its own round of notes, because a state is now saved at
+    # the prompt's last prefill pass boundary: a turn that adds only a short
+    # question stays inside the band its parent already wrote, and writes
+    # nothing. Real conversations carry tool results and pasted work, so the
+    # incremental save is exercised by turns that cross a boundary.
+    parser.add_argument("--turn-words", type=int, default=400,
+                        help="approximate length of the notes each follow-up turn adds")
     parser.add_argument("--num-predict", type=int, default=48)
     parser.add_argument("--min-tokens", type=int, default=2048)
     parser.add_argument("--headroom-gb", type=float, default=4.0,
@@ -257,7 +264,7 @@ def main():
     notes = prose(args.words, seed=1)
     turn1 = [{"role": "system", "content": "You are a concise assistant for a river maintenance program.\n\n" + notes},
              {"role": "user", "content": "Summarize what the notes say about the spillway gate."}]
-    result = {"binary": args.binary, "memory_gb": args.memory_gb, "words": args.words,
+    result = {"binary": args.binary, "memory_gb": args.memory_gb, "words": args.words, "turn_words": args.turn_words,
               "num_predict": args.num_predict, "work": work}
 
     def start(directory, label):
@@ -287,10 +294,12 @@ def main():
                 result["max_context_tokens"] = plan.get("max_context_tokens")
             first_1 = chat(args.port, turn1, args.num_predict)
             shutil.copytree(first_dir, after_turn_1)
-            turn2 = follow_up(turn1, first_1, "Which stations need a second visit, and why?")
+            turn2 = follow_up(turn1, first_1, "Here is today's round.\n\n" + prose(args.turn_words, seed=2)
+                              + "\n\nWhich stations need a second visit, and why?")
             first_2 = chat(args.port, turn2, args.num_predict)
             shutil.copytree(first_dir, after_turn_2)
-            turn3 = follow_up(turn2, first_2, "Which note reports the highest reading, and where?")
+            turn3 = follow_up(turn2, first_2, "And the evening round.\n\n" + prose(args.turn_words, seed=3)
+                              + "\n\nWhich note reports the highest reading, and where?")
             first_3 = chat(args.port, turn3, args.num_predict)
         finally:
             server.stop()
@@ -353,8 +362,13 @@ def main():
                 pr.get("restoredTokens", 0) > 0 and pr.get("restoredTokens") == p2.get("savedTokens"),
             "restart turn-3 prompt ids equal the first server's": restart_3["prompt_ids"] == first_3["prompt_ids"],
             "restart turn-3 output ids equal the first server's": restart_3["output_ids"] == first_3["output_ids"],
-            "a restarted server regenerating turn 3 restored the kept parent":
-                pg.get("restoredTokens", 0) > 0 and pg.get("restoredTokens") == p2.get("savedTokens"),
+            # At or above: a turn is saved at its prompt's last prefill pass
+            # boundary, so the regenerating server may restore the deeper
+            # state the restarted server wrote rather than the kept parent.
+            # Either is a state of this conversation, and the output ids
+            # below are what actually has to match.
+            "a restarted server regenerating turn 3 restored the kept parent or deeper":
+                pg.get("restoredTokens", 0) >= (p2.get("savedTokens") or 0) > 0,
             "regenerated turn-3 output ids equal the first server's": regenerate_3["output_ids"] == first_3["output_ids"],
             "prefix-cache lists both states of the snapshot": len(listing.get("states", [])) == 2
                 and listing.get("in_use") is False,

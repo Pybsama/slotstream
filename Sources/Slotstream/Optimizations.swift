@@ -74,6 +74,20 @@ public struct InferenceOptimizations: Codable, Equatable {
     /// Retain the complete committed prompt and its raw last logits. This is
     /// independently qualified before joining integrationCandidate.
     public var completePromptCheckpoint = false
+    /// Continue a retained conversation only from a state this request would
+    /// have built itself, so a cached turn computes what a cold one does.
+    ///
+    /// Without it a turn resumes whatever state the previous turn left: its
+    /// prompt read in passes, its reply decoded one token at a time. That is
+    /// not what reading those same ids computes, and the difference can cross
+    /// a token boundary (see `PrefixResumeRule`). With it the engine resumes
+    /// only at its own prefill pass boundaries and re-reads the rest.
+    /// Optional so control sets saved before this existed decode unchanged;
+    /// nil is the original behavior.
+    public var alignedPrefixResume: Bool? = nil
+
+    /// Does this request have to reproduce a fresh read of its prompt?
+    public var resumesOnPassBoundaries: Bool { alignedPrefixResume == true }
     /// Expert Lookahead raw-staging prefetch (experimental, off by default).
     /// `expertPrefetchShadow` runs forecasts without reads to price overhead.
     /// Optional so control sets saved before the experiment decode unchanged.
@@ -121,6 +135,7 @@ public struct InferenceOptimizations: Codable, Equatable {
         result.responsiveGovernor = true
         result.prefixCheckpointTokens = 256
         result.completePromptCheckpoint = true
+        result.alignedPrefixResume = true
         result.sharedRoPE = true
         result.fusedRoPE = true
         result.verifySplitAttention = true
@@ -216,6 +231,8 @@ public struct InferenceOptimizations: Codable, Equatable {
             }
             result.prefixCheckpointTokens = n
         }
+        result.alignedPrefixResume = try flag("SLOTSTREAM_OPT_ALIGNED_RESUME",
+            fallback: result.alignedPrefixResume ?? false) ? true : nil
         result.cachedRouterWeights = try flag("SLOTSTREAM_OPT_ROUTER_WEIGHTS", fallback: result.cachedRouterWeights)
         result.expertPrefetch = try flag("SLOTSTREAM_OPT_EXPERT_PREFETCH", fallback: result.expertPrefetch ?? false) ? true : nil
         result.expertPrefetchShadow = try flag("SLOTSTREAM_OPT_EXPERT_PREFETCH_SHADOW", fallback: result.expertPrefetchShadow ?? false) ? true : nil

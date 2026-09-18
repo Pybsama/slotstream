@@ -84,9 +84,12 @@ import SevraRuntime
     @objc func toggleSidebar(_ sender: Any?) { NotificationCenter.default.post(name: .sevraToggleSidebar, object: nil) }
     @objc func back(_ sender: Any?) { model.closePanel() }
     @objc func revealHome(_ sender: Any?) { NSWorkspace.shared.open(model.homeURL) }
+    @objc func attachSources(_ sender: Any?) { model.panel = ""; model.attach() }
+    @objc func appsAndSkills(_ sender: Any?) { model.panel = "Apps" }
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(send(_:)) { return model.composer.canSend && !model.busy && !model.submitting && !model.attaching && !model.aiPaused && !model.composer.transitioning }
         if menuItem.action == #selector(stop(_:)) { return model.busy && model.thread?.run?.state != .stopping }
+        if menuItem.action == #selector(attachSources(_:)) { return model.composer.ready && !model.working && !model.attaching && !model.aiPaused }
         if menuItem.action == #selector(thinkLonger(_:)) { menuItem.state = model.thinkingEnabled ? .on : .off; return model.composer.ready && !model.thinkingUnavailable }
         if menuItem.action == #selector(answerNow(_:)) { return model.liveThinking?.active == true }
         if menuItem.action == #selector(newThread(_:)) || menuItem.action == #selector(incognito(_:)) { return model.composer.ready && !model.composer.transitioning }
@@ -119,6 +122,7 @@ import SevraRuntime
         let file = menu("File")
         add(file, "New Thread", #selector(newThread(_:)), "n", target: self)
         add(file, "New Incognito Thread", #selector(incognito(_:)), "n", [.command, .shift], target: self)
+        add(file, "Attach Files…", #selector(attachSources(_:)), "a", [.command, .shift], target: self)
         add(file, "Send Message", #selector(send(_:)), "", target: self)
         add(file, "Stop Response", #selector(stop(_:)), "", target: self)
         file.addItem(.separator()); add(file, "Think Longer", #selector(thinkLonger(_:)), "", target: self)
@@ -130,6 +134,7 @@ import SevraRuntime
         edit.addItem(.separator()); add(edit, "Find in Current Document…", #selector(find(_:)), "f", target: self)
         add(edit, "Search Home…", #selector(search(_:)), "k", target: self)
         let view = menu("View"); add(view, "Home", #selector(home(_:)), "1", target: self)
+        add(view, "Apps & Skills", #selector(appsAndSkills(_:)), "2", target: self)
         add(view, "Toggle Sidebar", #selector(toggleSidebar(_:)), target: self)
         view.addItem(.separator())
         add(view, "Focus Composer", #selector(focusComposer(_:)), target: self)
@@ -223,8 +228,9 @@ import SevraRuntime
             if let help = item.toolTip, let view = item.view, view.toolTip != help { view.toolTip = help; view.setAccessibilityHelp(help) }
         }
         let conversation = model.panel.isEmpty || model.panel == "Artifact"
-        let title = conversation ? (model.thread?.title ?? "Home") : model.panel
-        var subtitle = conversation ? (model.thread?.mode.title ?? "Shared memory") : ""
+        let panelTitles = ["Apps": "Apps & Skills", "App review": "Review App", "Skill review": "Review Skill", "Changes": "File Changes", "Needs you": "Needs You"]
+        let title = conversation ? (model.thread?.title ?? "Home") : model.panel == "App" ? (model.runningApp?.session.name ?? "App") : panelTitles[model.panel] ?? model.panel
+        var subtitle = conversation ? (model.thread?.mode.title ?? "Shared memory") : model.panel == "App" ? "Mini-app · offline" : ""
         if conversation, let thread = model.thread, thread.id != "home" {
             let lifecycle: String
             switch thread.lifecycle {
@@ -316,6 +322,8 @@ import SevraRuntime
             if thread.mode == .incognito { add("Close Incognito Thread", "xmark", #selector(closeIncognito(_:)), thread: thread) }
         }
         menu.addItem(.separator())
+        add("Attach Files…", "paperclip", #selector(attachSources(_:)), enabled: model.composer.ready && !model.working && !model.aiPaused)
+        add("Apps & Skills", "square.grid.2x2", #selector(appsAndSkills(_:)))
         add("Reveal Home in Finder", "folder", #selector(revealHome(_:)))
         add("Settings…", "gearshape", #selector(settings(_:)))
     }

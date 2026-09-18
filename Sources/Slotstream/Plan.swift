@@ -169,6 +169,10 @@ public struct MemoryPlan {
             lookaheadReserveBytes: lookaheadReserveBytes)
     }
     public var expectedPeakGB: Double { Double(memoryLedger.expectedPeakBytes) / 1e9 }
+    /// Remaining planned budget, not currently available physical memory. The
+    /// minimum-cache policy may consume part of the nominal planning margin;
+    /// full residency can leave more than that margin unassigned.
+    public var plannedHeadroomGB: Double? { targetGB.map { max(0, $0 - expectedPeakGB) } }
 
     public func withRequestPolicy(_ configuration: ContextConfiguration) throws -> MemoryPlan {
         guard configuration.maxContextTokens == maxContextTokens else {
@@ -208,7 +212,7 @@ public struct MemoryPlan {
             let hint = source == .auto
                 ? "   (explicit target: --memory-gb N; auto RAM share: --max-ram-percent P)"
                 : ""
-            l.append(String(format: "  target: %.1f GB total for this process%@", t, hint))
+            l.append(String(format: "  target: %.1f GB total process budget, not a RAM usage goal%@", t, hint))
         }
         if fullyResident {
             l.append(String(
@@ -220,8 +224,15 @@ public struct MemoryPlan {
                 expertsPerLayerCached, Geometry.expertsPerLayer, slots, poolGB))
         }
         l.append(String(
-            format: "  expect: ~%.1f GB peak, ~%.0f tok/s warm decode (est. from M5 Pro anchors)",
+            format: "  plan:   ~%.1f GB full-workload envelope, ~%.0f tok/s warm decode (est. from M5 Pro anchors)",
             expectedPeakGB, estWarmTokS))
+        var memory = String(format: "  memory: %.1f GB expert cache at load; %.1f GB allowed for runtime, context and workspace",
+            poolGB, Double(memoryLedger.expectedPeakBytes - memoryLedger.poolBytes) / 1e9)
+        if let headroom = plannedHeadroomGB { memory += String(format: "; %.1f GB budget headroom", headroom) }
+        l.append(memory + ". Short requests can use less.")
+        if expertsPerLayerCached > Planner.decodePlateauPerLayer {
+            l.append("  speed:  this cache exceeds the measured decode range; the estimate is capped, but extra cache may still improve speed")
+        }
         // The decode curve is a function of experts per layer alone. It carries
         // no term for read bandwidth, and it was anchored on a 17.3 GB/s SSD
         // (MEASUREMENTS, M0.5). The first machine measured that was not the dev
@@ -287,6 +298,12 @@ public struct MemoryPlan {
             "pool_slots": slots,
             "pool_gb": tenth(poolGB),
             "expected_peak_gb": tenth(expectedPeakGB),
+            // Preserve the legacy envelope field; make its meaning explicit
+            // without passing it off as sampled physical memory.
+            "memory_target_semantics": "process_budget_not_allocation_goal",
+            "expected_peak_semantics": "planned_full_workload_envelope_not_measured_usage",
+            "non_cache_allowance_bytes": memoryLedger.expectedPeakBytes - memoryLedger.poolBytes,
+            "decode_estimate_cache_in_measured_range": expertsPerLayerCached <= Planner.decodePlateauPerLayer,
             "device_ram_gb": tenth(ramGB),
             "device_working_set_gb": tenth(workingSetGB),
             "max_ram_percent": ramPercent,
@@ -321,6 +338,7 @@ public struct MemoryPlan {
         ]
         if let a = availableGB, a.isFinite { d["device_available_gb"] = tenth(a) }
         if let t = targetGB { d["target_gb"] = tenth(t) }
+        if let headroom = plannedHeadroomGB { d["planned_headroom_gb"] = tenth(headroom) }
         if let policy = runtimeAllocationPolicy {
             d["runtime_prefix_cache_enabled"] = policy.prefixCacheEnabled
             if let chunk = policy.prefillChunkOverride { d["runtime_prefill_override"] = chunk }

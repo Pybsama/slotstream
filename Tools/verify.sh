@@ -140,6 +140,7 @@ esac
 
 echo "== conversation prefix cache: bounded, flat with depth, deterministic =="
 check "prefix reuse within the prefill-rechunk control (prefix-check)" "run_binary prefix-check"
+check "a continued conversation equals a cold one (prefix-exact-check)" "run_binary prefix-exact-check"
 
 echo "== prefill sweep: matches the pool path, deterministic, blind to the pool =="
 check "sweep within the prefill-rechunk control, identical cold and warm (sweep-check)" "run_binary sweep-check"

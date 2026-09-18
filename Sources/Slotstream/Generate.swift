@@ -130,6 +130,9 @@ public struct GenStats: Codable {
     public var sharedPrefixStores = 0
     public var sharedPrefixRefusals = 0
     public var sharedPrefixErrors = 0
+    /// States this request declined to continue from because they would not
+    /// have reproduced a read of its own prompt (see `PrefixResumeRule`).
+    public var alignedResumeRefusals = 0
     public var embeddingRowsEnabled = false
     /// Unique lookup rows served/read within this request, including MTP.
     public var embeddingRowHits = 0
@@ -384,6 +387,10 @@ public final class Generator {
     /// Read-only pricing observation for bounded native diagnostics. No wire
     /// or environment setting can install this package-only callback.
     package var automaticScopePricingObserver: (([[Int]], [Int], Int) -> Void)?
+    /// The raw next-token logits the prompt ends on, before any sampling, for
+    /// checks that compare a continued conversation against a cold one. Reads
+    /// the row to the CPU, so it is installed by diagnostics and nothing else.
+    package var promptLogitsObserver: (([Float]) -> Void)?
     package func setPrefillBudgetCeiling(_ ceiling: Int?) {
         prefillBudgetCeiling = ceiling
         if let ceiling { prefillChunk = min(max(1, prefillChunk), ceiling) }
@@ -612,25 +619,65 @@ public final class Generator {
                 prefillChunk: prefillChunk, mtp: speculationEnabled && model.mtpHead != nil) : nil
         let reserveSequenceBytes = model.sequenceCapacityBytes(tokens: promptIds.count + params.maxTokens,
             mtp: speculationEnabled && model.mtpHead != nil)
+        // What this request may continue from, when a cached turn has to
+        // compute what a cold one does: its own pass boundaries, reached by
+        // reading exactly these ids under exactly these settings. Nil keeps
+        // the original extend-only reuse.
+        let resumeRule = model.optimizations.resumesOnPassBoundaries
+            ? PrefixResumeRule(
+                key: PromptCheckpointKey(model: model.promptCheckpointIdentity,
+                    optimizations: model.optimizations, prefillChunk: prefillChunk,
+                    mtp: speculationEnabled && model.mtpHead != nil),
+                boundaries: PrefillSchedule.resumeBoundaries(tokens: promptIds.count,
+                    maxChunk: prefillChunk, tailAware: model.optimizations.tailAwarePrefill))
+            : nil
+        cache?.resumeRuleInForce(resumeRule != nil)
         // The persistent tier answers first only when it holds a longer state
         // than memory does, and makes room exactly like a miss before reading.
         let restored = restorePersistentPrefix(cache: cache, promptIds: promptIds, images: images,
             completePromptKey: completeKey, reserveTokens: promptIds.count + params.maxTokens,
-            reserveSequenceBytes: reserveSequenceBytes, request: request, stats: &stats)
-        let hit: (state: Qwen4ExpModel.State, reused: Int, logits: MLXArray?)?
+            reserveSequenceBytes: reserveSequenceBytes, request: request, resume: resumeRule, stats: &stats)
+        var hit: (state: Qwen4ExpModel.State, reused: Int, logits: MLXArray?, freshEquivalent: Bool)?
         if let restored {
-            hit = (restored.state, restored.tokens, nil)
+            // Only a boundary-aligned state is offered to a request under the
+            // rule (PersistentPrefixPolicy.bestMatch), and the tier's identity
+            // covers the settings, so a restored state is fresh-equivalent.
+            hit = (restored.state, restored.tokens, nil, resumeRule != nil)
         } else {
             hit = cache?.takeForGeneration(
                 matching: promptIds, images: images,
                 reserveTokens: promptIds.count + params.maxTokens,
                 reserveSequenceBytes: reserveSequenceBytes, completePromptKey: completeKey,
-                modelIdentity: model.promptCheckpointIdentity)
+                modelIdentity: model.promptCheckpointIdentity, resume: resumeRule)
+        }
+        // A state whose draft cache does not match the mode this request was
+        // offered cannot be continued exactly: finish it from the start rather
+        // than read the rest of the prompt through a different head.
+        if let taken = hit, resumeRule?.key.mtp == true, !taken.state.hasValidMTP {
+            stats.alignedResumeRefusals += 1
+            hit = nil
         }
         let state = hit?.state ?? model.makeState()
         let reused = hit?.reused ?? 0
+        // Every token of this state was read in the passes this prefill is
+        // about to continue, so what it stores next is fresh-equivalent too.
+        let alignedPrefill = reused == 0 || (resumeRule != nil && hit?.freshEquivalent == true)
         let stateKnowsMTP = hit == nil || state.hasValidMTP
         let mtpHead = speculationEnabled && stateKnowsMTP ? model.mtpHead : nil
+        // The settings this request actually ran under. A strict-prefix hit can
+        // have been produced without a draft state; that request deliberately
+        // finishes plain, so stamp the mode used rather than the one asked for.
+        let producedKey = PromptCheckpointKey(model: model.promptCheckpointIdentity,
+            optimizations: model.optimizations, prefillChunk: prefillChunk, mtp: mtpHead != nil)
+        // The last pass boundary this prefill crosses. A longer prompt that
+        // extends these ids reads through the same position, so this is the
+        // deepest state the next turn can continue from exactly. Zero keeps
+        // common-prefix retention off, as `prefixCheckpointTokens` always has.
+        let checkpointAt: Int = {
+            guard model.optimizations.prefixCheckpointTokens > 0 else { return 0 }
+            guard let resumeRule else { return model.optimizations.prefixCheckpointTokens }
+            return resumeRule.boundaries.max() ?? 0
+        }()
         model.smallPrefillReferenceStart = reused
         model.smallPrefillReferenceEnd = promptIds.count
         var smallReferenceStart: Int?
@@ -797,9 +844,15 @@ public final class Generator {
                         return ImageSegment(start: image.start, count: min(image.count, i - image.start),
                             hash: image.hash, preparationIdentity: image.preparationIdentity)
                     }
-                    cache?.store(state: state, tokens: Array(promptIds.prefix(i)), images: committedImages)
+                    // A cancelled prefill stops on a completed pass, so this
+                    // prefix is exactly what reading it computes when the
+                    // whole read was aligned.
+                    let alignedHere = alignedPrefill && (resumeRule?.boundaries.contains(i) ?? false)
+                    cache?.store(state: state, tokens: Array(promptIds.prefix(i)), images: committedImages,
+                        freshEquivalent: alignedHere, key: producedKey)
                     persistPrefix(cache: cache, state: state, tokens: Array(promptIds.prefix(i)),
-                        images: committedImages, request: request, stats: &stats)
+                        images: committedImages, request: request,
+                        aligned: resumeRule == nil || alignedHere, stats: &stats)
                 }
                 stats.terminalQueryRowsSkipped = model.terminalQueryRowsSkipped - terminalQueryStart
             stats.terminalMoERowsSkipped = model.terminalMoERowsSkipped - terminalMoEStart
@@ -1017,16 +1070,25 @@ public final class Generator {
                         referenceStart: model.smallPrefillReferenceStart, referenceEnd: model.smallPrefillReferenceEnd) : keyEnd)
             }
             i = hi
-            if let cache, i == model.optimizations.prefixCheckpointTokens,
-               reused < i, i < promptIds.count {
+            if let cache, i == checkpointAt, reused < i, i < promptIds.count {
                 // Only an existing whole-stack commit is eligible. Do not
                 // split/rebatch a pass merely to manufacture this boundary.
                 do {
+                    // With the rule in force this boundary, not the consumed
+                    // conversation, is what a later run can restore exactly.
+                    // Written before the fork, so the snapshot the next turn
+                    // resumes carries the lineage and its own save references
+                    // these rows instead of writing them again.
+                    if resumeRule != nil {
+                        persistPrefix(cache: cache, state: state, tokens: Array(promptIds.prefix(i)),
+                            images: images, request: request, aligned: alignedPrefill, stats: &stats)
+                    }
                     let retained = try cache.storeReusableCheckpoint(state: state,
                         tokens: Array(promptIds.prefix(i)), images: images,
                         reserveTokens: promptIds.count + params.maxTokens,
                         reserveSequenceBytes: model.sequenceCapacityBytes(tokens: promptIds.count + params.maxTokens,
-                            mtp: mtpHead != nil))
+                            mtp: mtpHead != nil),
+                        freshEquivalent: alignedPrefill, key: producedKey)
                     if retained { stats.prefixCheckpointStores += 1 }
                     else { stats.prefixCheckpointRefusals += 1 }
                 } catch {
@@ -1042,16 +1104,11 @@ public final class Generator {
             // or replaying a pass. State alone cannot supply the first token;
             // retain its compact raw logits too, before any sampling mutation.
             do {
-                // A strict-prefix hit can have been produced without a draft
-                // state. That request deliberately finishes plain; stamp the
-                // mode actually used, so a later MTP request rebuilds its head.
-                let producedKey = PromptCheckpointKey(model: completeKey.model,
-                    optimizations: completeKey.optimizations, prefillChunk: completeKey.prefillChunk,
-                    mtp: mtpHead != nil, contextArithmetic: completeKey.contextArithmetic)
                 let retained = try cache.storeCompletePrompt(state: state, tokens: promptIds, images: images,
                     reserveTokens: promptIds.count + params.maxTokens,
                     reserveSequenceBytes: model.sequenceCapacityBytes(tokens: promptIds.count + params.maxTokens,
-                        mtp: mtpHead != nil), logits: logits, vocabularySize: model.cfg.vocabSize, key: producedKey)
+                        mtp: mtpHead != nil), logits: logits, vocabularySize: model.cfg.vocabSize,
+                    key: producedKey, freshEquivalent: alignedPrefill)
                 if retained { stats.completePromptStores += 1 }
                 else { stats.prefixCheckpointRefusals += 1 }
             } catch { stats.prefixCheckpointErrors += 1 }
@@ -1092,6 +1149,9 @@ public final class Generator {
         }
         model.pool.resetStats()
         model.ngram.resetStats()
+        if let promptLogitsObserver, logits.size == model.cfg.vocabSize {
+            promptLogitsObserver(logits.reshaped([-1]).asType(.float32).asArray(Float.self))
+        }
 
         // ---- decode
         var out: [Int] = []
@@ -1155,8 +1215,16 @@ public final class Generator {
             reason = "error"
         }
         if stats.runtimeError == nil, request?.mayRetainState != false {
-            cache?.store(state: state, tokens: consumed, images: images)
-            persistPrefix(cache: cache, state: state, tokens: consumed, images: images, request: request, stats: &stats)
+            // The conversation entry holds generated tokens, so under the rule
+            // it can never be continued exactly; it still carries this turn's
+            // exact ids, which `peek` splices into the next prompt. The state
+            // a later turn resumes is the boundary checkpoint above.
+            cache?.store(state: state, tokens: consumed, images: images,
+                freshEquivalent: false, key: producedKey)
+            if resumeRule == nil {
+                persistPrefix(cache: cache, state: state, tokens: consumed, images: images,
+                    request: request, aligned: true, stats: &stats)
+            }
         }
         stats.finishReason = reason
         stats.decodeTokens = out.count

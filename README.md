@@ -71,8 +71,8 @@ range; other apps and memory pressure pull results down.
 |---|---|---|
 | 8 GB | **Support coming soon.** The current model doesn't fit yet. | Not available yet |
 | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
-| 24–<48 GB | ~6–16 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
-| 48–<96 GB | ~15–27 tok/s | 65,536 at 48 GB; 131,072 at 64 GB |
+| 24–<48 GB | ~6–16 tok/s | 32,768 through 32 GB; 65,536 at 36 GB |
+| 48–<96 GB | ~15–27 tok/s | 32,768 at 48 GB; 131,072 at 64 GB |
 | 96 GB+, the model fits in memory | ~20–32 tok/s | 262,144 tokens, the model's full window |
 
 The middle rows are anchored on our M5 Pro's measurement; the top ends of the
@@ -91,7 +91,8 @@ conditions, and [every automatic memory plan](docs/HARDWARE.md#automatic-memory-
 **Auto mode picks the memory target, cache size, speculative decoding and
 context window for your Mac.** It takes the largest window in the table above
 that still leaves room for speculative decoding and a complete conversation,
-given the memory free at startup. `slotstream doctor` shows the choice and
+given the memory free at startup, without an unmeasured loss of useful
+expert cache. `slotstream doctor` shows the choice and
 why, and `--max-context 65536` sets a window yourself, up to 262,144 tokens.
 
 **Starting a reply takes time.** Slotstream first reads your question and the
@@ -235,6 +236,11 @@ slotstream doctor --memory-gb 40
 ```
 
 If the plan fits with headroom, `slotstream serve --memory-gb 40` uses it.
+The flag is a total process budget. The startup report separates the allocated
+expert cache from allowances for conversation state and temporary work, which
+short requests may not use. Auto keeps extra expert cache when the speed
+estimate cannot price the cost of replacing it with a larger context window.
+Choose `--max-context N` explicitly when you prefer that tradeoff.
 An explicit target keeps the cache fixed and disables automatic resizing, so
 leave room for macOS and other apps. See the
 [memory options](docs/CLI.md#memory-options) for details.

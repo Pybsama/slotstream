@@ -192,14 +192,21 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     let badFolder = root.appendingPathComponent("source-init-failure")
     try FileManager.default.createDirectory(at: badFolder, withIntermediateDirectories: true)
     try FileManager.default.createSymbolicLink(at: badFolder.appendingPathComponent("link.md"), withDestinationURL: source)
+    try Data("kept".utf8).write(to: badFolder.appendingPathComponent("plain.md"))
+    let linked = try SourceFolder(url: badFolder)
+    let linkedList = try linked.execute(ProposedTool(name: "source.list", arguments: [:]), cancellation: Cancellation())
+    try require(linkedList.contains("plain.md") && !linkedList.contains("link.md") && linked.infos.first?.skipped == 1, "symbolic links are skipped, never listed or followed")
+    let crowded = root.appendingPathComponent("source-too-many")
+    try FileManager.default.createDirectory(at: crowded, withIntermediateDirectories: true)
+    for n in 0...SourceLimits.files { try Data().write(to: crowded.appendingPathComponent("f\(n).txt")) }
     let sentinel = open(source.path, O_RDONLY)
     defer { close(sentinel) }
     for _ in 0..<30 {
-        do { _ = try SourceFolder(url: badFolder); throw SevraError.refused("CHECK FAILED: symlink inventory accepted") }
-        catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "unsafe folder initialization refused") }
+        do { _ = try SourceFolder(url: crowded); throw SevraError.refused("CHECK FAILED: oversized inventory accepted") }
+        catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "oversized folder initialization refused") }
     }
     try require(fcntl(sentinel, F_GETFD) >= 0, "failed source initialization preserves unrelated descriptor ownership")
-    print("PASS: source Unicode boundaries and repeated unsafe-inventory cleanup")
+    print("PASS: source Unicode boundaries, skipped symbolic links and repeated oversized-inventory cleanup")
 
     let hashFile = root.appendingPathComponent("hash-cancellation.bin")
     try Data(repeating: 42, count: 16 * 1024 * 1024).write(to: hashFile)

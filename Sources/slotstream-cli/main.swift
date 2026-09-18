@@ -14,7 +14,7 @@ struct Slotstream: ParsableCommand {
         subcommands: [
             Run.self, Serve.self, Launch.self, Stop.self, Pull.self, Doctor.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
-            PrefixCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
+            PrefixCheck.self, PrefixExactCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPRowCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
             ContextCheck.self, PrefillScheduleCommand.self, SweepCheck.self,
             VisionParity.self, OptimizationStateCheck.self, PackExperts.self,
@@ -48,8 +48,12 @@ struct ModelOptions: ParsableArguments {
             discussion: """
                 The easiest knob: how much of this Mac slotstream may use. The \
                 expert cache gets what remains after the conservatively charged \
-                resident/runtime/context footprint and a 1 GB margin. Run \
+                resident/runtime/context footprint and a nominal 1 GB margin. Run \
                 `slotstream doctor --memory-gb N` for the exact cache size. \
+                This is a budget, not an instruction to fill RAM: context and \
+                temporary workspace use memory as needed. Auto will not trade \
+                away cache above the measured decode range for more context; \
+                --max-context N chooses that tradeoff explicitly. \
                 Default: auto -- a model-specific target based on measured \
                 tradeoffs, bounded by 70% of RAM, the Metal working set minus \
                 2 GB, and live availability. The chosen plan is announced at \
@@ -531,8 +535,9 @@ struct Serve: ParsableCommand {
             discussion: """
                 auto (the default) picks this Mac's window: the largest of \
                 32768, 65536, 131072 and 262144 that keeps speculative decoding, \
-                retains one complete conversation and adds at most 10% to a \
-                typical request. `doctor` shows the choice and its tradeoff. \
+                retains one complete conversation and adds at most 10% to an \
+                estimated request, without an unmeasured cache reduction. \
+                `doctor` shows the choice and its tradeoff. \
                 The configured window stays fixed for this engine; the planner \
                 fits its state and workspaces before loading, and requests \
                 above the window are refused. --max-prefill-wait separately \
@@ -877,6 +882,7 @@ struct Doctor: ParsableCommand {
         // The window: explicit, or this machine's automatic choice planned
         // against the (possibly simulated) live memory, exactly as serve does.
         var automatic: AutomaticContextWindow?
+        var automaticPlan: MemoryPlan?
         let maxContext: Int
         if let tokens = self.maxContext.tokens {
             maxContext = tokens
@@ -891,6 +897,7 @@ struct Doctor: ParsableCommand {
                     mtpAvailable: mtpPresent, visionAvailable: visionPresent, runtimePolicy: policy,
                     decodeLookahead: lookahead) {
                 automatic = resolved.automatic
+                automaticPlan = resolved.plan
                 maxContext = resolved.plan.maxContextTokens
             } else {
                 automatic = Planner.automaticContextWindow(tierRequest, on: device, mtpAvailable: mtpPresent,
@@ -928,7 +935,9 @@ struct Doctor: ParsableCommand {
             }
             throw PlanError("\(feasibility.refusal ?? "requested configuration does not fit"); maximum feasible window: \(feasibility.maximumFeasibleWindow) tokens")
         }
-        let plan = try requestedPlan.withRequestPolicy(configuration)
+        // Keep the exact automatic decision, including its busy-start notes.
+        // Feasibility remains an independent prerequisite above.
+        let plan = try (automaticPlan ?? requestedPlan).withRequestPolicy(configuration)
         if asJSON {
             var output = plan.json(); output["context_feasibility"] = feasibility.json
             output["context_window_source"] = automatic == nil ? "explicit" : "automatic"
@@ -1408,13 +1417,21 @@ struct PrefixCheck: ParsableCommand {
     var slots: Int = Geometry.floorSlots
     @Option var maxTokens: Int = 24
 
-    /// A short multi-turn chat, driven exactly as a client drives one: every
-    /// turn re-sends the whole history through the chat template, so the prompt
-    /// is re-tokenized from text each time. That is the real test of whether a
+    /// A multi-turn chat, driven exactly as a client drives one: every turn
+    /// re-sends the whole history through the chat template, so the prompt is
+    /// re-tokenized from text each time. That is the real test of whether a
     /// cache can hit at all — re-encoding the previous reply has to reproduce
     /// the ids that were generated.
+    ///
+    /// The notes are not decoration. A turn may resume only at one of its own
+    /// prefill pass boundaries (`PrefixResumeRule`), so a chat whose whole
+    /// history is fifty tokens has nothing to resume and would prove nothing
+    /// about reuse. This history crosses several.
+    static let context = (1 ... 90)
+        .map { "Note \($0): item \($0) weighs \($0 * 3) grams." }
+        .joined(separator: " ")
     static let turns = [
-        "Name one planet. Answer with just the name.",
+        "\(context)\n\nName one planet. Answer with just the name.",
         "Is it bigger than Earth? Answer yes or no.",
         "Why? One short sentence.",
     ]
@@ -1593,9 +1610,19 @@ struct PrefixCheck: ParsableCommand {
                         + "    run 1: \(a.0)\n    run 2: \(b.0)")
                 }
 
+                // ---- 4b. Reuse may not change the answer. A resumed turn now
+                //          computes what a cold one computes, so the replies
+                //          are the same replies, not merely close ones.
+                if engine.model.optimizations.resumesOnPassBoundaries {
+                    for (i, (a, b)) in zip(cold, warmA).enumerated() where a.0 != b.0 {
+                        failures.append("a continued turn \(i + 1) answered differently from a cold one\n"
+                            + "    cold: \(a.0)\n    warm: \(b.0)")
+                    }
+                }
+
                 // ---- 5. A prompt that does not extend the held state must
                 //         rebuild, and must still be deterministic.
-                let editQ = "Name one ocean. Answer with just the name."
+                let editQ = "\(Self.context)\n\nName one ocean. Answer with just the name."
                 let edA = try conversation(cached: true, edit: editQ)
                 let edB = try conversation(cached: true, edit: editQ)
                 for (i, (a, b)) in zip(edA, edB).enumerated() where a.0 != b.0 {

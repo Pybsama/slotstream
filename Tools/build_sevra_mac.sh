@@ -13,6 +13,7 @@ STAGE=$(mktemp -d "$PWD/.build/sevra-bundle-XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT
 python3 Tools/mac_build_inputs.py "$DBMD" > "$STAGE/before.json"
 swift build --package-path apps/macos -c "$CONFIG" --product Sevra -j 2
+swift build --package-path apps/macos -c "$CONFIG" --product sevra-extract -j 2
 OUT=$(swift build --package-path apps/macos -c "$CONFIG" --show-bin-path)
 python3 Tools/mac_build_inputs.py "$DBMD" > "$STAGE/after.json"
 if ! cmp -s "$STAGE/before.json" "$STAGE/after.json"; then
@@ -27,9 +28,11 @@ cp apps/macos/Resources/Sevra.icns "$BUNDLE/Contents/Resources/"
 cp "$OUT/Sevra" "$BUNDLE/Contents/MacOS/Sevra"
 cp Tools/lib/mlx-0.31.1.metallib "$BUNDLE/Contents/MacOS/mlx.metallib"
 cp "$DBMD" "$BUNDLE/Contents/Helpers/dbmd"
+cp "$OUT/sevra-extract" "$BUNDLE/Contents/Helpers/sevra-extract"
 cp apps/macos/Info.plist "$BUNDLE/Contents/Info.plist"
 cp "$STAGE/before.json" "$BUNDLE/Contents/Resources/build-inputs.json"
 codesign --force --sign - "$BUNDLE/Contents/Helpers/dbmd"
+codesign --force --sign - "$BUNDLE/Contents/Helpers/sevra-extract"
 codesign --force --sign - "$BUNDLE/Contents/MacOS/mlx.metallib"
 codesign --force --sign - "$BUNDLE"
 codesign --verify --deep --strict "$BUNDLE"

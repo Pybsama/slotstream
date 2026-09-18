@@ -58,6 +58,36 @@ package struct PromptCheckpointKey: Equatable {
     }
 }
 
+/// Which retained states one request may resume from, when the engine has to
+/// reproduce what reading the whole prompt computes.
+///
+/// The arithmetic depends on how tokens were grouped into passes and on
+/// whether each one was read or generated: a 256-row pass sums a row in a
+/// different order from a one-row decode step, and top-10 expert routing turns
+/// that difference into different experts. So the state a previous turn left
+/// behind, its prompt read in passes and then its reply decoded a token at a
+/// time, is not the state this turn would have built by reading the same ids,
+/// and continuing from it can change a token. Measured on a 1,430-token agent
+/// turn (2026-09-17): a fresh read scored `>` at 0.9576 and `]` at 0.0421 for
+/// one position of tool-call syntax, and the cached continuation inverted
+/// them, so the model's first call arrived malformed and the host had to ask
+/// again.
+///
+/// `boundaries` are this prompt's own prefill pass boundaries (see
+/// `PrefillSchedule.resumeBoundaries`). A state of exactly that length, whose
+/// every token was read in those same passes, is the state this request would
+/// have held at that point anyway, so resuming from it and resuming from
+/// nothing compute the same logits. `key` rejects a state built under a
+/// different pass size, model or draft mode, whose passes were not these.
+package struct PrefixResumeRule {
+    package let key: PromptCheckpointKey
+    package let boundaries: Set<Int>
+    package init(key: PromptCheckpointKey, boundaries: Set<Int>) {
+        self.key = key
+        self.boundaries = boundaries
+    }
+}
+
 /// A digest of one image's encoded bytes, wide enough that a collision is not
 /// a practical concern. Bytes rather than the URL: the same http URL may serve
 /// different pictures later, while identical bytes always decode, resize and
@@ -148,6 +178,15 @@ public final class PrefixCache {
         var wasUsedOrReturned = false
         var lastLogits: MLXArray?
         var promptKey: PromptCheckpointKey?
+        /// True only when every one of `tokens` was read in the chronological
+        /// prefill passes a fresh read of the same ids runs, under
+        /// `producedKey`. A state that also consumed generated tokens, or one
+        /// resumed from a position that was not a pass boundary, is false and
+        /// `PrefixResumeRule` refuses it.
+        var freshEquivalent = false
+        /// The settings this state was actually built under, so a later
+        /// request cannot continue it with a different pass size or draft mode.
+        var producedKey: PromptCheckpointKey?
     }
 
     /// Do a held entry and an incoming prompt describe the same images?
@@ -185,6 +224,11 @@ public final class PrefixCache {
     private var _maxTokens: Int
     private var _enabled: Bool
     private var budgetLimit: Int?
+    /// Whether requests are running under `PrefixResumeRule`, which changes
+    /// what is worth keeping: a state that also consumed generated tokens can
+    /// then never be continued, so it is the first thing to release when room
+    /// is needed, ahead of a boundary snapshot the next turn will resume.
+    private var _resumeRuleInForce = false
 
     /// An allocation that has been reassigned to experts cannot be restored
     /// through a later cache toggle. Only a newly applied plan changes this.
@@ -286,13 +330,14 @@ public final class PrefixCache {
     /// next-token logits were retained. The public extend-only API stays strict.
     package func takeForGeneration(
         matching promptIds: [Int], images: [ImageSegment] = [], reserveTokens: Int? = nil,
-        reserveSequenceBytes: Int? = nil, completePromptKey: PromptCheckpointKey?, modelIdentity: UUID? = nil
-    ) -> (state: Qwen4ExpModel.State, reused: Int, logits: MLXArray?)? {
+        reserveSequenceBytes: Int? = nil, completePromptKey: PromptCheckpointKey?, modelIdentity: UUID? = nil,
+        resume: PrefixResumeRule? = nil
+    ) -> (state: Qwen4ExpModel.State, reused: Int, logits: MLXArray?, freshEquivalent: Bool)? {
         lock.lock()
         defer { lock.unlock() }
         guard _enabled else { entries.removeAll(); return nil }
         guard let i = bestEntry(matching: promptIds, images: images, completePromptKey: completePromptKey,
-                modelIdentity: modelIdentity) else {
+                modelIdentity: modelIdentity, resume: resume) else {
             _misses += 1
             // The caller is about to allocate a new state. Make room first so
             // four retained states plus a fifth active state never coexist.
@@ -318,7 +363,7 @@ public final class PrefixCache {
                 do {
                     let branch = try selected.state.forkForPrefix()
                     _hits += 1; _checkpointHits += 1
-                    return (branch, selected.tokens.count, logits)
+                    return (branch, selected.tokens.count, logits, selected.freshEquivalent)
                 } catch {
                     if let failed = entries.firstIndex(where: { $0.state === selected.state }) {
                         entries.remove(at: failed); _evictions += 1
@@ -328,7 +373,7 @@ public final class PrefixCache {
                 }
             }
             _hits += 1
-            return (selected.state, selected.tokens.count, logits)
+            return (selected.state, selected.tokens.count, logits, selected.freshEquivalent)
         }
         let e = entries.remove(at: i)
         clock += 1
@@ -337,31 +382,45 @@ public final class PrefixCache {
         // permitted reply before handing it out, just as on a miss.
         reserveActiveTokens(max(promptIds.count, reserveTokens ?? promptIds.count, Self.tokenUnits(reserveSequenceBytes ?? 0), Self.charge(e)))
         _hits += 1
-        return (e.state, e.tokens.count, logits)
+        return (e.state, e.tokens.count, logits, e.freshEquivalent)
     }
 
     /// Called with the lock held: the entry `takeForGeneration` would use.
     private func bestEntry(matching promptIds: [Int], images: [ImageSegment],
-                           completePromptKey: PromptCheckpointKey?, modelIdentity: UUID?) -> Int? {
+                           completePromptKey: PromptCheckpointKey?, modelIdentity: UUID?,
+                           resume: PrefixResumeRule?) -> Int? {
         var best: Int?
         for (i, e) in entries.enumerated()
         where (modelIdentity == nil || e.state.modelIdentity == modelIdentity)
             && (promptIds.count > e.tokens.count || (completePromptKey != nil
                 && e.promptKey == completePromptKey && e.lastLogits != nil
                 && promptIds.count == e.tokens.count)) && promptIds.starts(with: e.tokens)
-            && Self.imagesAgree(entry: e.images, prompt: images, upTo: e.tokens.count) {
+            && Self.imagesAgree(entry: e.images, prompt: images, upTo: e.tokens.count)
+            && Self.resumable(e, promptIds: promptIds, resume: resume) {
             if best == nil || e.tokens.count > entries[best!].tokens.count { best = i }
         }
         return best
     }
 
+    /// May this request continue from this entry and still compute what
+    /// reading its whole prompt computes? Without a rule, every matching
+    /// entry is offered, which is the original extend-only behavior.
+    private static func resumable(_ e: Entry, promptIds: [Int], resume: PrefixResumeRule?) -> Bool {
+        guard let resume else { return true }
+        guard e.freshEquivalent, e.producedKey == resume.key else { return false }
+        // The same ids at the same length: this is the state, not a prefix of
+        // it, so there is no pass to reproduce and its retained logits stand.
+        return promptIds.count == e.tokens.count || resume.boundaries.contains(e.tokens.count)
+    }
+
     /// Prompt tokens the equivalent `takeForGeneration` would reuse, without
     /// taking, touching or evicting anything.
     package func retainedMatchLength(matching promptIds: [Int], images: [ImageSegment] = [],
-                                     completePromptKey: PromptCheckpointKey?, modelIdentity: UUID?) -> Int {
+                                     completePromptKey: PromptCheckpointKey?, modelIdentity: UUID?,
+                                     resume: PrefixResumeRule? = nil) -> Int {
         lock.withLock {
             guard _enabled, let i = bestEntry(matching: promptIds, images: images,
-                completePromptKey: completePromptKey, modelIdentity: modelIdentity) else { return 0 }
+                completePromptKey: completePromptKey, modelIdentity: modelIdentity, resume: resume) else { return 0 }
             return entries[i].tokens.count
         }
     }
@@ -395,6 +454,10 @@ public final class PrefixCache {
 
     /// A restored state is a hit, served by the persistent tier.
     package func recordRestore() { lock.withLock { _hits += 1; _persistentHits += 1 } }
+
+    /// Declared by each request before it takes anything: whether it, and so
+    /// the requests around it, must resume exactly. See `evictionCandidates`.
+    package func resumeRuleInForce(_ inForce: Bool) { lock.withLock { _resumeRuleInForce = inForce } }
 
     private static func tokenUnits(_ bytes: Int) -> Int {
         if bytes == Int.max { return Int.max }
@@ -453,6 +516,15 @@ public final class PrefixCache {
     public func store(
         state s: Qwen4ExpModel.State, tokens t: [Int], images: [ImageSegment] = []
     ) {
+        store(state: s, tokens: t, images: images, freshEquivalent: false, key: nil)
+    }
+
+    /// As above, recording how the state was built so a later request under
+    /// `PrefixResumeRule` can tell whether continuing it is exact.
+    package func store(
+        state s: Qwen4ExpModel.State, tokens t: [Int], images: [ImageSegment],
+        freshEquivalent: Bool, key: PromptCheckpointKey?
+    ) {
         lock.lock()
         defer { lock.unlock() }
         guard _enabled, s.committedBoundaryValid, !t.isEmpty, t.count == s.tokenCount,
@@ -473,9 +545,11 @@ public final class PrefixCache {
                 entries[i].wasUsedOrReturned = true
                 return
             }
-            entries[i] = Entry(state: s, tokens: t, images: images, used: clock)
+            entries[i] = Entry(state: s, tokens: t, images: images, used: clock,
+                freshEquivalent: freshEquivalent, producedKey: key)
         } else {
-            entries.append(Entry(state: s, tokens: t, images: images, used: clock))
+            entries.append(Entry(state: s, tokens: t, images: images, used: clock,
+                freshEquivalent: freshEquivalent, producedKey: key))
         }
         keepPrefixesCurrent(of: t, images: images)
         while entries.count > Self.maxEntries
@@ -498,14 +572,27 @@ public final class PrefixCache {
         reserveTokens: Int, reserveSequenceBytes: Int, retention: SharedPrefixRetention = .optional
     ) throws -> Bool {
         try storeCheckpoint(state: s, tokens: t, images: images, reserveTokens: reserveTokens,
-            reserveSequenceBytes: reserveSequenceBytes, logits: nil, promptKey: nil, retention: retention)
+            reserveSequenceBytes: reserveSequenceBytes, logits: nil, promptKey: nil,
+            retention: retention, freshEquivalent: false, producedKey: nil)
+    }
+
+    /// As above, recording the settings and the read that produced the state.
+    @discardableResult
+    package func storeReusableCheckpoint(
+        state s: Qwen4ExpModel.State, tokens t: [Int], images: [ImageSegment],
+        reserveTokens: Int, reserveSequenceBytes: Int,
+        freshEquivalent: Bool, key: PromptCheckpointKey?
+    ) throws -> Bool {
+        try storeCheckpoint(state: s, tokens: t, images: images, reserveTokens: reserveTokens,
+            reserveSequenceBytes: reserveSequenceBytes, logits: nil, promptKey: nil,
+            freshEquivalent: freshEquivalent, producedKey: key)
     }
 
     @discardableResult
     package func storeCompletePrompt(
         state s: Qwen4ExpModel.State, tokens t: [Int], images: [ImageSegment] = [],
         reserveTokens: Int, reserveSequenceBytes: Int, logits: MLXArray,
-        vocabularySize: Int, key: PromptCheckpointKey
+        vocabularySize: Int, key: PromptCheckpointKey, freshEquivalent: Bool = false
     ) throws -> Bool {
         guard vocabularySize > 0, logits.size == vocabularySize,
               logits.dtype == .bfloat16 || logits.dtype == .float32 else {
@@ -515,13 +602,15 @@ public final class PrefixCache {
             throw ModelError("complete prompt key must belong to the state's loaded model")
         }
         return try storeCheckpoint(state: s, tokens: t, images: images, reserveTokens: reserveTokens,
-            reserveSequenceBytes: reserveSequenceBytes, logits: logits, promptKey: key)
+            reserveSequenceBytes: reserveSequenceBytes, logits: logits, promptKey: key,
+            freshEquivalent: freshEquivalent, producedKey: key)
     }
 
     private func storeCheckpoint(
         state s: Qwen4ExpModel.State, tokens t: [Int], images: [ImageSegment],
         reserveTokens: Int, reserveSequenceBytes: Int, logits: MLXArray?, promptKey: PromptCheckpointKey?,
-        retention: SharedPrefixRetention = .optional
+        retention: SharedPrefixRetention = .optional,
+        freshEquivalent: Bool = false, producedKey: PromptCheckpointKey? = nil
     ) throws -> Bool {
         guard !t.isEmpty, s.tokenCount == t.count else {
             throw ModelError("a reusable checkpoint needs its exact committed token count")
@@ -547,13 +636,19 @@ public final class PrefixCache {
         let active = max(t.count, reserveTokens, Self.tokenUnits(reserveSequenceBytes), charge)
         let allowance = _maxTokens - min(_maxTokens, active)
         guard charge <= allowance else { return false }
-        if let existing = entries.firstIndex(where: { $0.tokens == t && $0.images == committedImages
-                && $0.state.modelIdentity == s.modelIdentity && $0.reusable && $0.promptKey == promptKey }) {
+        // An entry marked differently describes a different lineage, not the
+        // same snapshot: replace it below rather than keeping the older mark.
+        func sameSnapshot(_ e: Entry) -> Bool {
+            e.tokens == t && e.images == committedImages && e.state.modelIdentity == s.modelIdentity
+                && e.reusable && e.promptKey == promptKey
+                && e.freshEquivalent == freshEquivalent && e.producedKey == producedKey
+        }
+        if let existing = entries.firstIndex(where: sameSnapshot) {
             let retained = entries[existing].state
             clock += 1; entries[existing].used = clock
             if retention == .conversation { entries[existing].wasUsedOrReturned = true }
             reserveActiveTokens(active)
-            if entries.contains(where: { $0.state === retained && $0.reusable && $0.promptKey == promptKey }) { return true }
+            if entries.contains(where: { $0.state === retained && sameSnapshot($0) }) { return true }
         }
         // Plan room before changing anything. Creating an unused checkpoint
         // may replace its own exact duplicate or other unused checkpoints, but
@@ -570,15 +665,51 @@ public final class PrefixCache {
         }
         var remainingCount = entries.count - victims.count
         var remainingCharge = entries.enumerated().reduce(0) { $0 + (victims.contains($1.offset) ? 0 : Self.charge($1.element)) }
-        let optional = entries.enumerated().filter { $0.element.reusable && !$0.element.wasUsedOrReturned }
-        var candidates = optional.filter { !victims.contains($0.offset) }.sorted { $0.element.used < $1.element.used }
-        if retention == .conversation {
-            let optionalIndices = Set(optional.map(\.offset))
-            candidates += entries.enumerated()
-                .filter { !optionalIndices.contains($0.offset) && !victims.contains($0.offset) }
-                .sorted { $0.element.used < $1.element.used }
+        // Least valuable first: snapshots nothing has used yet, then the
+        // shallower snapshot of this very conversation, which this one
+        // supersedes: a prompt that reaches the old boundary and still
+        // matches these ids reaches the new one too. Without that second
+        // group a used checkpoint pins the resume point where it was and a
+        // long conversation re-reads a little more of itself every turn.
+        // Under the rule a conversation state cannot be continued at all, so
+        // it goes before a snapshot that can; without it, only speculative
+        // snapshots may be given up, exactly as before.
+        let unresumable = _resumeRuleInForce
+            ? entries.enumerated().filter { !$0.element.freshEquivalent && $0.element.lastLogits == nil
+                && !victims.contains($0.offset) }.sorted { $0.element.used < $1.element.used }
+            : []
+        // A boundary snapshot under the rule is what every following turn
+        // resumes from, so storing anything else may not take it; only a
+        // deeper snapshot of the same ids replaces it, below.
+        let unused = entries.enumerated().filter { $0.element.reusable && !$0.element.wasUsedOrReturned
+            && !victims.contains($0.offset)
+            && !(_resumeRuleInForce && $0.element.freshEquivalent && $0.element.lastLogits == nil)
+        }.sorted { $0.element.used < $1.element.used }
+        let superseded = entries.enumerated().filter { $0.element.reusable && $0.element.wasUsedOrReturned
+            && !victims.contains($0.offset) && $0.element.tokens.count < t.count
+            && $0.element.producedKey == producedKey && t.starts(with: $0.element.tokens)
+            && Self.imagesAgree(entry: $0.element.images, prompt: committedImages, upTo: $0.element.tokens.count)
+        }.sorted { $0.element.tokens.count > $1.element.tokens.count }
+        var candidates: [(offset: Int, element: Entry)] = []
+        var candidateIndices = Set<Int>()
+        func appendCandidates(_ rows: [(offset: Int, element: Entry)]) {
+            for row in rows where candidateIndices.insert(row.offset).inserted {
+                candidates.append(row)
+            }
         }
-        for candidate in candidates {
+        appendCandidates(unresumable)
+        appendCandidates(unused)
+        appendCandidates(superseded)
+        // A shared head retained like a conversation may, after exhausting
+        // the cheaper candidates above, replace the least-recently-used
+        // conversation or exact boundary. This is the same standing ordinary
+        // conversation states have and keeps upstream's shared-prefix policy.
+        if retention == .conversation {
+            appendCandidates(entries.enumerated()
+                .filter { !victims.contains($0.offset) }
+                .sorted { $0.element.used < $1.element.used })
+        }
+        for candidate in candidates where !victims.contains(candidate.offset) {
             if remainingCount < Self.maxEntries - 1 && remainingCharge <= allowance - charge { break }
             victims.insert(candidate.offset); remainingCount -= 1
             remainingCharge -= Self.charge(candidate.element)
@@ -591,7 +722,8 @@ public final class PrefixCache {
         clock += 1
         entries.append(Entry(state: frozen, tokens: t, images: committedImages, used: clock, reusable: true,
             wasUsedOrReturned: inheritedConversationValue || retention == .conversation,
-            lastLogits: frozenLogits, promptKey: promptKey))
+            lastLogits: frozenLogits, promptKey: promptKey,
+            freshEquivalent: freshEquivalent, producedKey: producedKey))
         _checkpointStores += 1
         return true
     }
@@ -608,10 +740,23 @@ public final class PrefixCache {
         }
     }
 
+    /// Least valuable first. Ordinarily that is a snapshot nothing has used
+    /// yet, which was taken speculatively. Under the resume rule a state that
+    /// consumed generated tokens comes first instead: it can no longer be
+    /// continued, and releasing it is how a long conversation keeps the
+    /// boundary snapshot it does resume from.
+    private func evictionCandidates() -> [(offset: Int, element: Entry)] {
+        let all = Array(entries.enumerated())
+        if _resumeRuleInForce {
+            let unresumable = all.filter { !$0.element.freshEquivalent && $0.element.lastLogits == nil }
+            if !unresumable.isEmpty { return unresumable }
+        }
+        let speculative = all.filter { $0.element.reusable && !$0.element.wasUsedOrReturned }
+        return speculative.isEmpty ? all : speculative
+    }
+
     private func evictLRU() {
-        let optional = entries.enumerated().filter { $0.element.reusable && !$0.element.wasUsedOrReturned }
-        let candidates = optional.isEmpty ? Array(entries.enumerated()) : optional
-        guard let lru = candidates.min(by: { $0.element.used < $1.element.used })?.offset
+        guard let lru = evictionCandidates().min(by: { $0.element.used < $1.element.used })?.offset
         else { return }
         entries.remove(at: lru)
         _evictions += 1

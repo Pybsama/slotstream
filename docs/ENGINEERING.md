@@ -167,7 +167,10 @@ and failed experiments behind these results.
 picks for each Mac.** It takes the largest of 32,768, 65,536, 131,072 and
 262,144 tokens that keeps speculative decoding, retains one complete
 conversation and adds at most 10% to the planner's estimate for a typical
-request. `serve --max-context 65536` fixes the window Hermes uses, and any size
+request. A flat estimate beyond its measured cache range is not evidence that
+extra cache has no value: auto declines reductions in that range and reports
+their cost as unmeasured. The same rule applies to a busy startup.
+`serve --max-context 65536` fixes the window Hermes uses, and any size
 up to the pinned model's 262,144 tokens is accepted; requests with images stay
 within 65,536. The planner charges extra state and transient memory before
 allocating the expert cache, and the automatic ceiling rises by the window's own

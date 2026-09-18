@@ -8,6 +8,11 @@ updated: 2026-09-18T17:41:02.390398Z
 # sources/runs
 
 - [[sources/runs/2026/09/2026-09-18-release-0-2-21-published-and-installed]] — v0.2.21 acceptance: CI artifact 24/25 in one run plus vision parity beside it, attestation, install, installed e2e 31/31, launch gate 48/54 with the Pi race phase driven by Claude Code 5/5.
+- [[sources/runs/2026/09/2026-09-18-memory-budget-final-reporting]] — Budget headroom and cache-preserving automatic context pass the final reporting and CLI checks
+- [[sources/runs/2026/09/2026-09-18-memory-budget-native-verification]] — Memory budget fix: native verification and unchanged image reuse failure
+- [[sources/runs/2026/09/2026-09-18-memory-budget-software-verification]] — Memory budget fix: final software verification
+- [[sources/runs/2026/09/2026-09-18-memory-budget-regression]] — Memory budget context regression: before and after
+- [[sources/runs/2026/09/2026-09-17-conversation-resume-exactness]] — A continued conversation computed different logits from a cold one, 3.7% to 5.9% of their spread, and after the resume rule computes them bit for bit
 - [[sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck]] — Decode comparisons re-run on a quiet machine after the commit: 16k and 32k
 - [[sources/runs/2026/09/2026-09-17-verify-pass-checks-and-battery]] — Check catalogue, static gates and verify battery on the final verify-pass build
 - [[sources/runs/2026/09/2026-09-17-verify-pass-decode-final-build]] — Decode comparisons at 16k and 32k on the final build: dense, split and exact
@@ -502,13 +507,8 @@ updated: 2026-09-18T17:41:02.390398Z
 - [[sources/runs/2026/09/2026-09-06-optimization-complete-integrated]] — Complete prompt integrated native qualification V141
 - [[sources/runs/2026/09/2026-09-06-optimization-complete-unique-confirmed]] — Complete-prompt unique-request nonregression passes with charged retention
 - [[sources/runs/2026/09/2026-09-06-optimization-partial-rotation-component]] — Exact BF16 partial-rotation component and preserved build corrections
-- [[sources/runs/2026/09/2026-09-06-optimization-prefix-client-capacity]] — Model-bound prefix stores and preserved multi-client capacity
-- [[sources/runs/2026/09/2026-09-06-optimization-complete-repeat-confirmed]] — Independent complete-prompt reuse confirmation passes with ten clean pairs
-- [[sources/runs/2026/09/2026-09-06-optimization-vision-resource-counterexample]] — Whole-request vision resource qualification fails its frozen saving and clean-pair gates
-- [[sources/runs/2026/09/2026-09-06-optimization-vision-serving-nonregression]] — Query-tiled vision: small-image nonregression and swap-excluded maximum request
-- [[sources/runs/2026/09/2026-09-06-optimization-resident-overlap]] — Bounded resident expert overlap: exact mixed-cache computation and checked failure joins
 
 ## More
 
-This folder has 620 files. The 500 most recent are listed above.
+This folder has 625 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

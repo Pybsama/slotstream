@@ -18,7 +18,8 @@ public enum ContextWindowChoice: Sendable, Equatable {
 /// - retains one complete conversation of the window, so follow-up turns read
 ///   only what is new, and
 /// - adds at most `ContextPolicy.automaticRequestTimeTolerance` to the
-///   planner's estimated time for its representative request.
+///   planner's estimated time for its representative request, without
+///   treating an unmeasured cache reduction as free.
 /// A raw cache size (--experts-per-layer, --pool-gb) keeps the default window.
 /// The comparison uses planner estimates from measured anchors, not benchmarks.
 /// Evidence and revision criteria:
@@ -61,6 +62,7 @@ public struct AutomaticContextWindow {
                 }
                 if let s = c.requestSeconds { d["request_seconds"] = s }
                 if let r = c.relativeRequestCost { d["relative_request_cost"] = r }
+                d["request_cost_calibrated"] = c.relativeRequestCost != nil
                 if let refusal = c.refusal { d["refusal"] = refusal }
                 return d
             },
@@ -72,8 +74,8 @@ public struct AutomaticContextWindow {
         let windows = ContextPolicy.automaticWindows.map(String.init).joined(separator: ", ")
         let percent = Int((ContextPolicy.automaticRequestTimeTolerance * 100).rounded())
         return "  window: automatic for this Mac, \(served) tokens: the largest of \(windows) that keeps "
-            + "speculative decoding, retains one complete conversation and adds at most \(percent)% to a "
-            + "typical request; --max-context N chooses another window up to \(ContextPolicy.maxTokens)"
+            + "speculative decoding, retains one complete conversation and adds at most \(percent)% to the "
+            + "estimated request time without an unmeasured cache tradeoff; --max-context N chooses another window up to \(ContextPolicy.maxTokens)"
     }
 
     /// The doctor section: each candidate and why auto took or declined it.
@@ -87,9 +89,10 @@ public struct AutomaticContextWindow {
             "context window: automatic, \(window) tokens on this machine's memory tier. Auto takes the largest",
             "window that keeps speculative decoding, retains one complete conversation, and adds at most \(percent)%",
             "to the estimated time of a \(Int(Planner.tuningPromptTokens))-token prompt with a \(Int(Planner.tuningReplyTokens))-token reply:",
+            "Cache reductions above the measured decode range are declined, even when the estimate is flat.",
         ]
         if served < window {
-            lines.append("  lowered to \(served) tokens right now: with the memory reclaimable now, a larger window would not fit or would turn speculative decoding off")
+            lines.append("  lowered to \(served) tokens right now: a larger window does not fit the live memory and performance policy")
         }
         lines.append("   window   experts/layer   draft   lookahead    pass   typical request   full-window wait")
         for c in candidates {
@@ -100,10 +103,12 @@ public struct AutomaticContextWindow {
             let marker = c.window == window ? "   <- auto" : (c.accepted ? "" : "   (\(c.reason))")
             let wait = p.estPrefillSecondsAtMaxContext
             let waitText = wait.isFinite ? "~" + PrefillSchedule.describe(seconds: wait) : "not yet calibrated"
+            let requestText = c.relativeRequestCost.map { String(format: "%.1f s (%+.1f%%)", seconds, $0 * 100) }
+                ?? "unmeasured cost"
             lines.append("   \(pad(String(c.window), 6))   \(pad(String(format: "%.0f/512", p.expertsPerLayerCached), 13))   "
                 + "\(pad(p.mtpEnabled ? "on" : "off", 5))   \(pad(p.decodeLookahead ? "on" : "off", 9))   "
                 + "\(pad(String(p.prefillChunk), 5))   "
-                + "\(pad(String(format: "%.1f s (%+.1f%%)", seconds, (c.relativeRequestCost ?? 0) * 100), 16))   "
+                + "\(pad(requestText, 16))   "
                 + waitText + marker)
         }
         lines.append("  --max-context N chooses any window up to \(ContextPolicy.maxTokens). A larger window costs memory and")
@@ -113,6 +118,32 @@ public struct AutomaticContextWindow {
 }
 
 extension Planner {
+    /// The decode estimate is deliberately clamped above its last measured
+    /// cache anchor. It cannot price ANY loss of slots in that range, including
+    /// a candidate which drops back into the measured range. Keep those slots
+    /// unless the caller explicitly chooses the larger context window.
+    /// Revisit when paired cache measurements extend the cost model.
+    package static func hasUnmeasuredCacheReduction(_ candidate: MemoryPlan, from baseline: MemoryPlan) -> Bool {
+        baseline.expertsPerLayerCached > decodePlateauPerLayer && candidate.slots < baseline.slots
+    }
+
+    /// Shared by hardware-tier selection and live startup. A busy start must
+    /// obey the same performance policy, not merely find any plan that fits.
+    package static func automaticWindowRefusal(_ candidate: MemoryPlan, from baseline: MemoryPlan) -> String? {
+        if baseline.mtpEnabled && !candidate.mtpEnabled { return "turns speculative decoding off" }
+        if baseline.decodeLookahead && !candidate.decodeLookahead { return "turns the decode lookahead off" }
+        if hasUnmeasuredCacheReduction(candidate, from: baseline) {
+            return String(format: "would remove %.1f GB of expert cache with an unmeasured performance cost; use --max-context %d to choose this tradeoff",
+                baseline.poolGB - candidate.poolGB, candidate.maxContextTokens)
+        }
+        let cost = estimatedRequestSeconds(candidate) / estimatedRequestSeconds(baseline) - 1
+        if cost > ContextPolicy.automaticRequestTimeTolerance + 1e-9 {
+            return String(format: "adds %.1f%% to a typical request, above the %.0f%% limit",
+                cost * 100, ContextPolicy.automaticRequestTimeTolerance * 100)
+        }
+        return nil
+    }
+
     /// The planner's estimated seconds for its representative request at a
     /// plan (a tuningPromptTokens prompt and a tuningReplyTokens reply): the
     /// score that already sizes the prefill pass. It is built from measured
@@ -176,22 +207,13 @@ extension Planner {
             }
             let seconds = estimatedRequestSeconds(value)
             let cost = seconds / baseSeconds - 1
-            var accepted = true
-            var reason = String(format: "adds %.1f%% to a typical request", max(0, cost) * 100)
-            if basePlan.mtpEnabled && !value.mtpEnabled {
-                accepted = false
-                reason = "turns speculative decoding off"
-            } else if basePlan.decodeLookahead && !value.decodeLookahead {
-                accepted = false
-                reason = "turns the decode lookahead off"
-            } else if cost > ContextPolicy.automaticRequestTimeTolerance + 1e-9 {
-                accepted = false
-                reason = String(format: "adds %.1f%% to a typical request, above the %.0f%% limit",
-                    cost * 100, ContextPolicy.automaticRequestTimeTolerance * 100)
-            }
+            let tradeoffRefusal = automaticWindowRefusal(value, from: basePlan)
+            let accepted = tradeoffRefusal == nil
+            let reason = tradeoffRefusal ?? String(format: "adds %.1f%% to a typical request", max(0, cost) * 100)
             if accepted { chosen = max(chosen, window) }
             candidates.append(Candidate(window: window, plan: value, refusal: nil, requestSeconds: seconds,
-                relativeRequestCost: cost, accepted: accepted, reason: reason))
+                relativeRequestCost: hasUnmeasuredCacheReduction(value, from: basePlan) ? nil : cost,
+                accepted: accepted, reason: reason))
         }
         return AutomaticContextWindow(window: chosen, candidates: candidates)
     }
@@ -226,20 +248,23 @@ extension Planner {
             // (the governor never loads or unloads it), so a busy start must
             // not trade speculative decoding for the larger window.
             let baseline = try live(base, .automatic)
+            var loweringReason = "the larger window does not fit the available memory"
             for window in ContextPolicy.automaticWindows.reversed() where window > base && window <= automatic.window {
-                guard let value = try? live(window, .completeWindow),
-                      value.mtpEnabled || !baseline.mtpEnabled,
-                      value.decodeLookahead || !baseline.decodeLookahead else { continue }
-                let notes = window < automatic.window ? [loweredNote(automatic.window, window, device)] : []
+                guard let value = try? live(window, .completeWindow) else { continue }
+                if let refusal = automaticWindowRefusal(value, from: baseline) {
+                    if window == automatic.window { loweringReason = refusal }
+                    continue
+                }
+                let notes = window < automatic.window ? [loweredNote(automatic.window, window, device, reason: loweringReason)] : []
                 return (value.addingNotes(notes), automatic)
             }
-            let notes = automatic.window > base ? [loweredNote(automatic.window, base, device)] : []
+            let notes = automatic.window > base ? [loweredNote(automatic.window, base, device, reason: loweringReason)] : []
             return (baseline.addingNotes(notes), automatic)
         }
     }
 
-    private static func loweredNote(_ full: Int, _ used: Int, _ device: Machine) -> String {
+    private static func loweredNote(_ full: Int, _ used: Int, _ device: Machine, reason: String) -> String {
         let reading = device.availableGB.flatMap { $0.isFinite ? String(format: " (%.1f GB reclaimable now)", $0) : nil } ?? ""
-        return "automatic context window lowered from \(full) to \(used) tokens for this run: other apps hold memory\(reading), and the larger window would not fit or would turn speculative decoding off; restart after they release it for the full window"
+        return "automatic context window lowered from \(full) to \(used) tokens for this run\(reading): \(reason); restart after other apps release memory to reconsider the window"
     }
 }

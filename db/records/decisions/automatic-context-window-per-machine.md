@@ -2,7 +2,7 @@
 type: decision
 id: 01m2e00j7vn1wjhmkjzy20hha5
 created: 2026-09-13T18:20:59.515193+00:00
-updated: 2026-09-13T18:20:59.515193+00:00
+updated: 2026-09-18T16:11:59.560967+00:00
 summary: Auto picks the largest of 32,768, 65,536, 131,072 and 262,144 tokens that keeps speculative decoding, retains one conversation and adds at most 10% to a typical request
 decided_on: 2026-09-13
 evidence: '[[records/measurements/automatic-context-window-plans-2026-09-13]], [[records/measurements/automatic-context-window-131072-read-2026-09-13]], [[records/measurements/automatic-context-window-draft-head-131072-2026-09-13]]'
@@ -44,3 +44,6 @@ This Mac, with 51.5 GB of RAM and a 40.2 GB working set, picks 65,536; 131,072 w
 **Overrides.** `--max-context N` fixes any window from 1 to 262,144, and `--max-context 32768` restores the former plan. `--experts-per-layer` and `--pool-gb` keep the 32,768-token default. A fixed `--memory-gb` target still gets an automatic window, priced inside that target: on the development Mac a 20 GB target picks 65,536 tokens at 9.6%. `--max-ram-percent` lowers auto's share of RAM. An explicit window above 32,768 retains a complete conversation when the plan holds it, and otherwise the plan says how many tokens a follow-up reuses. Requests with images stay within 65,536 tokens.
 
 **Gates.** `Tools/planner_gates.sh` covers each tier, quiet and busy starts, fixed caches, explicit windows and the JSON candidates. `Tools/context_proxy.swift` case C23 runs the policy against production sources. `Tools/context_gates.py` checks `Tools/fixtures/context-automatic-v1.json` and keeps the frozen default allocation byte-identical at an explicit 32,768 through `Tools/fixtures/context-default-v2.json`.
+
+## Correction: unmeasured cache loss, 2026-09-18
+The original table and cost comparisons above describe the September 13 policy. The flat decode estimate above its measured range cannot establish the cost of removing expert slots. Auto now declines those reductions and applies the same performance rule at busy startup; explicit context choices remain available. See [[records/decisions/automatic-context-preserves-unmeasured-cache]] and [[records/measurements/memory-budget-context-policy-2026-09-18]] for the correction and regression evidence.

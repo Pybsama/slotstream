@@ -47,10 +47,26 @@ public struct Message: Codable, Identifiable, Sendable, Equatable {
 public struct Citation: Codable, Identifiable, Sendable, Equatable {
     public var id: String
     public var path: String
+    /// SHA-256 of the source file's bytes.
     public var hash: String
+    /// UTF-8 byte range in the file, or in its deterministic extracted text.
     public var start: Int
     public var length: Int
     public var content: String?
+    /// The first PDF page the excerpt covers.
+    public var page: Int? = nil
+    /// How the text was obtained when it is not the file itself: pdfkit,
+    /// dbmd, appkit or ocr.
+    public var method: String? = nil
+    public init(id: String, path: String, hash: String, start: Int, length: Int, content: String?, page: Int? = nil, method: String? = nil) {
+        self.id = id; self.path = path; self.hash = hash; self.start = start; self.length = length; self.content = content; self.page = page; self.method = method
+    }
+    public var location: String {
+        var parts: [String] = []
+        if let page { parts.append("page \(page)") }
+        if method == "ocr" { parts.append("recognized text") }
+        return parts.joined(separator: " · ")
+    }
 }
 public struct ArtifactProposal: Codable, Identifiable, Sendable, Equatable {
     public var id: String
@@ -74,6 +90,17 @@ public struct Run: Codable, Identifiable, Sendable, Equatable {
     public var context: ContextReceipt?
     /// Metadata only. The thought itself is never stored.
     public var thinking: ThinkingReceipt?
+    /// File changes staged by this run, awaiting review or already applied.
+    public var changes: ChangeSet?
+    public var appProposal: AppProposal?
+    public var skillProposal: SkillProposal?
+    /// The skill this run followed, if any.
+    public var skill: SkillUse?
+    /// Tool groups offered to the model for this run.
+    public var tools: [ToolGroup]?
+    /// The app or skill this run published, for links in the conversation.
+    public var published: String?
+    public var awaitingReview: Bool { proposal != nil || appProposal != nil || skillProposal != nil || changes?.state == .proposed }
 }
 public struct WorkThread: Codable, Identifiable, Sendable, Equatable {
     public var id: String
@@ -120,6 +147,8 @@ public struct HomeState: Codable, Sendable, Equatable {
     public var journalSubmissions: [AcceptedSubmission]?
     public var revision = 0
     public var submissions: [AcceptedSubmission]?
+    public var skills: [Skill]?
+    public var apps: [MiniApp]?
     public init() {}
 
     /// Resolve quoted Home events without copying or changing their ownership.
@@ -153,7 +182,8 @@ public struct AcceptedSubmission: Codable, Sendable, Equatable {
 public struct RuntimeSnapshot: Sendable, Equatable {
     public var home: HomeState
     public var modelStatus: String
-    public var attachmentNames: [String: String]
+    public var attachments: [String: [AttachmentInfo]] = [:]
+    public var attachmentNames: [String: String] { attachments.mapValues { $0.map(\.name).joined(separator: ", ") } }
     public var error: String?
     public var simulated: Bool
     public var performance: PerformanceSnapshot? = nil
@@ -163,6 +193,16 @@ public struct RuntimeSnapshot: Sendable, Equatable {
     public var thinking: ThinkingObservation? = nil
     /// Recent thoughts by run id, kept in memory while Sevra is open.
     public var thinkingTraces: [String: String] = [:]
+    /// Increments per collection when mini-app data changes.
+    public var appDataRevision: [String: Int] = [:]
+    /// The same counts for writes each app made itself, by app ID. An open
+    /// app hears only about changes it did not make, so its own saves cannot
+    /// feed a reload loop.
+    public var appDataWrites: [String: [String: Int]] = [:]
+    /// Device-local app data grants, by app ID.
+    public var grants: [String: AppGrant] = [:]
+    /// Whether this build can read documents, images and knowledge bases.
+    public var documentsAvailable = false
 }
 public func digestText(_ s: String) -> String { digestBytes(Data(s.utf8)) }
 public func digestBytes(_ d: Data) -> String { SHA256.hash(data: d).map { String(format: "%02x", $0) }.joined() }

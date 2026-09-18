@@ -136,13 +136,18 @@ package enum PersistentPrefixPolicy {
     /// longer than what memory already retains. Same extend-only rule as
     /// PrefixCache. A request that will speculate needs the draft cache, or it
     /// would finish plain and every later save of the conversation would lack it.
+    /// `boundaries`, when given, are the incoming prompt's own prefill pass
+    /// boundaries: a restored state of any other length would continue this
+    /// read from a position it never reads through (PrefixResumeRule).
     package static func bestMatch(_ entries: [PersistentPrefixEntry], identity: String, prompt: [Int],
                                   longerThan retained: Int, requireDraft: Bool,
-                                  now: Double, maxAge: TimeInterval?) -> PersistentPrefixEntry? {
+                                  now: Double, maxAge: TimeInterval?,
+                                  boundaries: Set<Int>? = nil) -> PersistentPrefixEntry? {
         var best: PersistentPrefixEntry?
         for entry in entries where entry.identity == identity && !entry.tokens.isEmpty
             && entry.tokens.count > retained && prompt.count > entry.tokens.count
             && (!requireDraft || entry.hasDraft) && !isExpired(entry, now: now, maxAge: maxAge)
+            && (boundaries?.contains(entry.tokens.count) ?? true)
             && prompt.starts(with: entry.tokens) {
             if best == nil || entry.tokens.count > best!.tokens.count { best = entry }
         }

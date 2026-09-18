@@ -192,6 +192,7 @@ extension Diagnostics {
         referenceOverrides["SLOTSTREAM_OPT_PREFIX_CHECKPOINT"] = "0"
         referenceOverrides["SLOTSTREAM_OPT_AUTO_READ_SCOPE"] = "0"
         referenceOverrides["SLOTSTREAM_OPT_VISION_QUERY_TILE"] = "0"
+        referenceOverrides["SLOTSTREAM_OPT_ALIGNED_RESUME"] = "0"
         c.equal("explicit zeros restore the complete reference inference family",
             try InferenceOptimizations.resolving(environment: referenceOverrides, defaults: candidate),
             InferenceOptimizations())

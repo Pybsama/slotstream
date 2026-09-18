@@ -13,8 +13,23 @@ import Combine
         willSet { if panel.isEmpty && !newValue.isEmpty { textSession.rememberFocus() } }
         didSet {
             if panel.isEmpty && !oldValue.isEmpty { DispatchQueue.main.async { self.textSession.restoreFocus() } }
+            // A draft app runs only while its review is on screen.
+            if oldValue == "App review" && panel != "App review" { closePreview() }
+            if panel == "App review" && oldValue != "App review" { Task { await startPreview() } }
+            if panel != "Changes" { reviewedChangeSetID = nil }
         }
     }
+    @Published var applyingChanges = false
+    @Published var reviewedChangeSetID: String?
+    @Published var runningApp: MiniAppController?
+    @Published var appPreview: MiniAppController?
+    /// Records already saved in each collection an app under review asks for.
+    @Published var appReviewCounts: [String: Int] = [:]
+    @Published var appFailure: String?
+    @Published var skillPreview: (name: String, text: String)?
+    var openingApp: String?
+    var seenAppRevisions: [String: Int] = [:]
+    var seenAppRevisionsOwner: String?
     @Published var focusRevision = 0
     @Published var notice = ""
     @Published var pendingLink: URL?
@@ -94,10 +109,12 @@ import Combine
     var onFind: (() -> Void)?
     var thread: WorkThread? { snapshot?.home.threads.first { $0.id == selectedID } }
     var busy: Bool { thread?.run.map { !$0.state.terminal } ?? false }
+    /// A response is running. A run waiting for review is not working.
+    var working: Bool { thread?.run.map { !$0.state.terminal && $0.state != .needsYou } ?? false }
     var thinkingEnabled: Bool { thread?.thinking == true }
     /// Thinking stays off for tool turns in this version, so the switch is
     /// unavailable while a source is attached rather than silently ignored.
-    var thinkingUnavailable: Bool { snapshot?.attachmentNames[selectedID] != nil || aiPaused }
+    var thinkingUnavailable: Bool { !(snapshot?.attachments[selectedID] ?? []).isEmpty || aiPaused }
     var liveThinking: ThinkingObservation? {
         guard let thought = snapshot?.thinking, thought.threadID == selectedID else { return nil }
         return thought
@@ -255,6 +272,7 @@ import Combine
         let setupValue = setup?.snapshot()
         if setupStatus != setupValue { setupStatus = setupValue }
         if let failure = snapshot?.error, failure != dismissedError { error = failure }
+        syncApps()
         let state = thread?.run?.state.rawValue
         if state != lastAnnouncedState {
             lastAnnouncedState = state
@@ -283,7 +301,16 @@ import Combine
         }
     }
     func navigateToReview(_ id: String) {
-        navigate(id, panel: "Artifact")
+        let run = snapshot?.home.threads.first { $0.id == id }?.run
+        navigate(id, panel: run.map(Self.reviewPanel) ?? "Artifact")
+    }
+    /// The review a waiting run needs first.
+    static func reviewPanel(for run: Run) -> String {
+        if run.proposal != nil { return "Artifact" }
+        if run.appProposal != nil { return "App review" }
+        if run.skillProposal != nil { return "Skill review" }
+        if run.changes?.state == .proposed { return "Changes" }
+        return ""
     }
     func renameThread(_ id: String) {
         navigate(id, panel: "Rename")
@@ -333,22 +360,6 @@ import Combine
             snapshot?.home.threads[i].run?.status = "Stopping"
         }
         perform { try await $0.stop(threadID: id) }
-    }
-    func attach() {
-        let picker = NSOpenPanel(); picker.canChooseDirectories = true; picker.canChooseFiles = true
-        picker.allowsMultipleSelection = false; picker.prompt = "Attach read-only"
-        picker.message = "Choose one text file or folder for this thread. Sevra can read it but cannot change it."
-        guard picker.runModal() == .OK, let url = picker.url else { return }
-        attachFiles([url])
-    }
-    func attachFiles(_ urls: [URL]) {
-        guard !busy, !attaching, let url = urls.first, urls.count == 1 else { error = "Attach one file or folder after the current response finishes."; return }
-        let id = selectedID; attaching = true
-        Task {
-            defer { attaching = false }
-            do { try await runtime?.attach(threadID: id, folder: url); await refresh(); focusRevision += 1 }
-            catch { self.error = error.localizedDescription }
-        }
     }
     func approve(_ proposal: ArtifactProposal) {
         guard !approving else { return }; approving = true

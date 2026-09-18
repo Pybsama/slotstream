@@ -6,8 +6,8 @@ private actor PromotionProbe: Inference {
     nonisolated let simulated = true
     var contexts: [[ChatMessage]] = []
     var toolAvailability: [Bool] = []
-    func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
-        contexts.append(history); toolAvailability.append(tools)
+    func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        contexts.append(history); toolAvailability.append(!tools.isEmpty)
         return EngineTurn(text: "Continuation probe reply.")
     }
     func unload() {}

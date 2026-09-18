@@ -260,9 +260,9 @@ These were all real bugs found by adversarial probing. Each is now gated by
 - **Prompt plus completion is capped (`--max-context`, default `auto`).** Auto
   takes the largest of 32,768, 65,536, 131,072 and 262,144 whose plan keeps MTP
   and the lookahead as the 32,768 plan has them, retains one complete
-  conversation and adds at most 10% to the representative request, judged on RAM
-  and working set. A busy start steps the window down instead of dropping the
-  head; `--experts-per-layer` and `--pool-gb` keep 32,768, while `--memory-gb`
+  conversation and adds at most 10% to the representative request without removing cache
+  above the measured decode range, judged on RAM
+  and working set. A busy start applies the same memory and performance rule; `--experts-per-layer` and `--pool-gb` keep 32,768, while `--memory-gb`
   still gets a window priced inside its target
   (`records/decisions/automatic-context-window-per-machine`). Frozen allocation
   fixtures and monotonic sweeps pin an explicit 32,768. The model limit,
@@ -352,17 +352,41 @@ These were all real bugs found by adversarial probing. Each is now gated by
   retained, so `PrefixCache.take` evicts LRU entries until retained + active
   states fit both the four-state and shared-token ceilings. Each state has
   ~113 MB of fixed GDN memory in addition to ~27 KiB/token; both are charged.
-- **Do not gate this on byte-equality with a cold rebuild — it will never
-  pass.** Reuse re-batches the same tokens, MLX picks reduction orders by shape,
-  and floating point is not associative: swept over a 64-token sequence, all 63
-  split points differ. §6.1's "streaming is math-invisible" is about the expert
-  pool, where hit and miss deliver identical bytes. The gate is
-  `slotstream prefix-check`: reuse must perturb logits no more than re-chunking
-  a plain prefill already does (measured 4.37% vs 5.90% of logit spread), stay
-  flat with depth, be deterministic run to run, and actually be reusing.
-  Corollary worth knowing: the existing byte-identical-across-chunk-sizes result
-  is luckier than it reads — the logit deltas are several percent either way and
-  the text matches because top-1 usually survives.
+- **A turn may resume only at its own prefill pass boundaries** (2026-09-17).
+  The arithmetic depends on how tokens were grouped into passes and on whether
+  each one was read or generated: a 256-row pass sums a row in a different
+  order from a one-row decode step, MLX picks reduction orders by shape, and
+  top-10 expert routing turns those differences into different experts. So the
+  state a turn leaves behind, its prompt read in passes and then its reply
+  decoded a token at a time, is not what reading those same ids computes, and
+  continuing from it can move a token across the decision. It did: on a
+  1,430-token agent turn a fresh read scored `>` at 0.9576 and `]` at 0.0421
+  for one position of tool-call syntax, the continued turn inverted them, and
+  the model's first `file.edit` call arrived malformed. `PrefixResumeRule`
+  (`InferenceOptimizations.alignedPrefixResume`, on in the deployed family)
+  offers a request only a state whose length is one of **its own** pass
+  boundaries and whose every token was read in those passes; everything after
+  the boundary is re-read. `SLOTSTREAM_OPT_ALIGNED_RESUME=0` restores the old
+  behavior, for comparison work only.
+- **What the rule costs.** A follow-up turn re-reads back to the last boundary,
+  which is one partial pass instead of nothing. Measured at 961 slots on the
+  same three-turn chat: follow-up prefill 2.47 s -> 8.56 s, against 26.3 s to
+  read the conversation cold. What it buys is that the continued turn and the
+  cold one produce the same tokens and bit-identical prompt logits, which is
+  what `slotstream prefix-exact-check` asserts. Under the rule a conversation
+  state is worth only its ids (`peek` splices them into the next prompt), so it
+  is the first thing evicted and the boundary snapshot is the last; a deeper
+  snapshot of the same conversation replaces the one it supersedes, or the
+  resume point never advances and each turn re-reads more of itself.
+- **Byte-equality against a cold rebuild holds only under the rule.** Without
+  it the comparison never passes and must not be asked for: swept over a
+  64-token sequence, all 63 split points differ, and a continued turn moved
+  logits 3.7% to 5.9% of their spread. That is inside the band re-chunking a
+  plain prefill already moves them, which is what `slotstream prefix-check`
+  measures (4.37% against a 5.90% control) and is still the right gate for
+  *different pass sizes*, which the rule does not make equal and cannot.
+  §6.1's "streaming is math-invisible" is about the expert pool, where hit and
+  miss deliver identical bytes.
 - **The governor sheds it before shrinking the pool.** One re-prefill is a
   cheaper give-back than a starved cache, which taxes every token after it.
 - **It holds four conversations, and must not be reduced to one.** A single slot

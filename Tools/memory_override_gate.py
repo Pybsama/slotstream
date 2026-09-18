@@ -60,6 +60,10 @@ def main():
             expect(row['exit_code'] == 0, row['case'] + ': successful plan had failing exit')
             p = value.get('plan', value)
             ledger = p['memory_ledger']
+            if p.get('target_gb') is not None:
+                headroom = p['target_gb'] - ledger['expected_peak_bytes'] / 1e9
+                expect(abs(p.get('planned_headroom_gb', -1) - headroom) <= .051,
+                       row['case'] + ': displayed budget headroom does not reconcile')
             expect(ledger['pool_bytes'] == p['pool_slots'] * 2_764_800, row['case'] + ': pool bytes disagree with slots')
             expect(640 <= p['pool_slots'] <= 48 * 512, row['case'] + ': expert capacity out of bounds')
             if p['source'] == '--memory-gb':
@@ -83,6 +87,35 @@ def main():
         for available in (8, 16, 32, 52, 60):
             p = plan(run(f'availability/{available}', ['--memory-gb', '48'], available=available))
             expect((p is not None) == (available >= 52), f'wrong physical-headroom decision/{available}')
+        # Reported regression: an explicit 48 GB budget silently selected a
+        # 262K window and sacrificed more than half the expert cache. The
+        # clamped speed estimate above its measured cache range cannot price
+        # that loss. Exercise the public default, not only explicit windows.
+        for mtp in ('off', 'on', 'auto'):
+            base = plan(run(f'context-baseline/{mtp}', ['--memory-gb', '48'], mtp=mtp))
+            row = run(f'context-auto48/{mtp}', ['--memory-gb', '48'], context='auto', mtp=mtp)
+            selected = plan(row)
+            expect(base is not None and selected is not None, f'48 GB automatic context refused/{mtp}')
+            if base and selected:
+                expect(selected['pool_slots'] >= base['pool_slots'],
+                       f'automatic context silently removed uncalibrated cache capacity/{mtp}')
+                expect(selected['max_context_tokens'] == 32768, f'48 GB default window regression/{mtp}')
+                expect(selected.get('memory_target_semantics') == 'process_budget_not_allocation_goal',
+                       f'memory target semantics missing/{mtp}')
+                candidates = row['result'].get('automatic_context_window', {}).get('candidates', [])
+                expect(len(candidates) == 4, f'missing automatic context tradeoffs/{mtp}')
+                for candidate in candidates[1:]:
+                    expect(not candidate['accepted'] and 'unmeasured' in candidate['reason'],
+                           f'uncalibrated cache loss not explained/{mtp}/{candidate["window"]}')
+                    expect(candidate.get('relative_request_cost') is None,
+                           f'uncalibrated cache loss reported as a known cost/{mtp}/{candidate["window"]}')
+                ledger = selected['memory_ledger']
+                expect(selected.get('non_cache_allowance_bytes') == ledger['expected_peak_bytes'] - ledger['pool_bytes'],
+                       f'memory breakdown does not reconcile/{mtp}')
+            for context in (65536, 131072, 262144):
+                explicit = plan(run(f'context-manual48/{mtp}/{context}', ['--memory-gb', '48'], context=context, mtp=mtp))
+                expect(explicit is not None and explicit['max_context_tokens'] == context,
+                       f'explicit context override stopped working/{mtp}/{context}')
         for flags, source in [
             (['--memory-gb', '48', '--pool-gb', '24'], '--pool-gb'),
             (['--memory-gb', '48', '--pool-gb', '24', '--experts-per-layer', '40'], '--experts-per-layer'),

@@ -199,6 +199,37 @@ public enum PrefillSchedule {
         computePasses(tokens: tokens, from: position, maxChunk: maxChunk, tailAware: tailAware).map(\.tokens)
     }
 
+    /// The positions inside a `tokens`-long prompt that a later request may
+    /// resume this one's prefill from, having read the same ids.
+    ///
+    /// Every pass here is the one this position takes whatever the prompt's
+    /// total length is, so reading from any of these positions runs exactly
+    /// the passes a fresh read of the whole prompt runs, and computes the
+    /// same sums. Two kinds of position are therefore left out: the end of
+    /// the prompt, whose last pass is however many tokens remained, and
+    /// anything in the late-context regime, where the pass and its attention
+    /// window are measured against the reference origin of *this* read rather
+    /// than the position alone. `PrefixResumeRule` is what enforces it.
+    public static func resumeBoundaries(tokens: Int, maxChunk: Int, tailAware: Bool = false) -> Set<Int> {
+        guard tokens > 0, tokens <= ContextPolicy.modelLimit else { return [] }
+        var out: Set<Int> = []
+        var pos = 0
+        while pos < tokens {
+            guard chunk(at: pos, maxChunk: 256) >= 256 else { break }
+            let c = next(remaining: tokens - pos, at: pos, maxChunk: maxChunk, tailAware: tailAware)
+            guard c > 0, c <= tokens - pos else { break }
+            pos += c
+            // A pass that ended only because the prompt ran out is not this
+            // position's pass; a longer prompt reads past it in one go.
+            guard pos < tokens else { break }
+            // Nor is a position whose own pass is measured against the origin
+            // of the read it belongs to rather than the position alone.
+            guard chunk(at: pos, maxChunk: 256) >= 256 else { break }
+            out.insert(pos)
+        }
+        return out
+    }
+
     public struct ComputePass: Sendable {
         public let tokens: Int
         public let queryRows: Int

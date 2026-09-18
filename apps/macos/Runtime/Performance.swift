@@ -21,6 +21,11 @@ public struct PerformancePreferences: Codable, Equatable, Sendable {
 /// Product policy for the currently supported text model. It reuses the
 /// engine's measured operating ceiling and preserves its independent CLI.
 public enum PerformancePolicy {
+    /// The engine's smallest automatic window. At the 10 GB test plan the
+    /// planner reports the same 9.0 GB peak as the former 8,192-token window
+    /// and one fewer cached expert per layer (doctor, September 17, 2026).
+    /// Documents, file changes and apps need the room.
+    public static let contextTokens = 32768
     // Round the engine floor UP to a half GB for an accessible native control.
     public static let minimumGB = ceil(Planner.minMemoryGB * 2) / 2
     public static func maximumGB(on machine: Machine) -> Double {
@@ -46,7 +51,7 @@ public enum PerformancePolicy {
         // RAM-share bound, pressure cancellation and shrink/grow policy.
         let percent = preferences.budget == .custom ? preferences.customGB / machine.ramGB * 100 : nil
         let plan = try Planner.plan(PlanRequest(maxRAMPercent: percent, mtp: .off, vision: .off,
-                                               maxContextTokens: 8192), on: machine)
+                                               maxContextTokens: contextTokens), on: machine)
         let limit = preferences.budget == .custom ? preferences.customGB : Planner.usefulCeilingGB
         let feasible = min(limit, machine.workingSetGB - 2,
                            available - Planner.availabilitySlackGB(ramGB: machine.ramGB))

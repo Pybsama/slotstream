@@ -96,7 +96,7 @@ let machine = Machine.current()
 let plan = try Planner.plan(PlanRequest(memoryGB: 16), on: machine)
 print(plan.banner())
 print(plan.expertsPerLayerCached, "experts per layer,",
-      plan.expectedPeakGB, "GB expected peak")
+      plan.expectedPeakGB, "GB planned full-workload envelope")
 ```
 
 `Machine.simulated(ramGB: 16)` previews a decimal-GB memory size, like
@@ -265,3 +265,14 @@ retains one complete conversation when its plan can hold one; otherwise the
 plan's notes say how much a follow-up reuses. `ContextPolicy.maxTokens` is the
 model's 262,144 tokens, and requests with images stay within
 `ContextPolicy.visionLimit`.
+
+Automatic selection preserves cache above the measured decode range when a
+larger window would remove slots. Its clamped speed estimate cannot establish
+that those slots have no value. Such candidates omit `relative_request_cost`
+and set `request_cost_calibrated` to false. The plan's legacy
+`expected_peak_gb` is the planned full-workload envelope, not measured usage;
+`memory_target_semantics`, `expected_peak_semantics` and
+`non_cache_allowance_bytes` make the distinction explicit in JSON.
+`planned_headroom_gb` is the remaining planned budget after that envelope,
+not live free RAM. Near the minimum cache size it can be smaller than the
+nominal planning margin; a fully resident model can leave more unassigned.

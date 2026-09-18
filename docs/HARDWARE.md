@@ -182,12 +182,12 @@ guidance, independently of reply speed.
 
 ### Automatic memory plans
 
-The columns describe 0.2.17 source plans in auto mode, which picks the
+The columns describe the current source plans in auto mode, which picks the
 context window along with the target and speculative decoding. The draft file
 is available and no other apps hold memory. Simulated RAM is in decimal GB; a
 Mac's marketed memory capacity can produce a different decimal-GB device
 reading and target. Auto picks 32,768 tokens through 32 GB of simulated RAM,
-65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB.
+65,536 at 36 GB, 32,768 at 48 GB, 131,072 at 64 GB and 262,144 from 96 GB.
 
 | Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Automatic context window |
 |---|---|---|---|
@@ -197,7 +197,7 @@ reading and target. Auto picks 32,768 tokens through 32 GB of simulated RAM,
 | 24 GB | 16 GB | Off | 32,768 |
 | 32 GB | 22 GB | On | 32,768 |
 | 36 GB | 25 GB | On | 65,536 |
-| 48 GB | 33.6 GB | On | 65,536 |
+| 48 GB | 33.6 GB | On | 32,768 |
 | 64 GB | 43.2 GB | On | 131,072 |
 | 96 or 128 GB | 54.7 GB | On | 262,144 |
 
@@ -228,12 +228,16 @@ request of 2,000 prompt tokens and a 400-token reply. `slotstream doctor
 --sim-ram <GB>` shows every candidate and its reason. At 24 GB a 65,536-token
 window would add 18%, and at 32 GB it would turn speculative decoding off.
 At 36 GB it adds 9%, as the cache drops from 96 to 75 experts per layer.
-At 48 GB, 131,072 tokens would add 15%; at 64 GB, 262,144 would add 18%.
+At 48 GB, auto keeps the original cache because its size exceeds the measured
+decode range: the estimate cannot price the loss, even when it reports little
+or no change. At 64 GB, 262,144 would add 18%.
 From 64 GB the larger window's memory comes from room the 32,768-token plan
 leaves unused, so the cache keeps its size and the target rises above that
 plan's 34.6 GB, to 43.2 GB at 64 GB and 54.7 GB from 96 GB. Real available
-memory and Metal limits can change these decisions; a busy start lowers the
-window before it gives up speculative decoding. `--max-context N` fixes any
+memory and Metal limits can change these decisions; a busy start applies the
+same cache and speed rules before choosing its window. A larger Mac can
+therefore receive a smaller window when widening it would sacrifice cache
+whose performance benefit is unmeasured. `--max-context N` fixes any
 window up to 262,144; on a 32 GB Mac, `--max-context 65536` gives the larger
 window without speculative decoding.
 

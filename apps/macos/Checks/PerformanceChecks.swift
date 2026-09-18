@@ -20,7 +20,7 @@ private actor PerformanceProbe: Inference {
     }
     func unload() { releases += 1 }
     func release() { held = false }
-    func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+    func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
         calls += 1
         while held { try cancellation.check(); try await Task.sleep(nanoseconds: 5_000_000) }
         try cancellation.check(); _ = buffer.append("Ready")

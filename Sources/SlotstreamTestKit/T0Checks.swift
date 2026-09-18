@@ -11,6 +11,7 @@ extension Catalogue {
             Check("prefill-schedule", tier: .t0) { Diagnostics.prefillSchedule() },
             Check("context-policy", tier: .t0) { contextPolicy() },
             Check("automatic-context-window", tier: .t0) { try automaticContextWindow() },
+            Check("memory-budget-context", tier: .t0) { try memoryBudgetContext() },
             Check("configurable-context", tier: .t0) { try Diagnostics.configurableContext() },
             Check("exact-read", tier: .t0) { Diagnostics.optimizationExactRead() },
             Check("packed-layout", tier: .t0) { try Diagnostics.optimizationPackedLayout() },
@@ -42,6 +43,7 @@ extension Catalogue {
             Check("expert-lookahead-routing-readback", tier: .t1) { try Diagnostics.expertLookaheadRoutingReadback() },
             Check("compact-indexer", tier: .t1) { Diagnostics.optimizationCompactIndexer() },
             Check("persistent-prefix-round-trip", tier: .t1) { try Diagnostics.persistentPrefixRoundTrip() },
+            Check("aligned-prefix-resume", tier: .t0) { try Diagnostics.alignedPrefixResume() },
             Check("slot-slices", tier: .t1) { Diagnostics.optimizationSlotSlices() },
             Check("slot-words", tier: .t1) { Diagnostics.optimizationSlotSlices(wordWrites: true) },
             Check("vision-splice", tier: .t1) { Diagnostics.visionSplice() },
@@ -55,13 +57,83 @@ extension Catalogue {
         ] + toolCallChecks + gatewayChecks + openAIChecks + responsesChecks + anthropicChecks + launchChecks + weightStoreChecks
     }
 
+    static func memoryBudgetContext() throws -> CheckReport {
+        var c = CheckBuilder("memory-budget-context")
+        // Both the decimal tier used by doctor and a physical 64 GiB device.
+        for ram in [64.0, 64 * pow(1024, 3) / 1e9] {
+            let device = Machine(ramGB: ram, workingSetGB: ram * 0.75, availableGB: ram, isSimulated: true)
+            for mtp in [Planner.MTPMode.off, .on, .auto] {
+                let request = PlanRequest(memoryGB: 48, mtp: mtp)
+                let baseline = try Planner.resolveContextWindow(.tokens(32_768), request: request,
+                    on: device, mtpAvailable: true).plan
+                let resolved = try Planner.resolveContextWindow(.automatic, request: request,
+                    on: device, mtpAvailable: true)
+                let label = "\(ram)/\(mtp.rawValue)"
+                c.expect("\(label) preserves the larger expert cache", resolved.plan.slots == baseline.slots
+                    && resolved.plan.maxContextTokens == 32_768 && resolved.plan.targetGB == 48)
+                c.expect("\(label) budget still covers the whole plan",
+                    resolved.plan.expectedPeakGB + Planner.planningMarginGB <= 48)
+                c.expect("\(label) reports budget semantics",
+                    resolved.plan.banner().contains("not a RAM usage goal")
+                        && resolved.plan.banner().contains("Short requests can use less"))
+                let json = resolved.plan.json()
+                c.expect("\(label) machine-readable breakdown reconciles",
+                    json["non_cache_allowance_bytes"] as? Int == resolved.plan.memoryLedger.expectedPeakBytes
+                        - resolved.plan.memoryLedger.poolBytes)
+                guard let automatic = resolved.automatic else { throw ModelError("missing automatic context report") }
+                c.expect("\(label) unknown tradeoffs do not masquerade as zero cost",
+                    automatic.candidates.dropFirst().allSatisfy {
+                        !$0.accepted && $0.relativeRequestCost == nil && $0.reason.contains("unmeasured")
+                    } && automatic.report(served: resolved.plan.maxContextTokens).contains("unmeasured cost"))
+                for window in [65_536, 131_072, 262_144] {
+                    let manual = try Planner.resolveContextWindow(.tokens(window), request: request,
+                        on: device, mtpAvailable: true)
+                    c.expect("\(label) explicit \(window) remains available",
+                        manual.plan.maxContextTokens == window && manual.automatic == nil
+                            && manual.plan.expectedPeakGB + Planner.planningMarginGB <= 48)
+                }
+            }
+        }
+        // Exercise tier and busy-start decisions across the supported range.
+        for ram in [16.0, 24, 32, 36, 48, 64, 96, 128] {
+            for available in [ram, ram * 0.8, ram * 0.6] {
+                let device = Machine(ramGB: ram, workingSetGB: ram * 0.75, availableGB: available, isSimulated: true)
+                let request = PlanRequest()
+                guard let baseline = try? Planner.resolveContextWindow(.tokens(32_768), request: request,
+                    on: device, mtpAvailable: true).plan else { continue }
+                let resolved = try Planner.resolveContextWindow(.automatic, request: request,
+                    on: device, mtpAvailable: true)
+                c.expect("\(ram)/\(available) live selection obeys the same tradeoff rule",
+                    Planner.automaticWindowRefusal(resolved.plan, from: baseline) == nil)
+                if baseline.expertsPerLayerCached > Planner.decodePlateauPerLayer {
+                    c.expect("\(ram)/\(available) preserves unmeasured cache capacity", resolved.plan.slots >= baseline.slots)
+                }
+            }
+        }
+        let roomy = Machine(ramGB: 128, workingSetGB: 96, availableGB: 128, isSimulated: true)
+        for target in [8.1, 9, 10, 12, 48, 90] {
+            for mtp in [Planner.MTPMode.off, .on] {
+                guard let plan = try? Planner.resolveContextWindow(.tokens(32_768),
+                    request: PlanRequest(memoryGB: target, mtp: mtp), on: roomy, mtpAvailable: true).plan else { continue }
+                let headroom = plan.plannedHeadroomGB ?? -1
+                c.expect("\(target)/\(mtp.rawValue) displayed budget reconciles, including the cache floor",
+                    headroom >= 0 && abs(plan.expectedPeakGB + headroom - target) < 1e-9
+                        && plan.banner().contains(String(format: "%.1f GB budget headroom", headroom)))
+            }
+        }
+        let raw = try Planner.resolveContextWindow(.tokens(32_768), request: PlanRequest(poolGB: 4), on: roomy).plan
+        c.expect("a raw pool size does not invent a total budget", raw.plannedHeadroomGB == nil
+            && raw.json()["planned_headroom_gb"] == nil && !raw.banner().contains("budget headroom"))
+        return c.report()
+    }
+
     /// The automatic context window on simulated Macs: each tier's choice, the
     /// startup step-down on a busy machine, fixed caches, explicit windows and
     /// the retention fallback. Planning only; nothing reads this Mac's memory.
     static func automaticContextWindow() throws -> CheckReport {
         var c = CheckBuilder("automatic-context-window")
         let tiers: [(Double, Int)] = [(16, 32_768), (24, 32_768), (32, 32_768), (36, 65_536),
-                                      (48, 65_536), (64, 131_072), (96, 262_144), (128, 262_144)]
+                                      (48, 32_768), (64, 131_072), (96, 262_144), (128, 262_144)]
         for (ram, window) in tiers {
             let gb = Int(ram)
             let device = Machine(ramGB: ram, workingSetGB: ram * 0.75, availableGB: ram, isSimulated: true)

@@ -8,6 +8,32 @@ determines which version the installer downloads.
 
 ## 0.2.21 - 2026-09-18
 
+- Automatic context selection no longer trades away expert cache above the
+  measured decode range on the assumption that its flat speed estimate means
+  no performance cost. This fixes large explicit memory budgets silently
+  becoming long-context reservations instead of useful cache. Busy starts use
+  the same decision rule. Explicit `--max-context` choices remain available;
+  startup and JSON reports distinguish the process budget, allocated expert
+  cache and runtime/context allowances from measured memory usage.
+- A continued conversation now computes what a cold one computes. The engine's
+  arithmetic depends on how tokens were grouped into passes and on whether each
+  one was read or generated, so the state a turn left behind, its prompt read
+  in passes and its reply decoded a token at a time, was not what reading those
+  same ids computes. The difference sat in the same band as re-chunking a
+  prefill, 3.7% to 5.9% of the logit spread, and it crossed a token: on a
+  1,430-token agent turn a fresh read scored `>` at 0.9576 and `]` at 0.0421
+  for one position of tool-call syntax, the cached turn inverted them, and the
+  model's first `file.edit` call came back malformed. A request now resumes
+  only a state whose length is one of its own prefill pass boundaries and whose
+  every token was read in those passes, and re-reads the rest, so the same
+  conversation gives the same tokens and bit-identical prompt logits either
+  way. The Sevra basics run that produced that malformed call now writes the
+  same edit with no correction round. A follow-up turn pays one partial pass
+  for it: measured at 961 slots on a three-turn chat, follow-up prefill 2.47 s
+  against 8.56 s, both well under the 26.3 s of reading the conversation cold.
+  New gate `slotstream prefix-exact-check`, and the weights-free
+  `aligned-prefix-resume` catalogue check holds the policy in CI;
+  `SLOTSTREAM_OPT_ALIGNED_RESUME=0` restores the previous reuse.
 - Faster speculative decode on long prompts. The three-row verify pass of
   draft depth 2 no longer falls to the dense attention kernel, whose cost
   grows with the context: from 6,144 tokens it runs two rows at a time through

@@ -59,7 +59,7 @@ import Foundation
     }
 
     static func automaticWindows() throws {
-        let tiers: [(Double, Int)] = [(16, 32768), (24, 32768), (32, 32768), (36, 65536), (48, 65536),
+        let tiers: [(Double, Int)] = [(16, 32768), (24, 32768), (32, 32768), (36, 65536), (48, 32768),
                                       (64, 131072), (96, 262144), (128, 262144)]
         for (ram, window) in tiers {
             let device = Machine(ramGB: ram, workingSetGB: ram * 0.75, availableGB: ram, isSimulated: true)
@@ -76,6 +76,24 @@ import Foundation
             }
         }
         let big = Machine(ramGB: 128, workingSetGB: 96, availableGB: 128, isSimulated: true)
+        // A clamped estimate is missing evidence, not a free cache reduction.
+        for ram in [64.0, 64 * 1024 * 1024 * 1024 / 1e9] {
+            let device = Machine(ramGB: ram, workingSetGB: ram * 0.75, availableGB: ram, isSimulated: true)
+            for mtp in [Planner.MTPMode.off, .on, .auto] {
+                let request = PlanRequest(memoryGB: 48, mtp: mtp)
+                let choice = Planner.automaticContextWindow(request, on: device, mtpAvailable: true)
+                let base = try Planner.resolveContextWindow(.tokens(32768), request: request, on: device, mtpAvailable: true).plan
+                let selected = try Planner.resolveContextWindow(.automatic, request: request, on: device, mtpAvailable: true).plan
+                check("C23", "48 GB default keeps the explicit 32K cache", selected.slots == base.slots && selected.maxContextTokens == 32768)
+                check("C23", "48 GB candidates explain unmeasured cache loss", choice.candidates.dropFirst().allSatisfy {
+                    !$0.accepted && $0.relativeRequestCost == nil && $0.reason.contains("unmeasured")
+                })
+                for window in [65536, 131072, 262144] {
+                    let explicit = try Planner.resolveContextWindow(.tokens(window), request: request, on: device, mtpAvailable: true)
+                    check("C23", "48 GB explicit context stays available", explicit.plan.maxContextTokens == window && explicit.automatic == nil)
+                }
+            }
+        }
         check("C23", "a fixed cache size keeps the default window",
             Planner.automaticContextWindow(PlanRequest(expertsPerLayer: 120), on: big, mtpAvailable: true).window == ContextPolicy.defaultTokens)
         let explicit = try Planner.resolveContextWindow(.tokens(65536), request: PlanRequest(), on: big, mtpAvailable: true)

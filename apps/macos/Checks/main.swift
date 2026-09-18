@@ -6,23 +6,29 @@ func require(_ value: @autoclosure () -> Bool, _ message: String) throws { if !v
 let sem = DispatchSemaphore(value: 0)
 var result: Int32 = 0
 do { try crashChildIfRequested() } catch { fputs(error.localizedDescription + "\n", stderr); exit(1) }
+if holdMemoryChildIfRequested() { exit(0) }
 Task {
+    // Signal last, after every cleanup in this task has run.
+    defer { sem.signal() }
     do {
-        if try seedAuditUIIfRequested() { sem.signal(); return }
-        if try seedUIIfRequested() { sem.signal(); return }
-        if try seedPromotionUIIfRequested() { sem.signal(); return }
-        if try await auditIfRequested() { sem.signal(); return }
-        if try await realPerformanceCheckIfRequested() { sem.signal(); return }
-        if try await realCheckIfRequested() { sem.signal(); return }
-        if try await realThinkingCheckIfRequested() { sem.signal(); return }
+        if try await crashApplyChildIfRequested() { return }
+        if try seedAuditUIIfRequested() { return }
+        if try seedUIIfRequested() { return }
+        if try seedPromotionUIIfRequested() { return }
+        if try await auditIfRequested() { return }
+        if try await realPerformanceCheckIfRequested() { return }
+        if try await realCheckIfRequested() { return }
+        if try await realThinkingCheckIfRequested() { return }
+        if try await realBasicsCheckIfRequested() { return }
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-check-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
-        if CommandLine.arguments.contains("--external-drafts") { try await externalDraftChecks(root: root, dbmd: dbmd); sem.signal(); return }
-        if CommandLine.arguments.contains("--archive") { try await archiveChecks(root: root, dbmd: dbmd); sem.signal(); return }
-        if CommandLine.arguments.contains("--context-window") { try await longConversationChecks(root: root, dbmd: dbmd); sem.signal(); return }
-        if CommandLine.arguments.contains("--thinking") { try await thinkingChecks(root: root, dbmd: dbmd); sem.signal(); return }
+        if CommandLine.arguments.contains("--external-drafts") { try await externalDraftChecks(root: root, dbmd: dbmd); return }
+        if CommandLine.arguments.contains("--archive") { try await archiveChecks(root: root, dbmd: dbmd); return }
+        if CommandLine.arguments.contains("--context-window") { try await longConversationChecks(root: root, dbmd: dbmd); return }
+        if CommandLine.arguments.contains("--thinking") { try await thinkingChecks(root: root, dbmd: dbmd); return }
+        if CommandLine.arguments.contains("--basics") { try await basicsChecks(root: root, dbmd: dbmd); return }
         let folder = root.appendingPathComponent("sources")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try Data("The launch date is October 12. The budget is 400 dollars.\n".utf8).write(to: folder.appendingPathComponent("notes.md"))
@@ -96,7 +102,7 @@ Task {
         try await ipcChecks(root: root, dbmd: dbmd)
         try await personalLoopChecks(root: root, dbmd: dbmd)
         try await thinkingChecks(root: root, dbmd: dbmd)
+        try await basicsChecks(root: root, dbmd: dbmd)
     } catch { fputs(error.localizedDescription + "\n", stderr); result = 1 }
-    sem.signal()
 }
 sem.wait(); exit(result)

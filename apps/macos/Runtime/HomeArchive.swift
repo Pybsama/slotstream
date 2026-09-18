@@ -40,7 +40,7 @@ public enum HomeArchive {
     static let maxFiles = 20_000
     static let maxBytes = 512 * 1024 * 1024
     static let maxFileBytes = 64 * 1024 * 1024
-    static let owned = Set(["sevra.toml", "db", "artifacts", "assets", "skills", "mini-apps", "runs"])
+    static let owned = Set(["sevra.toml", "db", "artifacts", "assets", "extensions", "changes", "skills", "mini-apps", "runs"])
     private static let fm = FileManager.default
 
     static func pathKey(_ path: String) throws -> String {

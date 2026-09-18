@@ -38,6 +38,7 @@ struct ContentView: View {
     private var elevated: Color { scheme == .dark ? Color(red: 37/255, green: 37/255, blue: 34/255) : .white }
     private var secondaryInk: Color { contrast == .increased ? .primary : scheme == .dark ? Color(red: 184/255, green: 182/255, blue: 170/255) : Color(red: 99/255, green: 97/255, blue: 91/255) }
     private var boundary: Color { contrast == .increased ? .primary : scheme == .dark ? Color(red: 133/255, green: 130/255, blue: 119/255) : Color(red: 133/255, green: 130/255, blue: 121/255) }
+    private var palette: Palette { Palette(scheme: scheme, contrast: contrast) }
     private var messages: [Message] {
         guard let thread = model.thread, let home = model.snapshot?.home else { return [] }
         return home.conversationMessages(for: thread).filter { !$0.text.isEmpty }
@@ -169,6 +170,11 @@ struct ContentView: View {
             Button { archiveOnly.toggle() } label: { navigationLabel(archiveOnly ? "Open threads" : "Archived", symbol: "archivebox") }.buttonStyle(RailButton(selected: archiveOnly)).help(archiveOnly ? "Show open and completed threads" : "Show archived threads")
             Divider().padding(.vertical, 4)
             railButton("Journal", symbol: "book.closed", selected: model.panel == "Journal") { openPanel("Journal") }
+            railButton("Apps & Skills", symbol: "square.grid.2x2", selected: model.panel == "Apps") { openPanel("Apps") }
+            if let running = model.runningApp {
+                Button { openPanel("App") } label: { navigationLabel(running.session.name, symbol: "app").padding(.leading, 12) }
+                    .buttonStyle(RailButton(selected: model.panel == "App")).help("Return to \(running.session.name), which is open")
+            }
             railButton("Knowledge", symbol: "square.stack", selected: model.panel == "Knowledge") { openPanel("Knowledge") }
             railButton("Settings", symbol: "gearshape", selected: model.panel == "Settings") { openPanel("Settings") }
             Text("Development build · Local only").font(.caption).foregroundStyle(secondaryInk).padding(12)
@@ -190,7 +196,7 @@ struct ContentView: View {
             .help(thread.title + " · " + lifecycleTitle(thread.lifecycle) + ". Right-click for thread actions.").contextMenu { threadActions(thread) }
     }
     private func railButton(_ title: String, symbol: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) { navigationLabel(title, symbol: symbol) }.buttonStyle(RailButton(selected: selected)).help(title == "Home" ? "Open your Home conversation (⌘1)" : title == "Knowledge" ? "Inspect, correct, or forget saved memories" : title == "Journal" ? "Read and write your personal journal" : "Appearance, model, and keyboard settings (⌘,)")
+        Button(action: action) { navigationLabel(title, symbol: symbol) }.buttonStyle(RailButton(selected: selected)).help(title == "Home" ? "Open your Home conversation (⌘1)" : title == "Knowledge" ? "Inspect, correct, or forget saved memories" : title == "Journal" ? "Read and write your personal journal" : title == "Apps & Skills" ? "Your mini-apps and skills (⌘2)" : "Appearance, model, and keyboard settings (⌘,)")
     }
     private func navigationLabel(_ title: String, symbol: String) -> some View {
         HStack(spacing: 10) { Image(systemName: symbol).frame(width: 16, height: 18).accessibilityHidden(true); Text(title) }
@@ -253,6 +259,11 @@ struct ContentView: View {
         case "Artifact": artifact
         case "Context": contextInspector
         case "Home changes": homeChanges
+        case "Changes": ChangesPanel(model: model, palette: palette)
+        case "App review": AppReviewPanel(model: model, palette: palette)
+        case "Skill review": SkillReviewPanel(model: model, palette: palette)
+        case "Apps": AppsPanel(model: model, palette: palette)
+        case "App": AppCanvas(model: model, palette: palette)
         default: conversation
         }
     }
@@ -265,8 +276,13 @@ struct ContentView: View {
                     Spacer()
                     Text(model.thread?.mode == .incognito ? "A private place to think." : "What would you like to work on?").font(.custom("Poppins-Medium", size: 24))
                     Text(model.thread?.mode == .incognito ? "This thread stays out of saved history and shared memory. It disappears when you close it." : "Ask something, or bring a file and work through it together.").font(.custom("Inter-Regular", size: 16)).foregroundStyle(secondaryInk).fixedSize(horizontal: false, vertical: true)
-                    Button { model.attach() } label: { Label("Attach a file or folder", systemImage: "paperclip") }.padding(.top, 4).disabled(!ready || model.busy || model.attaching || model.aiPaused).help(attachHelp)
-                    Text("Try: Read these notes and draft a cited briefing.").font(.callout).foregroundStyle(secondaryInk)
+                    HStack(spacing: 12) {
+                        Button { model.attach() } label: { Label("Attach files or folders", systemImage: "paperclip") }.disabled(!ready || model.working || model.attaching || model.aiPaused).help(attachHelp)
+                        if model.thread?.mode != .incognito {
+                            Button { model.useSkill("app") } label: { Label("Build an app", systemImage: "square.grid.2x2") }.disabled(!ready || model.aiPaused).help("Start a request for a mini-app that runs inside Sevra")
+                        }
+                    }.padding(.top, 4)
+                    Text("Try: Summarize this PDF with citations, fix the dates in my notes, or search my knowledge base.").font(.callout).foregroundStyle(secondaryInk)
                     Spacer()
                 }.padding(.vertical, 32).readingColumn()
             } else {
@@ -343,6 +359,15 @@ struct ContentView: View {
                     Text(run.status).font(.callout).foregroundStyle(secondaryInk).lineLimit(3).textSelection(.enabled)
                     Spacer(minLength: 4)
                     if run.proposal != nil { Button("Review document") { model.panel = "Artifact" }.buttonStyle(.borderedProminent) }
+                    if run.appProposal != nil { Button("Review app") { model.panel = "App review" }.buttonStyle(.borderedProminent) }
+                    if run.skillProposal != nil { Button("Review skill") { model.panel = "Skill review" }.buttonStyle(.borderedProminent) }
+                    if let changes = run.changes {
+                        if changes.state == .proposed { Button("Review changes") { model.reviewChanges() }.buttonStyle(.borderedProminent).accessibilityIdentifier("review-changes") }
+                        else if changes.state != .rejected { Button("Changes") { model.reviewChanges(changes) }.help("See what was written, or undo it") }
+                    }
+                    if let published = run.published, published.hasPrefix("app:"), model.snapshot?.home.apps?.contains(where: { $0.id == published.dropFirst(4) && $0.active != nil && !$0.removed }) == true {
+                        Button("Open app") { model.openApp(String(published.dropFirst(4))) }
+                    }
                     if run.artifact != nil && !artifactOpen { Button("Open document") { model.openArtifact() } }
                     if [.failed, .interrupted, .stopped].contains(run.state) { Button("Edit and retry", action: model.prepareRetry).help("Copy the request to your draft so you can edit and send it again") }
                     if run.context != nil { Button("Context") { model.panel = "Context" }.help("Inspect the history and memories used for this response") }
@@ -375,14 +400,7 @@ struct ContentView: View {
         VStack(spacing: 8) {
             composerIssue
             if model.attaching { HStack { ProgressView().controlSize(.small); Text("Preparing source…").font(.callout); Spacer() } }
-            if let attachment = model.snapshot?.attachmentNames[model.selectedID] {
-                HStack(spacing: 8) {
-                    Label(attachment, systemImage: "doc").lineLimit(1).help(attachment)
-                    Text("Read-only").foregroundStyle(secondaryInk)
-                    Spacer()
-                    NativeIconButton(symbol: "xmark.circle", title: "Remove attached source", help: "Detach this source. The original file stays unchanged.", action: { let id = model.selectedID; model.perform { try await $0.detach(threadID: id) } }).frame(width: 28, height: 28).disabled(model.busy)
-                }.font(.callout).padding(.horizontal, 4)
-            }
+            if !model.attachments.isEmpty { AttachmentBar(model: model, palette: palette).padding(.horizontal, 4) }
             VStack(spacing: 0) {
                 ZStack(alignment: .topLeading) {
                     if model.draft.isEmpty { Text(model.busy ? "Draft your next message…" : "Message Sevra…").font(.custom("Inter-Regular", size: fontSize)).foregroundStyle(secondaryInk).padding(.leading, 15).padding(.top, 10).allowsHitTesting(false).accessibilityHidden(true) }
@@ -392,7 +410,8 @@ struct ContentView: View {
                         .id(model.selectedID).frame(height: min(max(compact ? 42 : 52, composerHeight), max(52, min(fontSize * 12, maxHeight - 44)))).disabled(!ready || model.composer.closing)
                 }
                 HStack(spacing: 8) {
-                    NativeIconButton(symbol: "paperclip", title: "Attach a file or folder", help: attachHelp, action: model.attach).frame(width: 28, height: 28).disabled(!ready || model.busy || model.attaching || model.aiPaused)
+                    NativeIconButton(symbol: "paperclip", title: "Attach files or folders", help: attachHelp, action: model.attach).frame(width: 28, height: 28).disabled(!ready || model.working || model.attaching || model.aiPaused)
+                    SkillMenu(model: model).frame(width: 28, height: 28).disabled(!ready || model.aiPaused)
                     Menu {
                         if model.thread?.mode == .incognito {
                             Text("This thread is not saved and uses no shared memory.")
@@ -422,7 +441,7 @@ struct ContentView: View {
                                 .help("End the thought now and answer from what Sevra has so far")
                         }
                         Button(model.thread?.run?.state == .stopping ? "Stopping…" : model.thread?.run?.state == .queued ? "Cancel" : model.thread?.run?.state == .needsYou ? "Cancel review" : "Stop", action: model.stop)
-                            .disabled(model.thread?.run?.state == .stopping).accessibilityIdentifier("stop-response").help(model.thread?.run?.state == .queued ? "Remove this message from the queue" : model.thread?.run?.state == .needsYou ? "Cancel this review without saving the document" : "Stop the current response and further tool actions")
+                            .disabled(model.thread?.run?.state == .stopping).accessibilityIdentifier("stop-response").help(model.thread?.run?.state == .queued ? "Remove this message from the queue" : model.thread?.run?.state == .needsYou ? "Cancel this review. Nothing waiting for review is saved or written" : "Stop the current response and further tool actions")
                     } else {
                         Button(action: model.send) { Label(otherThreadWorking ? "Queue" : "Send", systemImage: "arrow.up") }.buttonStyle(.borderedProminent)
                             .disabled(!model.composer.canSend || model.attaching || model.aiPaused).accessibilityIdentifier("send-message").help(sendHelp).accessibilityHint(sendHelp)
@@ -437,7 +456,7 @@ struct ContentView: View {
         }.padding(.top, 8).padding(.bottom, 16).readingColumn()
     }
     private var attachHelp: String {
-        model.aiPaused ? "Review Home changes before attaching a source" : model.busy ? "Attach a source after this response finishes" : "Attach one text file or folder for read-only access"
+        model.aiPaused ? "Review Home changes before attaching a source" : model.working ? "Attach sources after this response finishes" : "Attach files, folders or a db.md knowledge base. Sevra reads them; changes need your permission and review."
     }
     private var typicalThinking: String? { model.typicalThinkingSeconds.map { "Recently about " + ThinkingPolicy.describe($0) + " extra." } }
     private var thinkHelp: String {
@@ -650,12 +669,12 @@ struct ContentView: View {
     private var needsYou: some View {
         ScrollView { VStack(alignment: .leading, spacing: 20) {
             let pending = model.snapshot?.home.threads.filter { $0.run?.state == .needsYou } ?? []
-            if pending.isEmpty { emptyState("Nothing needs your attention", detail: "Documents waiting for review will appear here.") }
+            if pending.isEmpty { emptyState("Nothing needs your attention", detail: "Documents, file changes, apps and skills waiting for review appear here.") }
             ForEach(pending) { t in
                 VStack(alignment: .leading, spacing: 10) {
                     Text(t.title).font(.headline)
-                    Text(t.run?.proposal?.filename ?? t.run?.status ?? "Review needed").foregroundStyle(secondaryInk)
-                    HStack { Button("Review document") { model.navigateToReview(t.id) }.buttonStyle(.borderedProminent); Text(t.mode.title).font(.caption).foregroundStyle(secondaryInk) }
+                    Text(reviewSummary(t.run)).foregroundStyle(secondaryInk)
+                    HStack { Button(reviewTitle(t.run)) { model.navigateToReview(t.id) }.buttonStyle(.borderedProminent); Text(t.mode.title).font(.caption).foregroundStyle(secondaryInk) }
                 }.frame(maxWidth: .infinity, alignment: .leading); Divider()
             }
         }.padding(.vertical, 24).readingColumn() }
@@ -782,6 +801,22 @@ struct ContentView: View {
                 ForEach(model.snapshot?.home.journal.reversed() ?? [].reversed()) { entry in VStack(alignment: .leading, spacing: 8) { Text(entry.date, style: .date).font(.caption).foregroundStyle(secondaryInk); Text(entry.text).font(.custom("Inter-Regular", size: fontSize)).textSelection(.enabled) }; Divider() }
             }.frame(maxWidth: .infinity, alignment: .leading) }
         }.padding(.vertical, 24).readingColumn().onAppear { journalFocused = false; DispatchQueue.main.async { journalFocused = true } }
+    }
+    private func reviewTitle(_ run: Run?) -> String {
+        switch run.map(AppModel.reviewPanel) {
+        case "App review": return "Review app"
+        case "Skill review": return "Review skill"
+        case "Changes": return "Review changes"
+        default: return "Review document"
+        }
+    }
+    private func reviewSummary(_ run: Run?) -> String {
+        guard let run else { return "Review needed" }
+        if let proposal = run.proposal { return proposal.filename }
+        if let app = run.appProposal { return "App: " + app.name }
+        if let skill = run.skillProposal { return "Skill: /" + skill.name }
+        if let changes = run.changes, changes.state == .proposed { return "File changes: " + changes.summary }
+        return run.status
     }
     private func emptyState(_ title: String, detail: String) -> some View {
         VStack(alignment: .leading, spacing: 8) { Text(title).font(.headline); Text(detail).foregroundStyle(secondaryInk).fixedSize(horizontal: false, vertical: true) }.padding(.vertical, 20).frame(maxWidth: .infinity, alignment: .leading)

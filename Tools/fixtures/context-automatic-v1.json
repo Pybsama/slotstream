@@ -78,7 +78,7 @@
         "off",
         "--json"
       ],
-      "expected_window": 131072
+      "expected_window": 65536
     }
   ]
 }

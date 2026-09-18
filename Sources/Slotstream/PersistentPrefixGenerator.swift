@@ -78,12 +78,18 @@ extension Generator {
     func restorePersistentPrefix(cache: PrefixCache?, promptIds: [Int], images: [ImageSegment],
                                  completePromptKey: PromptCheckpointKey?, reserveTokens: Int,
                                  reserveSequenceBytes: Int, request: RequestController?,
+                                 resume: PrefixResumeRule?,
                                  stats: inout GenStats) -> PersistentPrefixCache.RestoreResult? {
         guard let cache, let tier = persistentTier(cache, images: images) else { return nil }
         let draft = speculationEnabled && model.mtpHead != nil
         let retained = cache.retainedMatchLength(matching: promptIds, images: images,
-            completePromptKey: completePromptKey, modelIdentity: model.promptCheckpointIdentity)
-        guard let entry = tier.candidate(extending: promptIds, longerThan: retained, requireDraft: draft)
+            completePromptKey: completePromptKey, modelIdentity: model.promptCheckpointIdentity,
+            resume: resume)
+        // A state saved at one of this prompt's own pass boundaries is the
+        // state this request would have read; any other length is refused for
+        // the same reason an in-memory conversation entry is.
+        guard let entry = tier.candidate(extending: promptIds, longerThan: retained, requireDraft: draft,
+            boundaries: resume?.boundaries)
         else { return nil }
         var observation = stats.persistentPrefix ?? PersistentPrefixObservation()
         defer { stats.persistentPrefix = observation }
@@ -112,8 +118,9 @@ extension Generator {
     /// it, unless its controller keeps the conversation off disk. `shared`
     /// writes a prefix other conversations start with, from inside a prompt.
     func persistPrefix(cache: PrefixCache?, state: Qwen4ExpModel.State, tokens: [Int], images: [ImageSegment],
-                       request: RequestController?, stats: inout GenStats, shared: Bool = false) {
-        guard let tier = persistentTier(cache, images: images),
+                       request: RequestController?, aligned: Bool = true,
+                       stats: inout GenStats, shared: Bool = false) {
+        guard aligned, let tier = persistentTier(cache, images: images),
               tokens.count >= tier.configuration.minimumTokens else { return }
         var observation = stats.persistentPrefix ?? PersistentPrefixObservation()
         defer { stats.persistentPrefix = observation }

@@ -42,7 +42,12 @@
     "decode_lookahead",
     "lookahead_reserve_bytes",
     "context_window_source",
-    "automatic_context_window"
+    "automatic_context_window",
+    "memory_target_semantics",
+    "expected_peak_semantics",
+    "non_cache_allowance_bytes",
+    "decode_estimate_cache_in_measured_range",
+    "planned_headroom_gb"
   ],
   "tiers": [
     {

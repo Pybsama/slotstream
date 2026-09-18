@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-09-17T14:55:23.061681+00:00
+updated: 2026-09-18T04:55:47.951956+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -203,10 +203,10 @@ Defects found and fixed while verifying:
 - The app review said an app cannot reach other apps, while collections are shared by name. The review now counts records already saved in each requested collection and says that apps using a collection share its records.
 - The host echoed an app's own saves back as change events, so an app that saves on every change could create records in a loop until the collection limit. Open apps now hear only about changes they did not make, the preview follows the same rule, and each app has a write budget.
 - Single-suite check modes signaled completion before removing their temporary folder, leaving files behind. The signal now follows cleanup.
+- Engine results no longer depend on cache history. A turn resumes only its own prefill pass boundaries, so the continued conversation computes what a cold one computes, bit for bit, and the check's first `file.edit` call is now correct with no correction round. Canonical: [[records/decisions/a-continued-conversation-computes-what-a-cold-one-computes]], measured in [[records/measurements/conversation-resume-exactness]].
 
 Still open:
 
-- Engine results that do not depend on cache history. A cached continuation groups a conversation's tokens differently from a fresh read, and the resulting drift flips the check's edit call. Resuming each turn from the last 256-token pass boundary reproduced a fresh read exactly in an emulation, so that is the proposed engine fix. Until then the host's one correction recovers the call, at the cost of a full prompt re-read.
 - A VoiceOver pass and a person's review of the new panels in the live app.
 - App Sandbox, signing and notarization for the app and its helper.
 - An Xcode build of the project. Xcode is not installed on this Mac; the project's structure and its helper build phase were checked without it.

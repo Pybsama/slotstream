@@ -79,8 +79,8 @@ range; other apps and memory pressure pull results down.
 |---|---|---|
 | 8 GB | **Support coming soon.** The current model doesn't fit yet. | Not available yet |
 | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
-| 24–<48 GB | ~6–16 tok/s | 32,768 through 32 GB; 65,536 from 36 GB |
-| 48–<96 GB | ~15–27 tok/s | 65,536 at 48 GB; 131,072 at 64 GB |
+| 24–<48 GB | ~6–16 tok/s | 32,768 through 32 GB; 65,536 at 36 GB |
+| 48–<96 GB | ~15–27 tok/s | 32,768 at 48 GB; 131,072 at 64 GB |
 | 96 GB+, the model fits in memory | ~20–32 tok/s | 262,144 tokens, the model's full window |
 
 The middle rows are anchored on our M5 Pro's measurement; the top ends of the
@@ -99,7 +99,8 @@ conditions, and [every automatic memory plan](docs/HARDWARE.md#automatic-memory-
 **Auto mode picks the memory target, cache size, speculative decoding and
 context window for your Mac.** It takes the largest window in the table above
 that still leaves room for speculative decoding and a complete conversation,
-given the memory free at startup. `slotstream doctor` shows the choice and
+given the memory free at startup, without an unmeasured loss of useful
+expert cache. `slotstream doctor` shows the choice and
 why, and `--max-context 65536` sets a window yourself, up to 262,144 tokens.
 
 **Starting a reply takes time.** Slotstream first reads your question and the
@@ -243,6 +244,11 @@ slotstream doctor --memory-gb 40
 ```
 
 If the plan fits with headroom, `slotstream serve --memory-gb 40` uses it.
+The flag is a total process budget. The startup report separates the allocated
+expert cache from allowances for conversation state and temporary work, which
+short requests may not use. Auto keeps extra expert cache when the speed
+estimate cannot price the cost of replacing it with a larger context window.
+Choose `--max-context N` explicitly when you prefer that tradeoff.
 An explicit target keeps the cache fixed and disables automatic resizing, so
 leave room for macOS and other apps. See the
 [memory options](docs/CLI.md#memory-options) for details.
@@ -663,7 +669,10 @@ and failed experiments behind these results.
 picks for each Mac.** It takes the largest of 32,768, 65,536, 131,072 and
 262,144 tokens that keeps speculative decoding, retains one complete
 conversation and adds at most 10% to the planner's estimate for a typical
-request. `serve --max-context 65536` fixes the window Hermes uses, and any size
+request. A flat estimate beyond its measured cache range is not evidence that
+extra cache has no value: auto declines reductions in that range and reports
+their cost as unmeasured. The same rule applies to a busy startup.
+`serve --max-context 65536` fixes the window Hermes uses, and any size
 up to the pinned model's 262,144 tokens is accepted; requests with images stay
 within 65,536. The planner charges extra state and transient memory before
 allocating the expert cache, and the automatic ceiling rises by the window's own
@@ -1769,7 +1778,7 @@ and OpenAI endpoints and the [fx guide](FX.md) for the AI SDK gateway.
 | Flag | Meaning |
 |---|---|
 | `--port <n>` | Listen port on 127.0.0.1 (default 11434). |
-| `--max-context <auto or n>` | Maximum tokens shared by prompt and reply. Default `auto`: the largest of 32768, 65536, 131072 and 262144 tokens that keeps speculative decoding, retains one complete conversation and adds at most 10% to a typical request on this Mac; `doctor` shows the choice. A number fixes the window, from 1 to 262144, the model's limit. Requests with images stay within 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Main sequence-cache capacity costs about 27 KiB per token, plus recurrent, retained, draft and transient allocations. |
+| `--max-context <auto or n>` | Maximum tokens shared by prompt and reply. Default `auto`: the largest of 32768, 65536, 131072 and 262144 tokens that keeps speculative decoding, retains one complete conversation and adds at most 10% to the estimated request time. Auto declines cache reductions above the measured decode range because their performance cost is unknown; `doctor` shows each tradeoff. A number fixes the window, from 1 to 262144, the model's limit. Requests with images stay within 65536. A larger window is priced before allocating the expert cache; a prompt above the configured cap returns 400. Main sequence-cache capacity costs about 27 KiB per token, plus recurrent, retained, draft and transient allocations. |
 | `--max-prefill-wait <minutes>` | Accepted request to first sampled model token, including queueing, tokenization and images. Default 30 minutes; `0` disables only time. |
 | `--no-elastic` | Pin the cache at its startup size. By default an auto-sized cache resizes between requests as memory pressure changes; explicit sizes are always pinned. |
 | `--no-prefix-cache` | Process each prompt from scratch. Useful for reproducibility comparisons. |
@@ -1955,7 +1964,7 @@ With no sizing override, auto sizes the process to the machine (see
 | Flag | Meaning |
 |---|---|
 | `--model <name or dir>` | Model name (resolves to `~/.slotstream/models`, or a dev checkout's `models/`) or a directory path. |
-| `--memory-gb <gb>` | Total process memory target, in decimal GB. The cache gets what remains after fixed allocations and a 1 GB margin. Minimum 8.1 for the 32,768-token window; larger windows raise the minimum. Use this option for a manual target. Auto still picks the context window inside this target unless `--max-context` is given; add `--max-context 32768` to reproduce a plan from before 0.2.17. |
+| `--memory-gb <gb>` | Total process memory budget, in decimal GB. The cache gets what remains after runtime, context, workspace and a nominal 1 GB margin. Near the minimum cache size, the plan can use part of that margin; `doctor` shows the actual planned headroom. Minimum 8.1 for the 32,768-token window; larger windows raise the minimum. This is a planning allowance, not an instruction to fill RAM. Conversation state and workspace use memory as needed, so measured usage can be lower. Auto picks the context window inside this target and preserves cache whose loss it cannot price; `--max-context N` chooses the context tradeoff explicitly. |
 | `--experts-per-layer <n>` | Expert cache size directly, 1…512. Each of the 48 layers has 512 experts of 2.76 MB and the cache holds `n × 48` of them, so the pool is `n × 0.133 GB`: 30/layer is 4 GB, 181 is 24 GB, 226 is 30 GB. The pool is one global cache; hot layers borrow slots from cold ones. |
 | `--pool-gb <gb>` | Raw expert-pool size (1 GB is about 7.5 experts per layer). |
 | `--vision auto\|on\|off` | Accept images (default `auto`). `auto` loads the image encoder on first use; `on` also requires the checkpoint to contain vision weights; `off` rejects images. |
@@ -2072,6 +2081,7 @@ See [Testing](TESTING.md) for the full suites.
 | `elastic-check` | Greedy output is byte-identical across a live pool grow and shrink. `--max-tokens` (24), `--big-slots` (960; lower it on small machines). |
 | `elastic-drill` | Drives the live governor through controlled polls: shrink, grow cooldown, regrowth and exact output. `--slots` (4000), `--max-memory-gb` (10), `--quick` skips regrowth. The unchanged deadbands need a larger starting arena: the full test uses `--slots 1000 --max-memory-gb 13`, requires the derived target plus 3 GB physically reclaimable, and reports sampled memory and swap. An insufficient ceiling refuses before model allocation. |
 | `prefix-check` | Conversation prefix reuse is equivalent, bounded, and deterministic. `--slots` (640), `--max-tokens` (24). |
+| `prefix-exact-check` | A continued conversation computes what a cold one does: same tokens and bit-identical prompt logits whether a turn resumed a retained state or read its whole prompt, with reuse still happening, an identical prompt reusing its complete state, an edited history rebuilding, and a second conversation resuming a shared prefix. `--slots` (640), `--max-tokens` (24), `--plan` to run a real memory plan so `--memory-gb` and `--mtp` apply. |
 | `sweep-check` | The prefill sweep (passes of 256 tokens or more) stays inside the prefill-rechunk band against the pool path, is deterministic, gives bit-identical logits on a cold and a warm pool, and leaves the pool consistent after admission. `--slots` (640). |
 | `parity` | N truncated layers match the Python reference dumps. `--layers` (4), `--tokens`, `--compare <dir>`, `--out <dir>`. |
 | `template-check` | Renders the chat template for a canned conversation and prints token ids. `--think`. |
@@ -2867,7 +2877,7 @@ let machine = Machine.current()
 let plan = try Planner.plan(PlanRequest(memoryGB: 16), on: machine)
 print(plan.banner())
 print(plan.expertsPerLayerCached, "experts per layer,",
-      plan.expectedPeakGB, "GB expected peak")
+      plan.expectedPeakGB, "GB planned full-workload envelope")
 ```
 
 `Machine.simulated(ramGB: 16)` previews a decimal-GB memory size, like
@@ -3036,6 +3046,17 @@ retains one complete conversation when its plan can hold one; otherwise the
 plan's notes say how much a follow-up reuses. `ContextPolicy.maxTokens` is the
 model's 262,144 tokens, and requests with images stay within
 `ContextPolicy.visionLimit`.
+
+Automatic selection preserves cache above the measured decode range when a
+larger window would remove slots. Its clamped speed estimate cannot establish
+that those slots have no value. Such candidates omit `relative_request_cost`
+and set `request_cost_calibrated` to false. The plan's legacy
+`expected_peak_gb` is the planned full-workload envelope, not measured usage;
+`memory_target_semantics`, `expected_peak_semantics` and
+`non_cache_allowance_bytes` make the distinction explicit in JSON.
+`planned_headroom_gb` is the remaining planned budget after that envelope,
+not live free RAM. Near the minimum cache size it can be smaller than the
+nominal planning margin; a fully resident model can leave more unassigned.
 
 
 <!-- ===== docs/FX.md ===== -->
@@ -5240,12 +5261,12 @@ guidance, independently of reply speed.
 
 ### Automatic memory plans
 
-The columns describe 0.2.17 source plans in auto mode, which picks the
+The columns describe the current source plans in auto mode, which picks the
 context window along with the target and speculative decoding. The draft file
 is available and no other apps hold memory. Simulated RAM is in decimal GB; a
 Mac's marketed memory capacity can produce a different decimal-GB device
 reading and target. Auto picks 32,768 tokens through 32 GB of simulated RAM,
-65,536 from 36 GB, 131,072 at 64 GB and 262,144 from 96 GB.
+65,536 at 36 GB, 32,768 at 48 GB, 131,072 at 64 GB and 262,144 from 96 GB.
 
 | Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Automatic context window |
 |---|---|---|---|
@@ -5255,7 +5276,7 @@ reading and target. Auto picks 32,768 tokens through 32 GB of simulated RAM,
 | 24 GB | 16 GB | Off | 32,768 |
 | 32 GB | 22 GB | On | 32,768 |
 | 36 GB | 25 GB | On | 65,536 |
-| 48 GB | 33.6 GB | On | 65,536 |
+| 48 GB | 33.6 GB | On | 32,768 |
 | 64 GB | 43.2 GB | On | 131,072 |
 | 96 or 128 GB | 54.7 GB | On | 262,144 |
 
@@ -5286,12 +5307,16 @@ request of 2,000 prompt tokens and a 400-token reply. `slotstream doctor
 --sim-ram <GB>` shows every candidate and its reason. At 24 GB a 65,536-token
 window would add 18%, and at 32 GB it would turn speculative decoding off.
 At 36 GB it adds 9%, as the cache drops from 96 to 75 experts per layer.
-At 48 GB, 131,072 tokens would add 15%; at 64 GB, 262,144 would add 18%.
+At 48 GB, auto keeps the original cache because its size exceeds the measured
+decode range: the estimate cannot price the loss, even when it reports little
+or no change. At 64 GB, 262,144 would add 18%.
 From 64 GB the larger window's memory comes from room the 32,768-token plan
 leaves unused, so the cache keeps its size and the target rises above that
 plan's 34.6 GB, to 43.2 GB at 64 GB and 54.7 GB from 96 GB. Real available
-memory and Metal limits can change these decisions; a busy start lowers the
-window before it gives up speculative decoding. `--max-context N` fixes any
+memory and Metal limits can change these decisions; a busy start applies the
+same cache and speed rules before choosing its window. A larger Mac can
+therefore receive a smaller window when widening it would sacrifice cache
+whose performance benefit is unmeasured. `--max-context N` fixes any
 window up to 262,144; on a 32 GB Mac, `--max-context 65536` gives the larger
 window without speculative decoding.
 
@@ -5356,6 +5381,32 @@ determines which version the installer downloads.
 
 ## 0.2.21 - 2026-09-18
 
+- Automatic context selection no longer trades away expert cache above the
+  measured decode range on the assumption that its flat speed estimate means
+  no performance cost. This fixes large explicit memory budgets silently
+  becoming long-context reservations instead of useful cache. Busy starts use
+  the same decision rule. Explicit `--max-context` choices remain available;
+  startup and JSON reports distinguish the process budget, allocated expert
+  cache and runtime/context allowances from measured memory usage.
+- A continued conversation now computes what a cold one computes. The engine's
+  arithmetic depends on how tokens were grouped into passes and on whether each
+  one was read or generated, so the state a turn left behind, its prompt read
+  in passes and its reply decoded a token at a time, was not what reading those
+  same ids computes. The difference sat in the same band as re-chunking a
+  prefill, 3.7% to 5.9% of the logit spread, and it crossed a token: on a
+  1,430-token agent turn a fresh read scored `>` at 0.9576 and `]` at 0.0421
+  for one position of tool-call syntax, the cached turn inverted them, and the
+  model's first `file.edit` call came back malformed. A request now resumes
+  only a state whose length is one of its own prefill pass boundaries and whose
+  every token was read in those passes, and re-reads the rest, so the same
+  conversation gives the same tokens and bit-identical prompt logits either
+  way. The Sevra basics run that produced that malformed call now writes the
+  same edit with no correction round. A follow-up turn pays one partial pass
+  for it: measured at 961 slots on a three-turn chat, follow-up prefill 2.47 s
+  against 8.56 s, both well under the 26.3 s of reading the conversation cold.
+  New gate `slotstream prefix-exact-check`, and the weights-free
+  `aligned-prefix-resume` catalogue check holds the policy in CI;
+  `SLOTSTREAM_OPT_ALIGNED_RESUME=0` restores the previous reuse.
 - Faster speculative decode on long prompts. The three-row verify pass of
   draft depth 2 no longer falls to the dense attention kernel, whose cost
   grows with the context: from 6,144 tokens it runs two rows at a time through

@@ -8,25 +8,35 @@ public struct EngineTurn: Sendable {
     /// Recorded with the run when the turn thought first. Never the thought itself.
     public var thinking: ThinkingReceipt?
     public init(text: String, calls: [ProposedTool] = [], finishReason: String = "stop") { self.text = text; self.calls = calls; self.finishReason = finishReason }
-    public func validate() throws {
+    /// Completion and size gate applied to every turn, before any tool runs.
+    public func validateCompletion() throws {
         guard finishReason == "stop" || finishReason == "tool_calls" else {
             throw SevraError.refused("The model response ended before a successful completion (\(finishReason)). Proposed actions were not executed.")
         }
-        guard text.utf8.count <= 262144, calls.count <= 6, Set(calls.map(\.id)).count == calls.count else {
+        guard text.utf8.count <= 262144, calls.count <= EngineTurn.maxCalls, Set(calls.map(\.id)).count == calls.count else {
             throw SevraError.refused("The response exceeded its bounds or reused a tool-call ID.")
         }
         guard finishReason != "tool_calls" || !calls.isEmpty else { throw SevraError.refused("The model declared tool calls but returned none. No actions were executed.") }
-        guard !calls.contains(where: { $0.name == "artifact.propose" }) || calls.count == 1 else {
-            throw SevraError.refused("Propose one document for review in its own response. No actions from this response were executed.")
+    }
+    /// Staging several files is one reviewed change, so a turn may propose up
+    /// to eight calls. Proposal tools still stand alone.
+    public static let maxCalls = 8
+    /// Validates the entire call set against the tools offered for this job.
+    public func validate(offered: [ToolSpec]) throws {
+        try validateCompletion()
+        if calls.count > 1, let terminal = calls.first(where: { call in offered.first { $0.name == call.name }?.terminal == true }) {
+            throw SevraError.refused(terminal.name == "artifact.propose" ? "Propose one document for review in its own response. No actions from this response were executed." : "Propose \(terminal.name) in its own response. No actions from this response were executed.")
         }
         var correction: ToolSchemaError?
         for call in calls {
-            do { try call.validate() }
+            do { try call.validate(offered: offered) }
             catch let error as ToolSchemaError { if correction == nil { correction = error } }
             catch { throw error }
         }
         if let correction { throw correction }
     }
+    /// The original starter tool set.
+    public func validate() throws { try validate(offered: ToolCatalog.specs(for: [.read, .document])) }
 }
 /// Latest-state observation is bounded independently from the authoritative
 /// completion. Slow views cannot block generation or enqueue token tasks.
@@ -84,16 +94,27 @@ public protocol Inference: Sendable {
     var simulated: Bool { get }
     var performanceTelemetry: PerformanceTelemetry? { get }
     func configure(_ preferences: PerformancePreferences) async throws
-    func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn
+    func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn
     /// A turn that may think first. `thinking` is nil for tool turns; `control`
     /// carries Answer now. Engines without thinking answer directly.
-    func turn(history: [ChatMessage], tools: Bool, thinking: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn
+    /// `replyTokens` is the most the reply may use; the engine may use less
+    /// when the context is nearly full.
+    func turn(history: [ChatMessage], tools: [ToolDefinition], thinking: ThinkingRequest?, replyTokens: Int, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn
     func unload() async
 }
 public extension Inference {
-    func turn(history: [ChatMessage], tools: Bool, thinking: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+    func turn(history: [ChatMessage], tools: [ToolDefinition], thinking: ThinkingRequest?, replyTokens: Int, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
         try await turn(history: history, tools: tools, cancellation: cancellation, buffer: buffer)
     }
+}
+
+/// Reply budgets. A document, file change or app can be long; a plain answer
+/// rarely is. These are development operating bounds for a 32,768-token
+/// window at a few to sixteen tokens per second, not measured optima.
+public enum ReplyPolicy {
+    public static let answerTokens = 4096
+    public static let proposalTokens = 12288
+    public static let minimumTokens = 256
 }
 
 private final class InferenceExecutor: SerialExecutor, @unchecked Sendable {
@@ -131,10 +152,10 @@ public actor LocalInference: Inference {
         }
         self.preferences = preferences
     }
-    public func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
-        try await turn(history: history, tools: tools, thinking: nil, control: ThinkingControl(), cancellation: cancellation, buffer: buffer)
+    public func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        try await turn(history: history, tools: tools, thinking: nil, replyTokens: ReplyPolicy.answerTokens, control: ThinkingControl(), cancellation: cancellation, buffer: buffer)
     }
-    public func turn(history: [ChatMessage], tools: Bool, thinking requested: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+    public func turn(history: [ChatMessage], tools definitions: [ToolDefinition], thinking requested: ThinkingRequest?, replyTokens requestedReply: Int, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
         guard !inTurn else { throw SevraError.refused("The local model is already in use.") }
         inTurn = true
         let started = ProcessInfo.processInfo.systemUptime
@@ -167,17 +188,17 @@ public actor LocalInference: Inference {
         guard let engine else { throw SevraError.unavailable("Model is unavailable.") }
         performanceTelemetry?.update(state: "In use", detail: "Responding on your Mac.", engine: engine)
         var request = try engine.beginRequest(connected: { !cancellation.isCancelled })
-        let definitions = tools ? ProposedTool.definitions : []
         // Thinking never joins a tool turn in this version: tool-call
         // reliability was measured with it off, and the combination has not been.
         let thinking = definitions.isEmpty ? requested : nil
-        let replyTokens = thinking?.replyTokens ?? 1024
         buffer.stage("Reading the conversation")
         // Spliced: an assistant turn the engine itself produced, thought block
         // included, is re-encoded from its held ids so the prefix state matches.
         let ids = try engine.encodeChatSpliced(history, tools: definitions, thinking: thinking != nil, effort: thinking?.level)
         try cancellation.check()
-        guard ids.count + (thinking?.budgetTokens ?? 0) + replyTokens <= engine.maxContextTokens else { throw SevraError.refused("This request is too large for the current context. Start a new thread or use a smaller source.") }
+        let room = engine.maxContextTokens - ids.count - (thinking?.budgetTokens ?? 0)
+        let replyTokens = min(thinking?.replyTokens ?? requestedReply, room)
+        guard replyTokens >= ReplyPolicy.minimumTokens else { throw SevraError.refused("This request is too large for the current context. Start a new thread or read less of the source at once.") }
         let splitter = ToolCallSplitter(tools: definitions.map(\.schema))
         var calls: [ProposedTool] = []
         var malformed = false
@@ -252,7 +273,7 @@ public actor LocalInference: Inference {
         guard !malformed, !tooLarge else { throw SevraError.refused("The model produced an incomplete or oversized response. No proposed actions were executed.") }
         var turn = EngineTurn(text: text, calls: calls, finishReason: result.stats.finishReason)
         turn.thinking = receipt
-        try turn.validate()
+        try turn.validateCompletion()
         return turn
     }
     public func unload() async {
@@ -276,14 +297,16 @@ public actor ScriptedInference: Inference {
     public private(set) var calls = 0
     public private(set) var observedContexts: [[ChatMessage]] = []
     public private(set) var observedThinking: [ThinkingRequest?] = []
+    public private(set) var observedTools: [[String]] = []
     public init(turns: [EngineTurn], delayNanoseconds: UInt64 = 0, thinkingTraces: [String] = []) { self.turns = turns; delay = delayNanoseconds; traces = thinkingTraces }
-    public func turn(history: [ChatMessage], tools: Bool, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
-        try await turn(history: history, tools: tools, thinking: nil, control: ThinkingControl(), cancellation: cancellation, buffer: buffer)
+    public func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+        try await turn(history: history, tools: tools, thinking: nil, replyTokens: ReplyPolicy.answerTokens, control: ThinkingControl(), cancellation: cancellation, buffer: buffer)
     }
-    public func turn(history: [ChatMessage], tools: Bool, thinking requested: ThinkingRequest?, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
+    public func turn(history: [ChatMessage], tools: [ToolDefinition], thinking requested: ThinkingRequest?, replyTokens: Int, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
         calls += 1
         observedContexts.append(history)
-        let thinking = tools ? nil : requested
+        observedTools.append(tools.map(\.name))
+        let thinking = tools.isEmpty ? requested : nil
         observedThinking.append(thinking)
         guard !turns.isEmpty else { throw SevraError.unavailable("The scripted test has no further responses.") }
         var turn = turns.removeFirst()

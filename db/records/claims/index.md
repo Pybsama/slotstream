@@ -2,11 +2,18 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-17T23:54:21.255997Z
+updated: 2026-09-18T16:12:53.469274Z
 ---
 
 # records/claims
 
+- [[records/claims/automatic-context-at-48-gb]] — Automatic context preserves unmeasured cache at the simulated 48 GB tier
+- [[records/claims/automatic-context-at-36-gb]] — Automatic context at the simulated 36 GB tier
+- [[records/claims/automatic-context-window-tolerance-10-percent]] — A larger automatic window may add at most 10% to a typical request
+- [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
+- [[records/claims/malformed-tool-call-token-scores]] — The token a continued turn flipped: a fresh read scored > at 0.9576 and ] at 0.0421
+- [[records/claims/continued-turn-logit-movement]] — Before the resume rule a continued turn moved the prompt logits 3.7% to 5.9% of their spread
+- [[records/claims/continued-turn-prefill-cost]] — A continued turn pays one partial prefill pass: 2.47 s against 8.56 s of follow-up prefill, against 26.3 s cold
 - [[records/claims/verify-split-16k-decode-second-prompt-x1-085]] — Speculative decode with the split verify attention measured x1.085 on a second 16,356-token prompt
 - [[records/claims/verify-split-32k-decode-x1-29]] — Speculative decode with the split verify attention measured x1.29 against the dense pass with a 32,740-token prompt
 - [[records/claims/verify-split-16k-decode-11-82-tok-s]] — Speculative decode with the split verify attention measured 11.82 against 11.67 tok/s (x1.013) at a 22 GB target with a 16,356-token prompt
@@ -83,11 +90,9 @@ updated: 2026-09-17T23:54:21.255997Z
 - [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-target-54-7-gb-from-96-gb]] — Auto targets 54.7 GB from 96 GB with the full window
 - [[records/claims/automatic-target-43-2-gb-at-64-gb]] — Auto targets 43.2 GB at 64 GB with its 131,072-token window
-- [[records/claims/automatic-context-window-tolerance-10-percent]] — A larger automatic window may add at most 10% to a typical request
 - [[records/claims/automatic-context-window-131072-at-64-gb]] — Auto takes a 131,072-token window at 64 GB
 - [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the 32,768-token window
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
-- [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
 - [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Small-memory planner estimates use the M5 Pro curve; README has broader ranges
 - [[records/claims/hardware-planning-range-low]] — Estimated warm reply range for 16 to less than 24 GB Macs

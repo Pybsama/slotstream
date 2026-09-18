@@ -29,11 +29,17 @@ public final class HomeStore {
     private var documentsLedger: URL { root.appendingPathComponent(".sevra/documents.json") }
     private var restoration: URL { root.appendingPathComponent(".sevra/restoration.json") }
     public private(set) var restoreReview: HomeRestoreReview?
-    private struct Document: Codable {
+    struct Document: Codable {
         var path: String
         var type: String
         var body: String
         var immutable: Bool
+        var summary: String? = nil
+    }
+    /// An owned Home file published create-only, such as a mini-app version.
+    struct OwnedFile: Codable {
+        var path: String
+        var content: Data
     }
     private struct Intent: Codable {
         var state: HomeState
@@ -41,7 +47,12 @@ public final class HomeStore {
         var artifact: ArtifactProposal?
         var documents: [Document]?
         var previousDocuments: [String: String]?
+        var files: [OwnedFile]?
     }
+    /// Stat identity of each verified document, so unchanged files are not
+    /// hashed again on every save. Any content change moves ctime.
+    private var verified: [String: (size: Int64, mtime: timespec, ctime: timespec, ino: ino_t, hash: String)] = [:]
+    private var grantsURL: URL { root.appendingPathComponent(".sevra/app-grants.json") }
     public init(root requestedRoot: URL, dbmd: URL, allowExternalDraftReview: Bool = false) throws {
         self.dbmd = dbmd
         self.allowsExternalDraftReview = allowExternalDraftReview
@@ -176,7 +187,7 @@ public final class HomeStore {
             let raw = try Data(contentsOf: root.appendingPathComponent("db/" + change.path))
             guard digestBytes(raw) == change.digest else { throw SevraError.conflict("The reviewed draft changed again. Inspect it again.") }
             accepted[change.path] = change.digest
-            let preserved = json(["path": change.path, "external_sha256": change.digest, "external_file_base64": raw.base64EncodedString(), "previous_known": change.previousDraft != nil, "previous_draft": change.previousDraft ?? "", "adopted_draft": draft])
+            let preserved = storedJSON(["path": change.path, "external_sha256": change.digest, "external_file_base64": raw.base64EncodedString(), "previous_known": change.previousDraft != nil, "previous_draft": change.previousDraft ?? "", "adopted_draft": draft])
             versions.append(Document(path: "records/drafts/conflicts/" + UUID().uuidString + ".md", type: "sevra-draft-conflict", body: preserved, immutable: true))
             next.threads[i].draft = draft; next.threads[i].draftRevision = (next.threads[i].draftRevision ?? 0) + 1
         }
@@ -221,7 +232,7 @@ public final class HomeStore {
         for entry in manifest.files where entry.path.hasPrefix("db/") {
             let path = String(entry.path.dropFirst(3))
             let name = (path as NSString).lastPathComponent
-            if path == "DB.md" || (["records/threads/", "records/drafts/", "sources/conversations/", "sources/excerpts/"].contains(where: path.hasPrefix) && name != "index.md" && name != "index.jsonl") {
+            if path == "DB.md" || (["records/threads/", "records/drafts/", "records/app-data/", "sources/conversations/", "sources/excerpts/"].contains(where: path.hasPrefix) && name != "index.md" && name != "index.jsonl") {
                 hashes[path] = entry.sha256
             }
         }
@@ -252,7 +263,7 @@ public final class HomeStore {
         }
     }
     public func verify() throws {
-        for child in [".sevra", "artifacts"] { try checkPlainPath(root.appendingPathComponent(child)) }
+        for child in [".sevra", "artifacts", "extensions", "changes"] { try checkPlainPath(root.appendingPathComponent(child)) }
         try checkPlainPath(record)
         let actual = try currentHash()
         guard actual == expectedHash else {
@@ -261,9 +272,18 @@ public final class HomeStore {
         for (path, expected) in documentHashes {
             let url = root.appendingPathComponent("db/" + path)
             try checkPlainPath(url)
-            guard fm.fileExists(atPath: url.path), digestBytes(try Data(contentsOf: url)) == expected else {
+            var info = stat()
+            guard lstat(url.path, &info) == 0 else {
                 throw SevraError.conflict("A Home document changed outside Sevra: \(path). Writes and AI context are paused; its bytes are preserved.")
             }
+            if let known = verified[path], known.hash == expected, known.size == info.st_size, known.ino == info.st_ino,
+               known.mtime.tv_sec == info.st_mtimespec.tv_sec, known.mtime.tv_nsec == info.st_mtimespec.tv_nsec,
+               known.ctime.tv_sec == info.st_ctimespec.tv_sec, known.ctime.tv_nsec == info.st_ctimespec.tv_nsec { continue }
+            guard digestBytes(try Data(contentsOf: url)) == expected else {
+                verified.removeValue(forKey: path)
+                throw SevraError.conflict("A Home document changed outside Sevra: \(path). Writes and AI context are paused; its bytes are preserved.")
+            }
+            verified[path] = (info.st_size, info.st_mtimespec, info.st_ctimespec, info.st_ino, expected)
         }
     }
     /// Read the current saved file through directory handles. The UI does not
@@ -310,6 +330,9 @@ public final class HomeStore {
         return digestBytes(try Data(contentsOf: record))
     }
     public func save(_ state: HomeState, artifact: ArtifactProposal? = nil) throws {
+        try save(state, artifact: artifact, extraDocuments: [], files: [])
+    }
+    func save(_ state: HomeState, artifact: ArtifactProposal? = nil, extraDocuments: [Document], files: [OwnedFile]) throws {
         try verify()
         if let artifact {
             try Self.validateFilename(artifact.filename)
@@ -326,8 +349,9 @@ public final class HomeStore {
         }
         persistent.submissions = persistent.submissions?.filter { s in persistent.threads.contains { $0.id == s.threadID } }
         persistent.storageLayout = 2
-        let documents = try prepareDocuments(persistent)
-        let intent = Intent(state: persistent, previousHash: expectedHash, artifact: artifact, documents: documents, previousDocuments: documentHashes)
+        for file in files { try Self.validateOwnedPath(file.path) }
+        let documents = try prepareDocuments(persistent) + extraDocuments
+        let intent = Intent(state: persistent, previousHash: expectedHash, artifact: artifact, documents: documents, previousDocuments: documentHashes, files: files.isEmpty ? nil : files)
         try durable(try encoded(intent), at: recovery)
         try fault?("intent")
         try apply(intent)
@@ -350,7 +374,7 @@ public final class HomeStore {
             }
             for message in thread.messages where !message.text.isEmpty {
                 guard persisted?.storageLayout != 2 || old?.messages.first(where: { $0.id == message.id }) != message else { continue }
-                let payload = json(["thread_id": thread.id, "message_id": message.id, "role": message.role, "text": message.text, "run_id": message.runID ?? "", "revision": state.revision])
+                let payload = storedJSON(["thread_id": thread.id, "message_id": message.id, "role": message.role, "text": message.text, "run_id": message.runID ?? "", "revision": state.revision])
                 let name = "event-\(state.revision)-" + digestText(payload).prefix(24) + ".md"
                 documents.append(Document(path: String(format: "sources/conversations/%04d/%02d/", year, month) + name, type: "note", body: payload, immutable: true))
             }
@@ -370,6 +394,7 @@ public final class HomeStore {
             for i in index.threads.indices {
                 index.threads[i].messages = []; index.threads[i].draft = ""
                 index.threads[i].run?.excerpts = nil; index.threads[i].run?.proposal = nil; index.threads[i].run?.trace = []
+                index.threads[i].run?.changes = nil; index.threads[i].run?.appProposal = nil; index.threads[i].run?.skillProposal = nil
                 index.threads[i].pastRuns = nil
             }
         }
@@ -400,6 +425,24 @@ public final class HomeStore {
             nextHashes[document.path] = digestBytes(try Data(contentsOf: url))
         }
         try fault?("documents")
+        for file in intent.files ?? [] {
+            try Self.validateOwnedPath(file.path)
+            let target = root.appendingPathComponent(file.path)
+            try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            try checkPlainPath(target)
+            if fm.fileExists(atPath: target.path) {
+                guard digestBytes(try Data(contentsOf: target)) == digestBytes(file.content) else {
+                    throw SevraError.conflict("An extension file already exists with different content: \(file.path).")
+                }
+                continue
+            }
+            let stage = root.appendingPathComponent(".sevra/owned-stage")
+            try durable(file.content, at: stage)
+            guard link(stage.path, target.path) == 0 else { throw SevraError.conflict("Could not publish \(file.path) without replacing a file.") }
+            try syncDirectory(target.deletingLastPathComponent())
+            try fm.removeItem(at: stage)
+        }
+        if intent.files != nil { try fault?("files") }
         if let artifact = intent.artifact {
             try Self.validateFilename(artifact.filename)
             let target = root.appendingPathComponent("artifacts/" + artifact.filename)
@@ -457,13 +500,52 @@ public final class HomeStore {
         let url = root.appendingPathComponent("db/" + doc.path)
         if existing { _ = try command(["body", "set", url.path, "--body-file", temp.path, "--json"]) }
         else {
-            let result = try command(["write", doc.path, "--dir", root.appendingPathComponent("db").path, "--type", doc.type, "--summary", doc.immutable ? "Immutable conversation event" : "Sevra thread or unsent draft", "--body-file", temp.path, "--json"])
+            let result = try command(["write", doc.path, "--dir", root.appendingPathComponent("db").path, "--type", doc.type, "--summary", doc.summary ?? (doc.immutable ? "Immutable conversation event" : "Sevra thread or unsent draft"), "--body-file", temp.path, "--json"])
             if let object = try JSONSerialization.jsonObject(with: result) as? [String: Any], let actual = object["written"] as? String, actual != doc.path {
                 _ = try command(["rename", actual, doc.path, "--json"])
             }
         }
         try syncFile(url); try syncDirectory(url.deletingLastPathComponent())
     }
+    static func validateOwnedPath(_ path: String) throws {
+        let parts = path.split(separator: "/", omittingEmptySubsequences: false)
+        guard parts.count >= 3, parts[0] == "extensions", ["miniapps", "skills"].contains(parts[1]),
+              parts.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." && !$0.hasPrefix(".") && $0.utf8.count <= 128 }) else {
+            throw SevraError.refused("Invalid extension file path.")
+        }
+    }
+    /// The documents Sevra tracks under a prefix, such as app records.
+    func documents(under prefix: String) -> [String] { documentHashes.keys.filter { $0.hasPrefix(prefix) }.sorted() }
+    /// Reads a tracked record's body. The bytes must match the integrity
+    /// ledger, which proves they are exactly what dbmd wrote for Sevra.
+    func trackedBody(_ path: String) throws -> String {
+        guard let expected = documentHashes[path] else { throw SevraError.refused("Unknown Home record.") }
+        let url = root.appendingPathComponent("db/" + path)
+        try checkPlainPath(url)
+        let data = try Data(contentsOf: url)
+        guard digestBytes(data) == expected else { throw SevraError.conflict("A Home record changed outside Sevra: \(path). Writes and AI context are paused; its bytes are preserved.") }
+        let text = String(decoding: data, as: UTF8.self)
+        let body = RecordText.body(of: text)
+        return body.isEmpty ? try self.body(url) : body.trimmingCharacters(in: .newlines)
+    }
+    func readOwned(_ path: String, limit: Int) throws -> Data {
+        try Self.validateOwnedPath(path)
+        return try HomeArchive.read(path, at: root, limit: limit)
+    }
+    /// Grants are device control state. The owner is the only writer, so a
+    /// cached copy stays exact after the first read.
+    func grants() -> [String: AppGrant] {
+        if let grantCache { return grantCache }
+        let value = (try? Data(contentsOf: grantsURL)).flatMap { try? decoded([String: AppGrant].self, $0) } ?? [:]
+        grantCache = value
+        return value
+    }
+    func saveGrants(_ grants: [String: AppGrant]) throws {
+        try durable(try encoded(grants), at: grantsURL)
+        grantCache = grants
+    }
+    private var grantCache: [String: AppGrant]?
+
     public static func validateFilename(_ name: String) throws {
         guard !name.hasPrefix("."), name.hasSuffix(".md"), name.utf8.count <= 100,
               !name.isEmpty, name.unicodeScalars.allSatisfy({ CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.").contains($0) }) else {

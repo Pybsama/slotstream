@@ -1816,9 +1816,26 @@ A second 16k prompt: x1.085, the arms accepting 70.8% and 73.1%; with the first 
 ## [2026-09-17 23:54] update | sources/runs/2026/09/2026-09-17-verify-pass-deployment-recheck
 Added the second 16k prompt's raw output.
 
+## [2026-09-18 04:55] create | records/measurements/conversation-resume-exactness
+A continued conversation now computes what a cold one computes. A turn resumes only its own prefill pass boundaries; the state a previous turn left, prompt read in passes and reply decoded a token at a time, is refused. Before: 3.7% to 5.9% of the logit spread, and one flipped token that made a tool call malformed. After: exactly zero, at 2.47 s against 8.56 s of follow-up prefill.
+
+## [2026-09-18 04:55] create | records/decisions/a-continued-conversation-computes-what-a-cold-one-computes
+Standing: a turn may continue only a state it would have built itself. The cost, one partial prefill pass per follow-up turn, is accepted.
+
+## [2026-09-18 04:55] create | sources/runs/2026/09/2026-09-17-conversation-resume-exactness
+Before and after on one Mac: prefix-exact-check both ways, prefix-check at 961 slots both ways, the Sevra real-model edit job whose malformed call started this, and the check suites. Two failures are recorded as not from this change: the complete-prompt image case, which fails the same way on the frozen build of 12:31, and all-hit-replay's thermal gate.
+
+## [2026-09-18 04:55] update | records/design/sevra-spec/implementation-status
+The open item on engine results that depend on cache history is closed: a turn resumes only its own prefill pass boundaries and the check's first file.edit call is correct with no correction round.
+
+## [2026-09-18 05:46] update | sources/runs/2026/09/2026-09-17-conversation-resume-exactness
+Added the disk tier: the persistent prefix e2e passes twelve of twelve after writing the boundary snapshot before it is forked, so the next turn's save references those rows. Final-build repeats recorded: prefix-exact-check exact, the app's real-model run 12 of 12 in 526 s with a clean edit trace.
+
+## [2026-09-18 17:10] update | records/measurements/memory-budget-context-policy-2026-09-18
+Fixed automatic context trading away expert cache above the measured decode range. Explicit memory budgets retain useful cache; CLI and JSON distinguish the planned budget, allocations, allowances and actual planned headroom. Regression checks fail before and pass after. The 319-case matrix, 90 planner checks, 130 context CLI assertions and final T0 catalogue pass. The full native allocation-fix battery passes 26 gates and retains one pre-existing image-reuse failure reproduced on the frozen baseline. Delivered source matches the tested build; no release or 64 GB hardware qualification. Documentation claims and projections pass; validation has zero errors and the same two historical log warnings.
+
 ## [2026-09-18 17:41] create | records/measurements/release-0-2-21-published-2026-09-18
 v0.2.21 published, installed and accepted; qualification caught a real 413 regression and two flaky gates.
 
 ## [2026-09-18 17:41] create | sources/runs/2026/09/2026-09-18-release-0-2-21-published-and-installed
 Raw acceptance for 0.2.21: CI, candidate, model battery, publication, install, installed e2e and the launch gate.
-

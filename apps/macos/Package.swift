@@ -14,6 +14,7 @@ let package = Package(
         .executable(name: "sevra-composer-checks", targets: ["SevraComposerChecks"]),
         .executable(name: "sevra-local", targets: ["SevraLocal"]),
         .executable(name: "sevra-mac-checks", targets: ["SevraMacChecks"]),
+        .executable(name: "sevra-extract", targets: ["SevraExtract"]),
     ],
     dependencies: [.package(path: "../.."), .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.8.0")],
     targets: [
@@ -24,5 +25,9 @@ let package = Package(
         .executableTarget(name: "SevraMac", dependencies: ["SevraRuntime", "SevraPresentation"], path: "App", swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "SevraLocal", dependencies: ["SevraRuntime"], path: "CLI", swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(name: "SevraMacChecks", dependencies: ["SevraRuntime"], path: "Checks", swiftSettings: [.swiftLanguageMode(.v5)]),
+        // The untrusted-document reader. It depends on nothing else in Sevra
+        // so the smallest possible code runs inside its sandbox.
+        .target(name: "CSevraSandbox", path: "CSandbox"),
+        .executableTarget(name: "SevraExtract", dependencies: ["CSevraSandbox"], path: "Extract", swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
 )

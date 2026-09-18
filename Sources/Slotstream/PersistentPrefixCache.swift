@@ -351,11 +351,11 @@ public final class PersistentPrefixCache {
     package var indexedSegments: [String: PersistentPrefixSegmentEntry] { lock.withLock { segments } }
 
     package func candidate(extending prompt: [Int], longerThan retained: Int,
-                           requireDraft: Bool) -> PersistentPrefixEntry? {
+                           requireDraft: Bool, boundaries: Set<Int>? = nil) -> PersistentPrefixEntry? {
         let now = Self.now()
         return lock.withLock {
             PersistentPrefixPolicy.bestMatch(heads, identity: identity.digest, prompt: prompt, longerThan: retained,
-                requireDraft: requireDraft, now: now, maxAge: configuration.maxAge)
+                requireDraft: requireDraft, now: now, maxAge: configuration.maxAge, boundaries: boundaries)
         }
     }
 
