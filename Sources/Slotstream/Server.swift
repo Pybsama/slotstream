@@ -153,8 +153,7 @@ public final class Server {
             if fd < 0 { continue }
             // A stalled client must not pin a thread forever: give reads a
             // deadline, and cap how many connections can be in flight.
-            var tv = timeval(tv_sec: 30, tv_usec: 0)
-            setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+            Self.setReadTimeout(fd, seconds: Self.readTimeoutSeconds)
             var st = timeval(tv_sec: 120, tv_usec: 0)
             setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &st, socklen_t(MemoryLayout<timeval>.size))
             var one: Int32 = 1
@@ -208,6 +207,37 @@ public final class Server {
     /// fixed chunks and dropped; never held.
     static let maxDrainBytes = 256 << 20
 
+    /// How long a connection may wait for the next thing a client sends.
+    package static let readTimeoutSeconds = 30
+
+    /// The discarding above waits only this long for each chunk, and never
+    /// longer than `maxDrainSeconds` in total. A client that is still
+    /// uploading keeps delivering, so these end the drain as soon as one
+    /// stops: a client that declared a huge body and then went quiet gets its
+    /// 413 now, instead of holding it until the connection's read deadline.
+    package static let drainChunkSeconds = 2
+    package static let maxDrainSeconds = 10.0
+
+    /// Read and discard `left` bytes, in reads of at most `chunk`. Stops early
+    /// when a read returns nothing or `expired` reports the deadline passed,
+    /// and answers what was left unread.
+    package static func drainBody(_ left: Int, chunk: Int,
+                                  read: (Int) -> Int, expired: () -> Bool) -> Int {
+        var left = left
+        while left > 0, !expired() {
+            let n = read(min(chunk, left))
+            if n <= 0 { break }
+            left -= n
+        }
+        return left
+    }
+
+    /// The deadline a connection's reads wait against.
+    static func setReadTimeout(_ fd: Int32, seconds: Int) {
+        var tv = timeval(tv_sec: seconds, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+    }
+
     /// The target of a request head's first line.
     package static func requestTarget(_ head: String) -> String? {
         let first = head.prefix { $0 != "\r" && $0 != "\n" }.split(separator: " ")
@@ -243,11 +273,14 @@ public final class Server {
                     else { return nil }
                     return Int(kv[1].trimmingCharacters(in: .whitespaces))
                 }).first {
-                var left = min(declared, Self.maxDrainBytes) - (buf.count - headerEnd!.upperBound)
-                while left > 0 {
-                    let n = read(fd, &tmp, min(tmp.count, left))
-                    if n <= 0 { break }
-                    left -= n
+                let left = min(declared, Self.maxDrainBytes) - (buf.count - headerEnd!.upperBound)
+                if left > 0 {
+                    Self.setReadTimeout(fd, seconds: Self.drainChunkSeconds)
+                    let end = Date().addingTimeInterval(Self.maxDrainSeconds)
+                    var sink = [UInt8](repeating: 0, count: tmp.count)
+                    _ = Self.drainBody(left, chunk: sink.count,
+                                       read: { read(fd, &sink, $0) }, expired: { Date() >= end })
+                    Self.setReadTimeout(fd, seconds: Self.readTimeoutSeconds)
                 }
             }
             return .fail(status: status, message: message, target: Self.requestTarget(head))

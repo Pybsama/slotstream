@@ -116,7 +116,9 @@ determines which version the installer downloads.
   `prefill_deadline_exceeded` instead of a 400.
 - A request body over the 32 MiB limit is read and discarded before the 413
   answer, up to 256 MiB, so the client reads the error instead of losing the
-  connection.
+  connection. A client that declares a large body and then stops sending gets
+  its 413 as soon as the next piece fails to arrive, and the discarding never
+  takes longer than 10 seconds in total.
 - Library: an app that embeds Slotstream can count a chat request's prompt
   tokens (`Engine.countChatTokens`), find where a prompt's shared head ends
   (`Engine.sharedPrefixBoundary`), name a request's shared prefix and how long

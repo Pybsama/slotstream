@@ -75,7 +75,28 @@ extension Diagnostics {
         } else {
             c.expect("no Content-Length means no body", false)
         }
+        // An oversized body is read and discarded before the 413, so a client
+        // that is still uploading gets the answer instead of a reset. That
+        // discarding is bounded at both ends: one that declared a huge body
+        // and then went quiet must not hold its 413 until the connection's
+        // read deadline, which is what it did when this was written.
+        var served = 0
+        var left = Server.drainBody(1 << 20, chunk: 4096,
+                                    read: { served += $0; return $0 }, expired: { false })
+        c.equal("a client that keeps sending is drained to the end", left, 0)
+        c.equal("...reading every declared byte", served, 1 << 20)
+        left = Server.drainBody(1 << 20, chunk: 4096, read: { _ in 0 }, expired: { false })
+        c.equal("a client that stops sending ends the drain", left, 1 << 20)
+        var reads = 0
+        left = Server.drainBody(1 << 20, chunk: 4096,
+                                read: { reads += 1; return $0 }, expired: { reads >= 3 })
+        c.equal("a trickling client ends the drain at its deadline", left, (1 << 20) - 3 * 4096)
+        c.expect("a chunk is waited for less than a whole request is",
+                 Server.drainChunkSeconds < Server.readTimeoutSeconds)
+        c.expect("and the whole drain no longer than one request's deadline",
+                 Server.maxDrainSeconds <= Double(Server.readTimeoutSeconds))
         c.measure("max_body_bytes", Double(Server.maxBodyBytes))
+        c.measure("max_drain_seconds", Server.maxDrainSeconds)
         return c.report()
     }
 
