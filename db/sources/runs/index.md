@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-18T19:51:48.063893Z
+updated: 2026-09-18T21:09:51.155362Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-18-release-0-2-22-published-and-installed]] — v0.2.22 published, installed and accepted: exact CI candidate, verified provenance, byte-identical installation, full local battery and installed end to end 31/31.
 - [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]] — v0.2.22 candidate passes the full model battery, memory and source gates, public library smoke test, and Mac app checks.
 - [[sources/runs/2026/09/2026-09-18-release-0-2-21-published-and-installed]] — v0.2.21 acceptance: CI artifact 24/25 in one run plus vision parity beside it, attestation, install, installed e2e 31/31, launch gate 48/54 with the Pi race phase driven by Claude Code 5/5.
 - [[sources/runs/2026/09/2026-09-18-memory-budget-final-reporting]] — Budget headroom and cache-preserving automatic context pass the final reporting and CLI checks
@@ -506,9 +507,8 @@ updated: 2026-09-18T19:51:48.063893Z
 - [[sources/runs/2026/09/2026-09-06-optimization-terminal-query-counterexample]] — Terminal single-query numerical counterexample V143
 - [[sources/runs/2026/09/2026-09-06-optimization-rope-integration]] — Exact partial RoPE model and MTP integration V142
 - [[sources/runs/2026/09/2026-09-06-optimization-complete-integrated]] — Complete prompt integrated native qualification V141
-- [[sources/runs/2026/09/2026-09-06-optimization-complete-unique-confirmed]] — Complete-prompt unique-request nonregression passes with charged retention
 
 ## More
 
-This folder has 626 files. The 500 most recent are listed above.
+This folder has 627 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-18T19:52:21.496081Z
+updated: 2026-09-18T21:09:57.710768Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-22-published-2026-09-18]] — v0.2.22 published, installed and accepted: memory and context policy fixed, exact conversation resume, verified release bytes, installed end to end 31/31.
 - [[records/measurements/conversation-resume-exactness]] — A continued conversation now computes what a cold one computes, bit for bit; a follow-up turn pays one partial prefill pass, 2.47 s against 8.56 s at 961 slots
 - [[records/measurements/memory-budget-context-policy-2026-09-18]] — Memory budget: preserve expert cache when context cost is unmeasured
 - [[records/measurements/release-0-2-21-published-2026-09-18]] — v0.2.21 published, installed and accepted: every model gate on the CI artifact, 31/31 installed checks, launch gate 48/54 with the Pi phase unrunnable here and its race driven by Claude Code 5/5.

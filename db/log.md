@@ -1851,3 +1851,12 @@ The v0.2.22 candidate repeats zero prompt-logit delta on every continued turn an
 
 ## [2026-09-18 19:52] validate | db
 v0.2.22 candidate evidence complete: zero validation errors, two declared historical warnings, 299 claim needles current and projections regenerated.
+
+## [2026-09-18 21:10] create | records/measurements/release-0-2-22-published-2026-09-18
+v0.2.22 published, installed and accepted; CI, provenance, byte identity, local battery, Mac app checks and installed end to end pass.
+
+## [2026-09-18 21:10] create | sources/runs/2026/09/2026-09-18-release-0-2-22-published-and-installed
+Raw v0.2.22 publication and installed acceptance: exact candidate, release provenance and installed e2e 31 of 31 after correcting the checkpoint-sized reuse fixture.
+
+## [2026-09-18 21:11] validate | db
+v0.2.22 publication evidence complete: zero validation errors, two declared historical warnings, 299 claim needles current, projections regenerated, acceptance harness tests 28 of 28 and installed end to end 31 of 31.

@@ -153,9 +153,27 @@ if [ "$R_STATUS" -eq 0 ] && ! printf '%s' "$R" | grep -q "4"; then ok "stop sequ
 echo "== conversation prefix cache, live =="
 curl -s --max-time 60 -d '{"model":"qwen3.8-flash-next:4bit"}' "http://127.0.0.1:$PORT/api/show" >/dev/null
 H0=$(curl -s --max-time 60 -d '{"model":"qwen3.8-flash-next:4bit"}' "http://127.0.0.1:$PORT/api/show" | jq_ "d['details']['prefix_cache']['hits']")
-chat '{"model":"qwen3.8-flash-next:4bit","messages":[{"role":"user","content":"Name one planet, just the name."}],"stream":false,"options":{"temperature":0,"num_predict":6}}' | ollama_text >/dev/null
+python3 > "$WORK/prefix-first.json" <<'PYE'
+import json
+background = 'The quick brown fox jumps over the lazy dog. ' * 300
+prompt = background + ' Name one planet, just the name.'
+print(json.dumps({"model": "qwen3.8-flash-next:4bit",
+                  "messages": [{"role": "user", "content": prompt}],
+                  "stream": False, "options": {"temperature": 0, "num_predict": 6}}))
+PYE
+python3 > "$WORK/prefix-next.json" <<'PYE'
+import json
+background = 'The quick brown fox jumps over the lazy dog. ' * 300
+prompt = background + ' Name one planet, just the name.'
+print(json.dumps({"model": "qwen3.8-flash-next:4bit",
+                  "messages": [{"role": "user", "content": prompt},
+                               {"role": "assistant", "content": "Mars"},
+                               {"role": "user", "content": "Bigger than Earth? Yes or no."}],
+                  "stream": False, "options": {"temperature": 0, "num_predict": 6}}))
+PYE
+curl -fsS --max-time 1800 -H 'Content-Type: application/json' --data-binary "@$WORK/prefix-first.json" "http://127.0.0.1:$PORT/api/chat" | ollama_text >/dev/null
 PREFIX_FIRST_STATUS=$?
-chat '{"model":"qwen3.8-flash-next:4bit","messages":[{"role":"user","content":"Name one planet, just the name."},{"role":"assistant","content":"Mars"},{"role":"user","content":"Bigger than Earth? Yes or no."}],"stream":false,"options":{"temperature":0,"num_predict":6}}' | ollama_text >/dev/null
+curl -fsS --max-time 1800 -H 'Content-Type: application/json' --data-binary "@$WORK/prefix-next.json" "http://127.0.0.1:$PORT/api/chat" | ollama_text >/dev/null
 PREFIX_NEXT_STATUS=$?
 H1=$(curl -s --max-time 60 -d '{"model":"qwen3.8-flash-next:4bit"}' "http://127.0.0.1:$PORT/api/show" | jq_ "d['details']['prefix_cache']['hits']")
 if [ "$PREFIX_FIRST_STATUS" -eq 0 ] && [ "$PREFIX_NEXT_STATUS" -eq 0 ] && [ "${H1:-0}" -gt "${H0:-0}" ]; then ok "follow-up turn reused a cached prefix ($H0 -> $H1 hits)"; else bad "no prefix reuse ($H0 -> $H1)"; fi
