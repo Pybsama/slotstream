@@ -12,10 +12,22 @@ updated: 2026-09-17T23:54:21.255997Z
 - [[records/claims/verify-split-16k-decode-11-82-tok-s]] — Speculative decode with the split verify attention measured 11.82 against 11.67 tok/s (x1.013) at a 22 GB target with a 16,356-token prompt
 - [[records/claims/verify-split-16k-decode-11-80-tok-s]] — Speculative decode with the split verify attention measured 11.80 against 10.93 tok/s (x1.079) at a 22 GB target with a 16,356-token prompt
 - [[records/claims/verify-split-32k-decode-x1-37]] — Speculative decode with the split verify attention measured x1.37 against the dense pass with a 32,740-token prompt at a 22 GB target
+- [[records/claims/launch-idle-exit-at-most-10080-minutes]] — The idle stop accepts at most 10080 minutes
+- [[records/claims/launch-server-prefix-cache-20-gb]] — A server slotstream launch starts keeps at most 20 GB of prompt caches on disk
+- [[records/claims/launch-server-idle-stop-30-minutes]] — A server slotstream launch starts stops 30 minutes after the last request and registered agent end
 - [[records/claims/exact-mode-draft-depths-up-to-4]] — The exact mode's equality holds for draft depths up to 4
 - [[records/claims/exact-mode-128-of-128-tokens]] — In the exact mode a speculative run matched a plain run on 128 of 128 tokens in the 16k comparison
 - [[records/claims/verify-split-fetch-free-pass-32-and-45-percent]] — The fetch-free three-row verify pass is 32% cheaper split at 32,740 tokens and 45% at 65,508
 - [[records/claims/verify-split-from-6144-tokens]] — The speculative verify pass splits its attention from 6,144 tokens of context by default
+- [[records/claims/launch-minimum-context-windows]] — slotstream launch needs 32,768 tokens for Claude Code and Codex, 16,384 for Pi and opencode, 65,536 for Hermes
+- [[records/claims/chat-default-reply-budget]] — Without an output limit, chat completions may use a quarter of the served window
+- [[records/claims/claude-code-launch-reply-limit]] — The Claude Code guide sets CLAUDE_CODE_MAX_OUTPUT_TOKENS to 8192
+- [[records/claims/claude-code-launch-stream-timeout]] — The Claude Code guide sets CLAUDE_STREAM_IDLE_TIMEOUT_MS to 1800000
+- [[records/claims/claude-code-launch-request-timeout]] — The Claude Code guide sets API_TIMEOUT_MS to 1800000
+- [[records/claims/messages-api-ping-interval]] — The Messages API sends a ping every 10 seconds during a prompt read
+- [[records/claims/claude-code-instructions-about-15000-tokens]] — Claude Code's instructions and tool descriptions take about 15,000 tokens
+- [[records/claims/coding-agents-verified-versions]] — The coding agents guide names the agent versions that were verified
+- [[records/claims/claude-code-guide-verified-version]] — The Claude Code guide was verified with Claude Code 2.1.270
 - [[records/claims/sevra-mac-folders-2000-files]] — Sevra reads folders of up to 2,000 files
 - [[records/claims/sevra-mac-recognition-40-pages]] — Sevra recognizes text on at most 40 pages per request
 - [[records/claims/sevra-mac-documents-64-mb]] — Sevra reads rich documents up to 64 MB

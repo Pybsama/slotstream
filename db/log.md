@@ -1667,6 +1667,21 @@ Full rebuild after moving the new run receipt from records/run/, where dbmd writ
 ## [2026-09-17 07:39] validate | db
 Sevra Mac basics records: dbmd validate --all with zero errors and the two preserved historical warnings; claims gate 236 checks, 0 failures; projections and llms-full.txt current.
 
+## [2026-09-17 08:26] create | sources/runs/2026/09/2026-09-17-coding-agents-live-4.md
+runs: coding agents at 12 GB through slotstream launch, three live passes (the first two with scratch predecessors of Tools/coding_agents_gate.sh, binaries not preserved) and the launcher review reproductions on stand-in servers
+
+## [2026-09-17 08:26] create | records/measurements/coding-agents-launch-2026-09-17.md
+measurement: five coding agents through slotstream launch at 12 GB; reuse across sessions after the retention change for requests with tools, lost after a picture until the vision re-plan kept the largest retention that fits; launcher review findings and their reproductions
+
+## [2026-09-17 08:26] create | records/claims/launch-minimum-context-windows.md
+claims: agent versions verified, Claude Code's opening prompt, the Messages API ping interval, launch minimum windows, the Claude Code timeouts and reply limit, and the chat default reply budget
+
+## [2026-09-17 08:34] update | records/design/measured-operating-policies.md
+Coding agent defaults: chat reply budget, launch minimum windows, 30-minute agent timeouts, conversation retention for tool-bearing shared prefixes, graded retention after the vision tower loads.
+
+## [2026-09-17 08:34] update | records/claims/launch-minimum-context-windows.md
+States Hermes's own 64,000-token minimum as the reason for its 65,536-token launch window.
+
 ## [2026-09-17 08:42] update | sources/runs/2026/09/2026-09-17-sevra-mac-basics
 Receipt regenerated on the final build: Tools/check_sevra_mac.sh exit 0 with 143 PASS lines; the app write budget check fails without the budget and the save-echo check failed before its fix; the bundle was rebuilt from the same sources. Added two real-model runs at the 10 GB plan, both passing all twelve checks: the first on an earlier build, whose counter app lost its count in the new app-under-test mode, and the second on the final build, whose app kept its count and one record. A recorded replay showed the model's first file.edit call carries a stray parameter tag. Frontmatter binary, command, tool and summary updated.
 
@@ -1724,6 +1739,20 @@ Split verify attention joins the deployment family from 6,144 tokens; the exact 
 ## [2026-09-17 17:20] create | records/claims
 Five claims for the verify-pass change: the 6,144-token threshold, 11.80 against 10.93 tok/s at 16k, the fetch-free pass 32% and 45% cheaper at 32k and 65k, 128 of 128 exact-mode tokens, and the exact mode's draft depths up to 4 (derived from the backend's quantized batch limits).
 
+## [2026-09-17 18:46] create | sources/runs/2026/09/2026-09-17-launch-background-server-live.md
+runs: the launch gate with its own background server, 54 of 54 live checks at 12 GB with Claude Code, Pi and Hermes; the three earlier passes and what failed in them
+
+## [2026-09-17 18:46] create | sources/runs/2026/09/2026-09-17-launch-window-doctor.md
+runs: doctor plans at 12, 10 and 9 GB, the automatic window against a fixed 65,536
+
+## [2026-09-17 18:46] create | records/measurements/coding-agents-background-server-2026-09-17.md
+measurement: the server slotstream launch starts, keeps, restarts and stops; why the window stays automatic except for Hermes
+
+## [2026-09-17 18:46] create | records/claims/launch-server-idle-stop-30-minutes.md
+claims: the 30-minute idle stop, its 10080-minute maximum, and the 20 GB prompt-cache quota of a launch-started server
+
+## [2026-09-17 18:46] update | records/design/measured-operating-policies.md
+Coding agent defaults: the window of a server launch starts, its lifetime and idle stop, its disk prompt cache, and which server launch may stop
 ## [2026-09-17 20:18] create | sources/runs/2026/09/2026-09-17-dense-matmul-row-invariance-python
 Raw output on the final verify-pass build; see the run body for command, binary and machine state.
 

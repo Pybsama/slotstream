@@ -12,6 +12,8 @@ updated: 2026-09-17T23:22:20.231946Z
 - [[sources/runs/2026/09/2026-09-17-verify-pass-decode-final-build]] — Decode comparisons at 16k and 32k on the final build: dense, split and exact
 - [[sources/runs/2026/09/2026-09-17-verify-pass-mode-pricing]] — Fetch-free verify pass cost of the stock, split and exact modes at 4k and 16k tokens
 - [[sources/runs/2026/09/2026-09-17-dense-matmul-row-invariance-python]] — Dense matmul row invariance under Python MLX: stock, gathered and one-row kernels
+- [[sources/runs/2026/09/2026-09-17-launch-window-doctor]] — doctor plans at 12, 10 and 9 GB: the automatic window against a fixed 65,536, which loses the expert cache, the retention, or the plan
+- [[sources/runs/2026/09/2026-09-17-launch-background-server-live]] — slotstream launch starts, records, reuses, restarts and stops its own server: 54 of 54 live checks at 12 GB
 - [[sources/runs/2026/09/2026-09-17-verify-pass-split-crossover-rungs]] — Split verify attention crossover rungs at 13 GB, 4k to 16k tokens
 - [[sources/runs/2026/09/2026-09-17-verify-pass-rows-check]] — Verify-pass kernel self-check verify-pass-rows on the first and final builds
 - [[sources/runs/2026/09/2026-09-17-verify-pass-decode-16k-first-build]] — Decode comparison at 16k on the first build: plain, dense, split and exact
@@ -22,6 +24,10 @@ updated: 2026-09-17T23:22:20.231946Z
 - [[sources/runs/2026/09/2026-09-16-small-row-matmul-and-attention-microbench]] — Small-row quantized matmul and multi-row attention microbenchmarks under Python MLX
 - [[sources/runs/2026/09/2026-09-17-verify-pass-decode-32k-loaded-machine]] — Decode comparison at 32k on a loaded machine, discarded for timing
 - [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]] — Sevra Mac basics: full scripted suite, offscreen checks and two real-model runs pass for documents, reviewed changes, knowledge bases, skills and mini-apps
+- [[sources/runs/2026/09/2026-09-17-launch-review-reproductions]] — Launcher review reproductions on stand-in servers without network: no cloud route, user key or other provider is reached; the Hermes gate fails the old guide, passes the new
+- [[sources/runs/2026/09/2026-09-17-coding-agents-live-4]] — Coding agents at 12 GB, final pass: 34/34 checks and 15/15 Messages API checks; second sessions start from their instructions, a picture turn reuses 15,587 of 16,332 tokens
+- [[sources/runs/2026/09/2026-09-17-coding-agents-live-2]] — Coding agents at 12 GB, second pass: 30 of 34 checks; second sessions reuse Claude Code's 13,312-token instructions, also after a restart, until a picture drops retention from 65,536 to 10,807 tokens
+- [[sources/runs/2026/09/2026-09-17-coding-agents-live-1]] — Coding agents at 12 GB, first pass: the Messages API 13/13, the SDK round trip and 22/22 agent checks passed; every second session read its whole opening prompt again
 - [[sources/runs/2026/09/2026-09-16-release-0-2-20-published-and-installed]] — v0.2.20 acceptance: CI artifact 25/25, Codex and SDK 9/9 before the tag, attestation, install, installed e2e 31/31, prefix 11/11, doctor and pull --verify.
 - [[sources/runs/2026/09/2026-09-16-codex-on-installed-0-2-20]] — Codex 0.148.0 and the OpenAI Python SDK 3.14.1 on the installed 0.2.20: file create and update through apply_patch, commands, an attached picture and view_image, and 11 strict SDK checks; 18 of 18.
 - [[sources/runs/2026/09/2026-09-16-sevra-mac-thinking]] — Opt-in thinking in the Mac app: scripted checks, four real-model runs at the 10 GB plan, defects fixed, final run passing, offscreen UI check of the production views passing
@@ -501,14 +507,8 @@ updated: 2026-09-17T23:22:20.231946Z
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-serving-nonregression]] — Query-tiled vision: small-image nonregression and swap-excluded maximum request
 - [[sources/runs/2026/09/2026-09-06-optimization-resident-overlap]] — Bounded resident expert overlap: exact mixed-cache computation and checked failure joins
 - [[sources/runs/2026/09/2026-09-06-optimization-state-lineage]] — Model-bound prefix state and live-ancestor checkpoint recovery
-- [[sources/runs/2026/09/2026-09-06-slotpack-v0210-publication-and-installed-acceptance]] — v0.2.10 release and main CI pass; exact public provenance, ordinary installer, download controls, all original hashes and loaded-model response verify.
-- [[sources/runs/2026/09/2026-09-06-optimization-vision-query-mechanism]] — Query-tiled vision: exact maximum tower, executed mechanism and known-content serving
-- [[sources/runs/2026/09/2026-09-06-slotpack-ci-coverage-regression-closure]] — A per-file CI coverage regression is corrected with explicit resumed-byte and CDN-status checks; the unchanged local ratchet passes at 96.87% downloader coverage.
-- [[sources/runs/2026/09/2026-09-06-optimization-vision-query-successor]] — Bounded original vision attention after preserved padding failures
-- [[sources/runs/2026/09/2026-09-06-slotpack-ci-interruption-fixture-correction]] — CI exposes a fixed-time interruption fixture; state-based cancellation and delayed-start compressed/raw checks pass.
-- [[sources/runs/2026/09/2026-09-06-optimization-complete-repeat-guarded-stop]] — Complete-prompt confirmation stopped by renewed competing work
 
 ## More
 
-This folder has 613 files. The 500 most recent are listed above.
+This folder has 619 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
