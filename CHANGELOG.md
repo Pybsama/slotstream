@@ -6,6 +6,21 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+- `slotstream optimization-state-check --variant complete-prompt` passes
+  again. Tiling vision queries changes the rows an image produces, so the
+  cache keys an image prompt on that setting too. When tiling joined the
+  deployed family, the check kept looking up retained image states with the
+  untiled key. It found nothing and stopped at its first image case, so its
+  remaining cases, including every speculative-decoding case, did not run.
+  Generation and the checks now take the key from one function. With them
+  running again, the speculative variant asserts the resume rule's handoff: a
+  state built without the draft head is not continued by a request that uses
+  one. That request reads its whole prompt and answers what a cold read does.
+  The previous handoff is still checked with `SLOTSTREAM_OPT_ALIGNED_RESUME=0`.
+  No engine result changed.
+
 ## 0.2.22 - 2026-09-18
 
 - Automatic context selection no longer trades away expert cache above the

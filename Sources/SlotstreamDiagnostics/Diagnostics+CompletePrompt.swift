@@ -201,25 +201,48 @@ extension Diagnostics {
         }
         if mtp {
             let ids = (0..<17).map { 1000 + $0 * 79 }
-            let transition = PrefixCache(maxTokens: 8192)
-            options.completePromptCheckpoint = false; model.optimizations = options
-            generator.speculationEnabled = false
-            let plain = generator.generate(promptIds: ids, params: params, eosIds: [], cache: transition)
-            c.expect("draft transition seed succeeds", plain.1.runtimeError == nil)
-            guard let consumed = transition.peek(extending: ids) else { throw ModelError("draft transition lost exact consumed IDs") }
-            let extended = consumed + [907]
-            options.completePromptCheckpoint = true; model.optimizations = options
-            generator.speculationEnabled = true
-            let fallback = generator.generate(promptIds: extended, params: params, eosIds: [], cache: transition)
-            c.equal("plain cached state finishes current request plain", fallback.1.verifyPasses, 0)
-            c.equal("plain-to-draft transition really reused state", fallback.1.reusedPrefixTokens, consumed.count)
-            let rebuilt = generator.generate(promptIds: extended, params: params, eosIds: [], cache: transition)
-            c.equal("complete prompt with missing head is not an MTP hit", rebuilt.1.completePromptHits, 0)
-            c.equal("missing draft head is rebuilt from the full prompt", rebuilt.1.prefillTokens, extended.count)
-            c.expect("rebuilt draft participates", rebuilt.1.verifyPasses > 0)
-            let hot = generator.generate(promptIds: extended, params: params, eosIds: [], cache: transition)
-            c.equal("rebuilt draft checkpoint can be reused completely", hot.1.completePromptHits, 1)
-            c.equal("reused draft output is exact", hot.0, rebuilt.0)
+            // A state built without the draft head, then a request that has
+            // one. With the resume rule off the plain state finishes that
+            // request plain and the next one rebuilds with the head. With it
+            // on, which the deployed family is, a state built under other
+            // settings is never continued: the request reads its whole
+            // prompt with the head and answers what a cold read does.
+            for aligned in [false, true] {
+                let rule = aligned ? "rule on" : "rule off"
+                options.alignedPrefixResume = aligned ? true : nil
+                let transition = PrefixCache(maxTokens: 8192)
+                options.completePromptCheckpoint = false; model.optimizations = options
+                generator.speculationEnabled = false
+                let plain = generator.generate(promptIds: ids, params: params, eosIds: [], cache: transition)
+                c.expect("\(rule): draft transition seed succeeds", plain.1.runtimeError == nil)
+                guard let consumed = transition.peek(extending: ids) else { throw ModelError("draft transition lost exact consumed IDs") }
+                let extended = consumed + [907]
+                options.completePromptCheckpoint = true; model.optimizations = options
+                generator.speculationEnabled = true
+                let fallback = generator.generate(promptIds: extended, params: params, eosIds: [], cache: transition)
+                let warm: [Int]
+                if aligned {
+                    c.equal("\(rule): a plain state is not continued by a draft request", fallback.1.reusedPrefixTokens, 0)
+                    c.equal("\(rule): the draft request reads its whole prompt", fallback.1.prefillTokens, extended.count)
+                    c.expect("\(rule): the draft takes part from the first request", fallback.1.verifyPasses > 0)
+                    let cold = generator.generate(promptIds: extended, params: params, eosIds: [])
+                    c.equal("\(rule): the draft request answers what a cold read does", fallback.0, cold.0)
+                    warm = fallback.0
+                } else {
+                    c.equal("\(rule): plain cached state finishes current request plain", fallback.1.verifyPasses, 0)
+                    c.equal("\(rule): plain-to-draft transition really reused state", fallback.1.reusedPrefixTokens, consumed.count)
+                    let rebuilt = generator.generate(promptIds: extended, params: params, eosIds: [], cache: transition)
+                    c.equal("\(rule): complete prompt with missing head is not an MTP hit", rebuilt.1.completePromptHits, 0)
+                    c.equal("\(rule): missing draft head is rebuilt from the full prompt", rebuilt.1.prefillTokens, extended.count)
+                    c.expect("\(rule): rebuilt draft participates", rebuilt.1.verifyPasses > 0)
+                    warm = rebuilt.0
+                }
+                let hot = generator.generate(promptIds: extended, params: params, eosIds: [], cache: transition)
+                c.equal("\(rule): rebuilt draft checkpoint can be reused completely", hot.1.completePromptHits, 1)
+                c.equal("\(rule): reused draft output is exact", hot.0, warm)
+            }
+            options.alignedPrefixResume = InferenceOptimizations.integrationCandidate.alignedPrefixResume
+            model.optimizations = options
         }
         c.measure("end_physical_bytes", Double(ProcessMemory.residentBytes()))
         return c.report()
