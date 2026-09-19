@@ -206,6 +206,7 @@ Defects found and fixed while verifying:
 - Engine results no longer depend on cache history. A turn resumes only its own prefill pass boundaries, so the continued conversation computes what a cold one computes, bit for bit, and the check's first `file.edit` call is now correct with no correction round. Canonical: [[records/decisions/a-continued-conversation-computes-what-a-cold-one-computes]], measured in [[records/measurements/conversation-resume-exactness]].
 - The reply opened with the model's words from its tool rounds: the real-model PDF answer began "I'll look through the attached files...". Those words now go to the run's Activity as one line ahead of the calls they introduce, and the reply is the final round's text. A new scripted check fails without the change, and the real-model PDF answer now starts with the budget.
 - The real-model checks' PDF fixture had new bytes on every run, because Quartz stamps the time and a random document ID, and `source.read` hands the model the file's SHA-256. The same check could therefore word its answer differently from run to run. The fixture is now pinned, and two consecutive real-model runs gave the same answer, edit and app file byte for byte. Evidence: [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]].
+- Asked "what is this?" about one attached PDF in the live app, the model asked what "this" meant and read nothing. Its instructions said files were attached but never named them. They now name each attachment, quoted as data, with its kind and access. A scripted check fails without the change, and a new real-model job asks the same question about an attached report and reads it. Evidence: [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]].
 
 Still open:
 
@@ -218,4 +219,4 @@ Still open:
 - Measured revision of the new operating bounds and of the larger window's first-token cost.
 - Local-model task reliability with these tools.
 
-Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]] and [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]].
+Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]], [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]] and [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]].

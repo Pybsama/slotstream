@@ -1884,3 +1884,12 @@ Added the narration and fixture fixes, corrected the greedy-decoding reason for 
 ## [2026-09-19 14:08] update | records/design/sevra-spec/runtime-contract
 Stated where tool-round words go (Activity, not the reply) and that closing the record write window needs a compare-and-set in dbmd.
 
+## [2026-09-19 15:13] create | sources/runs/2026/09/2026-09-19-sevra-names-attachments
+Sevra's instructions now name each attachment, quoted as data, with kind and access, so "what is this?" about one attached PDF reads it instead of asking. Scripted check fails without the change; the real-model check's new fourth job read and described the attached report, 14 of 14 in 636 s.
+
+## [2026-09-19 15:13] update | records/design/sevra-spec/runtime-contract
+Stated that the system instructions name each attachment and what "this" refers to.
+
+## [2026-09-19 15:13] update | records/design/sevra-spec/implementation-status
+Added the attachment-naming fix and its evidence.
+
