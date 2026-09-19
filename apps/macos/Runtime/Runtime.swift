@@ -444,6 +444,7 @@ public actor SevraRuntime {
             system += " No tools, network, shell or file access are available in this reply."
         } else {
             system += "\n" + ToolCatalog.guidance(for: groups)
+            if let attached = sources[thread.id]?.infos, !attached.isEmpty { system += "\n" + Self.attachmentNote(attached) }
             if groups.contains(.document) { system += "\nIf asked to save a briefing or document, read the sources, then call artifact.propose with the complete Markdown and its citations." }
             if !groups.contains(.change) && !groups.contains(.knowledgeChange) { system += "\nYou cannot change files in this reply." }
             system += "\nNo network, shell or other file access exists."
@@ -628,6 +629,22 @@ public actor SevraRuntime {
     /// second. Stop is always available. Revise with measured workflows.
     static let rounds = 12
     static let jobSeconds: TimeInterval = 45 * 60
+
+    /// Names what is attached, so a request such as "what is this?" has a
+    /// referent. Told only that attached files exist, the model asked what
+    /// "this" meant instead of reading the one PDF the person had attached.
+    /// Names are quoted: the person chose them, and a name is data like the
+    /// file's contents.
+    static func attachmentNote(_ attached: [AttachmentInfo]) -> String {
+        let lines = attached.prefix(SourceLimits.attachments).map { item -> String in
+            let kind = item.kind == .knowledge ? "db.md knowledge base" : item.kind.rawValue
+            let access = item.access == .change ? "changes need review" : "read only"
+            return "- " + String(item.name.prefix(attachmentNameLimit)).debugDescription + " (\(kind), \(access))"
+        }
+        return "Attached to this thread:\n" + lines.joined(separator: "\n")
+            + "\nWhen the request says \"this\", \"it\" or \"the file\" without naming something else, it means these attachments. Read them with the source tools before answering, instead of asking what the person means."
+    }
+    public static let attachmentNameLimit = 120
 
     /// One bounded line of what the model said before a tool round, for the
     /// run's activity, or nil when it said nothing.

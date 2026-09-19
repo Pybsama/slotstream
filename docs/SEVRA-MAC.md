@@ -71,7 +71,9 @@ Open a new thread and attach files or folders with the paperclip, the
 **File → Attach Files…** command (⌘⇧A), drag and drop, or paste. A thread holds
 up to eight attachments, each shown as a chip above the composer. Ask Sevra
 about them, or ask for a cited briefing and review the complete document before
-choosing **Save document**. Saved artifacts use create-only publication inside
+choosing **Save document**. The model is told each attachment's name, kind and
+access, so a question such as "what is this?" reads the attached file instead
+of asking what you mean. Saved artifacts use create-only publication inside
 the Home.
 
 ### What Sevra can read

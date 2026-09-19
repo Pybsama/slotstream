@@ -177,6 +177,7 @@ func basicsChecks(root: URL, dbmd: URL) async throws {
     try await sourceChecks(reader: DocumentReader(helper: helper, dbmd: dbmd), base: base)
     try await documentedLimitChecks(reader: DocumentReader(helper: helper, dbmd: dbmd), base: base)
     try await narrationChecks(base: base, dbmd: dbmd, helper: helper)
+    try await attachmentReferenceChecks(base: base, dbmd: dbmd, helper: helper)
     try await changeChecks(base: base, dbmd: dbmd, helper: helper)
     try await knowledgeChecks(base: base, dbmd: dbmd, helper: helper)
     try await skillChecks(base: base, dbmd: dbmd, helper: helper)
@@ -399,6 +400,45 @@ func sourceChecks(reader: DocumentReader, base: URL) async throws {
 // MARK: reviewed changes
 
 func waitFor(_ runtime: SevraRuntime, _ id: String) async throws -> WorkThread { try await terminal(runtime, id) }
+
+/// A person who attaches one file and asks "what is this?" means that file.
+/// The model used to be told only that attached files exist, so it asked
+/// what "this" meant instead of reading the attached PDF.
+func attachmentReferenceChecks(base: URL, dbmd: URL, helper: URL) async throws {
+    let folder = base.appendingPathComponent("Reference Files")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let deck = folder.appendingPathComponent("pitch-deck.pdf")
+    try Fixture.pdf(pages: ["Acme pitch", "Market"]).write(to: deck)
+    let odd = folder.appendingPathComponent("notes \"final\".md")
+    try Data("# Notes\n".utf8).write(to: odd)
+    let script = ScriptedInference(turns: [EngineTurn(text: "A pitch deck."), EngineTurn(text: "Still a pitch deck."), EngineTurn(text: "Hello.")])
+    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Reference Home"), dbmd: dbmd, inference: script, helper: helper)
+    func system() async -> String { await script.observedContexts.last?.first?.content ?? "" }
+
+    let thread = try await runtime.newThread(title: "Deck")
+    let attached = try await runtime.attach(threadID: thread, folder: deck, access: .read)
+    try await runtime.submit(threadID: thread, text: "what is this?", nonce: "this")
+    _ = try await waitFor(runtime, thread)
+    var prompt = await system()
+    try check(prompt.contains("Attached to this thread:\n- \"pitch-deck.pdf\" (file, read only)") && prompt.contains("it means these attachments"),
+              "the model is told which file is attached and what \"this\" refers to (\(prompt.suffix(400)))")
+
+    _ = try await runtime.attach(threadID: thread, folder: odd, access: .read)
+    try await runtime.setAccess(threadID: thread, attachmentID: attached.id, access: .change)
+    try await runtime.submit(threadID: thread, text: "and now?", nonce: "change")
+    _ = try await waitFor(runtime, thread)
+    prompt = await system()
+    try check(prompt.contains("- \"pitch-deck.pdf\" (file, changes need review)") && prompt.contains(#"- "notes \"final\".md" (file, read only)"#),
+              "names are quoted as data and the access shown is current (\(prompt.suffix(400)))")
+
+    let plain = try await runtime.newThread(title: "Plain")
+    try await runtime.submit(threadID: plain, text: "hello", nonce: "plain")
+    _ = try await waitFor(runtime, plain)
+    prompt = await system()
+    try check(!prompt.contains("Attached to this thread"), "a thread with nothing attached names nothing")
+    try await runtime.shutdown()
+    print("PASS: the model is told which files are attached, so \"what is this?\" has a referent")
+}
 
 /// What the model says before a tool round describes the work, not the
 /// answer. The real-model PDF answer used to open with "I'll look through the

@@ -2,9 +2,9 @@ import Foundation
 import SevraRuntime
 import Slotstream
 
-/// Real model, 10 GB plan, three basic jobs in one disposable Home:
-/// a question answered from a PDF, a reviewed edit to a text file, and a
-/// mini-app proposal. The harness is the reviewer for these synthetic
+/// Real model, 10 GB plan, four basic jobs in one disposable Home:
+/// a question answered from a PDF, a reviewed edit to a text file, a
+/// mini-app proposal, and "what is this?" about one attached file. The harness is the reviewer for these synthetic
 /// fixtures. Prints one JSON receipt for the evidence record.
 func realBasicsCheckIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--real-basics") else { return false }
@@ -104,11 +104,25 @@ func realBasicsCheckIfRequested() async throws -> Bool {
         expect(info?["ok"] as? Bool == true, "the approved app is on with its data access")
     }
 
+    // 4. A vague question about one attached file. Told only that files
+    // were attached, the model asked what "this" meant instead of reading it.
+    let vague = try await runtime!.newThread(title: "Attached file")
+    try await runtime!.attach(threadID: vague, folder: reports.appendingPathComponent("cedar-report.pdf"))
+    let vagueQuestion = "what is this?"
+    try await runtime!.submit(threadID: vague, text: vagueQuestion, nonce: "real-vague")
+    thread = try await watch(vague)
+    let described = thread.messages.last { $0.role == "assistant" }?.text ?? ""
+    let vagueTrace = thread.run?.trace ?? []
+    receipt["vague"] = ["prompt": vagueQuestion, "state": thread.run?.state.rawValue ?? "", "answer": described, "trace": vagueTrace]
+    expect(thread.run?.state == .completed && vagueTrace.contains { $0.hasPrefix("source.read:") && !$0.contains("refused") },
+           "\"what is this?\" about one attached file reads it")
+    expect(described.lowercased().contains("cedar"), "the answer describes the attached report")
+
     try await runtime!.shutdown(); runtime = nil
     receipt["seconds"] = Int(Date().timeIntervalSince(started))
     receipt["failures"] = failures
     print(String(decoding: try JSONSerialization.data(withJSONObject: receipt, options: [.sortedKeys, .prettyPrinted]), as: UTF8.self)); fflush(stdout)
     guard failures.isEmpty else { throw SevraError.refused("CHECK FAILED: real basics: " + failures.joined(separator: "; ")) }
-    print("PASS: real local model answered from a PDF, proposed an exact reviewed edit and an app that passed its review checks")
+    print("PASS: real local model answered from a PDF, proposed an exact reviewed edit and an app that passed its review checks, and read an attached file it was asked about as \"this\"")
     return true
 }
