@@ -479,8 +479,9 @@ release. See the implementation ledger for observed and pending evidence.
 
 A second real-model fixture asks a question about a generated PDF, proposes an
 exact edit to a text file and proposes a counter mini-app, acting as reviewer
-for each. It needs the helper, the metallib copied as above and the same memory
-rules:
+for each. The generated PDF is the same bytes on every run, so two runs on the
+same Mac and memory plan give the model the same input. It needs the helper,
+the metallib copied as above and the same memory rules:
 
 ```bash
 SEVRA_EXTRACT="$PWD/apps/macos/.build/release/sevra-extract" \

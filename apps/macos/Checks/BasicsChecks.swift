@@ -31,7 +31,29 @@ enum Fixture {
             context.endPDFPage()
         }
         context.closePDF()
-        return data as Data
+        return password == nil ? stable(data as Data) : data as Data
+    }
+
+    /// Quartz stamps every PDF with the current time and a random document
+    /// ID, so a fixture's bytes, and the SHA-256 the runtime hands the model
+    /// with each excerpt, changed on every run, and a real-model answer could
+    /// be worded differently by the same check. Pin both without moving a
+    /// byte, so every offset stays valid. An encrypted PDF keeps its ID: the
+    /// key that opens it is derived from it.
+    static func stable(_ pdf: Data) -> Data {
+        guard let text = String(data: pdf, encoding: .isoLatin1) else { return pdf }
+        let pinned = NSMutableString(string: text)
+        for (pattern, value) in [(#"/(?:CreationDate|ModDate) \(D:(\d{14})"#, "20260101000000"),
+                                 (#"/ID \[\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>"#, "")] {
+            let regex = try! NSRegularExpression(pattern: pattern)
+            for match in regex.matches(in: text, range: NSRange(location: 0, length: pinned.length)).reversed() {
+                for group in (1 ..< match.numberOfRanges).reversed() {
+                    let range = match.range(at: group)
+                    pinned.replaceCharacters(in: range, with: value.isEmpty ? String(repeating: "0", count: range.length) : value)
+                }
+            }
+        }
+        return (pinned as String).data(using: .isoLatin1) ?? pdf
     }
 
     static func image(_ text: String) -> CGImage {
@@ -149,6 +171,9 @@ func basicsChecks(root: URL, dbmd: URL) async throws {
     let base = root.appendingPathComponent("basics")
     try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
     try sandboxChecks(helper: helper, base: base)
+    // The real-model checks hand the model each fixture's SHA-256, so their
+    // answers repeat only if a fixture is the same bytes on every run.
+    try check(Fixture.pdf(pages: ["Stable"]) == Fixture.pdf(pages: ["Stable"]), "a generated PDF fixture is the same bytes every time")
     try await sourceChecks(reader: DocumentReader(helper: helper, dbmd: dbmd), base: base)
     try await documentedLimitChecks(reader: DocumentReader(helper: helper, dbmd: dbmd), base: base)
     try await narrationChecks(base: base, dbmd: dbmd, helper: helper)
