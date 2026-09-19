@@ -608,8 +608,7 @@ public final class Generator {
         // digest of the bytes behind each run, and `take` requires those to
         // agree as well; a swapped image therefore misses instead of resuming
         // a state built from the wrong pixels.
-        let images = vision?.cacheSegments(attentionPadding: model.optimizations.visionAttentionPadding,
-            queryTile: model.optimizations.visionQueryTile) ?? []
+        let images = vision?.cacheSegments(for: model.optimizations) ?? []
         // A hit hands over the state and the count of prompt tokens it already
         // consumed; a miss evicts enough LRU state before this allocation to
         // keep retained + active state inside the shared bounds (PrefixCache).

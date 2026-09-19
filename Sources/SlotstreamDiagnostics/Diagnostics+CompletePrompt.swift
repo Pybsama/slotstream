@@ -23,8 +23,14 @@ extension Diagnostics {
         func hash(_ a: MLXArray) -> String {
             "\(a.dtype):\(a.shape):\(SHA256.hash(data: Data(a.reshaped([-1]).view(dtype: .uint8).asArray(UInt8.self))))"
         }
+        // Look up with the identity generation stored. Under the candidate's
+        // query tiling that is not `segments`, and a lookup keyed on it found
+        // nothing for any image prompt.
+        func keyed(_ vision: VisionPrompt?) -> [ImageSegment] {
+            vision?.cacheSegments(for: model.optimizations) ?? []
+        }
         func stateAfter(_ cache: PrefixCache, _ ids: [Int], _ output: [Int], _ vision: VisionPrompt?) throws -> [String: String] {
-            guard let hit = cache.take(matching: ids + output + [907], images: vision?.segments ?? []) else {
+            guard let hit = cache.take(matching: ids + output + [907], images: keyed(vision)) else {
                 throw ModelError("complete-prompt diagnostic lost consumed state")
             }
             var values = hit.state.prefixForkDiagnosticTensors().mapValues(hash)
@@ -79,7 +85,7 @@ extension Diagnostics {
                 }
                 c.equal("\(label)/\(attempt): all state and continued logits exact", try stateAfter(cache, ids, result.0, vp), expected)
             }
-            c.expect("\(label): public API remains strictly extend-only", cache.take(matching: ids, images: vision(imageStart)?.segments ?? []) == nil)
+            c.expect("\(label): public API remains strictly extend-only", cache.take(matching: ids, images: keyed(vision(imageStart))) == nil)
             if imageStart != nil {
                 let changed = generator.generate(promptIds: ids, params: params, eosIds: [], cache: cache, vision: vision(imageStart, color: 1))
                 c.equal("\(label): changed pixels refuse reuse", changed.1.completePromptHits, 0)
