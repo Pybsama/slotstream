@@ -151,6 +151,7 @@ func basicsChecks(root: URL, dbmd: URL) async throws {
     try sandboxChecks(helper: helper, base: base)
     try await sourceChecks(reader: DocumentReader(helper: helper, dbmd: dbmd), base: base)
     try await documentedLimitChecks(reader: DocumentReader(helper: helper, dbmd: dbmd), base: base)
+    try await narrationChecks(base: base, dbmd: dbmd, helper: helper)
     try await changeChecks(base: base, dbmd: dbmd, helper: helper)
     try await knowledgeChecks(base: base, dbmd: dbmd, helper: helper)
     try await skillChecks(base: base, dbmd: dbmd, helper: helper)
@@ -373,6 +374,55 @@ func sourceChecks(reader: DocumentReader, base: URL) async throws {
 // MARK: reviewed changes
 
 func waitFor(_ runtime: SevraRuntime, _ id: String) async throws -> WorkThread { try await terminal(runtime, id) }
+
+/// What the model says before a tool round describes the work, not the
+/// answer. The real-model PDF answer used to open with "I'll look through the
+/// attached files..." because every round's text was added to the reply.
+func narrationChecks(base: URL, dbmd: URL, helper: URL) async throws {
+    let folder = base.appendingPathComponent("Narration Folder")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    try Data("# Budget\n\nThe Cedar pilot budget is 7300 dollars.\n".utf8).write(to: folder.appendingPathComponent("budget.md"))
+    let long = Array(repeating: "checking", count: 120).joined(separator: " ")
+    let script = ScriptedInference(turns: [
+        EngineTurn(text: "I'll look through the attached files to find the budget.", calls: [tool("source.list")]),
+        EngineTurn(text: "\n  Now the budget\nfile itself.  ", calls: [tool("source.read", ["id": .string("file-1")])]),
+        EngineTurn(text: "The Cedar pilot budget is $7,300 [S1]."),
+        EngineTurn(text: "The budget is $7,300 [S1]. Let me confirm it.", calls: [tool("source.read", ["id": .string("file-1")])]),
+        EngineTurn(text: "  \n"),
+        EngineTurn(text: long, calls: [tool("source.list")]),
+        EngineTurn(text: "", calls: [tool("source.list")]),
+        EngineTurn(text: "Listed."),
+    ])
+    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Narration Home"), dbmd: dbmd, inference: script, helper: helper)
+    let thread = try await runtime.newThread(title: "Budget")
+    _ = try await runtime.attach(threadID: thread, folder: folder, access: .read)
+    func answer(_ t: WorkThread) -> String { t.messages.last { $0.role == "assistant" && $0.runID == t.run?.id }?.text ?? "" }
+
+    try await runtime.submit(threadID: thread, text: "What is the Cedar pilot budget?", nonce: "narrated")
+    var state = try await waitFor(runtime, thread)
+    let trace = state.run?.trace ?? []
+    try check(state.run?.state == .completed && answer(state) == "The Cedar pilot budget is $7,300 [S1].",
+              "the answer is the final round's text alone (\(answer(state)))")
+    try check(trace.count == 4 && trace[0] == "Model: I'll look through the attached files to find the budget."
+              && trace[1].hasPrefix("source.list:") && trace[2] == "Model: Now the budget file itself."
+              && trace[3].hasPrefix("source.read:"), "each round's words lead the activity they introduce, on one line (\(trace))")
+
+    try await runtime.submit(threadID: thread, text: "Confirm the budget.", nonce: "blank-final")
+    state = try await waitFor(runtime, thread)
+    try check(state.run?.state == .completed && answer(state) == "The budget is $7,300 [S1]. Let me confirm it.",
+              "a final round with no words keeps what the model said instead of ending empty (\(answer(state)))")
+
+    try await runtime.submit(threadID: thread, text: "List the files.", nonce: "long")
+    state = try await waitFor(runtime, thread)
+    let notes = (state.run?.trace ?? []).filter { $0.hasPrefix("Model: ") }
+    try check(state.run?.state == .completed && answer(state) == "Listed." && notes.count == 1
+              && notes[0].count == "Model: ".count + SevraRuntime.narrationLimit && notes[0].hasSuffix("…"),
+              "long words are bounded to one line and a silent round adds no note (\(notes))")
+    try check(!state.messages.contains { $0.role == "assistant" && ($0.text.contains("checking") || $0.text.contains("look through")) },
+              "no tool round's words reach any answer")
+    try await runtime.shutdown()
+    print("PASS: tool-round narration stays out of answers and leads its activity")
+}
 
 func changeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let fm = FileManager.default

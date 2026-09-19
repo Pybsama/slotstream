@@ -1190,6 +1190,11 @@ the model must return a valid new response, and saving still requires exact
 document approval. The final adversarial replay passed this path with the real local model,
 including correction, cited proposal, exact approval and reopening the saved
 file. This qualifies the bounded fixture, not every possible user task.
+What the model writes before calling a tool says what it is about to do, so
+it is shown as one line under the reply's **Activity**, ahead of the calls it
+introduces, and never becomes part of the answer. The answer is the final
+round's text, or the text beside a proposal. If the final round has no text
+of its own, the reply keeps what the model wrote along the way.
 See the [feature audit](../db/records/design/sevra-spec/implementation-status.md#adversarial-mac-app-review)
 for the current evidence and open requirements.
 

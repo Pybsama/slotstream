@@ -504,6 +504,8 @@ public actor SevraRuntime {
                 // One schema correction per job, inside the existing round and
                 // time budgets. It never executes any part of the rejected set.
                 var schemaCorrections = 0
+                // What the model said before each tool round, in order.
+                var narration: [String] = []
                 for round in 0..<Self.rounds {
                     try cancellation.check(); try store.verify()
                     guard Date().timeIntervalSince(start) < Self.jobSeconds else { throw SevraError.refused("This job reached its time limit.") }
@@ -530,8 +532,17 @@ public actor SevraRuntime {
                     }
                     let i = try index(thread.id)
                     let thought = buffer.thinking()?.text ?? ""
+                    // Words before a tool round say what the model is about to
+                    // do. They go to the activity they introduce; the answer is
+                    // the final round's text, or the text beside a proposal.
+                    let proposing = response.calls.contains { call in offered.first { $0.name == call.name }?.terminal == true }
+                    let working = !response.calls.isEmpty && !proposing
+                    let note = working ? Self.narrationNote(response.text) : nil
+                    if note != nil { narration.append(response.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                    let answer = working ? "" : response.calls.isEmpty ? Self.answerText(response.text, narration: narration) : response.text
                     try update { h in
-                        if let j = h.threads[i].messages.lastIndex(where: { $0.role == "assistant" && $0.runID == run.id }) { h.threads[i].messages[j].text += response.text }
+                        if let j = h.threads[i].messages.lastIndex(where: { $0.role == "assistant" && $0.runID == run.id }) { h.threads[i].messages[j].text += answer }
+                        if let note { h.threads[i].run?.trace.append(note) }
                         if let receipt = response.thinking { h.threads[i].run?.thinking = receipt }
                         else if wantsThinking, thinkingRequest == nil, h.threads[i].run?.thinking == nil { h.threads[i].run?.thinking = .offForTools }
                     }
@@ -618,6 +629,21 @@ public actor SevraRuntime {
     static let rounds = 12
     static let jobSeconds: TimeInterval = 45 * 60
 
+    /// One bounded line of what the model said before a tool round, for the
+    /// run's activity, or nil when it said nothing.
+    static func narrationNote(_ text: String) -> String? {
+        let line = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard !line.isEmpty else { return nil }
+        return "Model: " + (line.count > narrationLimit ? String(line.prefix(narrationLimit - 1)) + "…" : line)
+    }
+    public static let narrationLimit = 280
+    /// The answer a job's final round leaves. A final round with no words of
+    /// its own keeps what the model said along the way, so a finished job
+    /// never ends with an empty reply.
+    static func answerText(_ text: String, narration: [String]) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !narration.isEmpty
+            ? narration.joined(separator: "\n\n") : text
+    }
     static func traceNote(_ name: String, _ result: String) -> String {
         if result.hasPrefix("{\"error\"") { return "refused" }
         switch name {
