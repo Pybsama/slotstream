@@ -1875,3 +1875,12 @@ Body no longer says auto picks 65,536 tokens or more from 36 GB; at 48 GB it pic
 
 ## [2026-09-18 21:50] validate | db
 Automatic window docs aligned with 0.2.22: zero validation errors, two declared historical warnings, 302 claim needles current and llms-full.txt regenerated.
+## [2026-09-19 14:08] create | sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration
+complete-prompt passes again (274 plain, 289 speculative): its image lookups now use the key generation stores under vision query tiling, and the speculative handoff is checked with the resume rule on and off. Sevra replies drop tool-round narration, which moves to Activity; the real-model PDF fixture is byte-stable and two runs matched byte for byte.
+
+## [2026-09-19 14:08] update | records/design/sevra-spec/implementation-status
+Added the narration and fixture fixes, corrected the greedy-decoding reason for two matching runs, and noted that the dbmd write window needs a compare-and-set in dbmd.
+
+## [2026-09-19 14:08] update | records/design/sevra-spec/runtime-contract
+Stated where tool-round words go (Activity, not the reply) and that closing the record write window needs a compare-and-set in dbmd.
+

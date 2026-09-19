@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-09-18T04:55:47.951956+00:00
+updated: 2026-09-19T14:08:09.644422+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -189,7 +189,7 @@ Verification on the development Mac, with the real bundled dbmd, in an isolated 
 - The offscreen apps check (`Tools/check_sevra_apps_ui.sh`) loads a hostile page twice into the production app host. The page tries fetch, XHR, WebSocket, EventSource, workers, beacons, peer connections from the page and from a fresh frame, popups, storage, undeclared and read-only collections, a link click with a ping, a form, location changes and a meta refresh. A loopback TCP listener and a UDP socket saw no connection and no datagram. The check then clicks through the change review and the app review flows in the production views, including a second app that sees the first app's saved record, with light and dark snapshots.
 - Removing the new record re-check, measuring only the helper process for its memory limit, leaving link preconnects on or allowing every app write makes the corresponding check fail. Before the echo fix, the check that reproduces a save-on-change app counted 40 records within about four seconds; afterwards it counts one.
 - On an earlier build of this work, the real-model basics check passed all twelve of its checks in 544 seconds at the 10 GB plan, with a peak physical footprint of 7.4 GB and no swap growth. The model answered the PDF question with the budget and page 2 from a PDF citation. It staged the exact status edit after one bounded correction of a malformed argument name. It proposed a 4,521-byte counter app with no review notes, which was turned on. Run in the production host by the new app-under-test mode, that app counted to 3 but showed 0 after reopening and left two records, because it looked for a record id it had chosen itself. The app guidance now explains host-assigned ids and change events.
-- On the final build, the same check passed again in 512 seconds with the same peak footprint and no swap growth. Its counter app followed the corrected guidance and passed the app-under-test mode, showing 3 after reopening with one saved record. The PDF answer and the edit trace matched the first run byte for byte, because answers are decoded greedily. A traced replay showed that the malformed edit call comes from the engine's cached continuation, not from the model's preference. Read fresh, the same prompt gives a correct call, and the flipped token scores 4%.
+- On the final build, the same check passed again in 512 seconds with the same peak footprint and no swap growth. Its counter app followed the corrected guidance and passed the app-under-test mode, showing 3 after reopening with one saved record. The PDF answer and the edit trace matched the first run byte for byte, although the generated PDF differed between the two runs; see the fixture fix below. A traced replay showed that the malformed edit call comes from the engine's cached continuation, not from the model's preference. Read fresh, the same prompt gives a correct call, and the flipped token scores 4%.
 
 Defects found and fixed while verifying:
 
@@ -204,6 +204,8 @@ Defects found and fixed while verifying:
 - The host echoed an app's own saves back as change events, so an app that saves on every change could create records in a loop until the collection limit. Open apps now hear only about changes they did not make, the preview follows the same rule, and each app has a write budget.
 - Single-suite check modes signaled completion before removing their temporary folder, leaving files behind. The signal now follows cleanup.
 - Engine results no longer depend on cache history. A turn resumes only its own prefill pass boundaries, so the continued conversation computes what a cold one computes, bit for bit, and the check's first `file.edit` call is now correct with no correction round. Canonical: [[records/decisions/a-continued-conversation-computes-what-a-cold-one-computes]], measured in [[records/measurements/conversation-resume-exactness]].
+- The reply opened with the model's words from its tool rounds: the real-model PDF answer began "I'll look through the attached files...". Those words now go to the run's Activity as one line ahead of the calls they introduce, and the reply is the final round's text. A new scripted check fails without the change, and the real-model PDF answer now starts with the budget.
+- The real-model checks' PDF fixture had new bytes on every run, because Quartz stamps the time and a random document ID, and `source.read` hands the model the file's SHA-256. The same check could therefore word its answer differently from run to run. The fixture is now pinned, and two consecutive real-model runs gave the same answer, edit and app file byte for byte. Evidence: [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]].
 
 Still open:
 
@@ -212,8 +214,8 @@ Still open:
 - An Xcode build of the project. Xcode is not installed on this Mac; the project's structure and its helper build phase were checked without it.
 - A recheck of WebKit's private feature switches on each macOS release.
 - The documented helper residuals: global metadata reads and folder listing in the dbmd modes.
-- The narrow window between the record re-check and dbmd's own write.
+- The narrow window between the record re-check and dbmd's own write. Closing it needs a compare-and-set in dbmd, which `body set` does not offer.
 - Measured revision of the new operating bounds and of the larger window's first-token cost.
 - Local-model task reliability with these tools.
 
-Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]].
+Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]] and [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]].
