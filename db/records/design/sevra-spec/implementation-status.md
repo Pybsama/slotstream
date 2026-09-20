@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-09-19T14:08:09.644422+00:00
+updated: 2026-09-20T19:56:24.418800+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -207,6 +207,8 @@ Defects found and fixed while verifying:
 - The reply opened with the model's words from its tool rounds: the real-model PDF answer began "I'll look through the attached files...". Those words now go to the run's Activity as one line ahead of the calls they introduce, and the reply is the final round's text. A new scripted check fails without the change, and the real-model PDF answer now starts with the budget.
 - The real-model checks' PDF fixture had new bytes on every run, because Quartz stamps the time and a random document ID, and `source.read` hands the model the file's SHA-256. The same check could therefore word its answer differently from run to run. The fixture is now pinned, and two consecutive real-model runs gave the same answer, edit and app file byte for byte. Evidence: [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]].
 - Asked "what is this?" about one attached PDF in the live app, the model asked what "this" meant and read nothing. Its instructions said files were attached but never named them. They now name each attachment, quoted as data, with its kind and access. A scripted check fails without the change, and a new real-model job asks the same question about an attached report and reads it. Evidence: [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]].
+- Think longer was unavailable whenever a source was attached, which is where a person most wants it. It is now unavailable only while the Home is paused, and a tool turn thinks too; a thought shortens only a plain answer, never a turn that can stage work. Measured rather than assumed: across three real-model runs with thinking on, every tool call was valid, no response was rejected, and the reviewed edit wrote the same file; the four jobs took 783, 682 and 1,257 seconds against 636 with thinking off.
+- A proposal refused for something the model can fix ended the job. One real-model run lost its whole app job to an app id that matched nothing, with nothing staged and no way on. A refusal now returns as a tool result, at most twice per job, and a later run recovered a refused oversized app and still reached its review. Evidence: [[sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals]].
 
 Still open:
 
@@ -219,4 +221,4 @@ Still open:
 - Measured revision of the new operating bounds and of the larger window's first-token cost.
 - Local-model task reliability with these tools.
 
-Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]], [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]] and [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]].
+Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]], [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]], [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]] and [[sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals]].

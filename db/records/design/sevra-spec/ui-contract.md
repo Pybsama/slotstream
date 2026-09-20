@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63b06sdk41zzcbfevt7c
 created: 2026-09-14T16:14:44.064879+00:00
-updated: 2026-09-17T07:31:16.839611+00:00
+updated: 2026-09-20T19:15:47.602720+00:00
 summary: Mac UI geometry, native text, appearance and review requirements
 ---
 # Mac native UI contract
@@ -51,7 +51,7 @@ Memory menus describe the actual selected scope and show only applicable changes
 Scoped implementation evidence: [[sources/runs/2026/09/2026-09-15-sevra-native-ux-settings-audit]]. Full VoiceOver, live IME and the existing native qualification matrix remain required.
 
 ## Thinking controls
-A native "Think longer" toggle button sits in the composer bar beside the memory scope control. It shows the thread's sticky state, is unavailable while a source is attached or AI is paused, and explains why through its help text. Its help and the composer hint carry the honest cost line: before any measured thought, "Adds time on this Mac" and that Answer now ends a thought early; afterwards the median of the last ten completed thoughts on this Mac, for example "Recently about 42 s extra". The File menu mirrors the control as "Think Longer" with a checked state and "Answer Now"; neither has a shortcut.
+A native "Think longer" toggle button sits in the composer bar beside the memory scope control. It shows the thread's sticky state and is unavailable only while AI is paused, which its help text explains. An attached source does not take the switch away: a thread that reads files thinks too, and the help says so. Its help and the composer hint carry the honest cost line: before any measured thought, "Adds time on this Mac" and that Answer now ends a thought early; afterwards the median of the last ten completed thoughts on this Mac, for example "Recently about 42 s extra". The File menu mirrors the control as "Think Longer" with a checked state and "Answer Now"; neither has a shortcut.
 
 While a thought runs, the run status reads "Thinking… 0:42" with a live clock from the first thought token, or "Finishing the thought… 0:42" after Answer now, and an "Answer now" button appears beside Stop. A collapsed "Working notes (thinking)" disclosure streams the thought under the status; it states that the notes are not saved or remembered and are kept only while Sevra is open. After the run, one plain receipt line replaces the clock, for example "Thought for 42 s before answering", "Thought for 3 min, up to its limit, then answered", "Thought for 12 s, then answered when you asked", "Thinking stopped after 8 s" or "Thinking is off while a source is attached", and the disclosure remains while the notes are still in memory. Accessibility identifiers: `think-longer`, `answer-now`, `thinking-receipt`, `working-notes`. The thought is never part of the conversation document, copy, export, search or Find. An offscreen check (`Tools/check_sevra_thinking_ui.sh`) renders the production views over the scripted engine, finds each control by its rendered label and clicks it, and verifies the switch, the hint texts, the live clock, Answer now, the working-notes disclosure with its privacy line, the receipt line and the typical-time hint in light and dark appearance. A VoiceOver pass and a person's review of the live app remain required before the UI gates are claimed; compilation and the scripted checks do not pass them.
 

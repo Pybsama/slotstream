@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-19T15:13:01.465600Z
+updated: 2026-09-20T19:55:58.105802Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals]] — Think longer is available with a source attached, tool turns think, and a refused proposal is corrected instead of ending the job; measured on three real-model runs
 - [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]] — Told only that files were attached, the model asked what "this" meant; with each attachment named, "what is this?" reads the attached PDF
 - [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]] — The complete-prompt check looked up image states with the wrong key and now passes 274 and 289; Sevra answers drop tool-round narration; the real-model PDF fixture is byte-stable
 - [[sources/runs/2026/09/2026-09-18-release-0-2-22-published-and-installed]] — v0.2.22 published, installed and accepted: exact CI candidate, verified provenance, byte-identical installation, full local battery and installed end to end 31/31.
@@ -506,9 +507,8 @@ updated: 2026-09-19T15:13:01.465600Z
 - [[sources/runs/2026/09/2026-09-06-optimization-resident-serving-counterexample]] — Resident overlap serving misses gain gate V140 completed V146
 - [[sources/runs/2026/09/2026-09-06-optimization-rope-confirmation-excluded]] — Independent RoPE confirmation stopped on swap V145
 - [[sources/runs/2026/09/2026-09-06-optimization-terminal-tail-and-rope-screen]] — Terminal query tail passes; RoPE screen swap excluded V144
-- [[sources/runs/2026/09/2026-09-06-optimization-terminal-query-counterexample]] — Terminal single-query numerical counterexample V143
 
 ## More
 
-This folder has 629 files. The 500 most recent are listed above.
+This folder has 630 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

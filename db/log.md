@@ -1893,3 +1893,15 @@ Stated that the system instructions name each attachment and what "this" refers 
 ## [2026-09-19 15:13] update | records/design/sevra-spec/implementation-status
 Added the attachment-naming fix and its evidence.
 
+## [2026-09-20 19:56] update | records/design/sevra-spec/runtime-contract
+A tool turn thinks when the switch is on, a thought never takes a staged reply's budget, and a refused proposal is correctable twice instead of ending the job.
+
+## [2026-09-20 19:56] update | records/design/sevra-spec/ui-contract
+Think longer is unavailable only while AI is paused; an attached source no longer takes the switch away.
+
+## [2026-09-20 19:56] update | records/design/sevra-spec/implementation-status
+Recorded the thinking-with-tools measurement and the refused-proposal correction.
+
+## [2026-09-20 19:56] create | sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals
+Three real-model runs with thinking on: every tool call valid, the same reviewed edit, 783/682/1257 s against 636 s plain; a refused app proposal now corrects instead of ending the job.
+
