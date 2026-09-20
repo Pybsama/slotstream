@@ -507,6 +507,7 @@ public actor SevraRuntime {
                 var schemaCorrections = 0
                 // What the model said before each tool round, in order.
                 var narration: [String] = []
+                var refusedProposals = 0
                 for round in 0..<Self.rounds {
                     try cancellation.check(); try store.verify()
                     guard Date().timeIntervalSince(start) < Self.jobSeconds else { throw SevraError.refused("This job reached its time limit.") }
@@ -567,7 +568,22 @@ public actor SevraRuntime {
                     for call in response.calls {
                         try cancellation.check(); try store.verify()
                         if offered.first(where: { $0.name == call.name })?.terminal == true {
-                            try propose(call, thread: thread, run: run, index: i, session: session)
+                            do {
+                                try propose(call, thread: thread, run: run, index: i, session: session)
+                            } catch let error as SevraError {
+                                // A proposal refused for something the model can
+                                // fix, an app id that matches nothing or a
+                                // document without citations, comes back like any
+                                // other tool error instead of ending the job. A
+                                // model that keeps proposing an invalid one still
+                                // stops, and nothing was staged either way.
+                                guard case .refused(let reason) = error, thread.mode != .incognito,
+                                      refusedProposals < Self.proposalRetries else { throw error }
+                                refusedProposals += 1
+                                history.append(ChatMessage(role: "tool", content: json(["error": reason]), toolCallId: call.id, toolName: call.name))
+                                try update { $0.threads[i].run?.trace.append("\(call.name): refused. " + reason) }
+                                continue
+                            }
                             finished = true; break
                         }
                         let result: String
@@ -627,6 +643,10 @@ public actor SevraRuntime {
     /// stage edits; enough time for a long app or document at a few tokens per
     /// second. Stop is always available. Revise with measured workflows.
     static let rounds = 12
+    /// How many refused proposals a job may correct. Each one costs a whole
+    /// generated app or document, so this is small; the round and time
+    /// budgets bound it as well.
+    public static let proposalRetries = 2
     static let jobSeconds: TimeInterval = 45 * 60
 
     /// Names what is attached, so a request such as "what is this?" has a
