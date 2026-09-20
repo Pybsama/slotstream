@@ -490,7 +490,7 @@ public actor SevraRuntime {
                 let groups = toolGroups(for: thread, run: run, skillTools: skill?.tools ?? [])
                 let offered = ToolCatalog.specs(for: groups)
                 let definitions = offered.map(\.definition)
-                thinkingRequest = wantsThinking && offered.isEmpty ? (thinkingOverride ?? ThinkingPolicy.request(seed: ThinkingPolicy.seed(run.id))) : nil
+                thinkingRequest = wantsThinking ? (thinkingOverride ?? ThinkingPolicy.request(seed: ThinkingPolicy.seed(run.id))) : nil
                 let replyTokens = groups.isDisjoint(with: [.document, .apps, .skills, .change, .knowledgeChange]) ? ReplyPolicy.answerTokens : ReplyPolicy.proposalTokens
                 let preparedContext = try context(thread, groups: groups, skill: skill.map { ($0.use, $0.instructions) })
                 var history = preparedContext.0
@@ -545,7 +545,6 @@ public actor SevraRuntime {
                         if let j = h.threads[i].messages.lastIndex(where: { $0.role == "assistant" && $0.runID == run.id }) { h.threads[i].messages[j].text += answer }
                         if let note { h.threads[i].run?.trace.append(note) }
                         if let receipt = response.thinking { h.threads[i].run?.thinking = receipt }
-                        else if wantsThinking, thinkingRequest == nil, h.threads[i].run?.thinking == nil { h.threads[i].run?.thinking = .offForTools }
                     }
                     remember(trace: thought, run: run.id, thread: thread.id)
                     active?.buffer = TurnBuffer()

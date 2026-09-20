@@ -2,7 +2,8 @@ import Foundation
 import CryptoKit
 
 /// Optional reasoning before an answer. Off unless a person turns it on for a
-/// thread; never joined to a tool turn until that combination is measured.
+/// thread, and then it applies to every turn of that thread, tool turns
+/// included: an attached source does not decide for the person.
 /// Bounded by a token budget, and a person can end it early with Answer now.
 /// The trace is working state: never persisted, never admitted to memory and
 /// never treated as evidence. Only this receipt is recorded with the run.
@@ -54,6 +55,8 @@ public enum ThinkingPolicy {
 }
 
 public struct ThinkingReceipt: Codable, Sendable, Equatable {
+    /// `offForTools` is historical: thinking used to be dropped whenever a
+    /// source was attached. Receipts recorded then still decode.
     public enum Ending: String, Codable, Sendable { case closed, budget, answerNow, stopped, offForTools }
     public var level: String
     public var budgetTokens: Int

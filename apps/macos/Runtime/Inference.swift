@@ -115,6 +115,13 @@ public enum ReplyPolicy {
     public static let answerTokens = 4096
     public static let proposalTokens = 12288
     public static let minimumTokens = 256
+    /// What a turn's reply may use. A thought shortens a plain answer, which
+    /// is the bound thinking was measured with, but never a turn that can
+    /// stage a change, a document or an app: those need their whole budget,
+    /// and the thought has its own.
+    public static func replyTokens(thinking: ThinkingRequest?, requested: Int, tools: Bool, room: Int) -> Int {
+        min(tools ? requested : (thinking?.replyTokens ?? requested), room)
+    }
 }
 
 private final class InferenceExecutor: SerialExecutor, @unchecked Sendable {
@@ -188,16 +195,19 @@ public actor LocalInference: Inference {
         guard let engine else { throw SevraError.unavailable("Model is unavailable.") }
         performanceTelemetry?.update(state: "In use", detail: "Responding on your Mac.", engine: engine)
         var request = try engine.beginRequest(connected: { !cancellation.isCancelled })
-        // Thinking never joins a tool turn in this version: tool-call
-        // reliability was measured with it off, and the combination has not been.
-        let thinking = definitions.isEmpty ? requested : nil
+        // A tool turn thinks too when the person asked for it. The thought
+        // runs first, then the same turn may call tools, which is what the
+        // template renders. What the thought must not do is take the reply
+        // budget a staged proposal needs, so only a plain answer uses the
+        // thinking reply cap.
+        let thinking = requested
         buffer.stage("Reading the conversation")
         // Spliced: an assistant turn the engine itself produced, thought block
         // included, is re-encoded from its held ids so the prefix state matches.
         let ids = try engine.encodeChatSpliced(history, tools: definitions, thinking: thinking != nil, effort: thinking?.level)
         try cancellation.check()
         let room = engine.maxContextTokens - ids.count - (thinking?.budgetTokens ?? 0)
-        let replyTokens = min(thinking?.replyTokens ?? requestedReply, room)
+        let replyTokens = ReplyPolicy.replyTokens(thinking: thinking, requested: requestedReply, tools: !definitions.isEmpty, room: room)
         guard replyTokens >= ReplyPolicy.minimumTokens else { throw SevraError.refused("This request is too large for the current context. Start a new thread or read less of the source at once.") }
         let splitter = ToolCallSplitter(tools: definitions.map(\.schema))
         var calls: [ProposedTool] = []
@@ -297,6 +307,7 @@ public actor ScriptedInference: Inference {
     public private(set) var calls = 0
     public private(set) var observedContexts: [[ChatMessage]] = []
     public private(set) var observedThinking: [ThinkingRequest?] = []
+    public private(set) var observedReplyTokens: [Int] = []
     public private(set) var observedTools: [[String]] = []
     public init(turns: [EngineTurn], delayNanoseconds: UInt64 = 0, thinkingTraces: [String] = []) { self.turns = turns; delay = delayNanoseconds; traces = thinkingTraces }
     public func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
@@ -306,8 +317,9 @@ public actor ScriptedInference: Inference {
         calls += 1
         observedContexts.append(history)
         observedTools.append(tools.map(\.name))
-        let thinking = tools.isEmpty ? requested : nil
+        let thinking = requested
         observedThinking.append(thinking)
+        observedReplyTokens.append(replyTokens)
         guard !turns.isEmpty else { throw SevraError.unavailable("The scripted test has no further responses.") }
         var turn = turns.removeFirst()
         if let thinking {

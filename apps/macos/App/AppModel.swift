@@ -114,7 +114,9 @@ import Combine
     var thinkingEnabled: Bool { thread?.thinking == true }
     /// Thinking stays off for tool turns in this version, so the switch is
     /// unavailable while a source is attached rather than silently ignored.
-    var thinkingUnavailable: Bool { !(snapshot?.attachments[selectedID] ?? []).isEmpty || aiPaused }
+    /// Only a paused Home takes the switch away. A thread with an attached
+    /// source thinks like any other: the person decides, not the attachment.
+    var thinkingUnavailable: Bool { aiPaused }
     var liveThinking: ThinkingObservation? {
         guard let thought = snapshot?.thinking, thought.threadID == selectedID else { return nil }
         return thought

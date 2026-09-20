@@ -461,8 +461,11 @@ struct ContentView: View {
     private var typicalThinking: String? { model.typicalThinkingSeconds.map { "Recently about " + ThinkingPolicy.describe($0) + " extra." } }
     private var thinkHelp: String {
         if model.aiPaused { return "Review Home changes before changing thinking" }
-        if model.snapshot?.attachmentNames[model.selectedID] != nil { return "Thinking is off while a source is attached in this version" }
-        if model.thinkingEnabled { return "Sevra thinks before each answer in this thread. Turn off for faster replies." }
+        if model.thinkingEnabled {
+            return model.snapshot?.attachmentNames[model.selectedID] != nil
+                ? "Sevra thinks before each answer in this thread, including while it reads your sources. Turn off for faster replies."
+                : "Sevra thinks before each answer in this thread. Turn off for faster replies."
+        }
         return "Take more time before answering. " + (typicalThinking ?? "Adds time on this Mac.") + " You can press Answer now at any point."
     }
     private var thinkingHint: String { "Thinks before answering. " + (typicalThinking ?? "Answer now ends a thought early.") }
