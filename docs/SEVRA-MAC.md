@@ -240,8 +240,10 @@ bash Tools/check_sevra_thinking_ui.sh
 
 That check renders the production views over the scripted engine in a scratch
 Home, finds each control by its rendered label and clicks it: Think longer on
-and off, Send, the live clock, Answer now, the working-notes disclosure, the
-receipt line and the typical-time hint, in light and dark appearance. Its
+and off, Send, the live clock and the last lines of the thought, the details
+popover with the working notes, Answer now, the thinking line above the reply,
+the optional speed line with the live writing speed, and the typical-time
+hint, in light and dark appearance. Its
 window is ordered far outside every display and the process never activates,
 so nothing appears on screen; snapshots land in `.build/sevra-thinking-ui/`.
 Native UI walkthroughs, VoiceOver passes and real-model checks remain separate
@@ -289,6 +291,34 @@ derived excerpts. New Thread only conversations may read shared memories but
 keep newly saved memories within that thread. Older Thread only conversations
 retain their stricter reading scope until you explicitly allow shared memories.
 Incognito uses neither saved memories nor persistent conflict records.
+
+## Thinking and response details
+
+**Think longer**, in the composer bar, lets Sevra reason before it answers. It
+is off by default and stays on for the thread until you turn it off; a thread
+with attached sources thinks too. While Sevra thinks, the status reads
+"Thinking…" with a clock, and the last few lines of its reasoning appear under
+it, newest at the bottom. Click them to read all the working notes, or press
+**Answer now** to end the thought and answer from what Sevra has so far. When
+the answer arrives, a line above it says how long Sevra thought. Click that line
+for the notes and the rest of the response's details. Working notes are not
+saved or remembered: they stay only while Sevra is open, for the eight most
+recent responses, and never enter the conversation's copy, export or search.
+Only how long the thought took and how it ended is saved with the response.
+
+Every response also records what it cost on this Mac, measured by the engine:
+the tokens it wrote and how fast, the time to its first token, how much of the
+conversation it read and how much it reused, the context it used, any model
+load it waited for, the share of the model's experts already in memory while
+it wrote, and the memory budget it ran with. Speed depends on that budget, so
+the details always show it. Turn on **Show response details** in the
+conversation options menu or the View menu to add a line under every reply
+with tokens per second, tokens written and time to first token, and to show
+the live writing speed in the status while Sevra writes. To open the full
+details, click a reply's thinking line or speed line, choose **Show Response
+Details** from the reply's context menu, or press ⌥⌘I for the latest reply.
+**Copy** there copies the numbers as text, without any notes or messages. The
+numbers stay in your Home and are never sent anywhere.
 
 ## Brand and native UI review
 
@@ -499,6 +529,20 @@ saved record:
 ```bash
 SEVRA_APP_UNDER_TEST="$(find "$PWD/.build/sevra-disposable-real-basics/Home/extensions/miniapps" -name index.html | head -1)" \
   SEVRA_APP_DATA=counter:write bash Tools/check_sevra_apps_ui.sh
+```
+
+A third real-model check compares the numbers Sevra records for a response
+with the engine's own statistics for the same requests: a thinking turn that
+loads the model, a second thinking turn that resumes the conversation instead
+of reading it again, and a plain turn after switching thinking off, which reads
+it again because the switch changes the system instructions. The engine
+resumes a request only at its own prefill pass boundaries, so the opening
+message is long enough for the conversation to pass the first one. It needs
+the metallib copied as above and the same memory rules:
+
+```bash
+apps/macos/.build/release/sevra-mac-checks --real-metrics \
+  --home "$PWD/.build/sevra-disposable-real-metrics"
 ```
 
 Slotstream's original CLI, serving APIs, library products and package coordinates

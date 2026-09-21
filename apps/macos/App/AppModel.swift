@@ -121,7 +121,6 @@ import Combine
         guard let thought = snapshot?.thinking, thought.threadID == selectedID else { return nil }
         return thought
     }
-    func thinkingTrace(for runID: String) -> String? { snapshot?.thinkingTraces[runID] }
     /// Median of the last ten completed thoughts on this Mac; the honest cost line.
     var typicalThinkingSeconds: Double? {
         let recent = (snapshot?.home.threads ?? []).flatMap { thread in
@@ -138,6 +137,60 @@ import Combine
     func answerNow() {
         let id = selectedID
         perform { try await $0.answerNow(threadID: id) }
+    }
+    /// The speed line under each reply and a live speed while one is written.
+    /// Off until a person turns it on, then remembered on this Mac.
+    @Published var showResponseDetails = UserDefaults.standard.bool(forKey: "responseDetails.visible")
+    func toggleResponseDetails() {
+        showResponseDetails.toggle()
+        UserDefaults.standard.set(showResponseDetails, forKey: "responseDetails.visible")
+    }
+    let details = ResponseDetailsPresenter()
+    /// The response the Context panel shows; nil means the thread's latest.
+    @Published var contextRunID: String?
+    var liveGeneration: GenerationObservation? {
+        guard let g = snapshot?.generation, g.threadID == selectedID else { return nil }
+        return g
+    }
+    /// The run that produced a message in this conversation, in the thread
+    /// that owns it: Home owns the messages a thread continues from.
+    func run(for message: Message) -> (threadID: String, run: Run)? {
+        guard let thread, let home = snapshot?.home, let runID = message.runID else { return nil }
+        let owner = thread.promotedMessageIDs.contains(message.id) ? home.threads.first { $0.id == "home" } : thread
+        guard let owner, let run = owner.allRuns.first(where: { $0.id == runID }) else { return nil }
+        return (owner.id, run)
+    }
+    /// "Thought for 42 s" once a run's thinking has ended, including while
+    /// its answer is still arriving and before the run records the round.
+    /// The run's thinking so far, including a finished thought whose answer is
+    /// still arriving. The runtime records a round and replaces its buffer in
+    /// one step, so a recorded thought is never counted twice.
+    func thoughtReceipt(for run: Run) -> ThinkingReceipt? {
+        if let live = snapshot?.thinking, live.runID == run.id, !live.active {
+            let current = ThinkingReceipt(level: ThinkingPolicy.level, budgetTokens: 0, tokens: 0, seconds: live.seconds, ending: live.ending ?? .closed)
+            return run.thinking.map { $0.merged(with: current) } ?? current
+        }
+        return run.thinking
+    }
+    func thoughtSummary(for run: Run) -> String? { thoughtReceipt(for: run)?.summary }
+    func showDetails(_ url: URL, relativeTo rect: NSRect, of view: NSView) {
+        guard let target = ResponseDetailsLink.target(url) else { return }
+        details.show(ResponseDetailsView(model: self, threadID: target.threadID, runID: target.runID), runID: target.runID, relativeTo: rect, of: view)
+    }
+    /// From a SwiftUI control that registered an anchor under this key.
+    func showDetails(threadID: String, runID: String, anchor key: String) {
+        guard let view = details.anchor(key) else { return }
+        details.show(ResponseDetailsView(model: self, threadID: threadID, runID: runID), runID: runID, relativeTo: view.bounds, of: view)
+    }
+    /// The current thread's latest response, from the View menu.
+    func showLatestDetails() {
+        guard let thread, let run = thread.run else { return }
+        showDetails(threadID: thread.id, runID: run.id, anchor: "status")
+    }
+    func inspectContext(threadID: String, runID: String) {
+        details.close()
+        contextRunID = runID
+        panel = "Context"
     }
     var homeURL: URL {
         if let path = ProcessInfo.processInfo.environment["SEVRA_HOME"] { return URL(fileURLWithPath: path) }

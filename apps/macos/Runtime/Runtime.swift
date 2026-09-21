@@ -32,9 +32,10 @@ public actor SevraRuntime {
     var lastError: String?
     private var modelStatus = "Model unloaded"
     private var nextOrder = 0
-    /// Recent thoughts by run id, memory only. Never written to Home, backups,
-    /// search or memory admission; Incognito thoughts leave with their thread.
-    private var traces: [String: (thread: String, text: String)] = [:]
+    /// Recent thoughts by run id, one entry per thought in the run, memory
+    /// only. Never written to Home, backups, search or memory admission;
+    /// Incognito thoughts leave with their thread.
+    private var traces: [String: (thread: String, steps: [String])] = [:]
     private var traceOrder: [String] = []
     /// Explicit check dependency: a bounded budget for real-model fixtures.
     private var thinkingOverride: ThinkingRequest?
@@ -135,14 +136,18 @@ public actor SevraRuntime {
     public func snapshot() -> RuntimeSnapshot {
         var snapshot = home
         var live: ThinkingObservation?
+        var generation: GenerationObservation?
         if let active, let i = snapshot.threads.firstIndex(where: { $0.id == active.thread }) {
+            if let g = active.buffer.generation() {
+                generation = GenerationObservation(threadID: active.thread, runID: active.run, thinking: g.thinking, tokens: g.tokens, seconds: g.seconds)
+            }
             let (text, status) = active.buffer.snapshot()
             if let j = snapshot.threads[i].messages.lastIndex(where: { $0.role == "assistant" && $0.runID == active.run }) {
                 snapshot.threads[i].messages[j].text += text
             }
             if snapshot.threads[i].run?.state != .stopping { snapshot.threads[i].run?.status = status }
             if let thought = active.buffer.thinking() {
-                live = ThinkingObservation(threadID: active.thread, runID: active.run, text: thought.text, seconds: thought.seconds, active: thought.active)
+                live = ThinkingObservation(threadID: active.thread, runID: active.run, text: thought.text, seconds: thought.seconds, active: thought.active, ending: thought.ending)
                 if thought.active, snapshot.threads[i].run?.state != .stopping {
                     snapshot.threads[i].run?.status = (active.control.answerRequested ? "Finishing the thought… " : "Thinking… ") + ThinkingPolicy.clock(thought.seconds)
                 }
@@ -152,7 +157,8 @@ public actor SevraRuntime {
         performance?.pending = pendingPerformance
         performance?.preferences = performancePreferences
         performance?.busy = driving || modelMaintenance
-        var result = RuntimeSnapshot(home: snapshot, modelStatus: inference.performanceTelemetry == nil ? modelStatus : (performance?.state ?? "Model not loaded"), error: lastError, simulated: inference.simulated, performance: performance, restoreReview: store.restoreReview, storageNeedsReview: storagePaused, thinking: live, thinkingTraces: traces.mapValues(\.text))
+        var result = RuntimeSnapshot(home: snapshot, modelStatus: inference.performanceTelemetry == nil ? modelStatus : (performance?.state ?? "Model not loaded"), error: lastError, simulated: inference.simulated, performance: performance, restoreReview: store.restoreReview, storageNeedsReview: storagePaused, thinking: live, thinkingTraces: traces.mapValues(\.steps))
+        result.generation = generation
         result.attachments = sources.filter { !$0.value.attachments.isEmpty }.mapValues(\.infos)
         result.appDataRevision = appDataRevision
         result.appDataWrites = appDataWrites
@@ -175,10 +181,21 @@ public actor SevraRuntime {
         active.control.requestAnswer()
     }
     public func setThinkingOverride(_ request: ThinkingRequest?) { thinkingOverride = request }
+    /// Keeps each thought of a run as its own step, within one 64 KiB bound
+    /// for the whole run, and only the eight most recent runs.
     private func remember(trace: String, run: String, thread: String) {
         guard !trace.isEmpty else { return }
         if traces[run] == nil { traceOrder.append(run) }
-        traces[run] = (thread, String(trace.prefix(65536)))
+        var steps = traces[run]?.steps ?? []
+        let room = 65536 - steps.reduce(0) { $0 + $1.utf8.count }
+        var bytes = 0, end = trace.unicodeScalars.startIndex
+        for index in trace.unicodeScalars.indices {
+            let size = UTF8.width(trace.unicodeScalars[index])
+            if bytes + size > room { break }
+            bytes += size; end = trace.unicodeScalars.index(after: index)
+        }
+        if bytes > 0 { steps.append(String(trace.unicodeScalars[..<end])) }
+        traces[run] = (thread, steps)
         while traceOrder.count > 8 { traces.removeValue(forKey: traceOrder.removeFirst()) }
     }
     @discardableResult public func newThread(mode: MemoryMode = .shared, title: String = "New thread") throws -> String {
@@ -482,9 +499,12 @@ public actor SevraRuntime {
             session?.beginJob()
             let start = Date()
             var appBytesRead = 0
-            // Thinking follows the thread's switch, never a tool turn.
+            // Thinking follows the thread's switch, tool turns included.
             let wantsThinking = thread.thinking == true
             var thinkingRequest: ThinkingRequest?
+            // A model request's numbers until the run records them. Its time
+            // counts even when the host refuses the response.
+            var unrecorded: ResponseMetrics?
             do {
                 let skill = try skillInstructions(run.skill)
                 let groups = toolGroups(for: thread, run: run, skillTools: skill?.tools ?? [])
@@ -516,6 +536,7 @@ public actor SevraRuntime {
                     let response: EngineTurn
                     do {
                         response = try await inference.turn(history: history, tools: definitions, thinking: thinkingRequest, replyTokens: replyTokens, control: control, cancellation: cancellation, buffer: buffer)
+                        unrecorded = response.metrics
                         try cancellation.check()
                         try response.validate(offered: offered) // Entire call set, before the first tool.
                     } catch let error as ToolSchemaError {
@@ -523,7 +544,16 @@ public actor SevraRuntime {
                         try cancellation.check(); try store.verify()
                         schemaCorrections += 1
                         let i = try index(thread.id)
-                        try update { $0.threads[i].run?.trace.append((error.errorDescription ?? "Tool schema refused.") + " Requested one corrected response.") }
+                        // The refused response's thought was real and visible;
+                        // it stays with the run like any other step.
+                        let refusedThought = buffer.thinking()?.text ?? ""
+                        let refusedReceipt = buffer.thinkingReceipt(level: thinkingRequest?.level ?? ThinkingPolicy.level, budgetTokens: thinkingRequest?.budgetTokens ?? ThinkingPolicy.budgetTokens)
+                        try update {
+                            $0.threads[i].run?.trace.append((error.errorDescription ?? "Tool schema refused.") + " Requested one corrected response.")
+                            $0.threads[i].run?.record(thinking: refusedReceipt, metrics: unrecorded)
+                        }
+                        unrecorded = nil
+                        remember(trace: refusedThought, run: run.id, thread: thread.id)
                         active?.buffer = TurnBuffer()
                         // The pinned chat template permits a system message
                         // only at the start. Host feedback belongs in that
@@ -545,8 +575,11 @@ public actor SevraRuntime {
                     try update { h in
                         if let j = h.threads[i].messages.lastIndex(where: { $0.role == "assistant" && $0.runID == run.id }) { h.threads[i].messages[j].text += answer }
                         if let note { h.threads[i].run?.trace.append(note) }
-                        if let receipt = response.thinking { h.threads[i].run?.thinking = receipt }
+                        // A job that uses tools thinks before each round; the
+                        // receipt and the numbers cover the whole run.
+                        h.threads[i].run?.record(thinking: response.thinking, metrics: unrecorded)
                     }
+                    unrecorded = nil
                     remember(trace: thought, run: run.id, thread: thread.id)
                     active?.buffer = TurnBuffer()
                     if response.calls.isEmpty {
@@ -623,7 +656,7 @@ public actor SevraRuntime {
                             h.threads[i].run?.state = cancellation.isCancelled ? .stopped : .failed
                             h.threads[i].run?.status = error.localizedDescription
                             h.threads[i].lifecycle = .open
-                            if let thoughtReceipt, h.threads[i].run?.thinking == nil { h.threads[i].run?.thinking = thoughtReceipt }
+                            h.threads[i].run?.record(thinking: thoughtReceipt, metrics: unrecorded)
                         }
                     } catch {
                         lastError = error.localizedDescription

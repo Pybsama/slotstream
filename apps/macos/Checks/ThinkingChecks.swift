@@ -49,7 +49,7 @@ func thinkingChecks(root: URL, dbmd: URL) async throws {
     try require(receipt.ending == .closed && receipt.tokens == short.split(separator: " ").count && receipt.seconds >= 0, "closed thought records its token count")
     try require(considered.messages.last?.text == "Considered answer.", "the answer excludes the thought")
     let afterThought = await runtime!.snapshot()
-    try require(afterThought.thinkingTraces[thoughtRun]?.contains(canary) == true, "finished thought stays readable in memory")
+    try require(afterThought.thinkingTraces[thoughtRun]?.joined().contains(canary) == true, "finished thought stays readable in memory")
     try require(afterThought.thinking == nil || afterThought.thinking?.active == false, "no live thought after completion")
 
     // Answer now ends the thought early and the answer still arrives.
@@ -106,7 +106,7 @@ func thinkingChecks(root: URL, dbmd: URL) async throws {
     let privateResult = try await terminal(again, privateThread)
     try require(privateResult.run?.thinking?.ending == .closed, "incognito thinks in memory")
     let whileOpen = await again.snapshot()
-    try require(whileOpen.thinkingTraces[privateRun]?.contains(canary) == true, "incognito thought is readable while open")
+    try require(whileOpen.thinkingTraces[privateRun]?.joined().contains(canary) == true, "incognito thought is readable while open")
     try await again.closeIncognito(threadID: privateThread)
     let afterClose = await again.snapshot()
     try require(afterClose.thinkingTraces[privateRun] == nil, "closing incognito drops its thought")

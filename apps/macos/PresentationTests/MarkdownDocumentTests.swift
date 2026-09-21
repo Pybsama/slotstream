@@ -83,6 +83,30 @@ final class MarkdownDocumentTests {
         checkFalse(table.notices.isEmpty)
         checkTrue(table.text.string.contains("---|"))
     }
+    func testAnnotationsStayOutsideTheMessage() {
+        let link = URL(string: "sevra-response://run/thread/run")!
+        let section = DocumentSection(id: "reply", speaker: "Sevra", source: "The answer is **42**.",
+            lead: DocumentAnnotation(text: "Thought for 8 s ›", link: link, help: "Show details"),
+            trail: DocumentAnnotation(text: "14.2 tok/s · 318 tokens", link: link), details: link)
+        let result = MarkdownDocumentRenderer().render([section], style: DocumentStyle())
+        let text = result.text.string as NSString
+        let lead = text.range(of: "Thought for 8 s ›"), body = text.range(of: "The answer is"), trail = text.range(of: "14.2 tok/s")
+        checkTrue(lead.location != NSNotFound && body.location != NSNotFound && trail.location != NSNotFound)
+        checkTrue(lead.location < body.location && body.location < trail.location)
+        checkEqual(result.text.attribute(.link, at: lead.location, effectiveRange: nil) as? URL, link)
+        checkEqual(result.text.attribute(.link, at: trail.location, effectiveRange: nil) as? URL, link)
+        checkNil(result.text.attribute(.link, at: NSMaxRange(lead), effectiveRange: nil))
+        checkNil(result.text.attribute(.underlineStyle, at: lead.location, effectiveRange: nil))
+        checkEqual(result.text.attribute(.toolTip, at: lead.location, effectiveRange: nil) as? String, "Show details")
+        // Quiet like the speaker's name, never like body text or a text link.
+        checkEqual(result.text.attribute(.foregroundColor, at: lead.location, effectiveRange: nil) as? NSColor, result.text.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? NSColor)
+        checkFalse(result.regions.contains { NSLocationInRange(lead.location, $0.display) || NSLocationInRange(trail.location, $0.display) })
+        checkEqual(section.source, "The answer is **42**.")
+        // Text links keep their own underline now that the view no longer adds one.
+        let code = render("```\nx\n```")
+        let copy = (code.text.string as NSString).range(of: "Copy code")
+        checkEqual(code.text.attribute(.underlineStyle, at: copy.location, effectiveRange: nil) as? Int, NSUnderlineStyle.single.rawValue)
+    }
     func testBoundedHistoryRenderSamples() {
         let renderer = MarkdownDocumentRenderer()
         let source = "## Update\n\nA **clear** paragraph with a [source](https://example.com).\n\n- Read\n- Review\n- Save\n\n```swift\nlet value = 42\n```\n"
@@ -116,8 +140,9 @@ func checkGreater<T: Comparable>(_ a: T, _ b: T, file: String = #file, line: Int
         checks.testSectionReuseAndLateReferences()
         checks.testSourceCoordinatesAndSourceModePreserveUnicode()
         checks.testMalformedAndBoundedDocumentsPreserveReadableSource()
+        checks.testAnnotationsStayOutsideTheMessage()
         checks.testBoundedHistoryRenderSamples()
-        print(failures == 0 ? "PASS: native Markdown structure, exact code, table attributes, inert HTML/images, link/citation boundaries, Unicode source coordinates, late references, cache reuse and limits" : "Presentation checks failed: \(failures)")
+        print(failures == 0 ? "PASS: native Markdown structure, exact code, table attributes, inert HTML/images, link/citation boundaries, Unicode source coordinates, late references, cache reuse, limits and message annotations" : "Presentation checks failed: \(failures)")
         exit(failures == 0 ? 0 : 1)
     }
 }

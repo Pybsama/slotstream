@@ -19,6 +19,7 @@ Task {
         if try await realPerformanceCheckIfRequested() { return }
         if try await realCheckIfRequested() { return }
         if try await realThinkingCheckIfRequested() { return }
+        if try await realMetricsCheckIfRequested() { return }
         if try await realBasicsCheckIfRequested() { return }
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-check-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -28,6 +29,7 @@ Task {
         if CommandLine.arguments.contains("--archive") { try await archiveChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--context-window") { try await longConversationChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--thinking") { try await thinkingChecks(root: root, dbmd: dbmd); return }
+        if CommandLine.arguments.contains("--response-details") { try await responseDetailsChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--basics") { try await basicsChecks(root: root, dbmd: dbmd); return }
         let folder = root.appendingPathComponent("sources")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -102,6 +104,7 @@ Task {
         try await ipcChecks(root: root, dbmd: dbmd)
         try await personalLoopChecks(root: root, dbmd: dbmd)
         try await thinkingChecks(root: root, dbmd: dbmd)
+        try await responseDetailsChecks(root: root, dbmd: dbmd)
         try await basicsChecks(root: root, dbmd: dbmd)
     } catch { fputs(error.localizedDescription + "\n", stderr); result = 1 }
 }

@@ -49,6 +49,8 @@ struct Transcript: NSViewRepresentable {
     var onNotice: (String) -> Void = { _ in }
     var onOutline: ([DocumentRegion]) -> Void = { _ in }
     var onScrollAwayFromLatest: (Bool) -> Void = { _ in }
+    /// Opens a response's details at a place in this document.
+    var onDetails: (URL, NSRect, NSView) -> Void = { _, _, _ in }
     @Environment(\.colorScheme) private var scheme
     @Environment(\.colorSchemeContrast) private var contrast
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -82,11 +84,16 @@ struct Transcript: NSViewRepresentable {
         let c = context.coordinator
         c.session = session; c.onLink = onLink
         c.onScrollAwayFromLatest = onScrollAwayFromLatest
+        let details = onDetails
+        c.onDetails = details
+        view.onDetails = { [weak view] url, rect in if let view { details(url, rect, view) } }
         view.setAccessibilityLabel(label)
         view.onOversizeCopy = onNotice
         if label == "Conversation" { session.conversation = view } else { session.artifact = view }
         let style = DocumentStyle(size: fontSize, dark: scheme == .dark, highContrast: contrast == .increased, sourceMode: sourceMode)
-        view.linkTextAttributes = [.foregroundColor: style.linkColor, .underlineStyle: NSUnderlineStyle.single.rawValue]
+        // Every link carries its own look: text links are colored and
+        // underlined by the renderer, while a reply's details line stays quiet.
+        view.linkTextAttributes = [.cursor: NSCursor.pointingHand]
         guard c.sections != sections || c.style != style || c.id != documentID else { return }
         if c.id != documentID {
             if !c.id.isEmpty { session.positions[c.id] = view.savedPosition }
@@ -158,6 +165,7 @@ struct Transcript: NSViewRepresentable {
         var pending: DispatchWorkItem?
         var onLink: (URL) -> Void = { _ in }
         var onScrollAwayFromLatest: (Bool) -> Void = { _ in }
+        var onDetails: (URL, NSRect, NSView) -> Void = { _, _, _ in }
         var lastAway: Bool?
         private var viewportObservers: [NSObjectProtocol] = []
         func observeViewport(_ scroll: NSScrollView, view: DocumentTextView) {
@@ -193,6 +201,8 @@ struct Transcript: NSViewRepresentable {
                     // Only a generated link at this exact code region can copy it.
                     if let region = view.regions.first(where: { $0.kind == .code && NSLocationInRange(charIndex, $0.display) }),
                        url == MarkdownDocumentRenderer.codeCopyURL(sectionID: region.sectionID, sourceOffset: region.source.lowerBound), let code = region.copyText { view.put(code); view.onOversizeCopy("Code copied.") }
+                } else if ResponseDetailsLink.target(url) != nil {
+                    onDetails(url, (textView as? DocumentTextView)?.linkRect(at: charIndex) ?? .zero, textView)
                 } else { session?.rememberFocus(); onLink(url) }
             }; return true
         }
@@ -222,9 +232,11 @@ final class DocumentTextView: NSTextView, NSAccessibilityCustomRotorItemSearchDe
     var sections: [DocumentSection] = []
     var regions: [DocumentRegion] = []
     var onOversizeCopy: (String) -> Void = { _ in }
+    var onDetails: ((URL, NSRect) -> Void)?
     private var menuCode: String?
     private var menuSource: String?
     private var menuLink: URL?
+    private var menuDetails: (url: URL, rect: NSRect)?
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = NSMenu()
         let point = convert(event.locationInWindow, from: nil)
@@ -239,6 +251,10 @@ final class DocumentTextView: NSTextView, NSAccessibilityCustomRotorItemSearchDe
         if menuSource != nil { let item = NSMenuItem(title: "Copy Message as Markdown", action: #selector(copySource), keyEquivalent: ""); item.target = self; menu.addItem(item) }
         menuLink = offset < (textStorage?.length ?? 0) ? textStorage?.attribute(.link, at: offset, effectiveRange: nil) as? URL : nil
         if let link = menuLink, MarkdownDocumentRenderer.externalURL(link.absoluteString) != nil { add("Copy Link", #selector(copyLink)) }
+        // A reply's details, from its text or from its details line.
+        let details = menuLink.flatMap { ResponseDetailsLink.target($0) != nil ? $0 : nil } ?? sections.first { $0.id == id }?.details
+        menuDetails = details.map { ($0, NSRect(x: point.x, y: point.y, width: 1, height: 1)) }
+        if menuDetails != nil, onDetails != nil { menu.addItem(.separator()); add("Show Response Details", #selector(showDetails)) }
         menu.addItem(.separator()); add("Select All", #selector(selectAll(_:))); add("Find…", #selector(findDocument))
         return menu
     }
@@ -249,6 +265,17 @@ final class DocumentTextView: NSTextView, NSAccessibilityCustomRotorItemSearchDe
     @objc func copyCode() { if let menuCode { put(menuCode) } }
     @objc func copySource() { if let menuSource { put(menuSource) } }
     @objc func copyLink() { if let menuLink { put(menuLink.absoluteString) } }
+    @objc func showDetails() { if let menuDetails { onDetails?(menuDetails.url, menuDetails.rect) } }
+    /// Where a link's text sits in this view, for a popover beside it.
+    func linkRect(at index: Int) -> NSRect {
+        guard let storage = textStorage, let manager = layoutManager, let container = textContainer, index < storage.length else { return .zero }
+        var range = NSRange(location: index, length: 1)
+        _ = storage.attribute(.link, at: index, longestEffectiveRange: &range, in: NSRange(location: 0, length: storage.length))
+        let glyphs = manager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        var rect = manager.boundingRect(forGlyphRange: glyphs, in: container)
+        rect.origin.x += textContainerOrigin.x; rect.origin.y += textContainerOrigin.y
+        return rect
+    }
     @objc func findDocument() { window?.makeFirstResponder(self); let item = NSMenuItem(); item.tag = Int(NSFindPanelAction.showFindPanel.rawValue); performFindPanelAction(item) }
     override func copy(_ sender: Any?) {
         let selected = selectedRange()

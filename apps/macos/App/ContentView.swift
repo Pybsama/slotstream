@@ -287,7 +287,7 @@ struct ContentView: View {
                 }.padding(.vertical, 32).readingColumn()
             } else {
                 documentToolbar
-                Transcript(documentID: model.selectedID + ":" + (pageEndID ?? "latest"), sections: loadedSections, fontSize: fontSize, sourceMode: sourceMode, session: model.textSession, onLink: model.inspectLink, onNotice: { if documentNotice != $0 { documentNotice = $0 } }, onOutline: { outline = $0 }, onScrollAwayFromLatest: { scrolledAwayFromLatest = $0 })
+                Transcript(documentID: model.selectedID + ":" + (pageEndID ?? "latest"), sections: loadedSections, fontSize: fontSize, sourceMode: sourceMode, session: model.textSession, onLink: model.inspectLink, onNotice: { if documentNotice != $0 { documentNotice = $0 } }, onOutline: { outline = $0 }, onScrollAwayFromLatest: { scrolledAwayFromLatest = $0 }, onDetails: model.showDetails)
                     .overlay(alignment: .bottom) {
                         if scrolledAwayFromLatest || pageEndID != nil {
                             NativeIconButton(symbol: "arrow.down", title: "Jump to latest message", help: "Jump to latest message (⌃⌘↓)", prominent: true, action: { jumpToLatest() })
@@ -313,8 +313,18 @@ struct ContentView: View {
     private var page: Range<Int> { HistoryPage.range(byteCounts: messages.map { $0.text.utf8.count }, endingAt: pageEndID.flatMap { id in messages.firstIndex { $0.id == id }.map { $0 + 1 } }) }
     private var loadedSections: [DocumentSection] {
         messages[page].map { m in
-            DocumentSection(id: m.id, speaker: speaker(m), source: m.text,
+            var section = DocumentSection(id: m.id, speaker: speaker(m), source: m.text,
                 citationIDs: Set(model.thread.flatMap { model.snapshot?.home.citations(for: m.id, in: $0) }?.map(\.id) ?? []))
+            if m.role == "assistant", let (threadID, run) = model.run(for: m), let link = ResponseDetailsLink.url(threadID: threadID, runID: run.id) {
+                section.details = link
+                if let summary = model.thoughtSummary(for: run) {
+                    section.lead = DocumentAnnotation(text: summary + " ›", link: link, help: "Show the working notes and details for this response")
+                }
+                if model.showResponseDetails, run.state.terminal || run.state == .needsYou, let metrics = run.metrics, let line = ResponseMetricsFormat.line(metrics) {
+                    section.trail = DocumentAnnotation(text: line, link: link, help: "Show the details for this response")
+                }
+            }
+            return section
         }
     }
     private var documentToolbar: some View {
@@ -332,8 +342,9 @@ struct ContentView: View {
                 }.menuStyle(.borderlessButton).fixedSize().help("Open a saved document from this thread")
             }
             if !sourceMode && !outline.isEmpty { outlineMenu(outline, artifact: false) }
-            NativeIconMenu(symbol: "doc.text", title: "Conversation options", help: "Conversation options: Markdown source, copy, export, and find", items: [
+            NativeIconMenu(symbol: "doc.text", title: "Conversation options", help: "Conversation options: Markdown source, response details, copy, export, and find", items: [
                 NativeMenuAction(title: "Show Markdown source", checked: sourceMode) { sourceMode.toggle() },
+                NativeMenuAction(title: "Show response details", checked: model.showResponseDetails) { model.toggleResponseDetails() },
                 NativeMenuAction(title: "Copy conversation as Markdown") { model.copyText(allSource) },
                 NativeMenuAction(title: "Export Markdown…") { model.exportText(allSource, filename: "conversation.md") },
                 NativeMenuAction(title: "Find in conversation…") { model.textSession.conversation?.findDocument() }
@@ -356,7 +367,7 @@ struct ContentView: View {
                 HStack(alignment: .center, spacing: 10) {
                     if !run.state.terminal && run.state != .needsYou { ProgressView().controlSize(.small) }
                     else { Image(systemName: run.state == .needsYou ? "doc.badge.clock" : run.state == .completed ? "checkmark.circle" : "exclamationmark.circle").foregroundStyle(secondaryInk).accessibilityHidden(true) }
-                    Text(run.status).font(.callout).foregroundStyle(secondaryInk).lineLimit(3).textSelection(.enabled)
+                    Text(run.status + liveSpeed(run)).font(.callout).foregroundStyle(secondaryInk).lineLimit(3).textSelection(.enabled).monospacedDigit()
                     Spacer(minLength: 4)
                     if run.proposal != nil { Button("Review document") { model.panel = "Artifact" }.buttonStyle(.borderedProminent) }
                     if run.appProposal != nil { Button("Review app") { model.panel = "App review" }.buttonStyle(.borderedProminent) }
@@ -370,7 +381,7 @@ struct ContentView: View {
                     }
                     if run.artifact != nil && !artifactOpen { Button("Open document") { model.openArtifact() } }
                     if [.failed, .interrupted, .stopped].contains(run.state) { Button("Edit and retry", action: model.prepareRetry).help("Copy the request to your draft so you can edit and send it again") }
-                    if run.context != nil { Button("Context") { model.panel = "Context" }.help("Inspect the history and memories used for this response") }
+                    if run.context != nil { Button("Context") { model.contextRunID = nil; model.panel = "Context" }.help("Inspect the history and memories used for this response") }
                     if model.selectedID == "home", run.state == .completed, let t = model.thread {
                         let ids = t.messages.filter { $0.runID == run.id }.map(\.id)
                         let continuation = model.snapshot?.home.continuation(of: ids)
@@ -382,11 +393,19 @@ struct ContentView: View {
                 if let context = run.context, context.omittedMessages > 0 {
                     Text("Using a recent conversation window and labeled excerpts. Earlier history remains searchable.").font(.caption).foregroundStyle(secondaryInk)
                 }
-                if let live = model.liveThinking, live.runID == run.id, !live.text.isEmpty {
-                    workingNotes(live.text, active: live.active)
-                } else if let receipt = run.thinking {
-                    Text(receipt.line).font(.caption).foregroundStyle(secondaryInk).accessibilityIdentifier("thinking-receipt")
-                    if let trace = model.thinkingTrace(for: run.id) { workingNotes(trace, active: false) }
+                if let live = model.liveThinking, live.runID == run.id, live.active, !live.text.isEmpty {
+                    // Indented to the status text, so the thought reads as part of "Thinking…".
+                    Button { model.showDetails(threadID: model.selectedID, runID: run.id, anchor: "thought") } label: { ThoughtPreview(text: live.text, palette: palette) }
+                        .buttonStyle(.plain).background(DetailsAnchor(presenter: model.details, key: "thought")).padding(.leading, 26)
+                        .help("Show all working notes. They are not saved or remembered.")
+                        .accessibilityElement(children: .ignore).accessibilityLabel("Working notes")
+                        .accessibilityValue(ThinkingPolicy.preview(live.text, limit: 160)).accessibilityHint("Shows all working notes and details")
+                        .accessibilityAddTraits(.isButton).accessibilityIdentifier("thinking-preview")
+                } else if let receipt = run.thinking, !replyShown(run) {
+                    // A response that ended without text still says how its thinking ended.
+                    Button { model.showDetails(threadID: model.selectedID, runID: run.id, anchor: "status") } label: { Text(receipt.summary + " ›") }
+                        .buttonStyle(.plain).font(.caption).foregroundStyle(secondaryInk)
+                        .help("Show the working notes and details for this response").accessibilityIdentifier("thinking-receipt")
                 }
                 if !run.trace.isEmpty {
                     DisclosureGroup("Activity") {
@@ -394,7 +413,17 @@ struct ContentView: View {
                     }.font(.callout)
                 }
             }.padding(.vertical, 8).readingColumn()
+                .background(DetailsAnchor(presenter: model.details, key: "status"))
         }
+    }
+    /// " · 12.8 tok/s" while the model writes, when response details are on.
+    private func liveSpeed(_ run: Run) -> String {
+        guard model.showResponseDetails, let g = model.liveGeneration, g.runID == run.id, let rate = g.rate, !run.state.terminal else { return "" }
+        return " · " + ResponseMetricsFormat.rate(rate) + " tok/s"
+    }
+    /// Whether the conversation shows this run's reply, which then carries its thinking line.
+    private func replyShown(_ run: Run) -> Bool {
+        messages.contains { $0.role == "assistant" && $0.runID == run.id }
     }
     private func composer(maxHeight: CGFloat, compact: Bool) -> some View {
         VStack(spacing: 8) {
@@ -469,14 +498,6 @@ struct ContentView: View {
         return "Take more time before answering. " + (typicalThinking ?? "Adds time on this Mac.") + " You can press Answer now at any point."
     }
     private var thinkingHint: String { "Thinks before answering. " + (typicalThinking ?? "Answer now ends a thought early.") }
-    private func workingNotes(_ text: String, active: Bool) -> some View {
-        DisclosureGroup(active ? "Working notes (thinking)" : "Working notes") {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Not saved or remembered. Kept only while Sevra is open.").font(.caption).foregroundStyle(secondaryInk)
-                ScrollView { Text(text).font(.caption).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(maxHeight: 160)
-            }.padding(.top, 4)
-        }.font(.callout).accessibilityIdentifier("working-notes")
-    }
     private var sendHelp: String {
         if model.aiPaused { return "Review Home changes before sending" }
         if model.attaching { return "Wait for the attached source to finish preparing" }
@@ -574,10 +595,15 @@ struct ContentView: View {
             }.formStyle(.grouped).scrollContentBackground(.hidden).id(settingsCategory)
         }.frame(maxWidth: 800).frame(maxWidth: .infinity).background(canvas)
     }
+    /// The response whose context is shown: one chosen from its details, or the latest.
+    private var contextRun: Run? {
+        if let id = model.contextRunID, let run = model.snapshot?.home.threads.lazy.compactMap({ $0.allRuns.first { $0.id == id } }).first { return run }
+        return model.thread?.run
+    }
     private var contextInspector: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if let context = model.thread?.run?.context {
+                if let context = contextRun?.context {
                     Text("Starting context for this response").font(.title2)
                     Text("\(context.messageIDs.count) complete \(context.messageIDs.count == 1 ? "message" : "messages") · \(context.memoryIDs.count) saved \(context.memoryIDs.count == 1 ? "memory" : "memories")").foregroundStyle(secondaryInk)
                     if context.omittedMessages > 0 || context.omittedMemories > 0 {

@@ -6,9 +6,38 @@ public struct DocumentSection: Equatable, Sendable {
     public var speaker: String?
     public var source: String
     public var citationIDs: Set<String>
-    public init(id: String, speaker: String? = nil, source: String, citationIDs: Set<String> = []) {
+    /// A quiet line under the speaker, before the text: how long Sevra thought.
+    public var lead: DocumentAnnotation?
+    /// A quiet line after the text: what the reply cost.
+    public var trail: DocumentAnnotation?
+    /// Where this message's details open, for its context menu.
+    public var details: URL?
+    public init(id: String, speaker: String? = nil, source: String, citationIDs: Set<String> = [], lead: DocumentAnnotation? = nil, trail: DocumentAnnotation? = nil, details: URL? = nil) {
         self.id = id; self.speaker = speaker; self.source = source; self.citationIDs = citationIDs
+        self.lead = lead; self.trail = trail; self.details = details
     }
+}
+/// Links from the conversation to one response's details, beside the
+/// document's other generated links: copying code and opening citations.
+public enum ResponseDetailsLink {
+    public static let scheme = "sevra-response"
+    public static func url(threadID: String, runID: String) -> URL? {
+        var url = URLComponents(); url.scheme = scheme; url.host = "run"; url.path = "/" + threadID + "/" + runID; return url.url
+    }
+    public static func target(_ url: URL) -> (threadID: String, runID: String)? {
+        guard url.scheme == scheme, url.host == "run" else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        return parts.count == 2 ? (parts[0], parts[1]) : nil
+    }
+}
+/// A line that belongs to a message without being part of its text. It is
+/// drawn in the conversation like the speaker's name, and is never part of
+/// the message source, Copy Message as Markdown or an export.
+public struct DocumentAnnotation: Equatable, Sendable {
+    public var text: String
+    public var link: URL?
+    public var help: String?
+    public init(text: String, link: URL? = nil, help: String? = nil) { self.text = text; self.link = link; self.help = help }
 }
 public struct DocumentStyle: Equatable, Sendable {
     public var size: Double
@@ -99,6 +128,7 @@ private final class SectionRenderer {
             let p = paragraph(); p.lineSpacing = 0; p.paragraphSpacing = 6; p.paragraphSpacingBefore = 0
             output.append(NSAttributedString(string: speaker + "\n", attributes: [.font: NSFont.systemFont(ofSize: 13, weight: .semibold), .foregroundColor: style.secondary, .paragraphStyle: p]))
         }
+        if let lead = section.lead { annotate(lead, spacing: 8) }
         if bytes.count > 262144 {
             notices.append("A large message is shown as source. Copy or export Markdown to keep the complete text.")
             // The paginated document host limits loaded messages; source mode does not discard bytes.
@@ -108,12 +138,24 @@ private final class SectionRenderer {
             let document = Document(parsing: section.source, options: [.disableSmartOpts])
             for node in document.children { block(node, depth: 0, indent: 0) }
         }
+        if let trail = section.trail { annotate(trail, spacing: 4) }
         // Separate turns without adding another full body-text line and its
         // paragraph spacing. The source and copy/export text remain unchanged.
         let gap = NSMutableParagraphStyle()
         gap.minimumLineHeight = 12; gap.maximumLineHeight = 12
         append("\n", attributes: [.font: NSFont.systemFont(ofSize: 1), .paragraphStyle: gap])
         return RenderedDocument(text: output, regions: regions, notices: notices, parsedSections: 1)
+    }
+    /// Secondary ink at the speaker's size. A linked annotation takes a
+    /// pointing hand and its help, but not the underline of links in text.
+    func annotate(_ note: DocumentAnnotation, spacing: Double) {
+        let p = paragraph(); p.lineSpacing = 0; p.paragraphSpacing = spacing; p.paragraphSpacingBefore = 0
+        var a: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12.5), .foregroundColor: style.secondary, .paragraphStyle: p]
+        if let link = note.link { a[.link] = link; a[.cursor] = NSCursor.pointingHand }
+        if let help = note.help { a[.toolTip] = help }
+        append(note.text, attributes: a)
+        a.removeValue(forKey: .link); a.removeValue(forKey: .cursor); a.removeValue(forKey: .toolTip)
+        append("\n", attributes: a)
     }
     func sourceRange(_ node: any Markup) -> Range<Int> {
         guard let r = node.range else { return 0..<0 }
@@ -163,6 +205,7 @@ private final class SectionRenderer {
             let label: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 13, weight: .medium), .foregroundColor: style.secondary, .paragraphStyle: paragraph(indent: indent + 12)]
             append(title + "   ", attributes: label)
             var action = label; action[.link] = MarkdownDocumentRenderer.codeCopyURL(sectionID: section.id, sourceOffset: sourceRange(c).lowerBound); action[.foregroundColor] = style.link
+            action[.underlineStyle] = NSUnderlineStyle.single.rawValue
             append("Copy code", attributes: action); append("\n", attributes: label)
             let bodyStart = output.length
             append(c.code.hasSuffix("\n") ? c.code : c.code + "\n", attributes: a)

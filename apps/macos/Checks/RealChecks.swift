@@ -103,7 +103,7 @@ func realThinkingCheckIfRequested() async throws -> Bool {
     await runtime!.setThinkingOverride(ThinkingRequest(level: ThinkingPolicy.level, budgetTokens: forcedBudget, replyTokens: ThinkingPolicy.replyTokens, seed: 7))
     let a = try await runtime!.submit(threadID: thread, text: "A train leaves at 9:40 and the trip takes 2 hours and 35 minutes. What time does it arrive? Work it out step by step, then give the arrival time in one sentence.", nonce: "real-think-budget")
     let aResult = try await watch(a)
-    let aTrace = await runtime!.snapshot().thinkingTraces[a]
+    let aTrace = await runtime!.snapshot().thinkingTraces[a]?.joined(separator: "\n\n")
     record("forced_close", aResult, aTrace)
     try require(aResult.run?.state == .completed, "forced close completes: " + (aResult.run?.status ?? ""))
     try require(aResult.run?.thinking?.ending == .budget && (aResult.run?.thinking?.tokens ?? 0) <= forcedBudget, "budget ended the thought within its bound")
@@ -112,7 +112,7 @@ func realThinkingCheckIfRequested() async throws -> Bool {
     await runtime!.setThinkingOverride(ThinkingRequest(level: ThinkingPolicy.level, budgetTokens: 4096, replyTokens: ThinkingPolicy.replyTokens, seed: 11))
     let b = try await runtime!.submit(threadID: thread, text: "Plan a three-day walking trip through a hilly region for two people, with distances, rest days and what could go wrong. Think it through carefully before answering, then keep the answer under 150 words.", nonce: "real-think-answer-now")
     let bResult = try await watch(b, answerNowAfter: answerAfter)
-    let bTrace = await runtime!.snapshot().thinkingTraces[b]
+    let bTrace = await runtime!.snapshot().thinkingTraces[b]?.joined(separator: "\n\n")
     record("answer_now", bResult, bTrace)
     try require(bResult.run?.state == .completed && bResult.run?.thinking?.ending == .answerNow, "answer now ended the thought and the run completed")
     try require((bResult.messages.last?.text.utf8.count ?? 0) > 0, "answer now still produced an answer")
@@ -120,7 +120,7 @@ func realThinkingCheckIfRequested() async throws -> Bool {
     await runtime!.setThinkingOverride(nil)
     let c = try await runtime!.submit(threadID: thread, text: "What is 12 times 12? Answer with the number only.", nonce: "real-think-natural")
     let cResult = try await watch(c)
-    let cTrace = await runtime!.snapshot().thinkingTraces[c]
+    let cTrace = await runtime!.snapshot().thinkingTraces[c]?.joined(separator: "\n\n")
     record("app_budget", cResult, cTrace)
     try require(cResult.run?.state == .completed && cResult.run?.thinking != nil && (cResult.messages.last?.text.contains("144") ?? false), "app-budget thought answers correctly")
     // Phase D: thinking off again in the same thread, continuing after thought turns.

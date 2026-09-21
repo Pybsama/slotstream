@@ -7,7 +7,11 @@ public struct EngineTurn: Sendable {
     public var finishReason: String
     /// Recorded with the run when the turn thought first. Never the thought itself.
     public var thinking: ThinkingReceipt?
-    public init(text: String, calls: [ProposedTool] = [], finishReason: String = "stop") { self.text = text; self.calls = calls; self.finishReason = finishReason }
+    /// What this turn cost, as the engine measured it. Numbers only.
+    public var metrics: ResponseMetrics?
+    public init(text: String, calls: [ProposedTool] = [], finishReason: String = "stop", metrics: ResponseMetrics? = nil) {
+        self.text = text; self.calls = calls; self.finishReason = finishReason; self.metrics = metrics
+    }
     /// Completion and size gate applied to every turn, before any tool runs.
     public func validateCompletion() throws {
         guard finishReason == "stop" || finishReason == "tool_calls" else {
@@ -50,6 +54,11 @@ public final class TurnBuffer: @unchecked Sendable {
     private var thoughtEnding: ThinkingReceipt.Ending?
     private var thinkingStarted: TimeInterval?
     private var thinkingEnded: TimeInterval?
+    /// Arrival times of the first and latest token of each phase, for the
+    /// live writing speed. The recorded numbers come from the engine.
+    private var thoughtTokenTimes: (first: TimeInterval, last: TimeInterval)?
+    private var answerTokens = 0
+    private var answerTokenTimes: (first: TimeInterval, last: TimeInterval)?
     public init() {}
     public func append(_ delta: String) -> Bool {
         lock.lock(); defer { lock.unlock() }
@@ -63,10 +72,28 @@ public final class TurnBuffer: @unchecked Sendable {
     /// the bound still count.
     public func appendThought(_ delta: String) {
         lock.lock(); defer { lock.unlock() }
-        if thinkingStarted == nil { thinkingStarted = ProcessInfo.processInfo.systemUptime }
+        let now = ProcessInfo.processInfo.systemUptime
+        if thinkingStarted == nil { thinkingStarted = now }
+        thoughtTokenTimes = (thoughtTokenTimes?.first ?? now, now)
         thoughtTokens += 1
         guard thoughtBytes + delta.utf8.count <= 65536 else { return }
         thoughts += delta; thoughtBytes += delta.utf8.count
+    }
+    /// One answer token arrived. Text can lag behind tokens while tool-call
+    /// markup is held back, so tokens are counted where the engine yields them.
+    public func countAnswerToken() {
+        lock.lock(); defer { lock.unlock() }
+        let now = ProcessInfo.processInfo.systemUptime
+        answerTokenTimes = (answerTokenTimes?.first ?? now, now)
+        answerTokens += 1
+    }
+    /// The phase writing now, its tokens so far, and the time between its
+    /// first and latest token. Nil before the first token of either phase.
+    public func generation() -> (thinking: Bool, tokens: Int, seconds: Double)? {
+        lock.lock(); defer { lock.unlock() }
+        if let times = answerTokenTimes { return (false, answerTokens, times.last - times.first) }
+        if thinkingEnded == nil, let times = thoughtTokenTimes { return (true, thoughtTokens, times.last - times.first) }
+        return nil
     }
     public func beginThinking() { lock.lock(); if thinkingStarted == nil { thinkingStarted = ProcessInfo.processInfo.systemUptime }; lock.unlock() }
     public func endThinking(_ ending: ThinkingReceipt.Ending) {
@@ -75,11 +102,11 @@ public final class TurnBuffer: @unchecked Sendable {
         if thinkingEnded == nil { thinkingEnded = ProcessInfo.processInfo.systemUptime; thoughtEnding = ending }
     }
     public var thinkingSeconds: Double { thinking()?.seconds ?? 0 }
-    public func thinking() -> (text: String, seconds: Double, active: Bool)? {
+    public func thinking() -> (text: String, seconds: Double, active: Bool, ending: ThinkingReceipt.Ending?)? {
         lock.lock(); defer { lock.unlock() }
         guard let started = thinkingStarted else { return nil }
         let end = thinkingEnded ?? ProcessInfo.processInfo.systemUptime
-        return (thoughts, max(0, end - started), thinkingEnded == nil)
+        return (thoughts, max(0, end - started), thinkingEnded == nil, thoughtEnding)
     }
     /// The receipt as far as this buffer can tell: exact when the thought
     /// ended normally, `stopped` when the run ended first. Nil if no thought ran.
@@ -142,6 +169,9 @@ public actor LocalInference: Inference {
     private let model: URL
     private var preferences: PerformancePreferences
     private var inTurn = false
+    /// The engine's own statistics for each request of the last turn, so a
+    /// real check can compare them with what the app recorded.
+    public private(set) var lastStats: [GenStats] = []
     public init(model: URL = WeightStore.default.modelDirectory, preferences: PerformancePreferences = .init()) {
         self.model = model; self.preferences = preferences
     }
@@ -167,6 +197,9 @@ public actor LocalInference: Inference {
         inTurn = true
         let started = ProcessInfo.processInfo.systemUptime
         var prepared = false
+        var metrics = ResponseMetrics()
+        metrics.rounds = 1
+        lastStats = []
         defer {
             inTurn = false
             performanceTelemetry?.update(state: self.engine == nil ? "Model not loaded" : "Ready",
@@ -190,10 +223,14 @@ public actor LocalInference: Inference {
                 governor = MemoryGovernor(engine: engine)
                 governor?.start()
             }
+            metrics.loadSeconds = ProcessInfo.processInfo.systemUptime - started
             try cancellation.check()
         }
         guard let engine else { throw SevraError.unavailable("Model is unavailable.") }
         performanceTelemetry?.update(state: "In use", detail: "Responding on your Mac.", engine: engine)
+        // Time to first token starts here, after any load, which is reported apart.
+        let ready = ProcessInfo.processInfo.systemUptime
+        var firstToken: Double?
         var request = try engine.beginRequest(connected: { !cancellation.isCancelled })
         // A tool turn thinks too when the person asked for it. The thought
         // runs first, then the same turn may call tools, which is what the
@@ -232,14 +269,20 @@ public actor LocalInference: Inference {
         func markPrepared() {
             if !prepared {
                 prepared = true
-                performanceTelemetry?.prepared(in: ProcessInfo.processInfo.systemUptime - started)
+                let now = ProcessInfo.processInfo.systemUptime
+                performanceTelemetry?.prepared(in: now - started)
+                firstToken = now - ready
             }
         }
         if let thinking {
             // The template opens the thought block itself. The thought ends at the
             // model's close tag, at the budget, or when the person asks for the
-            // answer; in the last two cases the documented closure is appended and
-            // the answer continues from the held prefix state.
+            // answer; in the last two cases the documented closure is appended.
+            // The answer is a second request over the prompt, the thought and the
+            // closure. The engine resumes it only from a prefill pass boundary it
+            // holds for those ids and reads the rest again, so the thought is
+            // always read once more, and a prompt shorter than the first boundary
+            // is read twice.
             let closeIDs = engine.tokenizer.encode(text: ThinkingPolicy.closeTag, addSpecialTokens: false)
             guard closeIDs.count == 1, let closeID = closeIDs.first else { throw SevraError.unavailable("This model does not expose a single thinking close token.") }
             var thoughtParams = SampleParams.thinking; thoughtParams.seed = thinking.seed; thoughtParams.maxTokens = thinking.budgetTokens
@@ -262,6 +305,8 @@ public actor LocalInference: Inference {
             buffer.endThinking(ending)
             try cancellation.check()
             if let error = thought.stats.runtimeError { throw SevraError.refused(error) }
+            metrics.record(thought.stats, thought: true, first: true)
+            lastStats.append(thought.stats)
             promptIds += thought.ids
             let separator = engine.tokenizer.encode(text: "\n\n", addSpecialTokens: false)
             if closed { promptIds += separator }
@@ -274,6 +319,7 @@ public actor LocalInference: Inference {
         }
         let result = engine.generate(promptIds: promptIds, params: params, shouldContinue: { !cancellation.isCancelled && !tooLarge }, onToken: { _, delta in
             markPrepared()
+            buffer.countAnswerToken()
             buffer.stage("Responding")
             consume(splitter.push(delta)); return !cancellation.isCancelled && !tooLarge
         }, request: request)
@@ -281,7 +327,14 @@ public actor LocalInference: Inference {
         try cancellation.check()
         if let error = result.stats.runtimeError { throw SevraError.refused(error) }
         guard !malformed, !tooLarge else { throw SevraError.refused("The model produced an incomplete or oversized response. No proposed actions were executed.") }
-        var turn = EngineTurn(text: text, calls: calls, finishReason: result.stats.finishReason)
+        metrics.record(result.stats, thought: false, first: thinking == nil)
+        lastStats.append(result.stats)
+        metrics.firstTokenSeconds = firstToken
+        metrics.windowTokens = engine.maxContextTokens
+        // The process budget the plan was sized to, which is the limit a person set.
+        metrics.budgetGB = engine.currentPlan.map { $0.targetGB ?? $0.expectedPeakGB }
+        metrics.customBudget = preferences.budget == .custom
+        var turn = EngineTurn(text: text, calls: calls, finishReason: result.stats.finishReason, metrics: metrics)
         turn.thinking = receipt
         try turn.validateCompletion()
         return turn
@@ -322,27 +375,40 @@ public actor ScriptedInference: Inference {
         observedReplyTokens.append(replyTokens)
         guard !turns.isEmpty else { throw SevraError.unavailable("The scripted test has no further responses.") }
         var turn = turns.removeFirst()
+        // Measured like the real engine, with one scripted word or character
+        // standing for one token. A turn may also carry exact numbers.
+        let begun = ProcessInfo.processInfo.systemUptime
+        var measured = ResponseMetrics()
+        measured.rounds = 1
         if let thinking {
             // One scripted word stands for one thought token.
             let trace = traces.isEmpty ? "Scripted reasoning." : traces.removeFirst()
             var tokens = 0
             var ending = ThinkingReceipt.Ending.closed
             buffer.beginThinking(); buffer.stage("Thinking")
+            let thoughtStart = ProcessInfo.processInfo.systemUptime
             for word in trace.split(separator: " ") {
                 try cancellation.check()
                 if delay > 0 { try await Task.sleep(nanoseconds: delay) }
+                if measured.firstTokenSeconds == nil { measured.firstTokenSeconds = ProcessInfo.processInfo.systemUptime - begun }
                 buffer.appendThought(String(word) + " "); tokens += 1
                 if control.answerRequested { ending = .answerNow; break }
                 if tokens >= thinking.budgetTokens { ending = .budget; break }
             }
             buffer.endThinking(ending)
+            measured.thoughtTokens = tokens; measured.thoughtSeconds = ProcessInfo.processInfo.systemUptime - thoughtStart
             turn.thinking = ThinkingReceipt(level: thinking.level, budgetTokens: thinking.budgetTokens, tokens: tokens, seconds: buffer.thinkingSeconds, ending: ending)
         }
+        let answerStart = ProcessInfo.processInfo.systemUptime
         for character in turn.text {
             try cancellation.check()
             if delay > 0 { try await Task.sleep(nanoseconds: delay) }
+            if measured.firstTokenSeconds == nil { measured.firstTokenSeconds = ProcessInfo.processInfo.systemUptime - begun }
+            buffer.countAnswerToken()
             _ = buffer.append(String(character)); buffer.stage("Simulated response")
         }
+        measured.answerTokens = turn.text.count; measured.answerSeconds = ProcessInfo.processInfo.systemUptime - answerStart
+        if turn.metrics == nil { turn.metrics = measured }
         try cancellation.check(); return turn
     }
     public func unload() {}
