@@ -36,6 +36,17 @@ def main():
     assert failures == [
         ("Sources/Slotstream/RealDrop.swift", 90.31, 100.0 * 374 / 417)
     ]
+
+    # Floors are stored to two decimals. SlotpackDownload.swift's floor, 310 of
+    # 319 lines, was written as 97.18, above the 97.1787 it measured, so CI
+    # failed a timing-dependent drop of exactly two lines (2026-09-21).
+    rounded = {"Sources/Slotstream/Rounded.swift": round(100.0 * 310 / 319, 2)}
+    failures, _, _ = compare({"Sources/Slotstream/Rounded.swift": (308, 319)}, rounded)
+    assert failures == []
+    failures, _, _ = compare({"Sources/Slotstream/Rounded.swift": (307, 319)}, rounded)
+    assert failures == [
+        ("Sources/Slotstream/Rounded.swift", 97.18, 100.0 * 307 / 319)
+    ]
     print("coverage ratchet checks pass")
 
 

@@ -60,7 +60,10 @@ def compare(measured, floor):
         # in files below 1,000 lines, so use the larger of 0.1 point and two
         # current source lines. Larger regressions still fail.
         slack = max(0.1, 200.0 / found) if found else 0.1
-        if now + slack < was:
+        # Floors are stored to two decimals, so one can sit up to 0.005 point
+        # above the coverage it recorded. Without this, a file whose floor had
+        # rounded up failed a drop of exactly two lines.
+        if now + slack + 0.005 < was:
             failures.append((path, was, now))
         elif now > was + slack:
             gains.append((path, was, now))
