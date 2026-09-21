@@ -85,8 +85,13 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try await runtime.saveDraft(threadID: "home", text: "Draft survives resource changes")
     _ = try await runtime.submit(threadID: "home", text: "A bounded question", nonce: "perf-1")
     try await eventually { await probe.calls == 1 }
-    try await runtime.setPerformancePreferences(.init(budget: .custom, customGB: 10))
-    try await runtime.setPerformancePreferences(.init(budget: .custom, customGB: 9))
+    // The runtime checks a custom limit against the Mac it runs on. A Mac too
+    // small for the 10 GB test limit, such as a CI runner, runs the same
+    // coalescing and handoff with Automatic preferences.
+    let budget: PerformancePreferences.Budget =
+        (try? PerformancePolicy.validate(.init(budget: .custom, customGB: 10), on: .current())) != nil ? .custom : .automatic
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 10))
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9))
     let earlyChanges = await probe.changes
     try verifyPerformance(earlyChanges.isEmpty, "budget change never interrupts current response")
     do { try await runtime.unload(); throw SevraError.refused("CHECK FAILED: released active model") }
@@ -97,7 +102,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try await runtime.unload()
     try verifyPerformance(await probe.releases == 1, "explicit idle release")
     await probe.holdSettings(true)
-    let changing = Task { try await runtime.setPerformancePreferences(.init(budget: .custom, customGB: 10)) }
+    let changing = Task { try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 10)) }
     try await eventually { await probe.configuring }
     _ = try await runtime.submit(threadID: "home", text: "Accepted while changing budget", nonce: "perf-2")
     try verifyPerformance(await probe.calls == 1, "new request waits for settings handoff")
