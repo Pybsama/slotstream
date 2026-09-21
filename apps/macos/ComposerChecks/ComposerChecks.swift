@@ -16,6 +16,15 @@ private func check(_ condition: Bool, _ label: String, line: Int = #line) throws
     }
     throw Failure("Timed out: " + label)
 }
+/// Waits on the clock for work a timer schedules, which yielding cannot reach.
+/// A shared CI Mac can run a debounced save long after its delay.
+@MainActor private func within(_ seconds: Double, _ label: String, _ predicate: () -> Bool) async throws {
+    let deadline = Date().addingTimeInterval(seconds)
+    while !predicate() {
+        guard Date() < deadline else { throw Failure("Timed out: " + label) }
+        try await Task.sleep(nanoseconds: 5_000_000)
+    }
+}
 @MainActor private final class Gate {
     var entered = false
     var continuation: CheckedContinuation<Void, Never>?
@@ -159,10 +168,11 @@ private func check(_ condition: Bool, _ label: String, line: Int = #line) throws
             try await run("debounce saves only the newest edit and cancels pending work after Send") {
                 let store = Store(), session = try await store.session(delay: 10_000_000)
                 for n in 0..<100 { session.edit("draft \(n)") }
-                try await Task.sleep(nanoseconds: 40_000_000)
-                try check(session.saved && store.writes.count == 1, "one debounced save")
+                try await within(10, "debounced save") { session.saved && !store.writes.isEmpty }
+                try check(store.writes.count == 1 && store.drafts["home"]?.text == "draft 99", "one debounced save of the newest edit")
                 session.edit("send now"); try check(await session.send(), "send before debounce")
-                try await Task.sleep(nanoseconds: 40_000_000)
+                // Nothing may be saved after Send; give a pending save twenty delays to appear.
+                try await Task.sleep(nanoseconds: 200_000_000)
                 try check(session.text.isEmpty && session.saved && store.drafts["home"]?.text == "", "no stale restoration")
                 try check(store.messages.count == 1 && session.issue == nil, "one message, no warning")
                 session.finish()
