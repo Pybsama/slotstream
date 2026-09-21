@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-09-21T15:39:18.469892Z
+updated: 2026-09-21T18:34:09.333383Z
 ---
 
 # records/decisions
 
+- [[records/decisions/coverage-as-review-feedback]] — Coverage as review feedback
 - [[records/decisions/adaptive-memory-limits]] — Custom process ceilings remain adaptive above the automatic default; hardware headroom, diagnostics and startup agree.
 - [[records/decisions/automatic-context-window-per-machine]] — Auto picks the largest of 32,768, 65,536, 131,072 and 262,144 tokens that keeps speculative decoding, retains one conversation and adds at most 10% to a typical request
 - [[records/decisions/automatic-context-preserves-unmeasured-cache]] — Automatic context preserves cache whose loss is unmeasured

@@ -4614,10 +4614,21 @@ python3 Tools/coverage_ratchet.py coverage.info
 built with the profiling instrumentation directly and `llvm-cov` reads what it
 wrote; the CLT ships `llvm-profdata` and `llvm-cov`, just not the test modules.
 
-`Tools/coverage-floor.json` sets a minimum for each file. This catches a loss
-of coverage in an existing file even if new code raises the overall
-percentage. Use `--update` only for a deliberate change, with an explanation
-in the commit.
+Coverage is a review aid. Historical per-file percentages do not block CI.
+The job still fails on a build error, a failed instrumented check, or a missing
+or invalid report. It uploads LCOV and puts per-file changes in the job summary.
+`Tools/coverage-floor.json` is the retained comparison snapshot; its historical
+name is kept for compatibility. `--update` deliberately refreshes that snapshot,
+and is not needed to make CI pass.
+
+Inspect uncovered behavior in each change. Memory limits, recovery, cache
+integrity, cancellation, download verification and public API compatibility
+require meaningful boundary and failure checks. Regression checks should fail
+when the bug is reintroduced. All existing correctness suites remain required.
+Context-proxy, CLI and real-model checks run separately and are not included
+in this coverage report. A narrower coverage gate needs reliable measurement
+and a specific risk justification before adoption. See the
+[coverage policy](../db/records/decisions/coverage-as-review-feedback.md).
 
 <a id="where-the-coverage-is-not"></a>
 

@@ -1,7 +1,7 @@
 ---
 type: index
 scope: root
-updated: 2026-09-21T15:39:18.469892Z
+updated: 2026-09-21T18:34:09.333383Z
 ---
 
 # Knowledge base index
@@ -12,10 +12,10 @@ updated: 2026-09-21T15:39:18.469892Z
 - [[sources/references/index|References]] (1) — vendor documentation and prior art cited by measurements and design
 - [[sources/runs/index|Runs]] (637) — raw tool output captured before a number was transcribed
 
-## Records (390)
+## Records (391)
 - [[records/analyses/index|Analyses]] (3)
 - [[records/claims/index|Claims]] (138) — every number on a public surface, with the measurement that supports it and the gate that guards it
-- [[records/decisions/index|Decisions]] (37) — what was decided, on which evidence, and what would reverse it
+- [[records/decisions/index|Decisions]] (38) — what was decided, on which evidence, and what would reverse it
 - [[records/design/index|Design]] (31) — PLAN.md's design sections: goal, ground truth, byte math, architecture, correctness strategy, references
 - [[records/machines/index|Machines]] (6) — the machines measurements ran on
 - [[records/measurements/index|Measurements]] (147) — every MEASUREMENTS.md section as a record: what was measured, how, on which machine, and whether it still stands

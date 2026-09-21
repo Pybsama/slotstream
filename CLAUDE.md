@@ -573,6 +573,10 @@ still quoted in commit history and both are wrong.
   `Tools/check_sevra_mac.sh` and the Xcode build (`Tools/build_sevra_xcode.sh`)
   when `apps/macos` or the engine it builds on changes. The app's real-model
   checks need the weights and stay on a development Mac.
+- Coverage percentages are advisory review feedback. Build, instrumented-test
+  and report-generation failures still block CI; never make the whole coverage
+  job optional. Inspect uncovered safety behavior and retain all correctness
+  gates. See [coverage policy](db/records/decisions/coverage-as-review-feedback.md).
 - The sandbox proxies localhost HTTP clients (curl/urllib): test the server
   with `nc` raw sockets, or the app's Browser pane (which reaches localhost).
 - Launch background servers with `(nohup ... &)` subshells; TaskStop kills

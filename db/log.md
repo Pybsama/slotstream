@@ -1944,3 +1944,6 @@ The baseline notes that CI now builds the Xcode app target, which shows that it 
 ## [2026-09-21 15:39] validate | records/decisions/adaptive-memory-limits.md
 Prepared a memory-only commit over 5d24e18, excluding concurrent issue-21 changes. Clean optimized local build, 964828 pure assertions, 420 CLI cases, 54 T0 groups, 22 verification/seven planner/four consumer harness checks and the previously blocked real fractional-ceiling server pass. Retained exact source hashes and a verified 22-member archive; owned server reaped. Zero validation errors and two historical warnings. User authorizes commit/push only; Unreleased marks next-release intent without a date, version bump, tag or publication.
 
+## [2026-09-21 18:35] create | records/decisions/coverage-as-review-feedback.md
+Made historical coverage percentages advisory while keeping instrumented checks and report errors blocking; added GitHub summary feedback and direct memory-budget refusal cases. Coverage CLI success/failure checks, static harness tests and isolated context-policy suite pass; original CI LCOV remains visible as advisory findings. Documentation, projections, claims and whitespace checks pass. Brain validation has zero errors and the two existing historical log warnings. Changes remain local and uncommitted.
+

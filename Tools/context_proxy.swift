@@ -212,6 +212,32 @@ import Foundation
             check("M01", "inconsistent hand-built adaptive policy is refused",
                 (try? Planner.validateMemoryBudget(manual, availableGB: 62)) == nil)
         }
+        // Direct callers can bypass planning. Validate their device values,
+        // unavailable observations and underfunded targets before allocation.
+        func manualBudget(ram: Double = 64, workingSet: Double = 48,
+                          target: Double? = 10) -> MemoryPlan {
+            MemoryPlan(source: .memoryGB, slots: Geometry.floorSlots, targetGB: target,
+                ramGB: ram, workingSetGB: workingSet, ramPercent: 70,
+                availableGB: 62, clamped: false, prefillChunk: 256,
+                prefixCacheTokens: 0, notes: [], simulated: true)
+        }
+        for invalid in [Double.nan, .infinity, -1, 0] {
+            for plan in [manualBudget(ram: invalid), manualBudget(workingSet: invalid),
+                         manualBudget(target: invalid)] {
+                check("M01", "invalid direct memory budget is refused",
+                    (try? Planner.validateMemoryBudget(plan, availableGB: 62)) == nil)
+            }
+        }
+        let valid = manualBudget()
+        check("M01", "valid direct budget is accepted",
+            (try? Planner.validateMemoryBudget(valid, availableGB: 62)) != nil)
+        for unavailable in [nil, Double.nan, -1.0] as [Double?] {
+            check("M01", "unknown or invalid availability cannot authorize allocation",
+                (try? Planner.validateMemoryBudget(valid, availableGB: unavailable)) == nil)
+        }
+        check("M01", "a direct target below the allocation is refused",
+            (try? Planner.validateMemoryBudget(manualBudget(target: valid.expectedPeakGB / 2),
+                                               availableGB: 62)) == nil)
     }
 
     static func defaults() throws {
