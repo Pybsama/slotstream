@@ -568,6 +568,11 @@ still quoted in commit history and both are wrong.
 - SwiftPM cannot compile Metal shaders with CLT only: the Makefile colocates
   the prebuilt `mlx.metallib` next to the binary. `swift test` is unavailable
   (no XCTest in CLT) — `Tools/verify.sh` is the acceptance suite.
+- CI is split by product. `ci.yml` builds and checks the engine and skips pushes
+  that change only docs, the brain or `apps/`. `sevra-mac.yml` runs
+  `Tools/check_sevra_mac.sh` and the Xcode build (`Tools/build_sevra_xcode.sh`)
+  when `apps/macos` or the engine it builds on changes. The app's real-model
+  checks need the weights and stay on a development Mac.
 - The sandbox proxies localhost HTTP clients (curl/urllib): test the server
   with `nc` raw sockets, or the app's Browser pane (which reaches localhost).
 - Launch background servers with `(nohup ... &)` subshells; TaskStop kills
