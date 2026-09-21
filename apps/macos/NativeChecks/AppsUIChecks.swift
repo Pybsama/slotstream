@@ -512,7 +512,11 @@ final class RecordingBroker: @unchecked Sendable {
         model.panel = "Apps"
         try await pause(0.8)
         lines = try read(try snapshot("07-apps-and-skills"))
-        check(visible("Apps & Skills", lines) && visible("Open", lines) && visible("/app", lines), "Apps & Skills lists the app and the built-in skills")
+        // Text recognition can read a command's leading slash as a letter, "/app"
+        // as "lapp" on a CI runner's rendering, so the built-in skills are found
+        // by their descriptions.
+        check(visible("Apps & Skills", lines) && visible("Open", lines) && visible("Create or change a small app", lines)
+              && visible("Turn a repeatable workflow into a skill", lines), "Apps & Skills lists the app and the built-in skills")
         window.appearance = NSAppearance(named: .darkAqua)
         try await pause(0.6)
         _ = try snapshot("07-apps-and-skills-dark")
