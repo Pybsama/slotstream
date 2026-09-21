@@ -132,9 +132,10 @@ public final class Engine {
                     availableGB: p.availableGB, clamped: p.clamped, prefillChunk: p.prefillChunk,
                     prefixCacheTokens: capped, mtpEnabled: p.mtpEnabled, visionEnabled: p.visionEnabled,
                     visionResidentReserved: p.visionResidentReserved, maxContextTokens: newValue,
-                    notes: p.notes, runtimeAllocationPolicy: p.runtimeAllocationPolicy,
+                    notes: p.notes, simulated: p.simulated, runtimeAllocationPolicy: p.runtimeAllocationPolicy,
                     maxPrefillWaitMinutes: p.maxPrefillWaitMinutes, contextQualification: p.contextQualification,
-                    lookaheadReserveBytes: p.lookaheadReserveBytes, decodeLookahead: p.decodeLookahead))
+                    lookaheadReserveBytes: p.lookaheadReserveBytes, decodeLookahead: p.decodeLookahead,
+                    memoryLimitGB: p.memoryLimitGB))
             }
         }
     }
@@ -305,6 +306,9 @@ public final class Engine {
         // allocation and 39 GB of swap. The flag travels on the plan so this
         // cannot be forgotten at a call site.
         if plan?.simulated == true { throw SlotstreamError.simulatedDeviceCannotLoad }
+        if let plan, plan.source == .auto || plan.source == .memoryGB || plan.memoryLimitGB != nil {
+            try Planner.validateMemoryBudget(plan, availableGB: Planner.deviceAvailableGB())
+        }
         let context = try ContextConfiguration(maxContextTokens: plan?.maxContextTokens ?? ContextPolicy.defaultTokens,
             maxPrefillWaitMinutes: plan?.maxPrefillWaitMinutes ?? ContextConfiguration.defaultWaitMinutes,
             qualification: plan?.contextQualification ?? false)
@@ -703,7 +707,7 @@ public final class Engine {
                 let ledger = charged.memoryLedger
                 let peak = ContextBytes.sum(ledger.expectedPeakBytes - ledger.prefillBytes,
                     max(ledger.prefillBytes, workspaceBytes))
-                if let target = charged.targetGB, Double(peak) > target * 1e9 {
+                if let target = charged.targetGB.map({ min($0, charged.memoryLimitGB ?? $0) }), Double(peak) > target * 1e9 {
                     var failure = RequestFailure(.insufficientMemory,
                         "image attention workspace exceeds this process memory target; resize the image or raise --memory-gb")
                     failure.requiredBytes = peak
@@ -1192,7 +1196,7 @@ public final class Engine {
         // request owns the generation gate. Keep explicit process targets and
         // the device working set separate from reclaimable-memory admission.
         generator.readScopeFootprintLimitBytes = currentPlan.flatMap { plan in
-            let limit = min(plan.targetGB ?? plan.expectedPeakGB, plan.workingSetGB)
+            let limit = min(plan.targetGB ?? plan.expectedPeakGB, plan.memoryLimitGB ?? .infinity, plan.workingSetGB)
             return limit.isFinite && limit > 0 && limit < Double(Int.max) / 1e9
                 ? Int(limit * 1e9) : 0
         }

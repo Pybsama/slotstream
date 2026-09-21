@@ -251,6 +251,11 @@ slotstream serve --memory-gb 16
 default text context; larger windows and resident components need more room.
 An explicit target disables automatic cache resizing, while loading and
 request-memory safeguards remain active. Preview it before starting.
+The development version also offers `--memory-limit-gb`: an upper process
+budget with automatic cache resizing. It can exceed the default model ceiling
+while remaining bounded by supported GPU/system headroom and live memory.
+The chosen limit is retained across shrink and recovery. Diagnostics and
+budgeted startup share the same feasibility check.
 See the [memory options](CLI.md#memory-options)
 for the other controls and their precedence.
 

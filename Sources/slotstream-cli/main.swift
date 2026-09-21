@@ -62,6 +62,17 @@ struct ModelOptions: ParsableArguments {
                 """))
     var memoryGB: Double?
 
+    @Option(name: .customLong("memory-limit-gb"), help: ArgumentHelp(
+        "Use up to this many GB, adapting the cache as available memory changes.",
+        discussion: """
+            Replaces the default model ceiling while keeping GPU and system headroom. \
+            The cache shrinks when other apps need memory and can grow back within \
+            this limit. --max-ram-percent can further restrict it. Cannot be combined \
+            with --memory-gb, --pool-gb or --experts-per-layer, which pin the cache. \
+            Use doctor with the same options to see the budget available now.
+            """))
+    var memoryLimitGB: Double?
+
     @Option(
         name: .customLong("experts-per-layer"),
         help: ArgumentHelp(
@@ -91,8 +102,9 @@ struct ModelOptions: ParsableArguments {
                 still sizes down on its own when they are actually holding \
                 memory. It cannot raise the model's default ceiling, which \
                 reflects measured tradeoffs on tested hardware. Use \
-                --memory-gb for an explicit target beyond that ceiling. \
-                Ignored when an explicit memory knob is given.
+                --memory-limit-gb for an adaptive ceiling beyond that default; \
+                this percentage can restrict it further. Ignored when a fixed \
+                memory or cache size is given.
                 """))
     var maxRAMPercent: Double?
 
@@ -130,11 +142,28 @@ struct ModelOptions: ParsableArguments {
     // all see the real directory; Foundation will not list a symlinked one.
     var modelURL: URL { ModelLocator.resolve(model).resolvingSymlinksInPath() }
 
+    func validate() throws {
+        if let limit = memoryLimitGB {
+            guard limit.isFinite, limit >= Planner.minMemoryGB else {
+                throw ValidationError("--memory-limit-gb must be finite and at least \(Planner.minMemoryGB) GB")
+            }
+            guard memoryGB == nil, poolGB == nil, expertsPerLayer == nil else {
+                throw ValidationError("--memory-limit-gb cannot be combined with --memory-gb, --pool-gb or --experts-per-layer")
+            }
+        }
+    }
+
     func mtpMode() throws -> Planner.MTPMode {
         guard let m = Planner.MTPMode(rawValue: mtp) else {
             throw PlanError("--mtp must be auto, on, or off (got \(mtp))")
         }
         return m
+    }
+
+    func rejectAdaptiveLimitForFixedDiagnostic() throws {
+        guard memoryLimitGB == nil else {
+            throw ValidationError("--memory-limit-gb does not apply to this fixed diagnostic profile; use run, serve or doctor to exercise an adaptive budget")
+        }
     }
 
     func visionMode() throws -> Planner.VisionMode {
@@ -164,13 +193,16 @@ struct ModelOptions: ParsableArguments {
         }
         try ensureWeights()
         let base = try Planner.plan(
-            expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB,
+            expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB, memoryLimitGB: memoryLimitGB,
             ramPercent: maxRAMPercent,
             mtp: requireMTP ? .on : requestedMTP, mtpAvailable: MTPWeights.present(modelDir: modelURL),
             vision: visionMode(), visionAvailable: visionAvailable(),
             maxContextTokens: maxContext, qualification: qualification,
             runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: modelURL))
         let plan = try runtimePlan(base, prefixCacheEnabled: prefixCacheEnabled).withRequestPolicy(configuration)
+        if plan.source == .auto || plan.source == .memoryGB {
+            try Planner.validateMemoryBudget(plan, availableGB: plan.availableGB)
+        }
         FileHandle.standardError.write((plan.banner() + "\n").data(using: .utf8)!)
         return plan
     }
@@ -185,7 +217,7 @@ struct ModelOptions: ParsableArguments {
         }
         _ = try ContextConfiguration(maxPrefillWaitMinutes: maxPrefillWait)
         let policy = try runtimePolicy(prefixCacheEnabled: prefixCacheEnabled)
-        let request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB,
+        let request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB, memoryLimitGB: memoryLimitGB,
             maxRAMPercent: maxRAMPercent, mtp: try mtpMode(), vision: try visionMode())
         try ensureWeights()
         let resolved = try Planner.resolveContextWindow(.automatic, request: request, on: .current(),
@@ -194,6 +226,9 @@ struct ModelOptions: ParsableArguments {
         let configuration = try ContextConfiguration(maxContextTokens: resolved.plan.maxContextTokens,
             maxPrefillWaitMinutes: maxPrefillWait)
         let plan = try runtimePlan(resolved.plan, prefixCacheEnabled: prefixCacheEnabled).withRequestPolicy(configuration)
+        if plan.source == .auto || plan.source == .memoryGB {
+            try Planner.validateMemoryBudget(plan, availableGB: plan.availableGB)
+        }
         var announce = plan.banner() + "\n"
         if let automatic = resolved.automatic {
             announce += automatic.announcement(served: plan.maxContextTokens) + "\n"
@@ -205,7 +240,7 @@ struct ModelOptions: ParsableArguments {
     /// The window `serve --max-context auto` would choose on this Mac now,
     /// with these options. Prints nothing and downloads nothing.
     func automaticWindow() throws -> Int {
-        let request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB,
+        let request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB, memoryLimitGB: memoryLimitGB,
             maxRAMPercent: maxRAMPercent, mtp: try mtpMode(), vision: try visionMode())
         return try Planner.resolveContextWindow(.automatic, request: request, on: .current(),
             mtpAvailable: MTPWeights.present(modelDir: modelURL), visionAvailable: visionAvailable(),
@@ -685,6 +720,9 @@ struct Serve: ParsableCommand {
         if plan.source == .auto, !noElastic {
             governor = MemoryGovernor(engine: engine)
             governor?.start()
+        } else if noElastic {
+            FileHandle.standardError.write(
+                "elastic: off (--no-elastic); the cache stays at its startup size\n".data(using: .utf8)!)
         } else if plan.source != .auto, !noElastic {
             FileHandle.standardError.write(
                 "elastic: off — an explicit size is pinned; omit the size flag for elastic auto\n"
@@ -730,6 +768,7 @@ struct Parity: ParsableCommand {
     @Option(help: "Write swift layer_{i}.bin dumps here") var out: String?
 
     func run() throws {
+        try model.rejectAdaptiveLimitForFixedDiagnostic()
         guard layers >= 1, layers <= Geometry.layers else {
             throw ValidationError("--layers must be between 1 and \(Geometry.layers)")
         }
@@ -888,7 +927,7 @@ struct Doctor: ParsableCommand {
             maxContext = tokens
         } else {
             let tierRequest = PlanRequest(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
-                memoryGB: model.memoryGB, maxRAMPercent: model.maxRAMPercent,
+                memoryGB: model.memoryGB, memoryLimitGB: model.memoryLimitGB, maxRAMPercent: model.maxRAMPercent,
                 mtp: try model.mtpMode(), vision: try model.visionMode())
             let mtpPresent = MTPWeights.present(modelDir: model.modelURL)
             let visionPresent = model.visionAvailable()
@@ -907,7 +946,7 @@ struct Doctor: ParsableCommand {
         }
         let configuration = try ContextConfiguration(maxContextTokens: maxContext, maxPrefillWaitMinutes: maxPrefillWait)
         let request = PlanRequest(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
-            memoryGB: model.memoryGB, maxRAMPercent: model.maxRAMPercent,
+            memoryGB: model.memoryGB, memoryLimitGB: model.memoryLimitGB, maxRAMPercent: model.maxRAMPercent,
             mtp: try model.mtpMode(), vision: try model.visionMode(), maxContextTokens: maxContext)
         let feasibility = Planner.contextFeasibility(request, on: device,
             mtpAvailable: MTPWeights.present(modelDir: model.modelURL),
@@ -917,7 +956,7 @@ struct Doctor: ParsableCommand {
         if feasibility.requestedPlan == nil, maxContext <= ContextPolicy.defaultTokens,
            model.expertsPerLayer != nil || model.poolGB != nil {
             advisory = try Planner.plan(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
-                memoryGB: model.memoryGB, ramGB: device.ramGB, workingSetGB: device.workingSetGB,
+                memoryGB: model.memoryGB, memoryLimitGB: model.memoryLimitGB, ramGB: device.ramGB, workingSetGB: device.workingSetGB,
                 availableGB: device.availableGB, ramPercent: model.maxRAMPercent,
                 mtp: model.mtpMode(), mtpAvailable: MTPWeights.present(modelDir: model.modelURL),
                 vision: model.visionMode(), visionAvailable: model.visionAvailable(),
@@ -952,10 +991,13 @@ struct Doctor: ParsableCommand {
         if let automatic { print(automatic.report(served: maxContext)) }
         print("""
 
-        knobs (first one given wins; with none, auto is the default):
-          --memory-gb G           easiest: total memory the process may use
+        memory controls (with none, auto is the default):
+          --memory-limit-gb G     adaptive ceiling; cache shrinks and recovers within it
+          --memory-gb G           total process budget with a fixed cache
           --experts-per-layer N   precise: cache N of 512 per layer (pool = N x 0.133 GB)
           --pool-gb G             raw pool size (1 GB = 7.5 experts/layer)
+        Use the adaptive ceiling alone. Among fixed controls, experts-per-layer
+        takes precedence over pool-gb, then memory-gb.
         """)
         print(String(
             format: "min ~%.0f/layer = %.1f GB total. The pool is one global cache shared across",
@@ -978,6 +1020,7 @@ struct Doctor: ParsableCommand {
                 row = try Planner.plan(expertsPerLayer: nil, poolGB: nil, memoryGB: t,
                     ramGB: device.ramGB, workingSetGB: device.workingSetGB, availableGB: device.availableGB,
                     maxContextTokens: maxContext, simulated: true, runtimePolicy: model.runtimePolicy())
+                try Planner.validateMemoryBudget(row, availableGB: device.availableGB)
             } catch {
                 // Name the constraint: a target above what this Mac can hold
                 // is a different answer from a target too small for the window.
@@ -1035,6 +1078,7 @@ struct ElasticCheck: ParsableCommand {
     var bigSlots: Int = 960
 
     func run() throws {
+        try model.rejectAdaptiveLimitForFixedDiagnostic()
         let sem = DispatchSemaphore(value: 0)
         var result: Result<Void, Error> = .success(())
         let tokens = maxTokens
@@ -1091,7 +1135,7 @@ struct ElasticDrill: ParsableCommand {
     var slots: Int = 4000
     @Flag(help: "Skip the 60 s grow cooldown wait and only assert the shrink half")
     var quick = false
-    @Option(help: "Hard total-memory ceiling for this diagnostic; the full governor drill needs an explicit ceiling above the ordinary 10 GB test budget")
+    @Option(help: "Hard total-memory ceiling for this diagnostic; use --memory-limit-gb 10 for small-cache pressure recovery, or an explicit larger ceiling for the full availability drill")
     var maxMemoryGB: Double = 10
 
     func validate() throws {
@@ -1129,10 +1173,9 @@ struct ElasticDrill: ParsableCommand {
                 // the governor take a 25 GB pool and drove tens of GB of swap —
                 // the seam avoids *needing* pressure, it does not make the
                 // resulting allocation imaginary.
-                // A shrink can only be demonstrated from a pool at least the
-                // floor plus both policy dead-bands: shrink needs 1 GB and the
-                // later recovery needs 2 GB. Below that, the governor correctly
-                // refuses to grow and the drill would misreport a policy failure.
+                // The availability-driven drill crosses both ordinary deadbands.
+                // A smaller adaptive profile instead donates on a bounded
+                // pressure event and verifies restoration below the grow band.
                 // The planner's round-trip reserves prefill/cache state from
                 // this budget too, so use 3 GB to leave the desired expert pool
                 // safely more than 2 GB above the floor after that reservation.
@@ -1143,14 +1186,15 @@ struct ElasticDrill: ParsableCommand {
                     + Planner.prefillCostGB(Planner.prefillChunkFor(poolBudgetGB: minStartPool))
                     + Planner.prefixCacheCostGB(tokens: Planner.prefixCacheTokensFor(poolBudgetGB: minStartPool))
                     + Planner.planningMarginGB
-                guard minimumTarget <= memoryCeiling else {
+                guard model.memoryLimitGB != nil || minimumTarget <= memoryCeiling else {
                     throw PlanError(String(format:
                         "elastic-drill needs at least a %.3f GB total target, above --max-memory-gb %.3f; "
                         + "the normal governor deadbands require this larger test. "
                         + "Use an explicit sufficient ceiling only with that target plus 3 GB physically reclaimable.",
                         minimumTarget, memoryCeiling))
                 }
-                let minAvailable = max(12.0, minStartPool * 3)
+                let minAvailable = model.memoryLimitGB.map { min($0, memoryCeiling) + 3 }
+                    ?? max(12.0, minStartPool * 3)
                 guard let realAvail = Planner.deviceAvailableGB(), realAvail >= minAvailable else {
                     print(String(format:
                         "ELASTIC DRILL SKIP: needs ~%.0f GB reclaimable to leave room for a "
@@ -1169,16 +1213,34 @@ struct ElasticDrill: ParsableCommand {
                 let poolCeiling = Geometry.gb(initialSlots)
                 let chunk = Planner.prefillChunkFor(poolBudgetGB: poolCeiling)
                 let cacheTokens = Planner.prefixCacheTokensFor(poolBudgetGB: poolCeiling)
-                let target = poolCeiling + Planner.fixedFootprintGB
+                // A supplied adaptive ceiling must start from that planner's
+                // cache/workspace split, not the legacy hand-sized arena. The
+                // two splits can fit the same budget but are not interchangeable
+                // when checking whether recovery restores the initial cache.
+                let adaptivePlan: MemoryPlan?
+                if let limit = model.memoryLimitGB {
+                    guard limit <= memoryCeiling else {
+                        throw PlanError("elastic-drill adaptive limit exceeds --max-memory-gb")
+                    }
+                    adaptivePlan = try Planner.plan(PlanRequest(memoryLimitGB: limit, mtp: .off, vision: .off), on: .current())
+                        .withRequestPolicy(ContextConfiguration(maxPrefillWaitMinutes: 17))
+                    guard let adaptivePlan, adaptivePlan.slots > Geometry.floorSlots else {
+                        throw PlanError("elastic-drill adaptive limit leaves no cache above the floor to donate")
+                    }
+                } else { adaptivePlan = nil }
+                let target = adaptivePlan?.targetGB ?? (poolCeiling + Planner.fixedFootprintGB
                     + Planner.prefillCostGB(chunk)
                     + Planner.prefixCacheCostGB(tokens: cacheTokens)
-                    + Planner.planningMarginGB
+                    + Planner.planningMarginGB)
                 guard target <= memoryCeiling else {
                     throw PlanError(String(format:
                         "elastic-drill needs a %.3f GB total target, above --max-memory-gb %.3f; "
                         + "the normal governor deadbands require this larger test. "
                         + "Use an explicit sufficient ceiling only with that target plus 3 GB physically reclaimable.",
                         target, memoryCeiling))
+                }
+                if let limit = model.memoryLimitGB, target > limit {
+                    throw PlanError("elastic-drill starting budget exceeds --memory-limit-gb")
                 }
                 guard realAvail >= target + 3 else {
                     throw PlanError(String(format:
@@ -1213,15 +1275,23 @@ struct ElasticDrill: ParsableCommand {
                         note("ELASTIC DRILL MEMORY " + String(decoding: data, as: UTF8.self))
                     }
                 }
-                let plan = MemoryPlan(
+                let plan = adaptivePlan ?? MemoryPlan(
                     source: .auto, slots: initialSlots, targetGB: target,
                     ramGB: Planner.deviceRAMGB(),
                     workingSetGB: Planner.deviceWorkingSetGB(),
                     ramPercent: Planner.defaultRAMPercent,
                     availableGB: realAvail, clamped: false,
                     prefillChunk: chunk, prefixCacheTokens: cacheTokens,
-                    notes: ["elastic drill bounded test plan"])
+                    notes: ["elastic drill bounded test plan"], maxPrefillWaitMinutes: 17,
+                    memoryLimitGB: model.memoryLimitGB)
                 let engine = try await Engine(modelDir: model.modelURL, plan: plan)
+                // Serve assigns its configured context after loading. Exercise
+                // that real plan-copy path before allowing the governor to run.
+                engine.maxContextTokens = plan.maxContextTokens
+                guard engine.currentPlan?.memoryLimitGB == plan.memoryLimitGB,
+                      engine.currentPlan?.maxPrefillWaitMinutes == plan.maxPrefillWaitMinutes else {
+                    throw PlanError("elastic-drill context assignment lost the adaptive ceiling or request deadline")
+                }
                 func checkMemory(nextSlots: Int? = nil) throws {
                     let additional = nextSlots.map { $0 > engine.model.pool.slots ? Geometry.gb($0) : 0 } ?? 0
                     guard let available = Planner.deviceAvailableGB(), available >= 3 + additional else {
@@ -1235,7 +1305,7 @@ struct ElasticDrill: ParsableCommand {
                 }
                 try checkMemory()
                 note(String(format: "  (machine has %.1f GB reclaimable; drill capped at a "
-                    + "%.1f GB pool)", realAvail, poolCeiling))
+                    + "%.1f GB pool)", realAvail, plan.poolGB))
 
                 var p = SampleParams.greedy
                 p.maxTokens = 20
@@ -1271,14 +1341,17 @@ struct ElasticDrill: ParsableCommand {
                     s0, Geometry.perLayer(s0), before))
 
                 // --- shrink: pretend the machine just got busy
-                Planner.availabilityOverride = 2.0
+                let smallRecovery = Geometry.gb(s0 - Geometry.floorSlots) < 2
+                let shrinkAvailability = smallRecovery ? min(realAvail, target + 3) : 2.0
+                Planner.availabilityOverride = shrinkAvailability
                 func inputs(at available: Double) -> GovernorPolicy.Inputs {
                     GovernorPolicy.Inputs(currentSlots: engine.model.pool.slots, availableGB: available,
                         ramGB: plan.ramGB, workingSetGB: plan.workingSetGB, ramPercent: plan.ramPercent,
                         maxContextTokens: engine.maxContextTokens,
-                        ownedAdditionalBytes: engine.prefixCache.ownedAdditionalBytes(mtpResident: false))
+                        ownedAdditionalBytes: engine.prefixCache.ownedAdditionalBytes(mtpResident: false),
+                        memoryLimitGB: plan.memoryLimitGB)
                 }
-                func pollBounded() throws {
+                func pollBounded(pressure: GovernorPolicy.Pressure? = nil) throws {
                     guard let available = Planner.availabilityOverride,
                           let desired = GovernorPolicy.desiredPlan(inputs(at: available)),
                           desired.expectedPeakGB <= memoryCeiling,
@@ -1286,12 +1359,20 @@ struct ElasticDrill: ParsableCommand {
                         throw PlanError("elastic-drill stimulus exceeds its bounded starting arena or total-memory ceiling")
                     }
                     try checkMemory(nextSlots: desired.slots)
-                    gov.pollNow()
+                    if let pressure { gov.pressureNow(pressure) } else { gov.pollNow() }
                     try checkMemory()
+                    guard engine.currentPlan?.memoryLimitGB == plan.memoryLimitGB,
+                          engine.currentPlan?.maxPrefillWaitMinutes == plan.maxPrefillWaitMinutes else {
+                        throw PlanError("elastic-drill resize lost the adaptive ceiling or request deadline")
+                    }
+                    if engine.model.pool.slots == desired.slots,
+                       engine.currentPlan?.targetGB != desired.targetGB {
+                        throw PlanError("elastic-drill resize retained a stale startup budget")
+                    }
                 }
-                let shrinkInputs = inputs(at: 2)
+                let shrinkInputs = inputs(at: shrinkAvailability)
                 let startCache = engine.prefixCache.maxTokens
-                try pollBounded()
+                try pollBounded(pressure: smallRecovery ? .warning : nil)
                 let s1 = engine.model.pool.slots
                 let underPressure = try gen()
                 note(String(format: "  squeeze: %d slots (~%.0f/layer) -> %@",
@@ -1331,17 +1412,18 @@ struct ElasticDrill: ParsableCommand {
                 // pool; deriving it from the hand-built target loses the
                 // planner's nonlinear prefill/cache reservations and can land
                 // below the 2 GB grow dead-band.
-                func desiredSlots(at available: Double) -> Int {
-                    GovernorPolicy.desiredSlots(inputs(at: available)) ?? s1
+                func restoresBudget(at available: Double) -> Bool {
+                    guard let p = GovernorPolicy.desiredPlan(inputs(at: available)) else { return false }
+                    return p.slots >= s0 && (!smallRecovery || (p.targetGB ?? 0) >= target)
                 }
                 var low = 0.0
                 var high = min(realAvail, Planner.deviceAvailableGB() ?? 0)
-                if desiredSlots(at: high) < s0 {
+                if !restoresBudget(at: high) {
                     fail.append("real reclaimable memory cannot reconstruct the bounded starting pool")
                 } else {
                     for _ in 0 ..< 48 {
                         let mid = (low + high) / 2
-                        if desiredSlots(at: mid) < s0 { low = mid } else { high = mid }
+                        if restoresBudget(at: mid) { high = mid } else { low = mid }
                     }
                 }
                 let recoveryAvailability = high
@@ -1371,6 +1453,7 @@ struct ElasticDrill: ParsableCommand {
                     note(String(format: "  recover: %d slots (~%.0f/layer) -> %@",
                         s2, Geometry.perLayer(s2), recovered))
                     if s2 <= s1 { fail.append("governor did not grow back: \(s1) -> \(s2)") }
+                    if s2 != s0 { fail.append("governor did not restore the complete starting cache: \(s2) instead of \(s0)") }
                     if recovered != before {
                         fail.append("output changed across a grow\n    before: \(before)\n    after:  \(recovered)")
                     }
@@ -1495,6 +1578,7 @@ struct PrefixCheck: ParsableCommand {
     }
 
     func run() throws {
+        try model.rejectAdaptiveLimitForFixedDiagnostic()
         let sem = DispatchSemaphore(value: 0)
         var result: Result<Void, Error> = .success(())
         let tokens = maxTokens
@@ -1701,6 +1785,7 @@ struct NgramGolden: ParsableCommand {
     @Option var tokens: String
 
     func run() throws {
+        try model.rejectAdaptiveLimitForFixedDiagnostic()
         let fields = tokens.split(separator: ",", omittingEmptySubsequences: false)
         let parsed = fields.map { Int64($0.trimmingCharacters(in: .whitespaces)) }
         guard !fields.isEmpty, parsed.allSatisfy({ $0 != nil }) else {
@@ -1730,6 +1815,7 @@ struct DequantGolden: ParsableCommand {
     @Option var gid: Int64 = 12345
 
     func run() throws {
+        try model.rejectAdaptiveLimitForFixedDiagnostic()
         guard gid >= 0 else { throw ValidationError("--gid must not be negative") }
         let index = try CheckpointIndex(dir: model.modelURL)
         let resident = try ResidentWeights(index: index)
@@ -1802,6 +1888,7 @@ struct TemplateCheck: ParsableCommand {
     @Flag var think = false
 
     func run() throws {
+        try model.rejectAdaptiveLimitForFixedDiagnostic()
         let sem = DispatchSemaphore(value: 0)
         var out: [Int] = []
         var err: Error?

@@ -504,6 +504,11 @@ sized the memory plan (`--memory-gb`, `auto`, `--pool-gb` or
 `--experts-per-layer`) and `memory_target_gb` the whole-process target, or
 `null` for a plan without one. Reading the status is not activity.
 
+The development version also reports `memory_limit_gb`: the saved adaptive
+ceiling, or `null` when none was selected. Adaptive plans still use
+`memory_source: "auto"`; their current `memory_target_gb` can be lower than
+the saved limit while other apps need memory.
+
 `POST /slotstream/clients` with `{"pid": 4242}` registers a running process
 of the user the server runs as, and returns `{"clients": 1}`, the number
 registered. A server started with `--idle-exit` keeps running while any

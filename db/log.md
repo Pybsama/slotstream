@@ -1920,6 +1920,18 @@ Thinking controls: live three-line thought preview and the thinking line above a
 ## [2026-09-21 04:38] update | records/design/sevra-spec/implementation-status
 Response details section with verification, the thinking second-read finding and what remains open.
 
+## [2026-09-21 04:45] validate | records/decisions/adaptive-memory-limits.md
+Adaptive memory implementation verified with planner contracts, 399 CLI cases plus two text diagnostics, native policy/UI checks, real deferred changes and a complete bounded shrink/cooldown/regrowth drill. Raw evidence preserved. Store validation: zero errors and two pre-existing historical log warnings; claims and projections pass. No release performed.
+
+## [2026-09-21 05:15] validate | records/decisions/adaptive-memory-limits.md
+Adversarial follow-up reproduced and repaired loss of the saved adaptive ceiling in the public server context setter; covered launch forwarding/status, fixed-diagnostic refusals, simulation isolation and out-of-range native settings. Preserved raw evidence and source snapshots. Passed 416 CLI cases, 964805 proxy assertions, 56 T0 groups, native policy and six UI renders, real server cooldown/request and complete bounded shrink/recovery with exact output. Claims/projections/whitespace pass; store has zero errors and two pre-existing log warnings. No release or real 64 GiB allocation qualification.
+
+## [2026-09-21 05:57] validate | records/decisions/adaptive-memory-limits.md
+Second adversarial pass corrected small-cache recovery after pressure and busy startup, fractional JSON/child-argument precision, bounded guidance and persisted response ceiling wording. Final build passed 420 CLI cases, 964819 pure assertions, 56 T0 groups, native policy/persistence, eight UI renders, public fractional/pinned serving and complete small/full live recovery with exact output. Native real deferred 10-to-9 GB change, reload and idle release passed. Archived and verified 154 evidence members. Claims, projections and whitespace pass; zero store errors, two pre-existing historical log warnings. All owned model processes and the bounded test driver ended. No release or real 64 GiB allocation qualification.
+
+## [2026-09-21 06:18] validate | records/decisions/adaptive-memory-limits.md
+Third adversarial memory pass repaired six legacy Swift callable signatures and rejected contradictory directly constructed adaptive plans before model allocation. External package and real Engine rejection pass; 420 CLI cases, 964828 pure assertions including 591 memory contracts, 56 T0 groups/29478 assertions, native policy/persistence and harness checks pass. Archived and hash-verified 100 evidence members. Frozen build sources still match. Live rerun did not start because another task retained the normal model lock through a bounded wait; previous live/UI evidence remains separate. Claims/projections/whitespace pass; zero store errors and two historical log warnings. No owned test processes remain. No release or real 64 GiB allocation qualification.
+
 ## [2026-09-21 06:41] create | sources/runs/2026/09/2026-09-21-sevra-mac-ci
 Sevra Mac CI on GitHub Actions: five runs of the new sevra-mac workflow. Every Xcode build passed; runner-only check failures were fixed until run five passed. Two engine CI fixes: a racing scheduler check and the coverage ratchet's rounding.
 
@@ -1928,4 +1940,7 @@ The Xcode app target builds in CI; Repository validation records the Mac app wor
 
 ## [2026-09-21 06:41] update | records/design/sevra-spec/mac-platform
 The baseline notes that CI now builds the Xcode app target, which shows that it builds, not that it runs.
+
+## [2026-09-21 15:39] validate | records/decisions/adaptive-memory-limits.md
+Prepared a memory-only commit over 5d24e18, excluding concurrent issue-21 changes. Clean optimized local build, 964828 pure assertions, 420 CLI cases, 54 T0 groups, 22 verification/seven planner/four consumer harness checks and the previously blocked real fractional-ceiling server pass. Retained exact source hashes and a verified 22-member archive; owned server reaped. Zero validation errors and two historical warnings. User authorizes commit/push only; Unreleased marks next-release intent without a date, version bump, tag or publication.
 

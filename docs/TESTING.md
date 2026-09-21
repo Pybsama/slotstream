@@ -185,6 +185,14 @@ cooldown and exact output checks. A skipped drill fails full acceptance.
 Run this gate without other heavy work. Full model hashing holds the same
 process exclusion lock as inference and must pass before native acceptance.
 
+The battery also requires `elastic-drill --memory-limit-gb 10
+--max-memory-gb 10 --mtp off`. This checks that a small cache recovers after
+pressure even when the lost cache is below the normal growth threshold.
+It preserves both cooldowns, the saved ceiling and exact output. The public
+adaptive-server gate separately checks startup, the production timer,
+status metadata and a completed request; its `--limit-gb` and `--no-elastic`
+options cover fractional limits and explicitly pinned serving.
+
 MTP diagnostics require and price the draft head before Engine allocation,
 including when their `--mtp` option is left at `auto`; explicit `off` is
 incompatible. The full `mtp-check` includes vision and uses an explicit 12 GB

@@ -174,7 +174,7 @@ struct ResponseDetailsView: View {
                     if let load = m.loadSeconds { row("Model load", ResponseMetricsFormat.seconds(load) + ", before this response started") }
                     if m.rounds > 1 { row("Model rounds", "\(m.rounds), with tool results in between") }
                     if let hits = m.expertHitRate { row("Expert cache", "\(Int((hits * 100).rounded()))% already in memory while writing") }
-                    if let budget = m.budgetGB { row("Memory budget", ResponseMetricsFormat.budgetText(budget, custom: m.customBudget == true)) }
+                    if let budget = m.budgetGB { row("Memory budget", ResponseMetricsFormat.budgetText(budget, custom: m.customBudget == true, limitGB: m.memoryLimitGB)) }
                 }
                 if !(run.state.terminal || run.state == .needsYou) {
                     // A job with tools records each model round as it finishes.

@@ -14,6 +14,7 @@ struct OptimizationStateCheck: ParsableCommand {
     @Option(help: "Candidate to compare: integrated | integrated-mtp | compute-islands | compute-islands-performance | slot-cpu-component | terminal-prefill-lifecycle | mtp-terminal-prefill | terminal-prefill-family | selected-attention-component | selected-attention-family | compact-state | compiled-norm | compiled-norm-component | mtp-compiled-norm | ngram | cache-bookkeeping | cache-containers | exact-read | read-handles | mtp-read-handles | read-handle-lifetime | mtp-cache-bookkeeping | mtp | indexer | sweep-placement | sweep-tiles | sweep-both | indexer-tiles | indexer-dense | indexer-dense-tiles | indexer-topk | indexer-visibility | rope | gdn-record | gdn-kernel | ple | workspace | scope | scope-256 | scope-lifecycle | scope-mtp-vision | mtp-work | lifecycle | output | router-weights | mtp-router-weights | router-projection | router-selection | block-selection | router | mtp-router | mtp-indexer | image-reuse | vision-attention | shared-overlap | prefill-family") var variant = "compact-state"
 
     func run() throws {
+        try model.rejectAdaptiveLimitForFixedDiagnostic()
         let report: CheckReport
         if generation { report = try Diagnostics.optimizationGeneration(modelDir: model.modelURL) }
         else if ["runtime-budget-lifecycle", "governor-boundary", "governor-boundary-mtp", "read-failure-serving", "output-serving", "context-serving"].contains(variant) {

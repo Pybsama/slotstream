@@ -245,7 +245,11 @@ the plan without loading the model:
 slotstream doctor --memory-gb 40
 ```
 
-If it fits with headroom, `slotstream serve --memory-gb 40` uses that budget.
+If it fits with headroom, `slotstream serve --memory-gb 40` uses that budget
+with a fixed cache. In the current development version, use
+`--memory-limit-gb` instead to choose an upper limit while the cache adapts
+to other apps. Custom limits can exceed the automatic default; the Mac's
+supported budget and available memory still bound actual use.
 Auto keeps expert cache when a larger automatic context would trade it away
 without a measured benefit. Use `--max-context N` when you explicitly want a
 longer window. Leave room for macOS and other apps. See the
@@ -751,6 +755,11 @@ slotstream serve --memory-gb 16
 default text context; larger windows and resident components need more room.
 An explicit target disables automatic cache resizing, while loading and
 request-memory safeguards remain active. Preview it before starting.
+The development version also offers `--memory-limit-gb`: an upper process
+budget with automatic cache resizing. It can exceed the default model ceiling
+while remaining bounded by supported GPU/system headroom and live memory.
+The chosen limit is retained across shrink and recovery. Diagnostics and
+budgeted startup share the same feasibility check.
 See the [memory options](CLI.md#memory-options)
 for the other controls and their precedence.
 
@@ -1155,7 +1164,8 @@ the tokens it wrote and how fast, the time to its first token, how much of the
 conversation it read and how much it reused, the context it used, any model
 load it waited for, the share of the model's experts already in memory while
 it wrote, and the memory budget it ran with. Speed depends on that budget, so
-the details always show it. Turn on **Show response details** in the
+the details always show it. With a custom limit, they distinguish that saved
+limit from the smaller budget available for the response. Turn on **Show response details** in the
 conversation options menu or the View menu to add a line under every reply
 with tokens per second, tokens written and time to first token, and to show
 the live writing speed in the status while Sevra writes. To open the full
@@ -1280,10 +1290,14 @@ other applications. The recommendation inherits the engine’s measured
 operating ceiling; it is not a promise of optimal performance on every Mac.
 
 **Custom limit** means “use up to” the selected budget within the displayed
-supported range. It retains automatic pressure protection. The saved limit
-stays stable when available memory changes. Settings distinguish the app’s
-physical memory use from its estimated current allocation budget. Unified
+supported range, which comes from this Mac's hardware rather than the automatic
+default. It retains automatic pressure protection. Switching to Custom starts
+at the current budget; returning to it restores your last chosen limit. The
+saved limit stays stable when available memory changes. Settings distinguish
+the app’s physical memory use from the budget available now. Unified
 CPU/GPU memory is counted once.
+If a saved limit exceeds the current Mac's supported range, Settings shows
+the saved value and asks you to lower it or choose Automatic.
 
 The model loads with the first request. **Keep model ready → Automatic**
 releases it after inactivity, with a bounded delay informed by observed
@@ -1873,6 +1887,7 @@ the second waits for the first to finish starting, then uses its server.
 |---|---|
 | `--port <n>` | The port the server listens on (default 11434). |
 | `--memory-gb <gb>` | Memory target for a server this command starts, as in `serve`. Default: automatic. When a server with another target is already running, it is left as it is and a note names its target. |
+| `--memory-limit-gb <gb>` | Adaptive ceiling for a server this command starts (development version). Cannot be combined with `--memory-gb`. An existing server keeps its settings; a note explains when the requested limit does not apply. |
 | `--idle-exit <minutes>` | How long a server this command starts keeps running after its last agent exits (default 30, at most 10080); `0` keeps it running until `slotstream stop`. |
 | `--no-start` | Use a running server only; never start or restart one. |
 | `--dry-run` | Print the server it would start, the command, the variables it sets or removes, the files it would write, and notes; start, download and write nothing. Keys and tokens in the output are hidden, and for Pi only the `slotstream` entry of its models file is shown. |
@@ -2014,18 +2029,25 @@ With no sizing override, auto sizes the process to the machine (see
 | Flag | Meaning |
 |---|---|
 | `--model <name or dir>` | Model name (resolves to `~/.slotstream/models`, or a dev checkout's `models/`) or a directory path. |
+| `--memory-limit-gb <gb>` | Adaptive total process ceiling, in decimal GB (development version). Can exceed the default model ceiling. The cache shrinks when other apps need memory and can grow back when it is available, within the saved limit and the Mac's supported budget. Cannot be combined with the fixed memory/cache options below. |
 | `--memory-gb <gb>` | Total process memory budget, in decimal GB. The cache gets what remains after runtime, context, workspace and a nominal 1 GB margin. Near the minimum cache size, the plan can use part of that margin; `doctor` shows the actual planned headroom. Minimum 8.1 for the 32,768-token window; larger windows raise the minimum. This is a planning allowance, not an instruction to fill RAM. Conversation state and workspace use memory as needed, so measured usage can be lower. Auto picks the context window inside this target and preserves cache whose loss it cannot price; `--max-context N` chooses the context tradeoff explicitly. |
 | `--experts-per-layer <n>` | Expert cache size directly, 1…512. Each of the 48 layers has 512 experts of 2.76 MB and the cache holds `n × 48` of them, so the pool is `n × 0.133 GB`: 30/layer is 4 GB, 181 is 24 GB, 226 is 30 GB. The pool is one global cache; hot layers borrow slots from cold ones. |
 | `--pool-gb <gb>` | Raw expert-pool size (1 GB is about 7.5 experts per layer). |
 | `--vision auto\|on\|off` | Accept images (default `auto`). `auto` loads the image encoder on first use; `on` also requires the checkpoint to contain vision weights; `off` rejects images. |
 | `--mtp auto\|on\|off` | Speculative decode (default `auto`); see [Speculative decode](#speculative-decode). |
-| `--max-ram-percent <p>` | Auto only: the largest share of RAM auto may target (default 70). Cannot raise it past the 33 GB base ceiling plus any enabled draft-head and draft-context charges. Ignored when an explicit size is given. |
+| `--max-ram-percent <p>` | Auto only: the largest share of RAM auto may target (default 70). Alone it cannot raise the 33 GB base ceiling plus enabled draft/context charges. With `--memory-limit-gb`, it can further lower that ceiling; without this percentage option the adaptive limit is bounded by hardware and availability. Ignored when a fixed size is given. |
 
 Precedence when several are given: `--experts-per-layer` beats `--pool-gb`,
 which beats `--memory-gb`. An explicit size keeps its expert-pool policy. Physical headroom is still
 checked before model loading and request growth. Preview it with `doctor`;
 an unavailable window is reported separately from a request that may take
 too long to prefill.
+
+`--memory-limit-gb` keeps resizing enabled unless you also pass `--no-elastic`.
+The requested limit stays saved even when the current target is lower. `doctor`
+and model startup use the same budget feasibility check, including at the
+default context window. Metal's recommendation is read from the system;
+Slotstream keeps additional headroom and checks live reclaimable memory too.
 
 
 A larger context reserves allocated cache capacity, retained conversations,
@@ -2039,6 +2061,8 @@ The target is a budget, so current usage can be lower while reserved context
 and temporary workspace are unused. `doctor` previews a new plan; it does not
 change an already running server. `/api/ps` includes that server's actual
 `details.memory_plan`, including its sizing source, target and expert pool.
+For an adaptive limit, `memory_limit_gb` is the saved ceiling and `target_gb`
+is the current budget, which can be smaller.
 
 For `run`, the default memory summary separates the **lifetime footprint peak**
 from **current footprint**. The lifetime value includes loading and all earlier
@@ -2114,6 +2138,10 @@ the second loads the model. Use small explicit memory targets for model
 checks (`--memory-gb 8.1` to `10`) and stop other model processes first.
 See [Testing](TESTING.md) for the full suites.
 
+Fixed-profile diagnostics reject `--memory-limit-gb` because they use their
+own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
+`elastic-drill` can exercise it within the diagnostic's separate memory ceiling.
+
 **Weights-free**
 
 | Command | Proves |
@@ -2129,7 +2157,7 @@ See [Testing](TESTING.md) for the full suites.
 | Command | Proves |
 |---|---|
 | `elastic-check` | Greedy output is byte-identical across a live pool grow and shrink. `--max-tokens` (24), `--big-slots` (960; lower it on small machines). |
-| `elastic-drill` | Drives the live governor through controlled polls: shrink, grow cooldown, regrowth and exact output. `--slots` (4000), `--max-memory-gb` (10), `--quick` skips regrowth. The unchanged deadbands need a larger starting arena: the full test uses `--slots 1000 --max-memory-gb 13`, requires the derived target plus 3 GB physically reclaimable, and reports sampled memory and swap. An insufficient ceiling refuses before model allocation. |
+| `elastic-drill` | Drives the live governor through shrink, cooldown, recovery and exact output. `--slots` (4000), `--max-memory-gb` (10), `--quick` skips recovery. Use `--memory-limit-gb 10 --max-memory-gb 10 --mtp off` for small-cache pressure recovery, or `--slots 1000 --max-memory-gb 13 --memory-limit-gb 13 --mtp off` for the full availability drill. Both require the target plus 3 GB physically reclaimable and report sampled memory and swap. An insufficient ceiling refuses before model allocation. |
 | `prefix-check` | Conversation prefix reuse is equivalent, bounded, and deterministic. `--slots` (640), `--max-tokens` (24). |
 | `prefix-exact-check` | A continued conversation computes what a cold one does: same tokens and bit-identical prompt logits whether a turn resumed a retained state or read its whole prompt, with reuse still happening, an identical prompt reusing its complete state, an edited history rebuilding, and a second conversation resuming a shared prefix. `--slots` (640), `--max-tokens` (24), `--plan` to run a real memory plan so `--memory-gb` and `--mtp` apply. |
 | `sweep-check` | The prefill sweep (passes of 256 tokens or more) stays inside the prefill-rechunk band against the pool path, is deterministic, gives bit-identical logits on a cold and a warm pool, and leaves the pool consistent after admission. `--slots` (640). |
@@ -2737,6 +2765,11 @@ sized the memory plan (`--memory-gb`, `auto`, `--pool-gb` or
 `--experts-per-layer`) and `memory_target_gb` the whole-process target, or
 `null` for a plan without one. Reading the status is not activity.
 
+The development version also reports `memory_limit_gb`: the saved adaptive
+ceiling, or `null` when none was selected. Adaptive plans still use
+`memory_source: "auto"`; their current `memory_target_gb` can be lower than
+the saved limit while other apps need memory.
+
 `POST /slotstream/clients` with `{"pid": 4242}` registers a running process
 of the user the server runs as, and returns `{"clients": 1}`, the number
 registered. A server started with `--idle-exit` keeps running while any
@@ -2933,8 +2966,21 @@ print(plan.expertsPerLayerCached, "experts per layer,",
 
 `Machine.simulated(ramGB: 16)` previews a decimal-GB memory size, like
 `slotstream doctor --sim-ram 16`; it does not simulate another chip or SSD.
-`Engine.load` rejects simulated plans;
+`Engine` rejects simulated plans;
 use `Machine.current()` for a plan that will allocate memory.
+
+In the development version, `PlanRequest(memoryLimitGB: chosenLimitGB)` sets
+an adaptive process ceiling. The supported hardware budget and available
+memory may lower `plan.targetGB`; `plan.memoryLimitGB` keeps the saved ceiling.
+Existing `memoryGB`, `poolGB` and `expertsPerLayer` controls keep a fixed cache
+and cannot be combined with this option.
+
+An embedding app must retain a `MemoryGovernor(engine:)` and call `start()`
+to enable live resizing. Call `await governor.stopAndWait()` before releasing
+the engine. Construct plans through `Planner.plan`; directly constructed
+adaptive plans must use `.auto` and a positive target within the saved limit.
+The engine validates these conditions before model allocation. The original
+planner and initializer signatures remain available for existing Swift code.
 
 <a id="pricing-a-prompt-before-you-send-it"></a>
 
@@ -4348,6 +4394,14 @@ cooldown and exact output checks. A skipped drill fails full acceptance.
 Run this gate without other heavy work. Full model hashing holds the same
 process exclusion lock as inference and must pass before native acceptance.
 
+The battery also requires `elastic-drill --memory-limit-gb 10
+--max-memory-gb 10 --mtp off`. This checks that a small cache recovers after
+pressure even when the lost cache is below the normal growth threshold.
+It preserves both cooldowns, the saved ceiling and exact output. The public
+adaptive-server gate separately checks startup, the production timer,
+status metadata and a completed request; its `--limit-gb` and `--no-elastic`
+options cover fractional limits and explicitly pinned serving.
+
 MTP diagnostics require and price the draft head before Engine allocation,
 including when their `--mtp` option is left at `auto`; explicit `off` is
 incompatible. The full `mtp-check` includes vision and uses an explicit 12 GB
@@ -5441,6 +5495,30 @@ Version headings can be prepared before publication. The
 determines which version the installer downloads.
 
 ## Unreleased
+
+- Custom memory limits in the Mac app can exceed the automatic default within
+  the Mac's supported range, with pressure protection and cache resizing still
+  enabled. First switching to Custom keeps the current budget; later switches
+  remember the last custom limit. Settings show current usage and the budget
+  available now separately.
+- `--memory-limit-gb` adds an adaptive process ceiling to the CLI. Existing
+  fixed-cache flags retain their behavior. Diagnostics and budgeted model
+  startup now share the same feasibility check at every context size, and
+  cache resizing updates the reported current budget while retaining the
+  selected ceiling.
+- Adaptive limits survive the server's context assignment and are also
+  available through `launch`. Fixed-profile diagnostics reject the option
+  instead of silently ignoring it. Saved app limits outside the current Mac's
+  range remain visible with a correction prompt.
+- Fractional memory limits retain their precision in launch arguments and
+  reported targets. Response details distinguish the budget used from the
+  saved custom limit, and busy-machine guidance respects the hardware bound.
+- Small caches recover after memory pressure or a busy startup even when the
+  missing amount falls below the normal growth threshold. Recovery still waits
+  for available memory and the existing cooldowns.
+- Swift memory-planning APIs retain their original callable signatures.
+  Directly constructed adaptive plans reject conflicting sources, missing
+  targets and targets above the saved limit before model allocation.
 
 - `slotstream optimization-state-check --variant complete-prompt` passes
   again. Tiling vision queries changes the rows an image produces, so the

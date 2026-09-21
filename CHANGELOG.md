@@ -8,6 +8,30 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Custom memory limits in the Mac app can exceed the automatic default within
+  the Mac's supported range, with pressure protection and cache resizing still
+  enabled. First switching to Custom keeps the current budget; later switches
+  remember the last custom limit. Settings show current usage and the budget
+  available now separately.
+- `--memory-limit-gb` adds an adaptive process ceiling to the CLI. Existing
+  fixed-cache flags retain their behavior. Diagnostics and budgeted model
+  startup now share the same feasibility check at every context size, and
+  cache resizing updates the reported current budget while retaining the
+  selected ceiling.
+- Adaptive limits survive the server's context assignment and are also
+  available through `launch`. Fixed-profile diagnostics reject the option
+  instead of silently ignoring it. Saved app limits outside the current Mac's
+  range remain visible with a correction prompt.
+- Fractional memory limits retain their precision in launch arguments and
+  reported targets. Response details distinguish the budget used from the
+  saved custom limit, and busy-machine guidance respects the hardware bound.
+- Small caches recover after memory pressure or a busy startup even when the
+  missing amount falls below the normal growth threshold. Recovery still waits
+  for available memory and the existing cooldowns.
+- Swift memory-planning APIs retain their original callable signatures.
+  Directly constructed adaptive plans reject conflicting sources, missing
+  targets and targets above the saved limit before model allocation.
+
 - `slotstream optimization-state-check --variant complete-prompt` passes
   again. Tiling vision queries changes the rows an image produces, so the
   cache keys an image prompt on that setting too. When tiling joined the

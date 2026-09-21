@@ -331,8 +331,10 @@ public actor LocalInference: Inference {
         lastStats.append(result.stats)
         metrics.firstTokenSeconds = firstToken
         metrics.windowTokens = engine.maxContextTokens
-        // The process budget the plan was sized to, which is the limit a person set.
-        metrics.budgetGB = engine.currentPlan.map { $0.targetGB ?? $0.expectedPeakGB }
+        // The current budget can be lower than the saved ceiling under contention.
+        let memoryPlan = engine.currentPlan
+        metrics.budgetGB = memoryPlan.map { $0.targetGB ?? $0.expectedPeakGB }
+        metrics.memoryLimitGB = memoryPlan?.memoryLimitGB
         metrics.customBudget = preferences.budget == .custom
         var turn = EngineTurn(text: text, calls: calls, finishReason: result.stats.finishReason, metrics: metrics)
         turn.thinking = receipt

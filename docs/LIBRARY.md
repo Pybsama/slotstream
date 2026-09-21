@@ -101,8 +101,21 @@ print(plan.expertsPerLayerCached, "experts per layer,",
 
 `Machine.simulated(ramGB: 16)` previews a decimal-GB memory size, like
 `slotstream doctor --sim-ram 16`; it does not simulate another chip or SSD.
-`Engine.load` rejects simulated plans;
+`Engine` rejects simulated plans;
 use `Machine.current()` for a plan that will allocate memory.
+
+In the development version, `PlanRequest(memoryLimitGB: chosenLimitGB)` sets
+an adaptive process ceiling. The supported hardware budget and available
+memory may lower `plan.targetGB`; `plan.memoryLimitGB` keeps the saved ceiling.
+Existing `memoryGB`, `poolGB` and `expertsPerLayer` controls keep a fixed cache
+and cannot be combined with this option.
+
+An embedding app must retain a `MemoryGovernor(engine:)` and call `start()`
+to enable live resizing. Call `await governor.stopAndWait()` before releasing
+the engine. Construct plans through `Planner.plan`; directly constructed
+adaptive plans must use `.auto` and a positive target within the saved limit.
+The engine validates these conditions before model allocation. The original
+planner and initializer signatures remain available for existing Swift code.
 
 <a id="pricing-a-prompt-before-you-send-it"></a>
 

@@ -395,7 +395,7 @@ public final class Server {
     package static func statusBody(pid: Int32, port: Int, version: String, model: String, contextWindow: Int,
                                    startedAt: Int, activity: ServerActivity.Snapshot,
                                    idleExitSeconds: Double?, memorySource: String? = nil,
-                                   memoryTargetGB: Double? = nil) -> [String: Any] {
+                                   memoryTargetGB: Double? = nil, memoryLimitGB: Double? = nil) -> [String: Any] {
         [
             "server": "slotstream",
             "version": version,
@@ -410,6 +410,7 @@ public final class Server {
             "idle_exit_minutes": idleExitSeconds.map { $0 / 60 } ?? NSNull(),
             "memory_source": memorySource ?? NSNull(),
             "memory_target_gb": memoryTargetGB ?? NSNull(),
+            "memory_limit_gb": memoryLimitGB ?? NSNull(),
         ]
     }
 
@@ -653,7 +654,7 @@ public final class Server {
                 pid: getpid(), port: Int(port), version: SlotstreamBuild.version, model: engine.modelName,
                 contextWindow: engine.maxContextTokens, startedAt: startedAt, activity: now,
                 idleExitSeconds: idleExit?.seconds, memorySource: plan?.source.rawValue,
-                memoryTargetGB: plan?.targetGB), cors: cors)
+                memoryTargetGB: plan?.targetGB, memoryLimitGB: plan?.memoryLimitGB), cors: cors)
         case ("POST", "/slotstream/clients"):
             let answer = Self.registerClient(json, activity: activity)
             respondJSON(fd, answer.body, status: answer.status, cors: cors)

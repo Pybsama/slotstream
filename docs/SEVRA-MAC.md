@@ -311,7 +311,8 @@ the tokens it wrote and how fast, the time to its first token, how much of the
 conversation it read and how much it reused, the context it used, any model
 load it waited for, the share of the model's experts already in memory while
 it wrote, and the memory budget it ran with. Speed depends on that budget, so
-the details always show it. Turn on **Show response details** in the
+the details always show it. With a custom limit, they distinguish that saved
+limit from the smaller budget available for the response. Turn on **Show response details** in the
 conversation options menu or the View menu to add a line under every reply
 with tokens per second, tokens written and time to first token, and to show
 the live writing speed in the status while Sevra writes. To open the full
@@ -436,10 +437,14 @@ other applications. The recommendation inherits the engine’s measured
 operating ceiling; it is not a promise of optimal performance on every Mac.
 
 **Custom limit** means “use up to” the selected budget within the displayed
-supported range. It retains automatic pressure protection. The saved limit
-stays stable when available memory changes. Settings distinguish the app’s
-physical memory use from its estimated current allocation budget. Unified
+supported range, which comes from this Mac's hardware rather than the automatic
+default. It retains automatic pressure protection. Switching to Custom starts
+at the current budget; returning to it restores your last chosen limit. The
+saved limit stays stable when available memory changes. Settings distinguish
+the app’s physical memory use from the budget available now. Unified
 CPU/GPU memory is counted once.
+If a saved limit exceeds the current Mac's supported range, Settings shows
+the saved value and asks you to lower it or choose Automatic.
 
 The model loads with the first request. **Keep model ready → Automatic**
 releases it after inactivity, with a bounded delay informed by observed

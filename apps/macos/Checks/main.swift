@@ -28,6 +28,7 @@ Task {
         if CommandLine.arguments.contains("--external-drafts") { try await externalDraftChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--archive") { try await archiveChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--context-window") { try await longConversationChecks(root: root, dbmd: dbmd); return }
+        if CommandLine.arguments.contains("--performance") { try await performanceChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--thinking") { try await thinkingChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--response-details") { try await responseDetailsChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--basics") { try await basicsChecks(root: root, dbmd: dbmd); return }

@@ -123,7 +123,7 @@ echo "== elastic governor: shrinks, honors the cooldown, grows back =="
 safety_before 16
 DRILL_LOG="$VERIFY_OUT/elastic-drill.txt"
 DRILL_STATUS=0
-"$BIN" elastic-drill --slots 1000 --max-memory-gb 13 >"$DRILL_LOG" 2>&1 || DRILL_STATUS=$?
+"$BIN" elastic-drill --slots 1000 --max-memory-gb 13 --memory-limit-gb 13 --mtp off >"$DRILL_LOG" 2>&1 || DRILL_STATUS=$?
 DRILL=$(sed -nE '/^ELASTIC DRILL (PASS|FAIL|SKIP)(:|$)/p' "$DRILL_LOG")
 if [ "$DRILL_STATUS" -ne 0 ]; then
   DRILL="ELASTIC DRILL FAIL: exit $DRILL_STATUS (details: $DRILL_LOG)"
@@ -137,6 +137,26 @@ case "$DRILL" in
   "ELASTIC DRILL SKIP:"*) echo "FAIL  required full gate skipped: $DRILL"; FAIL=$((FAIL+1)) ;;
   *)      echo "FAIL  $DRILL"; FAIL=$((FAIL+1)) ;;
 esac
+
+echo "== small adaptive cache: pressure recovery below the normal growth band =="
+safety_before 13
+SMALL_DRILL_LOG="$VERIFY_OUT/elastic-drill-small.txt"
+SMALL_DRILL_STATUS=0
+"$BIN" elastic-drill --memory-limit-gb 10 --max-memory-gb 10 --mtp off >"$SMALL_DRILL_LOG" 2>&1 || SMALL_DRILL_STATUS=$?
+SMALL_DRILL=$(sed -nE '/^ELASTIC DRILL (PASS|FAIL|SKIP)(:|$)/p' "$SMALL_DRILL_LOG")
+if [ "$SMALL_DRILL_STATUS" -eq 0 ] && [[ "$SMALL_DRILL" == "ELASTIC DRILL PASS:"* ]] && [[ "$SMALL_DRILL" != *$'\n'* ]]; then
+  echo "PASS  small adaptive cache recovery"; PASS=$((PASS+1))
+else
+  echo "FAIL  small adaptive cache recovery (details: $SMALL_DRILL_LOG)"; FAIL=$((FAIL+1))
+fi
+
+echo "== adaptive server: saved ceiling survives startup and the live timer =="
+safety_before 13
+if python3 Tools/adaptive_memory_e2e.py --binary "$BIN" --out "$VERIFY_OUT/adaptive-server"; then
+  echo "PASS  adaptive server lifecycle"; PASS=$((PASS+1))
+else
+  echo "FAIL  adaptive server lifecycle"; FAIL=$((FAIL+1))
+fi
 
 echo "== conversation prefix cache: bounded, flat with depth, deterministic =="
 check "prefix reuse within the prefill-rechunk control (prefix-check)" "run_binary prefix-check"

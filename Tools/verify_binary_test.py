@@ -189,21 +189,29 @@ printf 'AFTER_CONTEXT\\nCOUNTS %s %s\\n' "$PASS" "$FAIL"
 
 
 class VerifyGovernorStatus(unittest.TestCase):
+    small = False
+
     def run_status(self, text, status=0):
         with tempfile.TemporaryDirectory(prefix='slotstream-governor-status-') as directory:
             root = Path(directory)
             result = root/"results PASS; $(touch injected)"
             result.mkdir()
             fixture = root/"selected binary's path"
+            args = (['elastic-drill', '--memory-limit-gb', '10', '--max-memory-gb', '10', '--mtp', 'off']
+                    if self.small else ['elastic-drill', '--slots', '1000', '--max-memory-gb', '13', '--memory-limit-gb', '13', '--mtp', 'off'])
             fixture.write_text("#!/usr/bin/env python3\nimport os,sys\n"
-                               "assert sys.argv[1:] == ['elastic-drill','--slots','1000','--max-memory-gb','13']\n"
+                               f"assert sys.argv[1:] == {args!r}\n"
                                "sys.stdout.write(os.environ['VERIFY_DRILL_TEXT'])\n"
                                "raise SystemExit(int(os.environ['VERIFY_DRILL_STATUS']))\n")
             fixture.chmod(0o755)
             # Execute the actual verification block with the real system sed.
             # Only the native model-producing command is replaced by a fixture.
-            start = SCRIPT.index('DRILL_LOG=')
-            end = SCRIPT.index('\nesac', start)+len('\nesac')
+            if self.small:
+                start = SCRIPT.index('SMALL_DRILL_LOG=')
+                end = SCRIPT.index('\nfi', start)+len('\nfi')
+            else:
+                start = SCRIPT.index('DRILL_LOG=')
+                end = SCRIPT.index('\nesac', start)+len('\nesac')
             block = 'set -eo pipefail\nPASS=0; FAIL=0\n'+SCRIPT[start:end]+'''
 printf 'COUNTS %s %s\\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
@@ -213,7 +221,7 @@ printf 'COUNTS %s %s\\n' "$PASS" "$FAIL"
             process = subprocess.run(['bash','-c',block], cwd=root, env=env,
                                      text=True, capture_output=True, timeout=10)
             self.assertFalse((root/'injected').exists(), process.stdout+process.stderr)
-            self.assertEqual((result/'elastic-drill.txt').read_text(), text)
+            self.assertEqual((result/('elastic-drill-small.txt' if self.small else 'elastic-drill.txt')).read_text(), text)
             return process
 
     def test_real_status_shape_passes_with_progress_and_memory_record(self):
@@ -256,6 +264,10 @@ printf 'COUNTS %s %s\\n' "$PASS" "$FAIL"
                 process = self.run_status(text)
                 self.assertNotEqual(process.returncode, 0, process.stdout+process.stderr)
                 self.assertIn('COUNTS 0 1', process.stdout)
+
+
+class VerifySmallGovernorStatus(VerifyGovernorStatus):
+    small = True
 
 
 if __name__ == '__main__':

@@ -2,12 +2,17 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-21T06:41:08.806964Z
+updated: 2026-09-21T15:39:18.449481Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-21-adaptive-memory-commit]] — Isolated memory commit compiles and passes policy, CLI, general checks and the previously blocked real server rerun.
 - [[sources/runs/2026/09/2026-09-21-sevra-mac-ci]] — The Sevra Mac app's own CI: the Xcode project built on all five runs, and runner-only check failures were fixed until the fifth run passed
+- [[sources/runs/2026/09/2026-09-21-adaptive-memory-third-review]] — Third memory review repairs Swift callable compatibility and contradictory direct adaptive plans, with external-package and engine-startup regressions.
+- [[sources/runs/2026/09/2026-09-21-adaptive-memory-second-review]] — Second memory review fixes small-cache recovery, fractional limits and response reporting, with final policy and live gates.
+- [[sources/runs/2026/09/2026-09-21-adaptive-memory-adversarial-review]] — A reproduced server context-copy bug and launch/diagnostic/UI gaps were fixed; planner, CLI, native UI and real server/governor gates pass.
+- [[sources/runs/2026/09/2026-09-20-adaptive-memory-limits]] — Adaptive memory ceilings: planner and CLI matrices, native controls and real model shrink/recovery pass; limits and earlier fixture failure retained.
 - [[sources/runs/2026/09/2026-09-20-sevra-response-details]] — Sevra records each response's engine numbers and shows its speed, thinking line and working notes on request; the real-model check matches the engine and finds thinking turns read twice
 - [[sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals]] — Think longer is available with a source attached, tool turns think, and a refused proposal is corrected instead of ending the job; measured on three real-model runs
 - [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]] — Told only that files were attached, the model asked what "this" meant; with each attachment named, "what is this?" reads the attached PDF
@@ -502,13 +507,8 @@ updated: 2026-09-21T06:41:08.806964Z
 - [[sources/runs/2026/09/2026-09-06-optimization-maximum-image-reference-stop]] — Maximum-image reference resource stop and fixed-pool successor
 - [[sources/runs/2026/09/2026-09-06-optimization-gdn-projection-shared-backing]] — Shared-backing GDN projection native qualification
 - [[sources/runs/2026/09/2026-09-06-optimization-compute-islands-qualified]] — Quantized projection and GLU component qualification
-- [[sources/runs/2026/09/2026-09-06-optimization-rope-serving-qualified]] — RoPE short and prefill serving nonregression qualification
-- [[sources/runs/2026/09/2026-09-06-optimization-cpu-contiguous-counterexample]] — Contiguous CPU slot writes: exact serving regression
-- [[sources/runs/2026/09/2026-09-06-optimization-rope-component-qualified]] — Direct-stride RoPE component qualifies; serving protocols frozen V149
-- [[sources/runs/2026/09/2026-09-06-optimization-rope-direct-strides]] — Direct-stride RoPE native qualification V147
-- [[sources/runs/2026/09/2026-09-06-optimization-resident-serving-counterexample]] — Resident overlap serving misses gain gate V140 completed V146
 
 ## More
 
-This folder has 632 files. The 500 most recent are listed above.
+This folder has 637 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
