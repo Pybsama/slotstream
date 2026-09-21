@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-09-21T04:42:06.398844+00:00
+updated: 2026-09-21T06:41:08.952237+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -18,7 +18,7 @@ Implementation started September 14, 2026, at Carlos's request. A functional nat
 | Persistence | Official dbmd mutations, compact Home index, independent thread/draft records, immutable conversation/excerpt events, native hash/recovery ledger, create-only artifact publication. Actual process termination at intent/documents/artifact/record seams recovers idempotently. External edits pause writes and preserve bytes. | Complete export and inert restore, interactive reconciliation, cross-implementation schema conformance, full source-folder closure and power-loss proof remain pending. A process-crash test is not a storage power-loss test. |
 | Local CLI | Separate sevra-local consumer uses the same runtime. Authenticated bounded Unix IPC, same-user peers, long Home paths, ephemeral capability, duplicate acceptance and detached completion pass; unbound Incognito access is refused. The CLI can reopen the completed real-test Home. | Full CLI grammar, historical event replay and the optional authenticated network server are not complete. |
 | Model setup | Settings is wired to explicit pinned WeightStore inspection/download/resume/repair; model maintenance excludes inference. Startup does not download. Existing verified model inference was exercised. | Fresh acquisition/repair/cancellation, automatic maintained hardware selection and the same-hardware model-value comparison remain unqualified. |
-| Build and brand | Independent apps/macos package preserves the root engine package. Local source/dependency hashes stay identical across the app build; dbmd, Metal and licensed Inter/Poppins resources are bundled and ad-hoc signature verification passes. Native Observer geometry and a multiresolution bundled ICNS are included, with the same image in About. The Xcode project is now explicitly included despite the general ignore rule. App/CLI/check products compile; Xcode project and Info.plist parse. | Full Xcode is absent on this host, so its app target has not been built. Modern layered-icon and Finder/Dock-shell appearance qualification remain open. Developer ID, notarization, installed updater/rollback, clean-machine compatibility, voluntary feedback, external users and all release gates remain pending. |
+| Build and brand | Independent apps/macos package preserves the root engine package. Local source/dependency hashes stay identical across the app build; dbmd, Metal and licensed Inter/Poppins resources are bundled and ad-hoc signature verification passes. Native Observer geometry and a multiresolution bundled ICNS are included, with the same image in About. The Xcode project is now explicitly included despite the general ignore rule. App/CLI/check products compile; Xcode project and Info.plist parse. | Full Xcode is absent on this host. Since September 21, CI builds the Xcode app target in Release for Apple silicon, ad hoc signed, and verifies the bundle; see Repository validation. Modern layered-icon and Finder/Dock-shell appearance qualification remain open. Developer ID, notarization, installed updater/rollback, clean-machine compatibility, voluntary feedback, external users and all release gates remain pending. |
 
 ## Evidence
 
@@ -50,6 +50,10 @@ the raw outputs were preserved. The engine brain has no validation errors and
 retains its two historical log warnings. This work does not claim a warning-free brain cleanup.
 
 [[sources/runs/2026/09/2026-09-14-sevra-mac-static-regressions]]
+
+Since September 21 the app has its own CI workflow, `sevra-mac.yml`, for every change to the app, to the engine sources it builds on, or to its scripts. It runs `Tools/check_sevra_mac.sh`, the scripted checks without model weights, and `Tools/build_sevra_xcode.sh`, a Release build of the Xcode project for Apple silicon that fails on any package version other than the app's pins, on a bundle missing its executable, Metal library, dbmd or document helper, or on an ad hoc signature that does not verify. The Xcode build passed on every run. The first runs showed four failures that only the runner produced: a composer timing assumption, a disclosure that a synthesized click did not open, a slash that text recognition misread, and a 10 GB test limit the runner cannot hold. Each was fixed or replaced. Text recognition is unavailable inside the document helper's sandbox on the runner, so CI accepts the helper's own error for images and scanned pages; a development Mac must still read them. The fifth run, on `92dffed`, passed both jobs.
+
+[[sources/runs/2026/09/2026-09-21-sevra-mac-ci]]
 
 ## Resume order
 Start with the latest adversarial review's unresolved gates: replay the unchanged real Cedar fixture using the final corrected candidate when the other model experiment has finished, then recheck the last Queue/archive-filter/Find-focus/quiet-cancel fixes when the Mac is unlocked. Preserve failure evidence and exact executable/source identity. The prior scoped native pass is not a full final-binary UI qualification.
@@ -214,7 +218,7 @@ Still open:
 
 - A VoiceOver pass and a person's review of the new panels in the live app.
 - App Sandbox, signing and notarization for the app and its helper.
-- An Xcode build of the project. Xcode is not installed on this Mac; the project's structure and its helper build phase were checked without it.
+- Launching the Xcode-built app. CI builds and verifies it but does not run it.
 - A recheck of WebKit's private feature switches on each macOS release.
 - The documented helper residuals: global metadata reads and folder listing in the dbmd modes.
 - The narrow window between the record re-check and dbmd's own write. Closing it needs a compare-and-set in dbmd, which `body set` does not offer.

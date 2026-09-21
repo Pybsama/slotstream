@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-21T04:41:57.904433Z
+updated: 2026-09-21T06:41:08.806964Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-21-sevra-mac-ci]] — The Sevra Mac app's own CI: the Xcode project built on all five runs, and runner-only check failures were fixed until the fifth run passed
 - [[sources/runs/2026/09/2026-09-20-sevra-response-details]] — Sevra records each response's engine numbers and shows its speed, thinking line and working notes on request; the real-model check matches the engine and finds thinking turns read twice
 - [[sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals]] — Think longer is available with a source attached, tool turns think, and a refused proposal is corrected instead of ending the job; measured on three real-model runs
 - [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]] — Told only that files were attached, the model asked what "this" meant; with each attachment named, "what is this?" reads the attached PDF
@@ -506,9 +507,8 @@ updated: 2026-09-21T04:41:57.904433Z
 - [[sources/runs/2026/09/2026-09-06-optimization-rope-component-qualified]] — Direct-stride RoPE component qualifies; serving protocols frozen V149
 - [[sources/runs/2026/09/2026-09-06-optimization-rope-direct-strides]] — Direct-stride RoPE native qualification V147
 - [[sources/runs/2026/09/2026-09-06-optimization-resident-serving-counterexample]] — Resident overlap serving misses gain gate V140 completed V146
-- [[sources/runs/2026/09/2026-09-06-optimization-rope-confirmation-excluded]] — Independent RoPE confirmation stopped on swap V145
 
 ## More
 
-This folder has 631 files. The 500 most recent are listed above.
+This folder has 632 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

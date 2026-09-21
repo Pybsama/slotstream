@@ -1920,3 +1920,12 @@ Thinking controls: live three-line thought preview and the thinking line above a
 ## [2026-09-21 04:38] update | records/design/sevra-spec/implementation-status
 Response details section with verification, the thinking second-read finding and what remains open.
 
+## [2026-09-21 06:41] create | sources/runs/2026/09/2026-09-21-sevra-mac-ci
+Sevra Mac CI on GitHub Actions: five runs of the new sevra-mac workflow. Every Xcode build passed; runner-only check failures were fixed until run five passed. Two engine CI fixes: a racing scheduler check and the coverage ratchet's rounding.
+
+## [2026-09-21 06:41] update | records/design/sevra-spec/implementation-status
+The Xcode app target builds in CI; Repository validation records the Mac app workflow and its runs, and the open list keeps only launching the Xcode-built app.
+
+## [2026-09-21 06:41] update | records/design/sevra-spec/mac-platform
+The baseline notes that CI now builds the Xcode app target, which shows that it builds, not that it runs.
+
