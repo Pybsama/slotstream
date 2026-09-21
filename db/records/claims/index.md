@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-18T21:49:31.700660Z
+updated: 2026-09-21T03:58:48.567100Z
 ---
 
 # records/claims
 
+- [[records/claims/sevra-mac-working-notes-eight-responses]] — Sevra keeps working notes in memory for the eight most recent responses
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-context-at-36-gb]] — Automatic context at the simulated 36 GB tier

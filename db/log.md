@@ -1905,3 +1905,18 @@ Recorded the thinking-with-tools measurement and the refused-proposal correction
 ## [2026-09-20 19:56] create | sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals
 Three real-model runs with thinking on: every tool call valid, the same reviewed edit, 783/682/1257 s against 636 s plain; a refused app proposal now corrects instead of ending the job.
 
+## [2026-09-21 04:38] create | sources/runs/2026/09/2026-09-20-sevra-response-details
+Response details in the Mac app: engine numbers per run, speed line, thinking line, live thought preview and working notes. Scripted gate passed in an isolated snapshot of HEAD 40209f8 plus this work; the real-model check matched the engine over three turns and found that a thinking turn reads its prompt tail and its thought twice.
+
+## [2026-09-21 04:38] create | records/claims/sevra-mac-working-notes-eight-responses
+Working notes stay in memory for the eight most recent responses; gated by sevra-mac-checks --response-details.
+
+## [2026-09-21 04:38] update | records/design/sevra-spec/runtime-contract
+Response metrics section; thinking receipts merge over a job's rounds with steps; the answer phase is a second engine request that reads again after the prompt's last pass boundary, no longer described as continuing the held state.
+
+## [2026-09-21 04:38] update | records/design/sevra-spec/ui-contract
+Thinking controls: live three-line thought preview and the thinking line above a reply. New Response details section: optional speed line, one details popover per response, working notes, Copy.
+
+## [2026-09-21 04:38] update | records/design/sevra-spec/implementation-status
+Response details section with verification, the thinking second-read finding and what remains open.
+

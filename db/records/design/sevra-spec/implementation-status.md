@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-09-20T19:56:24.418800+00:00
+updated: 2026-09-21T04:42:06.398844+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -222,3 +222,28 @@ Still open:
 - Local-model task reliability with these tools.
 
 Evidence: [[sources/runs/2026/09/2026-09-17-sevra-mac-basics]], [[sources/runs/2026/09/2026-09-19-complete-prompt-image-key-and-answer-narration]], [[sources/runs/2026/09/2026-09-19-sevra-names-attachments]] and [[sources/runs/2026/09/2026-09-20-thinking-with-tools-and-refused-proposals]].
+
+## Response details
+Implemented on September 20 at Carlos's request that the app show its speed and its thinking as optional extra information, as specified in [[records/design/sevra-spec/runtime-contract]] (Thinking before answers, Response metrics) and [[records/design/sevra-spec/ui-contract]] (Thinking controls, Response details):
+
+- Each run records the engine's own numbers for its model requests, summed over a job's rounds, a refused round included. Numbers only, never text.
+- While a thought runs, its last lines stream under the run status, at most three lines with the top line fading, and open the response's details. This replaces the collapsed "Working notes (thinking)" box.
+- A reply that thought carries a quiet "Thought for 42 s ›" line above its text, outside the message's Markdown, copies, export and search. A job that thought before several rounds reads as one receipt.
+- "Show response details", off by default and remembered on this Mac, adds a speed line under each finished reply and the live writing speed to the run status.
+- One details popover per response, from the thinking line, the speed line, the reply's context menu or View > Response Details (⌥⌘I): thinking with every working note still in memory, speed, context with Inspect, activity, and Copy for the numbers.
+- Working notes stay in process memory for the eight most recent responses, within 64 KiB each.
+
+Verification on the development Mac:
+
+- `Tools/check_sevra_mac.sh` passes with 168 PASS lines in an isolated snapshot of HEAD `40209f8` plus this work. The new checks are the scripted response-details suite, a presentation test that keeps the new lines out of the message and its copies, and the offscreen thinking check's 39 checks over the production views in light and dark appearance.
+- The real-model metrics check (`--real-metrics`), run from the same snapshot at the 10 GB plan, matched the engine's statistics field by field over three turns: a thinking turn that loaded the model, a second thinking turn that reused 256 tokens from earlier in the conversation, and a plain turn after switching thinking off. Replies were written at 5.5 and 6.0 tokens per second. The peak physical footprint was 8.35 GB, and swap did not grow.
+
+Found while verifying: a thinking turn reads its prompt tail and its thought twice. The thought and the answer are two engine requests, and the engine resumes a request only from one of its own prefill pass boundaries, so the answer reads again everything after the prompt's last boundary, and the whole thought. In the real run that second read took 4.8 and 5.4 s, longer than writing one of the answers, and a person sees it as a pause before the first word. The runtime contract and the code comment no longer claim that the answer continues from the held state. Removing the second read is an open engine decision, weighed against [[records/decisions/a-continued-conversation-computes-what-a-cold-one-computes]].
+
+Still open:
+
+- A VoiceOver pass and a person's review of the preview, the lines and the popover in the live app.
+- The second read before a thinking turn's answer.
+- The memory budget row reads the plan's total process budget. Another session's uncommitted adaptive memory limit may give a person's limit a field of its own, which the row would then have to follow.
+
+Evidence: [[sources/runs/2026/09/2026-09-20-sevra-response-details]].
