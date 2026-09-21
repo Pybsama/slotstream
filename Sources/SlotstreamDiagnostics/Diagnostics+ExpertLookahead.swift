@@ -451,7 +451,14 @@ extension Diagnostics {
         var splitObservation = split.observation
         c.equal("lane-waiting ticket and unknown key counted as demand", splitObservation.demandMisses, 2)
         c.equal("lane-waiting ticket counted as cancelled", splitObservation.cancelled, 1)
+        // The demand batch for the misses runs now. The promoted ticket reads its
+        // remaining pieces at demand priority instead of waiting for the batch.
+        split.lanes.beginDemand()
         holdGate.signal()
+        let heldTicket = claimed.reading[holdKey]
+        for _ in 0 ..< 12000 where heldTicket?.state == .reading { usleep(5000) }
+        c.expect("promoted ticket reads on during the demand batch", heldTicket?.state == .ready)
+        split.lanes.endDemand()
         let finished = split.finishReading(claimed.reading)
         c.equal("joined ticket promoted after the demand batch", finished.count, 1)
         c.expect("promoted ticket ready", finished[holdKey]?.state.rawValue == "ready")
