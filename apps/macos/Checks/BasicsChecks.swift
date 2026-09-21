@@ -343,13 +343,26 @@ func sourceChecks(reader: DocumentReader, base: URL) async throws {
     let words = try object(session.execute(tool("source.search", ["query": .string("north rollout")]), cancellation: cancel))
     try check(words["match"] as? String == "all words on a line" && ((words["matches"] as? [[String: Any]])?.count ?? 0) == 1, "search falls back to all words on a line")
 
-    // Images and scanned pages are recognized on read.
-    let invoice = try object(session.execute(tool("source.read", ["id": .string(try id("invoice.png"))]), cancellation: cancel))
-    try check((invoice["content"] as? String)?.contains("482") == true && session.citations.last?.method == "ocr", "image text is recognized and marked")
-    let scan = try object(session.execute(tool("source.read", ["id": .string(try id("scan.pdf"))]), cancellation: cancel))
-    try check((scan["content"] as? String)?.localizedCaseInsensitiveContains("receipt") == true && session.citations.last?.method == "ocr" && (scan["note"] as? String)?.contains("recognized") == true, "scanned PDF page is recognized on read")
-    let rescan = try object(session.execute(tool("source.search", ["query": .string("receipt")]), cancellation: cancel))
-    try check(((rescan["matches"] as? [[String: Any]]) ?? []).contains { ($0["path"] as? String)?.hasSuffix("scan.pdf") == true }, "recognized text becomes searchable")
+    // Images and scanned pages are recognized on read. The helper first proves that
+    // Vision works inside its sandbox. On GitHub's macOS runners it does not, although
+    // Vision works outside the sandbox there, and the read fails with the helper's own
+    // error. CI sets SEVRA_CHECKS_OCR_OPTIONAL to accept exactly that error; everywhere
+    // else recognition must work.
+    var recognized = true
+    do {
+        let invoice = try object(session.execute(tool("source.read", ["id": .string(try id("invoice.png"))]), cancellation: cancel))
+        try check((invoice["content"] as? String)?.contains("482") == true && session.citations.last?.method == "ocr", "image text is recognized and marked")
+    } catch where ProcessInfo.processInfo.environment["SEVRA_CHECKS_OCR_OPTIONAL"] == "1"
+                    && error.localizedDescription == "Text recognition is unavailable on this Mac right now." {
+        recognized = false
+        print("SKIP: image and scan recognition; the document helper reports text recognition unavailable on this Mac")
+    }
+    if recognized {
+        let scan = try object(session.execute(tool("source.read", ["id": .string(try id("scan.pdf"))]), cancellation: cancel))
+        try check((scan["content"] as? String)?.localizedCaseInsensitiveContains("receipt") == true && session.citations.last?.method == "ocr" && (scan["note"] as? String)?.contains("recognized") == true, "scanned PDF page is recognized on read")
+        let rescan = try object(session.execute(tool("source.search", ["query": .string("receipt")]), cancellation: cancel))
+        try check(((rescan["matches"] as? [[String: Any]]) ?? []).contains { ($0["path"] as? String)?.hasSuffix("scan.pdf") == true }, "recognized text becomes searchable")
+    }
 
     // Rich documents.
     let rtf = try object(session.execute(tool("source.read", ["id": .string(try id("meeting.rtf"))]), cancellation: cancel))
@@ -370,7 +383,7 @@ func sourceChecks(reader: DocumentReader, base: URL) async throws {
     try await refuses("detached files are no longer readable", containing: "Unknown file") {
         _ = try session.execute(tool("source.read", ["id": .string(invoiceID)]), cancellation: cancel)
     }
-    print("PASS: multi-source attach, hidden and dependency folders skipped, PDF pages, word search fallback, image and scan recognition, RTF, Word, locked/damaged/oversized refusals, detach")
+    print("PASS: multi-source attach, hidden and dependency folders skipped, PDF pages, word search fallback, \(recognized ? "image and scan recognition, " : "")RTF, Word, locked/damaged/oversized refusals, detach")
 
     // Access decides which tool groups exist.
     let editable = SourceSession(reader: reader)
