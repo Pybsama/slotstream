@@ -87,7 +87,17 @@ echo "== goldens (need bench/parity31 from Tools/parity_ref.py under mlx==0.31.1
 run_model "$BIN" ngram-golden --tokens "9707,11,1246,525,498,30" 2>/dev/null | sed 's/^pos[0-9]*: //' > /tmp/ssv_ngram.txt
 check "ngram row ids == python reference"  "diff /tmp/ssv_ngram.txt bench/parity31/ngram_ids.txt"
 check "chat template == transformers"      "[ \"\$(run_binary template-check 2>/dev/null)\" = '248045,8678,198,2523,513,10631,13,248046,198,248045,846,198,12675,1017,248046,198,248045,74455,198,248068,271,248069,271' ]"
-check "layer parity (0-1 bit-exact gate)"  "run_binary parity --tokens '9707,11,1246,525,498,30' --layers 2 --compare bench/parity31"
+check "layer parity (historical reference, one-row projections)"  "run_binary parity --tokens '9707,11,1246,525,498,30' --layers 2 --compare bench/parity31 --row-invariant"
+
+# The historical fixtures remain immutable. A backend upgrade also needs a
+# current independent model implementation, plus the catalogue's scalar
+# numerical oracles: two implementations sharing MLX cannot alone certify it.
+REFERENCE_PYTHON=${SLOTSTREAM_REFERENCE_PYTHON:-.venv/bin/python}
+CURRENT_LAYERS="$VERIFY_OUT/current-layers"
+check "independent current-backend layer reference" \
+  '"$REFERENCE_PYTHON" Tools/current_backend_reference.py --kind layers --out "$CURRENT_LAYERS"'
+check "production layer parity against current backend" \
+  'run_binary parity --tokens 9707,11,1246,525,498,30 --layers 2 --compare "$CURRENT_LAYERS"'
 
 echo "== planner: right thing across machine setups (simulated, no model needed) =="
 if Tools/planner_gates.sh; then
@@ -111,10 +121,6 @@ check "$SMALL_MEMORY GB cache output == $BIG_MEMORY GB cache output" "diff /tmp/
 echo "== elastic pool: live resizes must not change the math =="
 check "grow/shrink/regrow byte-identical (elastic-check)" "run_binary elastic-check --big-slots $ECBIG"
 
-# Prefix reuse is deliberately NOT gated on byte-equality with a cold rebuild:
-# re-batching the same tokens re-associates their sums, and measured here that
-# moves logits LESS than re-chunking a plain prefill already does. The gate is
-# that bound plus determinism of the cached path. See MEASUREMENTS.md.
 # Drives the governor itself — poll, decide, lock, resize, log — not just its
 # policy function, using the availability seam so no real pressure is needed.
 # This required full gate fails acceptance when it cannot run with headroom;
@@ -158,8 +164,8 @@ else
   echo "FAIL  adaptive server lifecycle"; FAIL=$((FAIL+1))
 fi
 
-echo "== conversation prefix cache: bounded, flat with depth, deterministic =="
-check "prefix reuse within the prefill-rechunk control (prefix-check)" "run_binary prefix-check"
+echo "== conversation prefix cache: live determinism and exact scheduled reuse =="
+check "prefix reuse, invalidation and live reply equality (prefix-check)" "run_binary prefix-check"
 check "a continued conversation equals a cold one (prefix-exact-check)" "run_binary prefix-exact-check"
 
 echo "== prefill sweep: matches the pool path, deterministic, blind to the pool =="
@@ -171,7 +177,24 @@ check "sweep within the prefill-rechunk control, identical cold and warm (sweep-
 echo "== MTP draft head: parity with the Python reference + speculative gates =="
 MTPFILE="$HOME/.slotstream/models/qwen38-flash-next-mlx-4bit/mtp.safetensors"
 if [ -f "$MTPFILE" ]; then
-  check "mtp head bit-parity vs Python reference (mtp-parity)" "run_binary mtp-parity"
+  CURRENT_MTP="$VERIFY_OUT/current-mtp"
+  check "independent current-backend draft-head reference" \
+    '"$REFERENCE_PYTHON" Tools/current_backend_reference.py --kind mtp --out "$CURRENT_MTP"'
+  check "mtp head parity vs current Python reference (mtp-parity)" \
+    'run_binary mtp-parity --fixture "$CURRENT_MTP/comparison.safetensors"'
+  # Keep the old strict comparison visible without confusing cross-backend
+  # arithmetic differences with a failed Swift port. Unexpected command
+  # failures still fail acceptance; the current reference above is required.
+  safety_before 13
+  LEGACY_MTP_STATUS=0
+  run_binary mtp-parity >"$VERIFY_OUT/mtp-legacy-reference.txt" 2>&1 || LEGACY_MTP_STATUS=$?
+  if [ "$LEGACY_MTP_STATUS" -eq 0 ]; then
+    echo "DIAGNOSTIC  historical MLX 0.31 draft-head reference also agrees"
+  elif [ "$LEGACY_MTP_STATUS" -eq 2 ] && grep -q 'MTP PARITY FAIL' "$VERIFY_OUT/mtp-legacy-reference.txt"; then
+    echo "DIAGNOSTIC  historical MLX 0.31 draft-head reference differs (retained in mtp-legacy-reference.txt)"
+  else
+    echo "FAIL  historical draft-head diagnostic could not complete"; FAIL=$((FAIL+1))
+  fi
   # MTP is priced at startup; the combined vision leg needs its own explicit
   # 12 GB target. It must not add a draft head outside an MTP-off plan.
   safety_before 15

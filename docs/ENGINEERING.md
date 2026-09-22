@@ -110,11 +110,14 @@ and 39 s for 8,000. Ordinary prose can take longer than the synthetic prompt
 used by the estimator. `slotstream doctor` shows estimates for your memory
 plan, and the terminal prints progress during long prompts.
 
-The conversation cache avoids processing unchanged history again. In an
-eight-turn test at a 16 GB target, the last turn started replying after
-6.0 s with reuse, compared with 25.8 s without it. Reuse can change a reply
-when two candidate tokens are nearly tied; use `--no-prefix-cache` for
-comparisons that require a fresh computation every time.
+The conversation cache avoids processing unchanged history again. In a
+historical eight-turn test at a 16 GB target, the last turn started replying
+after 6.0 s with reuse, compared with 25.8 s without it. The current aligned
+cache accepts only checkpoints compatible with the incoming prompt's compute
+passes and backend, preserving exact cached-versus-fresh results for that
+computation. Use `--no-prefix-cache` to measure the cost of processing the
+whole prompt. See the [current reuse qualification](../db/records/measurements/prompt-speed-qualification-2026-09-21.md)
+for checkpoint and app-restart evidence.
 
 ### Prefill and speculative decode measurements
 

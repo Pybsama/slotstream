@@ -6,7 +6,65 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## Unreleased
+## 0.2.23 - 2026-09-22
+
+- Long prompts share expert reads across more existing compute passes, reducing
+  repeated reads without changing those passes. The scheduler preserves
+  checkpoint boundaries and chooses smaller groups when memory is tight.
+  See the [read-group and reuse qualification](db/records/measurements/prompt-speed-qualification-2026-09-21.md).
+- The Mac app can reuse compatible prompt checkpoints after a restart for
+  ordinary conversations. Checkpoints record the producing pass size, and
+  read groups stop at the checkpoint actually selected. Thinking and incognito
+  conversations keep their inference state off disk; an unavailable cache
+  falls back to ordinary inference.
+- Thinking and answering continue one live generation session, including
+  **Answer now**, natural completion and a reached thinking budget. The
+  engine reads only the transition suffix instead of reprocessing the thought.
+  [`Engine.generatePhased`](docs/LIBRARY.md#a-thinking-phase-followed-by-an-answer)
+  exposes this behavior with separate sampling and output budgets for each phase.
+- Automatically pair fused-workspace accounting with larger expert-read groups
+  on the qualified M5 Pro text-prefill path, including MTP. Main and draft
+  phases account for their overlapping hidden states. When smaller expert-buffer
+  writes allow substantially larger groups, the engine selects them automatically.
+  Groups adapt to the live memory budget and keep chronological compute passes;
+  other execution paths retain their existing policy. Applications need no new
+  setting. The [MTP measurements](db/records/measurements/mtp-prefill-policy-2026-09-21.md)
+  record the paired gain, tested configuration, memory peaks and remaining limits.
+- The engine and Mac app use the same pinned MLX backend and matching Metal
+  libraries. The measured M5 Pro profile enables upstream fused D256 prefill
+  attention with causal and sparse masks. Other profiles keep backend dispatch;
+  `SLOTSTREAM_OPT_FUSED_PREFILL=0` restores its normal selection on the measured
+  profile too. Disk checkpoints include the backend's arithmetic identity.
+  The [integration measurements](db/records/measurements/fused-prefill-integration-2026-09-21.md)
+  separate the complete backend upgrade from the fusion-only comparison;
+  percentages from different studies must not be combined into a total speedup.
+- Backend qualification keeps historical golden differences visible and adds
+  independent current-backend model comparisons and scalar attention oracles.
+  Exact speculative verification retains one-row projection arithmetic when
+  selected. The installer matches older macOS shaders to the downloaded release,
+  including releases made before this upgrade.
+- Closing response details from the Mac app completes immediately while a
+  thinking response is updating.
+
+- Chat Completions streams long string tool arguments as they are generated,
+  and parsing no longer rescans the whole growing argument at every token.
+  Token-limit truncation now returns `finish_reason: length`, requested usage
+  and the stream terminator, including incomplete required tool calls.
+  Partial arguments are not completed calls and must not be executed.
+- Conversation splicing recognizes earlier assistant replies inside a longer
+  cached descendant, preserving generated reasoning and tool syntax across
+  later turns. The disk cache retains generated IDs alongside its aligned
+  checkpoint so restarting does not drop reasoning from the reconstructed
+  prompt. Preparation checks retain the request's cancellation and
+  deadline between history turns.
+- Serving logs cache reuse decisions, periodic request phases and socket
+  output failures. Prefill progress follows elapsed time and estimates the
+  remaining wait from recent throughput. Ollama tool refusals name the
+  supported OpenAI route.
+- Serving diagnostics follow aligned cache boundaries and typed memory
+  failures. The pressure test interrupts an actual scope spanning several
+  prefill passes, then checks admission refusal and bounded recovery before
+  retrying inference.
 
 - Custom memory limits in the Mac app can exceed the automatic default within
   the Mac's supported range, with pressure protection and cache resizing still

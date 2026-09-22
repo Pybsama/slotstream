@@ -73,7 +73,7 @@ safety_before() {
         self.assertEqual(rows[0]['arguments'],
                          ['vision-parity', '--out', str(self.root/"vision output's; $(touch injected)")] if vision else
                          ['template-check'] if template else
-                         ['parity', '--tokens', '9707,11,1246,525,498,30', '--layers', '2', '--compare', 'bench/parity31'])
+                         ['parity', '--tokens', '9707,11,1246,525,498,30', '--layers', '2', '--compare', 'bench/parity31', '--row-invariant'])
         if not template:
             self.assertEqual(self.safety.read_text(), '13\n')
 
@@ -268,6 +268,35 @@ printf 'COUNTS %s %s\\n' "$PASS" "$FAIL"
 
 class VerifySmallGovernorStatus(VerifyGovernorStatus):
     small = True
+
+
+class VerifyHistoricalBackendDiagnostic(unittest.TestCase):
+    def run_status(self, code, output):
+        begin = SCRIPT.index('  LEGACY_MTP_STATUS=0')
+        end = SCRIPT.index('  # MTP is priced', begin)
+        with tempfile.TemporaryDirectory(prefix='legacy-backend-diagnostic-') as temp:
+            env = dict(os.environ, VERIFY_OUT=temp, FIXTURE_STATUS=str(code), FIXTURE_OUTPUT=output)
+            return subprocess.run(['bash', '-c', '''set -eo pipefail
+FAIL=0
+run_binary() { printf '%s\\n' "$FIXTURE_OUTPUT"; return "$FIXTURE_STATUS"; }
+''' + SCRIPT[begin:end] + '\n[ "$FAIL" -eq 0 ]\n'],
+                env=env, text=True, capture_output=True, timeout=10)
+
+    def test_old_agreement_and_numerical_difference_are_distinct_diagnostics(self):
+        for code, output, expected in [(0, 'MTP PARITY PASS', 'also agrees'),
+                                        (2, 'MTP PARITY FAIL', 'differs')]:
+            result = self.run_status(code, output)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('DIAGNOSTIC', result.stdout)
+            self.assertIn(expected, result.stdout)
+            self.assertNotIn('PASS ', result.stdout)
+
+    def test_unrelated_errors_are_not_waived(self):
+        for code, output in [(2, 'missing weights'), (1, 'MTP PARITY FAIL'),
+                             (139, 'MTP PARITY FAIL')]:
+            result = self.run_status(code, output)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('FAIL  historical draft-head diagnostic could not complete', result.stdout)
 
 
 if __name__ == '__main__':

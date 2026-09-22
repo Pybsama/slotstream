@@ -242,6 +242,9 @@ public final class ToolCallSplitter {
     private var currentArgs: [String: JSONValue] = [:]
     private var currentOrder: [String] = []
     private var emittedAnyArg = false
+    private var valueRaw = ""
+    private var streamsString = false
+    private var valueAtStart = true
     /// Everything consumed since `<tool_call>`, so a block that never closes
     /// can be returned verbatim rather than vanishing.
     private var rawCall = ""
@@ -325,8 +328,22 @@ public final class ToolCallSplitter {
                     let after = buf[hit.upperBound...]
                     guard let gt = after.firstIndex(of: ">") else { break loop }
                     let name = String(after[..<gt])
+                    guard currentArgs[name] == nil else {
+                        out.append(.malformed(rawCall + buf))
+                        buf = ""
+                        resetCall()
+                        state = .text
+                        return out
+                    }
                     rawCall += String(buf[..<buf.index(after: gt)])
                     buf = String(buf[buf.index(after: gt)...])
+                    valueRaw = ""
+                    valueAtStart = true
+                    streamsString = schemas[currentName]?.params[name] == .string
+                    if streamsString {
+                        out.append(.toolInputDelta(id: currentID,
+                            delta: (emittedAnyArg ? "," : "{") + JSONValue.quote(name) + ":\""))
+                    }
                     state = .value(name)
                     continue loop
                 }
@@ -345,19 +362,25 @@ public final class ToolCallSplitter {
                 continue loop
 
             case .value(let param):
-                guard let r = buf.range(of: Self.paramClose) else { break loop }
-                let raw = String(buf[..<r.lowerBound])
-                rawCall += String(buf[..<r.upperBound])
+                guard let r = buf.range(of: Self.paramClose) else {
+                    // Search only a bounded tail on the next push. Keeping a
+                    // closing tag's length also withholds its framing newline.
+                    // The old code rescanned the entire growing argument on
+                    // every token and never streamed a long file's contents.
+                    let keep = min(buf.count, Self.paramClose.count)
+                    consumeValue(String(buf.dropLast(keep)), final: false, into: &out)
+                    buf = String(buf.suffix(keep))
+                    break loop
+                }
+                consumeValue(String(buf[..<r.lowerBound]), final: true, into: &out)
+                rawCall += Self.paramClose
                 buf = String(buf[r.upperBound...])
                 let kind = schemas[currentName]?.params[param] ?? .unknown
-                let value = Self.coerce(raw, as: kind)
+                let value = Self.coerce(valueRaw, as: kind)
                 if currentArgs[param] == nil { currentOrder.append(param) }
                 currentArgs[param] = value
-                out.append(
-                    .toolInputDelta(
-                        id: currentID,
-                        delta: (emittedAnyArg ? "," : "{") + JSONValue.quote(param) + ":"
-                            + value.jsonText))
+                out.append(.toolInputDelta(id: currentID, delta: streamsString ? "\""
+                    : (emittedAnyArg ? "," : "{") + JSONValue.quote(param) + ":" + value.jsonText))
                 emittedAnyArg = true
                 state = .params
                 continue loop
@@ -381,7 +404,14 @@ public final class ToolCallSplitter {
         switch state {
         case .text:
             if !buf.isEmpty { out.append(.text(buf)) }
-        case .call, .params, .value, .closing:
+        case .value:
+            // A length-limited reply still owns the stable argument text it
+            // generated. Do not lose the decoder's final holdback on flush.
+            let keep = Self.holdback(buf, Self.paramClose)
+            let tail = String(buf.suffix(keep))
+            consumeValue(String(buf.dropLast(keep)), final: false, into: &out)
+            out.append(.malformed(rawCall + tail))
+        case .call, .params, .closing:
             out.append(.malformed(rawCall + buf))
         }
         buf = ""
@@ -411,15 +441,34 @@ public final class ToolCallSplitter {
         currentOrder = []
         emittedAnyArg = false
         rawCall = ""
+        valueRaw = ""
+    }
+
+    private func consumeValue(_ raw: String, final: Bool, into out: inout [ToolStreamEvent]) {
+        valueRaw += raw
+        rawCall += raw
+        guard streamsString else { return }
+        var value = raw
+        if valueAtStart, !value.isEmpty {
+            if value.hasPrefix("\n") { value.removeFirst() }
+            valueAtStart = false
+        }
+        if final, value.hasSuffix("\n") { value.removeLast() }
+        if !value.isEmpty {
+            // Escape each stable span, without adding another pair of quotes.
+            out.append(.toolInputDelta(id: currentID,
+                delta: String(JSONValue.quote(value).dropFirst().dropLast())))
+        }
     }
 
     /// How many trailing characters of `s` must be withheld because they could
     /// still grow into `tag`. Zero for ordinary prose, so text streams at once.
     public static func holdback(_ s: String, _ tag: String) -> Int {
-        let maxLen = min(s.count, tag.count - 1)
+        let tail = s.suffix(tag.count - 1)
+        let maxLen = tail.count
         if maxLen <= 0 { return 0 }
         for len in stride(from: maxLen, through: 1, by: -1) {
-            if tag.hasPrefix(s.suffix(len)) { return len }
+            if tag.hasPrefix(tail.suffix(len)) { return len }
         }
         return 0
     }

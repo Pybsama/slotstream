@@ -218,6 +218,13 @@ public final class Engine {
         }
     }
 
+    /// Detach the optional disk tier without deleting its saved states. A
+    /// private context must detach before encoding too, because spliced chat
+    /// encoding may consult the tier's saved conversation ids.
+    public func disablePersistentPrefixCache() {
+        withExclusive { prefixCache.attachPersistent(nil) }
+    }
+
     /// Where a prompt's system message ends, when it starts with one: the
     /// boundary the engine keeps as a shared prefix on its own. Callers whose
     /// shared preamble ends elsewhere set `RequestController.sharedPrefixTokens`.
@@ -523,12 +530,16 @@ public final class Engine {
     /// behaviour that existed before. The splice can make a turn cheaper; it can
     /// never make one wrong.
     public func encodeChatSpliced(
-        _ messages: [ChatMessage], tools: [ToolDefinition], thinking: Bool, effort: String?
+        _ messages: [ChatMessage], tools: [ToolDefinition], thinking: Bool, effort: String?,
+        request: RequestController? = nil
     ) throws -> [Int] {
+        try request?.check(phase: "chat template tokenization")
         let full = try encodeChat(messages, tools: tools, thinking: thinking, effort: effort)
+        try request?.check(phase: "chat prefix matching")
         guard prefixCache.enabled, messages.contains(where: { $0.role == "assistant" })
         else { return full }
         let fullText = tokenizer.decode(tokens: full, skipSpecialTokens: false)
+        let turnEnd = tokenizer.encode(text: "<|im_end|>", addSpecialTokens: false)
 
         var spliced: [Int] = []  // ids exactly as the model saw or produced them
         var consumed = 0  // characters of fullText those ids already cover
@@ -539,6 +550,7 @@ public final class Engine {
         }
 
         for k in messages.indices where messages[k].role == "assistant" {
+            try request?.check(phase: "chat prefix matching, assistant turn \(k)")
             guard
                 let headIds = try? encodeChat(
                     Array(messages[0..<k]), tools: tools, thinking: thinking, effort: effort)
@@ -551,21 +563,35 @@ public final class Engine {
             let producer =
                 spliced + (bridge.isEmpty ? [] : tokenizer.encode(text: bridge, addSpecialTokens: false))
             guard let entry = prefixCache.peek(extending: producer) else { break }
-            let generated = Array(entry[producer.count...])
+            // A retained descendant can include several later turns. Match
+            // only this assistant turn, then validate each later turn in the
+            // loop. Never compare the whole descendant to the first reply.
+            let generated = Self.assistantTurnIds(in: entry, after: producer.count, turnEnd: turnEnd)
             let genText = tokenizer.decode(tokens: generated, skipSpecialTokens: false)
             guard Self.spliceDescribes(genText, messages[k], tools: tools) else { break }
             guard
                 let end = fullText.range(
                     of: "<|im_end|>", range: index(headText.count)..<fullText.endIndex)
             else { break }
-            spliced = entry
+            spliced = producer + generated
             consumed = fullText.distance(from: fullText.startIndex, to: end.lowerBound)
             didSplice = true
         }
 
         guard didSplice else { return full }
+        try request?.check(phase: "chat suffix tokenization")
         let tail = String(fullText[index(consumed)...])
         return spliced + tokenizer.encode(text: tail, addSpecialTokens: false)
+    }
+
+    package static func assistantTurnIds(in entry: [Int], after count: Int, turnEnd: [Int]) -> [Int] {
+        guard count >= 0, count <= entry.count else { return [] }
+        guard !turnEnd.isEmpty, turnEnd.count <= entry.count - count else { return Array(entry.dropFirst(count)) }
+        for i in count...(entry.count - turnEnd.count)
+        where entry[i] == turnEnd[0] && entry[i..<(i + turnEnd.count)].elementsEqual(turnEnd) {
+            return Array(entry[count..<i])
+        }
+        return Array(entry.dropFirst(count))
     }
 
     /// Does this generated text describe the assistant turn the client sent?
@@ -1009,6 +1035,59 @@ public final class Engine {
         onToken: ((Int, String) -> Bool)? = nil,
         request: RequestController?, onAdmitted: (() -> Bool)? = nil
     ) -> (text: String, ids: [Int], stats: GenStats) {
+        generatePhase(promptIds: promptIds, params: params, vision: vision,
+            shouldContinue: shouldContinue, onToken: onToken, request: request,
+            onAdmitted: onAdmitted, gateHeld: false, continuing: nil, retaining: nil)
+    }
+
+    public typealias GenerationResult = (text: String, ids: [Int], stats: GenStats)
+
+    /// Two phases of one text generation, with independent samplers and output
+    /// budgets. The transition supplies nonempty forced separator/closure tokens. The
+    /// last sampled token is still pending and is consumed exactly once along
+    /// with that suffix. Callbacks must not re-enter this engine's generation
+    /// or configuration APIs: the session holds the generation gate throughout.
+    /// Neither phase persists private working state to disk. Later turns still
+    /// obey the ordinary cold-equivalent prefix-resume rule.
+    public func generatePhased(
+        promptIds: [Int], first: SampleParams, second: SampleParams,
+        shouldContinue: (() -> Bool)? = nil,
+        onFirstToken: ((Int, String) -> Bool)? = nil,
+        onSecondToken: ((Int, String) -> Bool)? = nil,
+        request: RequestController? = nil,
+        transition: (GenerationResult) throws -> [Int]
+    ) throws -> (first: GenerationResult, second: GenerationResult) {
+        let control = try request ?? beginRequest(connected: { shouldContinue?() ?? true })
+        try lock.lock(request: control)
+        defer { lock.unlock() }
+        control.persistsPrefixState = false
+        let held = GenerationPhaseState()
+        let firstResult = generatePhase(promptIds: promptIds, params: first, vision: nil,
+            shouldContinue: shouldContinue, onToken: onFirstToken, request: control,
+            onAdmitted: nil, gateHeld: true, continuing: nil, retaining: held)
+        if let failure = firstResult.stats.requestFailure { throw failure }
+        if let error = firstResult.stats.runtimeError { throw ModelError(error) }
+        let suffix = try transition(firstResult)
+        guard !suffix.isEmpty else {
+            throw RequestFailure(.invalidConfiguration, "a generation phase requires a nonempty transition suffix")
+        }
+        guard shouldContinue?() != false else {
+            throw RequestFailure(.clientCancelled, "generation was cancelled between phases")
+        }
+        let next = control.nextGenerationPhase()
+        next.persistsPrefixState = false
+        let secondResult = generatePhase(promptIds: promptIds + firstResult.ids + suffix,
+            params: second, vision: nil, shouldContinue: shouldContinue, onToken: onSecondToken,
+            request: next, onAdmitted: nil, gateHeld: true, continuing: held, retaining: nil)
+        return (firstResult, secondResult)
+    }
+
+    private func generatePhase(
+        promptIds: [Int], params: SampleParams, vision: VisionPrompt?,
+        shouldContinue: (() -> Bool)?, onToken: ((Int, String) -> Bool)?,
+        request: RequestController?, onAdmitted: (() -> Bool)?, gateHeld: Bool,
+        continuing: GenerationPhaseState?, retaining: GenerationPhaseState?
+    ) -> GenerationResult {
         let requestStart = RuntimeClock.now()
         let control: RequestController
         do {
@@ -1025,7 +1104,7 @@ public final class Engine {
             guard promptIds.count <= control.configuration.maxContextTokens else {
                 throw RequestFailure(.contextLengthExceeded, "prompt exceeds this request's configured context window")
             }
-            try lock.lock(request: control)
+            if !gateHeld { try lock.lock(request: control) }
         } catch {
             var stats = GenStats(); stats.promptTokens = promptIds.count
             let failure = error as? RequestFailure ?? RequestFailure(.inferenceError, String(describing: error))
@@ -1040,7 +1119,7 @@ public final class Engine {
         }
         let queueSeconds = RuntimeClock.seconds(since: requestStart)
         let preparationSeconds = max(0, control.elapsedSeconds - queueSeconds)
-        defer { control.releaseDispatchReservation(); lock.unlock() }
+        defer { control.releaseDispatchReservation(); if !gateHeld { lock.unlock() } }
         var params = params.sanitized()
         // A queued request may acquire the lock before the waiting governor.
         // Refuse it before image encoding, cache checkout or GPU allocation.
@@ -1207,7 +1286,8 @@ public final class Engine {
                 guard !clientGone, !stopFound else { return false }
                 if observePressure() { return false }
                 return shouldContinue?() ?? true
-            }, onToken: tokenHandler, request: control, onAdmitted: onAdmitted)
+            }, onToken: tokenHandler, request: control, onAdmitted: onAdmitted,
+            continuing: continuing, retaining: retaining)
 
         var text = tokenizer.decode(tokens: ids, skipSpecialTokens: true)
         if !stops.isEmpty, let from = Self.answerStart(text, reasoningOpen: reasoningOpen),

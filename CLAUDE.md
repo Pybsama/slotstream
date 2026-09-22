@@ -563,8 +563,9 @@ still quoted in commit history and both are wrong.
   pinned `pipenetwork` revision; `slotstream pull --verify` re-checks all
   hashes in ~14 s and is a verify.sh gate.
 - Parity goldens must be generated under **mlx 0.31.1** (`.venv31`,
-  `Tools/parity_ref.py`) — mlx-swift vendors 0.31.x and 0.32.x kernels differ
-  measurably. Never regenerate goldens under a newer mlx.
+  `Tools/parity_ref.py`). The runtime now pins MLX 0.32.2; kernel-upgrade
+  fidelity and same-backend cache equivalence are separate gates. Preserve the
+  historical reference: never regenerate goldens under a newer mlx.
 - SwiftPM cannot compile Metal shaders with CLT only: the Makefile colocates
   the prebuilt `mlx.metallib` next to the binary. `swift test` is unavailable
   (no XCTest in CLT) — `Tools/verify.sh` is the acceptance suite.

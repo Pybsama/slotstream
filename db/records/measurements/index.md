@@ -2,11 +2,19 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-18T21:09:57.710768Z
+updated: 2026-09-22T05:04:53.699748Z
 ---
 
 # records/measurements
 
+- [[records/measurements/automatic-prefill-policy-2026-09-21]] — Automatic prefill policy: validation and bounded adoption
+- [[records/measurements/mtp-prefill-policy-2026-09-21]] — Automatic MTP prefill: phase accounting and bounded expert writes
+- [[records/measurements/prefill-opportunities-2026-09-21]] — Remaining long-prompt opportunities: tested gains and rejected alternatives
+- [[records/measurements/fused-prefill-integration-2026-09-21]] — Qualified fused prefill integration and remaining bottlenecks
+- [[records/measurements/prompt-speed-qualification-2026-09-21]] — Prompt speed: three qualified changes and one rejected attention upgrade
+- [[records/measurements/fused-attention-reassessment-2026-09-21]] — Fused attention reassessment: usability, fidelity and qualification
+- [[records/measurements/issue21-long-context-qualification-2026-09-21]] — Issue 21: long conversations and full acceptance pass; original intermittent failures remain unproven
+- [[records/measurements/issue21-serving-regressions-2026-09-21]] — Issue 21: confirmed serving bugs repaired, remaining crash and pressure reports unverified
 - [[records/measurements/release-0-2-22-published-2026-09-18]] — v0.2.22 published, installed and accepted: memory and context policy fixed, exact conversation resume, verified release bytes, installed end to end 31/31.
 - [[records/measurements/conversation-resume-exactness]] — A continued conversation now computes what a cold one computes, bit for bit; a follow-up turn pays one partial prefill pass, 2.47 s against 8.56 s at 961 slots
 - [[records/measurements/memory-budget-context-policy-2026-09-18]] — Memory budget: preserve expert cache when context cost is unmeasured

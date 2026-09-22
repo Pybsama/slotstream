@@ -5700,3 +5700,282 @@ The v0.2.22 candidate closes the one known failure from the earlier native run. 
 The full native battery now passes 27 top-level gates with no failures. It also repeats the pinned-weight hashes, parity, exact conversation resume, short- and long-request 10 GB bounds, speculative decoding, 74 serving checks and 15 behavioral probes. The repository gates pass 319 memory cases, 90 planner cases and 69 catalogue groups with 31,261 assertions. Evidence: [[sources/runs/2026/09/2026-09-18-v0-2-22-release-candidate]].
 
 This qualifies the release candidate functionally on the shared 48 GB development Mac. It remains neither a native 48 GB allocation measurement nor 64 GB hardware qualification.
+
+## Issue 21: confirmed serving bugs repaired, remaining crash and pressure reports unverified
+[Issue 21](https://github.com/carloslfu/slotstream/issues/21) combines confirmed server bugs, behavior already corrected after the reported release, deliberate compatibility limits, and failures that have not been reproduced. The confirmed streaming and conversation-splicing defects are repaired. This does not establish that every reported symptom is fixed.
+
+## One-by-one disposition
+
+| Reported problem | Finding and resulting behavior |
+| --- | --- |
+| Long tool arguments arrive only at completion | Confirmed. The parser retained and repeatedly searched a growing parameter buffer; Chat Completions ignored provisional events. Declared string arguments now stream escaped JSON fragments during generation. The parser searches a bounded suffix and keeps completed executable calls separate from provisional fragments. |
+| Capped tool generation has no finish or usage | Confirmed. An incomplete call became an SSE error. Budget exhaustion now ends with `finish_reason: length`, requested usage and `[DONE]`, preserving partial arguments. Non-streaming follows the same contract. Partial JSON is not an executable completed call; undeclared tools and malformed completed output still fail. |
+| Follow-up prompts miss saved states | Confirmed splicing defect. A retained descendant could include several assistant turns, but matching compared it all with the first assistant message. Matching now slices and validates one assistant turn at a time, splicing only that turn's native IDs. This repairs that cause, not every nearly-identical prompt. |
+| Disk restore loses native history | Additional reproduced defect. Memory retained generated reasoning IDs; aligned disk checkpoints lacked the suffix after their numerical boundary. The intermediate restart reconstructed 1628 prompt tokens instead of 1654 and changed reasoning. Disk heads now optionally retain exact conversation IDs independently from numerical-state tokens. The repaired replay reconstructs 1654 prompt tokens and identical answer and reasoning, restoring 1536 numerical tokens. |
+| Sparse progress and stale tail ETA | Confirmed observability limitation. Progress appears after a completed pass once five seconds have elapsed, including a slow short suffix. ETA uses the recent interval and says “at this rate.” A separate request heartbeat reports the checked phase while a pass is still running. Initial estimates remain estimates. |
+| No reason given for cache misses | Added diagnostics for disabled/empty/evicted cache, prefix/model/image mismatch, incompatible pass boundaries, missing logits, fork failure and disk restore refusal. Hits report source and reused-token counts. |
+| Omitted `max_tokens` defaults to 512 | Already corrected after 0.2.20. Current policy uses one quarter of context, capped at 8192; explicit budgets remain available. Contract checks cover this bounded default. Unlimited generation is not promised. |
+| `store` and unknown optional fields rejected | `store: false` was already accepted after 0.2.20 and is now exercised by the live OpenAI gate. Persistence-requesting or unsupported semantics remain explicitly rejected. Arbitrary unknown fields are not silently ignored; the accepted surface is documented. |
+| Plain streamed cap has no terminal event | Not reproduced in official 0.2.20 or the repaired build. Both capped plain and unused-tools text streamed content, length termination, usage and `[DONE]`. Regression fixtures preserve that behavior. |
+| Ollama tools/tool-role rejected | Intentional adapter scope. Refusal now directs clients to `/v1/chat/completions`, with matching documentation. This work does not add Ollama tool calling. |
+| Silent whole-process exits | Not reproduced. Existing SIGPIPE protections remain. A live TCP reset during output was followed by a successful request in the same server. Writer failures now identify socket, drain, cancellation or queue causes. A numeric-conversion trap reproduced in 0.2.20 was already fixed after that release; no evidence links it to the reported exits. |
+| Busy pre-prefill stall after restore | Not reproduced with the available fixture. Added phase heartbeat and cancellation/deadline checks around encoding and between history-splicing steps. These improve diagnosis and cooperatively bound work; they do not prove the reported cause is fixed. |
+| Long-context pressure slowdown | Not reproduced or performance-qualified here. Pressure eviction and exact-prefix/boundary requirements remain intentional. No pressure workload was induced or reporter-hardware run performed. |
+
+## Preserved invariants
+
+Conversation metadata never becomes a numerical resume boundary: only the original checkpoint tokens select restored state, and generated suffixes are reread under the existing fresh-equivalent pass rule. Metadata shares the head's disk quota, expiration, deletion and clear lifecycle. Legacy heads decode; invalid token metadata is refused. Atomic replacement preserves tensor bytes, using APFS cloning when available and a bounded copy otherwise. Requests prohibiting persistence write no conversation metadata.
+
+Chat Completions emits one call identity with ordered fragments. Incomplete JSON is exposed only with length termination marking the incomplete response. Completed calls keep validation and typed coercion. Other protocol adapters retain completed-call behavior, and nonblocking socket output remains bounded.
+
+## Evidence and limits
+
+[[sources/runs/2026/09/2026-09-21-issue21-regressions]] preserves the official baseline, intermediate failed restart, final executable/source identities and raw evidence. The final build passed all 56 T0 checks (29468 assertions), a tensor-format round trip (94 assertions), all 24 OpenAI compatibility checks, live capped text/tool streaming, three-turn reasoning reuse, TCP-reset survival and identical disk-restart replay. A weights-free parser regression covers 16000 escaped Unicode fragments before closing the call; live fixtures use smaller explicit budgets to exercise termination.
+
+These are functional checks at an 8.1 GB target with MTP and vision off on the development Mac, not a clean benchmark, the full release battery or the reporter's long-context workload. Exact source is archived because other tasks edited the shared checkout. The exact client and complete logs were offered but not attached to the issue at capture time. Silent exits, the busy stall and pressure-related tail throughput remain open pending reproducible or diagnostic evidence.
+
+## Issue 21: long conversations and full acceptance qualification
+The confirmed issue-21 streaming and conversation-cache defects now have passing long-context and full acceptance coverage. This extends [[records/measurements/issue21-serving-regressions-2026-09-21]], whose original findings and narrower evidence remain preserved. It does not establish a cause or fix for every symptom in the report.
+
+## Results
+
+[[sources/runs/2026/09/2026-09-21-issue21-qualification]] preserves raw requests, streams, logs, failures, drivers and exact source/executable identities before this transcription.
+
+| Check | Result |
+| --- | --- |
+| Full acceptance battery | 29 passed, 0 failed, including MTP, vision, cache/logit equality, bounded pressure recovery, process-memory gates and API robustness |
+| Tensor/format tier | All 15 T1 groups passed |
+| Serving diagnostics | Context, output, pressure boundary and persistent-prefix checks passed; pressure/persistence variants also passed with MTP |
+| Final checkout T0/runtime | All 56 T0 groups passed, 29478 assertions, no skips; runtime check passed |
+| Final live API | Issue-21 streaming/termination/cache/disconnect suite, all 24 OpenAI checks and exact disk restart passed |
+| Final adaptive server | Kept the explicit 10 GB ceiling through startup cooldown and completed a request |
+| Long conversation | Prompt grew from 30288 to 51367 to 51413 tokens; reused numerical state advanced from 30208 to 51200 tokens, including after restart |
+
+The last follow-up reread only 213 tokens. Its reply, reasoning and usage matched after a real server restart. This passed at configured windows 65536 with a 10 GB target and 131072 with a 13.5 GB target, MTP and vision off. The larger-window follow-up and replay allowed 16000 output tokens and naturally produced 24. The window is a configured maximum; the largest actual prompt was 51413 tokens.
+
+The full battery used frozen executable `cc39e86eab88e3873d4c2fad47fb1e0505df63eb75d3d79da8da750c3e42fce0`. After another task added legacy Swift callable overloads and adaptive-policy guards, final checkout executable `7a4ae53bb0ce8e1fbdeb0df7f83685cea7c7b28e341a779814fb6e6fa48d0694` passed T0/runtime, live API/restart and bounded adaptive serving. The 29-gate battery was not repeated on that final executable. The run records each build separately and verifies final source hashes.
+
+## Additional corrections made during qualification
+
+Broader tests exposed stale assumptions in diagnostics. Each was checked against actual engine behavior before changing the assertion:
+
+- Context-serving counted only retained conversation tokens even though ownership includes the numerical checkpoint too. It also expected all 515 prompt tokens to be reusable where the valid aligned boundary is 512. It now checks exact retained history and rereading of the suffix from the actual safe boundary.
+- Output-serving expected a generic inference error for low memory. It now requires the typed `insufficient_memory` response and HTTP 503. A second request remains refused while simulated headroom is zero, then succeeds only after a recovery bounded by real available memory and the normal governor policy.
+- The pressure-scope fixture injected pressure on a continuation poll that occurred after the read scope had committed. It now injects at an actual layer router callback inside the scope and explicitly requires an aborted read with zero committed tokens. For this focused test, it disables checkpoint splitting temporarily so the intended multi-pass scope exists, then restores the setting. Plain and MTP variants pass.
+
+These are test repairs, not a weakening of numerical resume boundaries or production memory protection. Earlier failed attempts remain in the evidence archives.
+
+## What remains unproven
+
+The original intermittent whole-process exits and 20-minute busy stall did not reproduce. TCP-reset survival, long conversation completion and restart replay passed, but they cannot identify an unobserved failure's cause. A supplied 200-turn history also completed; it was not 200 real sequential generations. The exact client and complete logs were not attached to the issue at capture time.
+
+Live length-boundary tests use bounded generation; a 16000-token allowance is not evidence of 16000 generated tokens. The weights-free parser fixture separately covers 16000 escaped Unicode fragments. The configured 131K-window run is not full-window prompt qualification. No induced pressure workload or reporter-hardware test was run, and long-context tail timing on this active machine is not a performance benchmark. MTP/vision pass their acceptance fixtures, not every combination with this long-conversation workload.
+
+All owned servers were stopped and reaped. The repairs and evidence are local and have not been published as a release. Ollama tool calling remains outside the adapter's supported scope, with an actionable OpenAI-endpoint refusal; unsupported persistence semantics remain explicit refusals.
+
+## Prompt speed: three qualified changes and one rejected attention upgrade
+Three improvements are implemented locally: larger guarded expert-read scopes, exact prefix-checkpoint/restart reuse, and one live thinking-to-answer session. The newer fused-attention candidate remains disabled. No release or cross-hardware speed guarantee is implied.
+
+## Why these changes help
+
+A prompt has several costs: loading and encoding, fetching experts, dense/GDN work, attention, and optional cache I/O. Sharing an expert read across more existing compute passes reduces repeated SSD traffic. Once a scope already touches most experts, doubling its tokens need not double its expert bytes. Reusing an exact prefix removes work already performed. Continuing a live generation phase removes a second read of the thought without pretending generated state equals a fresh prefill on a later turn. Fused attention targets a different cost, avoiding intermediate score traffic, but its altered accumulation can change floating-point results and selected tokens.
+
+## Results
+
+| Opportunity | Implemented behavior | Evidence and limit |
+| --- | --- | --- |
+| Larger expert-read scopes | Automatic scheduling may share up to 8192 tokens when the scheduled compute pass is 256 rows; other eligible pass sizes retain 4096. Every original compute pass, checkpoint boundary, memory check and smaller-scope fallback remains. | 817 numerical checks pass. Three eligible loaded-engine pairs give median throughput ratio 1.179187, about 15.2% less prefill time on the 8195-token fixture. Expert bytes fall from 104581324800 to 58511462400. The guarded automatic path also runs under 10 GB. |
+| Prefix/checkpoint and restart reuse | Read scopes end at the checkpoint actually selected, rather than an obsolete fixed checkpoint. Disk heads record producing pass size; mismatched or unknown arithmetic is refused. The app attaches a per-Home disposable cache for eligible ordinary conversations. | Core 2051-token follow-up reads 259 after reusing 1792, with bit-exact cold logits. Disk reopen, changed-pass refusal and matching-pass restore pass. App restart reuses 2048 and reads 168 instead of 2216, with the same answer. |
+| Thinking then answering | `Engine.generatePhased` owns both samplers under one gate and transfers live state. It consumes any pending token once and reads the transition suffix. Generated rows remain ineligible for cold-equivalent later-turn reuse. | Plain and MTP checks pass 19 assertions each. Plain transition logits match an independent reconstruction bit for bit. Real app forced closure, Answer now, natural completion, plain follow-up and metric equality pass. |
+| New fused attention | MLX 0.31.1 remains pinned. The isolated MLX 0.32.2 integration is not promoted. | 807 of 810 numerical checks pass, but three continuation/rollback final-token comparisons fail. This is failure of the project's equivalence gate, not proof of worse answer quality. Component speed or a non-interleaved full-model time cannot override it. |
+
+## Privacy, memory and compatibility
+
+Ordinary app caches live in the owning Home's `.sevra/prefix-cache`, inherit the engine's existing quota/age policy, and are excluded from backups. Thinking, historical thinking conversations and incognito do not attach the disk tier. Home/privacy transitions clear held state before encoding; a direct thinking call detaches the tier too. Unavailable disk acceleration falls back to ordinary inference. The real app cache/phase sequence peaks at 8.081 GB under its 10 GB setting and preserves cache-file hashes through private requests.
+
+Legacy generation signatures remain available. The new phase API preserves request context/headroom policy, cancellation and independent output budgets. The legacy explicit cache mode retains its original shared-prefix behavior; aligned production reuse remains stricter. Full shared-prefix regression passes 745 checks, all 56 T0 groups and all 15 component groups pass, and the full native app and static scripts pass. Parity golden bytes remain unchanged.
+
+## Timing boundaries and reproducibility
+
+The first fresh-process scope experiment has no eligible paired rounds and is discarded for timing. The separate loaded-engine experiment has three eligible pairs; rounds 0 and 4 are discarded. All raw results remain available, including intermediate diagnostic, compatibility and compilation failures. Checkpoint/app timings are single functional observations, not additional percentage-speed claims. The measured scope gain applies to this M5 Pro, fixture and bounded loaded configuration. Cold start, other Mac generations, larger compute-pass scopes and universal end-to-end latency remain unmeasured.
+
+Evidence: [[sources/runs/2026/09/2026-09-21-prompt-speed-fresh-scope-discarded]], [[sources/runs/2026/09/2026-09-21-prompt-speed-loaded-scope]], [[sources/runs/2026/09/2026-09-21-prompt-speed-engine-and-fused]], [[sources/runs/2026/09/2026-09-21-prompt-speed-app-qualification]]. Operating decision: [[records/decisions/prompt-speed-qualified-paths]].
+
+
+## Later reassessment on September 21
+
+[[records/measurements/fused-attention-reassessment-2026-09-21]] and [[records/decisions/kernel-upgrade-fidelity-and-cache-equivalence]] correct the fused-attention interpretation above. The candidate still fails the original cross-kernel token-parity checks, but that does not establish inability to use it or lower answer quality. The ordinary rechunk control also changes a token; independent high-precision component comparisons favor the fused result; and the same fused backend passes the tested exact warm/cold continuation. The small semantic test contains the same arithmetic error under both backends. The original evidence remains preserved and the three other qualified paths remain adopted.
+
+## Fused attention reassessment: usability, fidelity and qualification
+Fused head-dimension-256 attention can run on this M5 Pro with Slotstream's explicit sparse masks. The earlier rejection establishes a failure of cross-kernel token parity, not an inability to integrate the kernel and not demonstrated lower answer quality. This reassessment preserves the original run and its three candidate mismatches.
+
+## What the rejection missed
+
+The existing diagnostic compares 256-token reference prefill, ordinary 512-token rechunking, and the fused 256-token candidate. It allows numerical drift relative to the rechunking control, but only asserted greedy-token equality for the candidate. The symmetric reassessment finds one changed token in the ordinary rechunking control and the same three changed choices in the candidate, across seven checkpoints. The synthetic prompt consists of arbitrary vocabulary IDs. There is no semantic oracle establishing that one of those predicted tokens is the correct answer.
+
+A changed arithmetic implementation and an inconsistent cache are separate questions. The standing warm/cold rule requires an identical computation when the same backend processes the same request, including its producing pass schedule. It explicitly does not require different pass sizes to agree. An upgrade can change floating-point rounding without breaking this rule. The new candidate reuses 2048 tokens and produces bit-identical cold logits on the tested continuation.
+
+## Numerical fidelity and real tasks
+
+A float64 NumPy reference, computed from exactly the same BF16 inputs, is more independent than treating the old BF16 output as truth. Across 12 synthetic component cases, including sparse masks, odd lengths and keys up to 32768, fused attention has smaller relative-L2 error every time. The median old/new error ratio is 2.562232. Eight query rows across all 24 heads are checked in each case. This is component fidelity, not a full-model accuracy guarantee.
+
+The fallback materializes intermediate attention scores in the input dtype; the NAX implementation uses float accumulators and avoids the complete score tensor. They compute the same masked-attention formula with different rounding and memory traffic. The improved component fidelity is therefore consistent with the implementation, rather than a reason to expect bitwise agreement with the old path.
+
+Four real inventory tasks use 3935 to 4190 prompt tokens, 256-row compute, 4096-token read scopes and greedy generation without thinking. Both implementations produce identical output tokens in every task. Retrieval, JSON extraction and a typed tool call are correct. Both produce the same wrong arithmetic result, 966 instead of 714. Preserve that failure: the report passes 35 of 37 assertions, not every assertion. This limited comparison finds no candidate-only semantic regression; it does not certify general answer quality. Physical footprint remains below 10 GB.
+
+## Integration and remaining scope
+
+The isolated Swift build uses MLX 0.32.2 and its matching metallib. The ordinary project still pins MLX 0.31.1. The tested newer dispatch defaults D256 to fused only for at least 1024 causal queries without an array mask. force_fused permits the supported kernel with the 256-query and explicit-mask geometry tested here. The later upstream array-mask dispatch change is distinct from, and unnecessary for, this forced path.
+
+This establishes feasibility on the M5 Pro. The production dependency is not upgraded by this research. Full backend/application qualification, MTP and persistent-reopen coverage under the new backend, larger context profiles, and other target Mac generations remain outside these new tests. Existing speed and memory gates continue to apply. The same-backend cache check remains strict; a cross-backend token mismatch is labeled as parity evidence, not silently rewritten as a quality failure or a passing parity result.
+
+## Full-prompt performance
+
+The separate loaded-engine experiment processes the same 8195-token fixture, with the same model pool and compute/read schedule, under fused and unfused MLX 0.32.2. One warmup per arm precedes five alternating pairs. Two pairs are eligible; three are excluded for paging. Eligible unfused/fused times are 40.860659/38.723230 seconds and 41.259546/39.303033 seconds. The median paired throughput ratio is 1.052489, about 4.99% less prefill time. This is preliminary evidence from two clean pairs, not a release-qualified or universal speed claim. All prompt-completion and physical-memory checks pass.
+
+The whole-prompt gain is much smaller than the attention-operation gain because fusion does not remove expert SSD traffic or the rest of the model work. The measured candidate also reads about 0.4% fewer expert bytes because rounding can change routing, so this is an integrated-candidate comparison. Lifetime physical peaks do not establish a whole-process memory reduction. Longer contexts and larger compute passes may make attention's memory savings more valuable; that is an engineering hypothesis requiring a separate profile measurement.
+
+Correctness evidence: [[sources/runs/2026/09/2026-09-21-fused-review-correctness]]. Timing evidence: [[sources/runs/2026/09/2026-09-21-fused-review-performance]]. Operating interpretation: [[records/decisions/kernel-upgrade-fidelity-and-cache-equivalence]].
+
+
+## Diagnostic correction verified
+
+The main diagnostic now records every reference, control and candidate token choice while retaining its original parity assertions. The optimized main build, all 56 T0 groups and all 817 checks in the real 1024-token scope fixture pass. All 21 arm-token measurements and seven control-match observations are present. Production Slotstream sources match the previously qualified runtime byte for byte. Exact sources and final verification are retained in [[sources/runs/2026/09/2026-09-21-fused-review-verification]].
+
+## Qualified fused prefill integration and remaining bottlenecks
+The upstream fused D256 prefill path is integrated in the working tree, with matched CLI and Mac-app dependencies, shader packaging, cache identity and numerical/runtime qualification. This is local integration, not a published release. Automatic forcing is limited to the tested Mac17,9 / M5 Pro / macOS build 25G83 profile. Other devices retain MLX dispatch; explicit forcing still requires supported NAX hardware and BF16 prefill geometry.
+
+## Measured gain and limits
+
+| Fixture | Comparison | Eligible pairs | Result |
+| --- | --- | ---: | --- |
+| inventory8195 | legacy to fused | 3 | 5.22% less prefill time, 1.0550x throughput |
+| inventory8195 | mlx32-default to fused | 2 | 1.80% less prefill time, preliminary only; fewer than three clean pairs |
+| inventory8195 | legacy to mlx32-default | 2 | 2.95% less prefill time, preliminary only; fewer than three clean pairs |
+
+All three integrated pairs improve prefill time, by 3.74% to 5.66%; median saved time is 1.55 seconds. The fused candidate stays below 8.23 GB physical peak in these three cells. The third normal-dispatch control has paging, so it is excluded from both component comparisons while the clean old/fused pair remains eligible. No 16K speed percentage is qualified.
+
+The main comparison uses this 48 GB Mac, a 10 GB engine target, identical raw inventory prompts, 256-row compute and fresh processes. It reports medians of eligible paired ratios. The original 8.1 GB pilot is retained separately and supplies no speed claim. These results do not imply the same gain at another memory budget, on another Mac, on warm-prefix hits or for every prompt. Read-scope schedules and routing can change the number of expert reads; the report preserves them for each pair. No across-study percentage is compounded with earlier prompt optimizations. The integrated old-backend comparison and the fusion-only comparison have separate eligibility counts. Fewer than three clean fusion-only pairs cannot establish a qualified fusion-only percentage. Adoption concerns the complete tested integration; it does not imply that all its gain came from attention.
+
+## Integration and correctness
+
+mlx-swift is pinned at ab924c82ead3b970caaa1c0ac11171de23f0305a with MLX 0.32.2 and matching verified shaders. Upstream [D256 NAX attention](https://github.com/ml-explore/mlx/pull/3842) is by wyanzhao; [force_fused](https://github.com/ml-explore/mlx/pull/4185) is by hojin12312. The later [automatic array-mask dispatch](https://github.com/ml-explore/mlx/pull/4416) is by dwijenpatel and is unnecessary for this explicitly selected path. The integration and qualification here use those upstream mechanisms.
+
+Causal and explicit sparse masks pass an independent scalar Double oracle on actual BF16 inputs. Decode/short verify and unsupported dtypes preserve their paths. Both main-layer and draft-head Python comparisons pass under the new backend; the MTP reference is bit exact. Exact warm/cold cache logits, disk reopen, invalidation, pool changes, speculative rollback, vision, APIs and real app lifecycle checks pass. Backend/environment/GPU/OS identity prevents an old disk checkpoint from inheriting changed arithmetic. The old MLX 0.31 draft-head golden still differs and remains visible; no historical golden is regenerated and no tolerance is widened. The old arbitrary-rechunk heuristic is a reproducible optional diagnostic, while actual same-schedule cache equivalence stays mandatory.
+
+The catalogue passes 72 groups / 31,677 assertions; the final upgrade rerun passes seven acceptance groups. The preceding full battery's 26 passing live groups remain supported by identical production engine semantics, with comment-only engine changes and re-run CLI diagnostics documented by source hashes. All three real Mac checks, the scripted UI suite, bundle build, external Swift consumer and final static/installer gates pass. Numerical and behavioral evidence is bounded and is not a general claim of improved model quality.
+
+## What limits further gains
+
+1. The planner still prices the unfused query-by-context intermediates in `ContextWorkspace.prefillBytes`. Fusion removes the full per-head score/probability buffers, but indexer masks, dense/GDN activations, expert workspace and short-path fallbacks still need reservations. A backend-aware reservation and larger compute passes need independent physical-peak, cancellation, retained-cache and exact-resume qualification before adoption.
+2. Memory-eligible expert-read scopes can dominate the outcome. At 8.1 GB the pilot reads more than 912 GB for 8195 tokens; at 10 GB the first baseline cell keeps an 8192-token scope and reads about 60 GB. At 16K, later scopes can contract as context and retained state grow. The opportunity is fewer rereads while retaining the process ceiling, not simply raising a memory limit or multiplying a kernel speedup into a full-request promise.
+3. The pinned fused kernel loops over key tiles and computes QK before applying an arbitrary mask. Truly sparse tiled attention could avoid discarded-key work, but per-query selections make efficient matrix tiling and reuse difficult. Kernel-level measurements and actual selection locality are needed; the existing experimental scalar selected-attention kernel is not automatically promoted.
+4. Expert matrix multiplication, GDN/dense layers, host synchronization and storage remain. Observed stage counters in the benchmark identify waits but do not fully attribute the remaining GPU work. A full trace should guide the next kernel change. The later upstream dispatch patch alone does not add another kernel gain to an already forced path.
+
+Raw evidence: [[sources/runs/2026/09/2026-09-21-fused-integration-correctness]], [[sources/runs/2026/09/2026-09-21-fused-integration-performance]], [[sources/runs/2026/09/2026-09-21-fused-integration-compatibility]], [[sources/runs/2026/09/2026-09-21-fused-integration-excluded-timings]]. Adoption: [[records/decisions/qualified-upstream-fused-prefill]].
+
+## Remaining long-prompt opportunities: tested gains and rejected alternatives
+Historical experiment and original verdict, preserved unchanged below. The later user-directed automatic policy is recorded in [[records/measurements/automatic-prefill-policy-2026-09-21]] and [[records/decisions/automatic-prefill-read-policy]]; its adoption does not upgrade this preliminary speed result.
+
+The remaining listed opportunities have executable tests and preserved negative results. The strongest candidate is the combination of larger expert-read groups and fused-aware workspace accounting. It remains opt-in: the bounded five-round study produced only one clean baseline/combined pair, short of the prespecified three. The existing upstream fused-attention default from [[records/measurements/fused-prefill-integration-2026-09-21]] remains unchanged.
+
+## Results and decisions
+
+| Opportunity | Observed result | Decision |
+| --- | --- | --- |
+| Fused workspace accounting plus larger read groups | One eligible 16K pair: 137.63 to 80.27 s, 41.67% less prefill; all five combined observations improve, but four pairs are excluded | Keep bounded opt-in prototype; no qualified new default |
+| Larger groups alone | Two eligible pairs disagree; slow outlier retained | No independent promotion |
+| Accounting alone with original group cap | Read reduction in a screen; no clean paired speed qualification | Retain only as part of the opt-in combination |
+| Clear cached buffers before admission | Same expert-read count; no repeatable demonstrated gain | Remove prototype/control |
+| 512/1024-token compute | Fixed-pool screens are slower and read more; 1024 physically fits despite planner refusal | Retain existing compute defaults |
+| Scalar selected attention | About 0.28 times fused throughput on actual captured inputs | Reject |
+| GPU union/gather compaction, four query-group sizes | Every case slower; best about 33% slower | Reject |
+| GDN and expert-transfer attribution | Separate fixed-forward probes plus primary stage counters | Diagnostic evidence only; no unsupported kernel speed claim |
+
+The main study is this M5 Pro / 48 GB Mac, 10 GB engine target, 961 slots, inventory16387, compute256, MTP off and one greedy output. Filesystem cache is uncontrolled. Physical peak in combined primary cells stays below 8.54 GB. Requested expert bytes fall from about 1.239 TB to 356 GB while computation stays chronological. Requested bytes are not SSD device bytes. The result is first-prefill latency, not complete-answer latency. It must not be compounded with the earlier 8K 5.22% integration result.
+
+## Qualification and implementation boundaries
+
+`SLOTSTREAM_OPT_AUTO_SCOPE_LIMIT=16384` permits larger automatic expert-read groups; `8192` or an absent control preserves the established maximum. It does not increase compute rows, bypass a checkpoint or grant memory. CPU retains the original maximum. Public preexisting scheduling signatures retain their behavior; optional Swift settings remain decodable when absent from older serialized objects.
+
+`SLOTSTREAM_OPT_FUSED_WORKSPACE=1` removes only full per-head score/probability reservations for the supported fused BF16 text path: 256 query rows, at most 16384 keys, MTP off and no selected-attention/terminal/small-query fallback. Images, CPU, other dtypes, larger contexts and fallback paths retain original accounting. The linear activation floor, indexer/mask allowance, copies, expert workspace, query-by-key envelope, actual process footprint, live headroom and reservation ownership remain. Both controls default off/absent. The experiment does not change the planner's general resident-pool or compute defaults.
+
+The actual 16K read envelope passes exact logits, all state bytes and continuation at a bounded diagnostic pool. The catalogue and corrected lifecycle, deployed cache/disk, MTP and synthetic-image rollback checks pass. Initial test-adaptation failures and their source-level explanations remain in the raw evidence. No golden or tolerance is changed. Timing uses frozen V2; the retained implementation narrows its eligibility and has separate correctness/source identities.
+
+## What remains in the way
+
+1. Performance qualification needs a stable host interval with at least three clean paired measurements. The five-round cap was reached; small swap-in counts are not waived and outliers are not removed. This study stops without promoting a new default.
+2. Expert rereads are the dominant demonstrated opportunity. Even the combined primary arm still requests roughly 356 GB; its recorded I/O time is roughly 26 to 28 seconds. Actual memory admission can shrink later groups, especially with MTP. The conservative full-layer expert workspace and decode-pool residency still compete for space. Rebalancing that memory is a further experiment, not a proven gain here.
+3. More compute rows are not automatically faster. In the matched floor-pool screens, larger passes lose read sharing and increase requested bytes. One larger-pass output changes; numerical/task qualification would be required even if a later configuration becomes faster.
+4. These masks are sparse by query but dense across matrix tiles. Avoiding enough work without expensive gathers or losing matrix-unit throughput is the unsolved part. The tested scalar and compaction prototypes do not solve it.
+5. Remaining dense/MoE/GDN work and synchronization require attribution under the actual long-prompt candidate before assigning another whole-request speed percentage. Fixed-forward profile numbers do not provide that attribution.
+
+Raw runs: [[sources/runs/2026/09/2026-09-21-prefill-opportunities-performance]], [[sources/runs/2026/09/2026-09-21-prefill-opportunities-excluded]], [[sources/runs/2026/09/2026-09-21-prefill-opportunities-components]], [[sources/runs/2026/09/2026-09-21-prefill-opportunities-correctness]]. Decision: [[records/decisions/prefill-opportunities-remain-experimental]].
+
+## Automatic prefill policy: validation and bounded adoption
+Historical initial automatic-policy validation, preserved below. MTP is now included through [[records/measurements/mtp-prefill-policy-2026-09-21]]; the earlier paging-excluded study is not relabeled successful.
+
+The engine now selects the combined fused-workspace and expert-read policy automatically on the existing qualified M5 Pro profile. Carlos explicitly requested automatic behavior instead of user opt-in after being told the speed result lacked three clean pairs. This is a bounded product adoption supported by exact-state, lifecycle, memory and integration checks. It is **not a claim that the frozen performance-adoption criterion passed**: the new study has zero eligible matched pairs, and the earlier 41.67% result remains one preliminary pair.
+
+## Automatic behavior
+
+Deployment enables fused workspace accounting alongside the already qualified fused kernel. One internal PrefillReadPolicy checks the actual GPU/NAX capability, BF16 weights, attention geometry, MTP/image mode and attention fallbacks. Its default larger read envelope applies only to 256-query computation and ends within 16384 keys. At later positions, on other compute shapes, or when the attention path cannot use the reservation, the established automatic cap remains. Each candidate still passes the same physical-footprint, live-headroom and request-ownership admission. A larger maximum never grants memory, changes compute rows or bypasses a checkpoint.
+
+The Mac app, CLI and serving adapters inherit this through the shared engine. There is no new UI control or startup tuning benchmark. Explicit reference configurations and older serialized settings keep original reservations. SLOTSTREAM_OPT_FUSED_WORKSPACE=0 restores original accounting and automatic cap; disabling forced fusion also disables the combined automatic path. Independent read-cap overrides remain diagnostic tools, not a setup requirement. MTP, images, CPU and unqualified hardware retain their existing automatic policy.
+
+## Evidence and limits
+
+| Round | Previous default prefill seconds | Automatic policy prefill seconds | Timing eligibility |
+| --- | ---: | ---: | --- |
+| 1 | 145.658 | 84.924 | Excluded: paging |
+| 2 | 142.374 | 76.459 | Excluded: paging |
+| 3 | 139.276 | 88.428 | Excluded: paging |
+
+These raw times are excluded from a qualified speed estimate. All primary default runs request 355.763 GB of expert data versus 1239.147 GB, with the same output IDs and compute schedule; requested bytes are not physical SSD bytes. All complete below 10 GB. The study stops after the three initial pairs because both allowed extensions could yield at most two eligible pairs. The original protocol, initial analyzer, explicit early-failure rationale, all cells and the controlled driver exit are preserved. No further extension or cross-study pooling earns a passed result.
+
+The full 16K state comparison, default catalogue, lifecycle, aligned checkpoint/disk, MTP/image, 8.1 GB boundary and fusion-disabled checks pass. Mac and static suites pass. See the raw correctness run for exact counts, peaks and the small-pass boundary correction discovered by the first catalogue attempt. Broader hardware, larger contexts and MTP workspace reductions remain unqualified; the guarded default falls back there. A reproducible performance regression should revise the policy, and a reliable speed percentage still requires a new independently frozen clean-host study.
+
+Decision: [[records/decisions/automatic-prefill-read-policy]]. Previous experiment and exclusions: [[records/measurements/prefill-opportunities-2026-09-21]]. Raw evidence: [[sources/runs/2026/09/2026-09-21-automatic-prefill-policy-timing]], [[sources/runs/2026/09/2026-09-21-automatic-prefill-policy-correctness]].
+
+## Automatic MTP prefill: phase accounting and bounded expert writes
+The supported fused text-prefill policy now works with MTP automatically. There is no new user opt-in. MTP changes retained tensors and peak memory, but it does not require disabling fused main attention. All three matched pairs are eligible. Median paired prefill-time reduction is 65.40%; median paired request-time reduction is 64.53%.
+
+## Implementation
+
+Price the main and draft phases separately and reserve their maximum. The draft calculation includes the complete main multi-stream output while it is retained, the shifted first draft pass and cache positions, short tails and full draft-attention allowance. Main and draft replacement caches remain separately charged. All byte arithmetic saturates on invalid input or overflow.
+
+MTP resident weights can leave too little room for the larger main expert workspace. The engine can evaluate expert-buffer writes one piece at a time, which releases each old piece before replacing the next. Price the actual largest piece from pool shapes while retaining full original weights, staging, routed activations, retained frontiers and admission copies. This changes allocation lifetimes, not expert bytes or mathematical passes.
+
+Extra write barriers are a performance cost. In the qualified fused MTP path, choose this strategy only for groups beyond 8192 through 16384 rows that at least double the largest batched-write group fitting the current process budget. The existing physical-footprint, live-headroom, queued-request, cancellation and checkpoint guards still select or reject each candidate. Public optimization settings remain immutable; execution controls belong to the current group. This is an operating tradeoff, not a new hardware, memory or arithmetic ceiling.
+
+## Qualification
+
+Final catalogue: 73 groups, 31841 assertions, all pass. Model assertion counts: mtp-equality16-final: 13, plain-equality16: 13, lifecycle: 1914, checkpoint: 25, mtp-vision: 874. A real server restart test forces MTP on in every server launch and checks the ordinary persistent-prefix path. Native Mac build/scripted regressions and the complete static suite pass. Functional and physical-memory checks retain global paging as diagnostics, independently of clean timing eligibility.
+
+The long MTP equality check requires actual grouping beyond 8192 and actual piecewise writes, while comparing raw prompt logits, all retained tensor bytes, teacher-forced continuation, speculative output IDs and chronological compute passes exactly. It exercises 16384 rows and 4878 piecewise writes. Complete process peak including both sequential arms, fingerprinting and continuation is 9.338720528 GB, below 10 GB. Candidate requested reads are 48580300800 bytes; the sequential control requests 1370118758400. Different allocation histories make this an equality/physical-memory check, not a speed comparison.
+
+The followup MTP/image lifecycle explicitly executes piecewise expert writes through cancellation during draft processing, checked read failure, rollback and exact retry. Automatic selection, checkpoints, disk restoration, head alignment, process/live-headroom fallback and image geometry remain covered. At 8.1 GB, forced MTP correctly refuses its additional resident head; normal automatic mode completes with MTP off, within the original target. The fusion-disabled MTP run also completes within its target. See functional-summary.json and each original receipt. No golden, tolerance or memory ceiling was relaxed.
+
+## Paired latency
+
+The same frozen binary compares `SLOTSTREAM_OPT_FUSED_WORKSPACE=0` against the default automatic policy. Both retain fused attention. Configuration: inventory16387, 10 GB target, 640 slots, compute 256, MTP on with two drafts, greedy maximum 16 outputs, fresh processes, sampled physical footprint. Every primary cell actually emitted 11 tokens and finished at its stop token. The M5 Pro / 48 GB machine uses the pinned MLX 0.32.2 backend. Filesystem cache is uncontrolled; no purge. Source, binary, shader, model-header and exact token identities are preserved.
+
+Each cell waits for 120 consecutive nominal, normal-power seconds. Eligibility requires completion, no global swap activity, nominal power/thermal before and after, matching prompt/output IDs, pool, compute geometry and sampling, and physical peak <= 10 GB. Every primary pair has matching inputs, outputs and compute passes. All three matched pairs are eligible. Median paired prefill-time reduction is 65.40%; median paired request-time reduction is 64.53%.
+
+| Round | Control prefill seconds | Automatic prefill seconds | Pair eligibility |
+| --- | ---: | ---: | --- |
+| 1 | 153.279 | 56.106 | Eligible |
+| 2 | 155.217 | 52.859 | Eligible |
+| 3 | 155.869 | 53.936 | Eligible |
+
+The generated analysis.json preserves every exclusion, observed read group, requested read byte count, actual peak and drafted-token count. Requested expert bytes are engine requests, not physical SSD traffic. This is a synthetic long-prompt/MTP result, not a universal throughput or cross-hardware claim. The sequential equality diagnostic is separate and must not be substituted for fresh-process timing.
+
+## Limits and remaining opportunities
+
+The result applies to this qualified M5 Pro profile, synthetic 16K prompt, small fixed target and MTP configuration. Do not compound it with the earlier standalone fused-kernel percentage. Other budgets and prompt shapes can choose different groups, and extra barriers do not help when the same group already fits. The first implementation's failed larger-scope assertion and the earlier fixed-group negative write experiments remain preserved.
+
+The primary cells report median prefill I/O time falling from 106.28 to 5.16 seconds, while median total prefill falls from 155.22 to 53.94 seconds. Scatter time increases from 1.32 to 2.85 seconds and reported GPU wait from 7.46 to 14.37 seconds. These counters may overlap and are not a complete additive profile. They support prioritizing remaining model computation and synchronization over expecting another comparable gain from read elimination at this profile. Raw medians and their interpretation are in timing-counters.json.
+
+The 16K key envelope, later-context reservations, full indexer/mask work, expert assembly and main-model compute remain limits on further gains. Broader key ranges and the write-strategy crossover across other prompt/budget profiles need separate measured qualification. Images retain their existing main-workspace policy. At qualification time these were local changes; this record is not a release receipt.
+
+Decision: [[records/decisions/automatic-mtp-prefill-read-policy]]. Raw evidence: [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-timing]], [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-correctness]], [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-v1]], [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-phase-screen]].

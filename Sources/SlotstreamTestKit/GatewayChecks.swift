@@ -533,6 +533,15 @@ extension Catalogue {
     /// a wrong accept silently answers from another conversation's state.
     static func chatSplice() -> CheckReport {
         var c = CheckBuilder("chat-splice")
+        let descendant = [1, 2, 3, 90, 91, 4, 5, 6, 90, 91, 7]
+        c.equal("descendant ends at the first assistant boundary",
+            Engine.assistantTurnIds(in: descendant, after: 2, turnEnd: [90, 91]), [3])
+        c.equal("later assistant turn uses its own boundary",
+            Engine.assistantTurnIds(in: descendant, after: 7, turnEnd: [90, 91]), [6])
+        c.equal("unfed terminal token need not be cached",
+            Engine.assistantTurnIds(in: [1, 2, 3], after: 2, turnEnd: [90]), [3])
+        c.equal("delimiter prefix alone is not a boundary",
+            Engine.assistantTurnIds(in: [1, 90, 3], after: 1, turnEnd: [90, 91]), [90, 3])
         let tools = [
             ToolDefinition(
                 name: "read_file", description: "Read a file.",

@@ -450,8 +450,10 @@ The model loads with the first request. **Keep model ready → Automatic**
 releases it after inactivity, with a bounded delay informed by observed
 preparation time and power conditions. **While app is open** favors warm
 follow-ups but still yields to memory pressure and sleep. **Release memory
-now** preserves saved conversations and personal memory. It does not create
-a disk cache of private inference state.
+now** preserves saved conversations and personal memory. Ordinary conversations
+can reuse a disposable prompt cache in that Home after a reload. Thinking and
+incognito sessions keep their inference state off disk. Backups exclude the
+prompt cache; it can be rebuilt from the saved conversation.
 
 Budget changes during a response apply after that job finishes. New messages
 wait through the short resource handoff. Closing the window follows the
@@ -504,7 +506,7 @@ create-only document publication and reopening its durable Home. Run it only
 under the repository memory rules, with a new disposable destination:
 
 ```bash
-cp Tools/lib/mlx-0.31.1.metallib apps/macos/.build/release/mlx.metallib
+cp Tools/lib/mlx-0.32.2.metallib apps/macos/.build/release/mlx.metallib
 apps/macos/.build/release/sevra-mac-checks --real \
   --source "$PWD/apps/macos/Fixtures/private-workspace-brief" \
   --home "$PWD/.build/sevra-disposable-real-check"

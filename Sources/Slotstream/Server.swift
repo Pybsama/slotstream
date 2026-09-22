@@ -32,12 +32,23 @@ public final class Server {
     /// that is still running. `stop` runs once, on a watcher thread, after new
     /// requests are refused. Set before `run()`.
     public var idleExit: (seconds: Double, stop: () -> Void)?
+    /// Local diagnostics contain request paths and phases, never prompt text.
+    public var onDiagnostic: ((String) -> Void)?
 
     private func makeOutput(_ fd: Int32, streaming: Bool = true) -> BoundedOutput? {
         guard streaming, engine.model.optimizations.boundedOutputQueue else { return nil }
         let output = BoundedOutput(fd: fd)
         outputObserver?(fd, output)
         return output
+    }
+
+    private func finishOutput(_ output: BoundedOutput?) {
+        guard let output else { return }
+        if !output.finish() {
+            let snapshot = output.snapshot
+            onDiagnostic?("stream ended: \(snapshot.failureReason ?? "output failed"); "
+                + "\(snapshot.writtenBytes)/\(snapshot.queuedBytes) accepted bytes written")
+        }
     }
 
     private func requestRefusal(_ fd: Int32, _ error: Error, dialect: String, cors: String) {
@@ -547,6 +558,20 @@ public final class Server {
         }
         let json = parsed ?? [:]
         if let control {
+            let requestID = UUID().uuidString.prefix(8)
+            onDiagnostic?("request \(requestID) \(path): accepted")
+            let heartbeat = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "slotstream.request-progress"))
+            heartbeat.schedule(deadline: .now() + 15, repeating: 15)
+            heartbeat.setEventHandler { [weak self] in
+                self?.onDiagnostic?(String(format: "request %@ %@: %.0f s elapsed, %@", String(requestID), path,
+                    control.elapsedSeconds, control.phase))
+            }
+            heartbeat.resume()
+            defer {
+                heartbeat.cancel()
+                onDiagnostic?(String(format: "request %@ %@: ended after %.1f s%@", String(requestID), path,
+                    control.elapsedSeconds, control.failure.map { ", " + $0.code.rawValue } ?? ""))
+            }
             switch path {
             case "/api/chat": apiChat(fd, json, cors: cors, control: control)
             case "/api/generate": apiGenerate(fd, json, cors: cors, control: control)
@@ -1117,8 +1142,22 @@ public final class Server {
 
     // MARK: /api/chat
 
+    package static func ollamaToolError(_ json: [String: Any]) -> String? {
+        let messages = json["messages"] as? [[String: Any]] ?? []
+        if json["tools"] != nil || messages.contains(where: {
+            $0["role"] as? String == "tool" || $0["tool_calls"] != nil || $0["tool_call_id"] != nil
+        }) {
+            return "tool calling is supported at /v1/chat/completions in OpenAI format; /api/chat does not implement Ollama tools"
+        }
+        return nil
+    }
+
     private func apiChat(_ fd: Int32, _ rawJSON: [String: Any], cors: String, control: RequestController) {
         let json = Self.withoutNulls(rawJSON)
+        if let error = Self.ollamaToolError(json) {
+            respondJSON(fd, ["error": error], status: "400 Bad Request", cors: cors)
+            return
+        }
         if let e = ollamaValidationError(
             json, allowed: ["model", "messages", "stream", "think", "options", "keep_alive"],
             messages: true)
@@ -1168,7 +1207,7 @@ public final class Server {
         // handed clients the reasoning and a stray closing tag.
         let splitter = thinking ? ThinkSplitter() : nil
         let output = makeOutput(fd, streaming: stream)
-        defer { output?.finish() }
+        defer { finishOutput(output) }
         @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
         func endOutput() { self.endChunked(fd, writer: output) }
         var alive = true
@@ -1380,7 +1419,7 @@ public final class Server {
         var headersStarted = false
         let splitter = thinking ? ThinkSplitter() : nil
         let output = makeOutput(fd, streaming: stream)
-        defer { output?.finish() }
+        defer { finishOutput(output) }
         @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
         func endOutput() { self.endChunked(fd, writer: output) }
         var alive = true
@@ -1497,7 +1536,7 @@ public final class Server {
                 try control.checkInputBytes(ContextInputMemory.bytes(messages: messages, tools: renderTools))
                 ids = try engine.encodeChatSpliced(
                     messages, tools: renderTools, thinking: request.reasoning.thinking,
-                    effort: request.reasoning.effort)
+                    effort: request.reasoning.effort, request: control)
             }
         } catch let failure as RequestFailure {
             requestRefusal(fd, failure, dialect: "gateway", cors: cors); return
@@ -1536,7 +1575,7 @@ public final class Server {
         // is minutes; every failure that can be detected has been by now.
         var headersStarted = false
         let output = makeOutput(fd)
-        defer { output?.finish() }
+        defer { finishOutput(output) }
         @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
         func endOutput() { self.endChunked(fd, writer: output) }
         var alive = true
@@ -1756,7 +1795,7 @@ public final class Server {
             } else {
                 try control.checkInputBytes(ContextInputMemory.bytes(messages: messages, tools: renderTools))
                 ids = try engine.encodeChatSpliced(messages, tools: renderTools,
-                    thinking: request.thinking, effort: request.effort)
+                    thinking: request.thinking, effort: request.effort, request: control)
             }
         } catch { requestRefusal(fd, error, dialect: "openai", cors: cors); return }
         if let error = engine.contextError(promptTokens: ids.count) { return fail(error, code: "context_length_exceeded") }
@@ -1786,7 +1825,7 @@ public final class Server {
         let created = Int(Date().timeIntervalSince1970)
         var headersStarted = false
         let output = makeOutput(fd, streaming: stream)
-        defer { output?.finish() }
+        defer { finishOutput(output) }
         @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
         func endOutput() { self.endChunked(fd, writer: output) }
         var alive = true
@@ -1802,7 +1841,8 @@ public final class Server {
             emit(["id": rid, "object": "chat.completion.chunk", "created": created, "model": engine.modelName,
                   "choices": [["index": 0, "delta": delta, "finish_reason": NSNull()]]])
         }
-        let accumulated = OpenAIOutput(tools: renderTools, choice: request.choice, parallel: request.parallel)
+        let accumulated = OpenAIOutput(tools: renderTools, choice: request.choice, parallel: request.parallel,
+            streamToolArguments: true, allowLengthTruncation: true)
         let thinker = request.thinking ? ThinkSplitter() : nil
         let parser = renderTools.isEmpty ? nil : ToolCallSplitter(tools: renderTools.map { $0.schema },
             idFactory: { "call_" + UUID().uuidString.replacingOccurrences(of: "-", with: "") })
@@ -1918,7 +1958,7 @@ public final class Server {
             } else {
                 try control.checkInputBytes(ContextInputMemory.bytes(messages: messages, tools: renderTools))
                 ids = try engine.encodeChatSpliced(
-                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort)
+                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort, request: control)
             }
         } catch let failure as RequestFailure {
             requestRefusal(fd, failure, dialect: "openai", cors: cors)
@@ -1956,7 +1996,7 @@ public final class Server {
                                                        freeform: request.freeform, echo: request.echo)
         var headersStarted = false
         let output = makeOutput(fd, streaming: stream)
-        defer { output?.finish() }
+        defer { finishOutput(output) }
         @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
         func endOutput() { self.endChunked(fd, writer: output) }
         var alive = true
@@ -2135,7 +2175,7 @@ public final class Server {
             } else {
                 try control.checkInputBytes(ContextInputMemory.bytes(messages: messages, tools: renderTools))
                 ids = try engine.encodeChatSpliced(
-                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort)
+                    messages, tools: renderTools, thinking: request.thinking, effort: request.effort, request: control)
             }
         } catch let failure as RequestFailure {
             requestRefusal(fd, failure, dialect: "anthropic", cors: cors)
@@ -2178,7 +2218,7 @@ public final class Server {
         let message = AnthropicDialect.MessageStream(model: engine.modelName, showThinking: request.showThinking)
         var headersStarted = false
         let output = makeOutput(fd, streaming: stream)
-        defer { output?.finish() }
+        defer { finishOutput(output) }
         @discardableResult func writeChunk(_ data: Data) -> Bool { self.chunk(fd, data, writer: output) }
         func endOutput() { self.endChunked(fd, writer: output) }
         var alive = true

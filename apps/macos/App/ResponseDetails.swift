@@ -28,7 +28,12 @@ import SevraPresentation
         popover = next; shownRunID = runID
         next.show(relativeTo: rect, of: view, preferredEdge: .maxY)
     }
-    func close() { popover?.performClose(nil) }
+    func close() {
+        // Do not leave owner-directed dismissal waiting for an AppKit
+        // animation while the response content is still updating.
+        popover?.animates = false
+        popover?.close()
+    }
     func popoverDidClose(_ notification: Notification) {
         guard (notification.object as? NSPopover) === popover else { return }
         popover = nil; shownRunID = nil

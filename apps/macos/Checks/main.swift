@@ -20,6 +20,7 @@ Task {
         if try await realCheckIfRequested() { return }
         if try await realThinkingCheckIfRequested() { return }
         if try await realMetricsCheckIfRequested() { return }
+        if try await realCacheCheckIfRequested() { return }
         if try await realBasicsCheckIfRequested() { return }
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-check-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

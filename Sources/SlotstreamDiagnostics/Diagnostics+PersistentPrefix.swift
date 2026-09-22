@@ -122,6 +122,11 @@ extension Diagnostics {
             cache.attachPersistent(tier)
             c.equal("splice reads persisted ids when memory is empty", cache.peek(extending: Array(base.prefix(64))), child)
             c.equal("prefix cache reports the tier", (cache.json()["persistent"] as? [String: Any])?["states"] as? Int, 2)
+            c.expect("generated ids attach to an aligned state", tier.rememberConversation(tokens: child + [7, 8, 9]))
+            c.equal("splicing includes the generated suffix", cache.peek(extending: child + [7]), child + [7, 8, 9])
+            c.equal("conversation metadata preserves every tensor bit", try restore(tier, child).map(digests), childExpected)
+            c.equal("metadata never extends the numerical state", tier.candidate(extending: child + [7, 8, 9],
+                longerThan: 0, requireDraft: true)?.tokens, child)
 
             // Regenerating the reply branches from the kept parent.
             guard let again = try restore(tier, base) else {
