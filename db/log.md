@@ -2001,3 +2001,6 @@ Audited installed releases and feature ablations across 123 completed requests. 
 ## [2026-09-22 18:38] update | records/measurements/speed-tables-review-2026-09-22.md
 Checked the published planner against every automatic memory/context row and kept the latest qualified 0.2.19 decode reference. Added separately scoped long-prompt and reuse results to README and HARDWARE, with claim records and links to the existing qualification. Documented that historical planner throughput estimates have not been recalibrated; no new inference benchmark or runtime change.
 
+## [2026-09-22 19:42] update | records/measurements/release-speed-calibration-2026-09-22.md
+Preserved 27 completed installed-release requests with exact wire replay and five narrow output checks; stopped the incomplete timing population after concurrent activity was observed. Added and unit-tested prospective CPU/GPU idle screening and live-plan checks; both quiet pilots stayed before model launch. Corrected the historical 22 GB benchmark equivalence in public tables and claims. No new qualified speed baseline, estimator change or inference change; remaining profiles require idle hardware and headroom.
+

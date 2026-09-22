@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-22T18:38:32.912512Z
+updated: 2026-09-22T19:41:27.029552Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-22-release-speed-calibration]] — Preserved 27 completed installed-release requests and the prospective idle-load correction; no new qualified speed baseline.
 - [[sources/runs/2026/09/2026-09-22-speed-tables-planner-review]] — Read-only installed-binary checks reproduce every automatic memory/context row; no model launch or new timing benchmark.
 - [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit-excluded]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
@@ -506,9 +507,8 @@ updated: 2026-09-22T18:38:32.912512Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-components-v3]] — Build 12 passes expanded CPU CLI and planner component contracts
 - [[sources/runs/2026/09/2026-09-06-configurable-context-projection-shape-first-pass]] — First 64-row projection-shape witness passes unchanged C07 criteria
 - [[sources/runs/2026/09/2026-09-06-configurable-context-http-pressure-counterexample]] — Expanded HTTP matrix exposes supplied-controller pressure bypass
-- [[sources/runs/2026/09/2026-09-06-optimization-soak-prerequisite-binding]] — Enforce final native and paired prerequisites before lifetime qualification
 
 ## More
 
-This folder has 664 files. The 500 most recent are listed above.
+This folder has 665 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

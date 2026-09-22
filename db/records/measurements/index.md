@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-22T18:38:32.974923Z
+updated: 2026-09-22T19:41:27.005956Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-speed-calibration-2026-09-22]] — Incomplete active-Mac calibration preserves functional evidence, corrects historical benchmark equivalence and adds prospective host-load screening.
+- [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/speed-tables-review-2026-09-22]] — Keep the latest qualified decode result and rough ranges; add scoped prompt-policy and reuse results, and mark historical planner calibration.
 - [[records/measurements/published-prompt-speed-audit-2026-09-22]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[records/measurements/release-0-2-23-published-2026-09-22]] — v0.2.23 published from the exact CI archive, provenance verified, publicly installed and accepted: full native battery 32/32, 16K MTP 13/13, installed serving 31/31.
@@ -26,7 +28,6 @@ updated: 2026-09-22T18:38:32.974923Z
 - [[records/measurements/coding-agents-launch-2026-09-17]] — Coding agents at 12 GB: Claude Code, Codex, Pi, opencode and Hermes pass every task via slotstream launch; second sessions reuse 84 to 98% of the opening prompt, also after a picture
 - [[records/measurements/speculative-verify-pass-split-attention-2026-09-17]] — Split verify attention from 6,144 tokens: a verification round 12% cheaper at 16k, x1.013 there and x1.29 at 32k on a quiet machine; an opt-in exact mode makes speculative output equal plain output
 - [[records/measurements/release-0-2-20-published-2026-09-16]] — v0.2.20 published, installed and accepted: 25/25 model gates on the CI artifact, 31/31 installed checks, 11 prefix checks, Codex and the OpenAI SDK 18/18 on the installed binary
-- [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/shared-prefix-cache-2026-09-16]] — Shared prefixes at 10 GB: a system prompt kept during its prefill is reused exactly from memory and across restarts; first token 2.6 to 4.4 s against 21 to 52 s cold
 - [[records/measurements/release-0-2-19-published-2026-09-16]] — v0.2.19 published, installed and accepted: 25 of 25 model gates on the CI artifact, 31 of 31 installed-release checks, 11 prefix checks, corrected forecast planned at 22 GB
 - [[records/measurements/corrected-forecast-release-benchmark-2026-09-16]] — Shipping build's default 1.10x over the 0.2.18 forecast at 22 GB: aggregate 1.108 (bootstrap 1.092 to 1.147), 24 of 24 pairs above 1, outputs identical, 14.38 to 15.86 tok/s

@@ -44,7 +44,8 @@ isn't enough to predict it.
 
 These reply-generation results were measured on real Macs, using different
 releases and settings. The leading result remains the latest qualified warm
-decode benchmark; it has not been rerun as a full decode benchmark on 0.2.23:
+decode benchmark. The [0.2.23 calibration attempt](../db/records/measurements/release-speed-calibration-2026-09-22.md)
+has not yet qualified a replacement full-answer baseline:
 
 | Mac | Memory | Reply speed |
 |---|---|---|
@@ -57,9 +58,11 @@ decode benchmark; it has not been rerun as a full decode benchmark on 0.2.23:
 | Same M5 Max, 0.2.3, 48 GB target | 128 GB | ~26.9 tok/s |
 | Same M5 Max, 0.2.3, 73 GB target | 128 GB | ~31.5 tok/s |
 
-The latest M5 Pro result is the 0.2.19 release benchmark of the shipping
-build's default against the 0.2.18 forecast (1.10x faster, 14.38 to 15.86 tok/s,
-identical output); the 0.2.16 row is the pre-release benchmark of that release's
+The historical leading M5 Pro result is the 0.2.19 release benchmark of the
+shipping forecast against the 0.2.18 forecast (1.10x faster, 14.38 to 15.86 tok/s,
+identical output). Both arms used smaller prompt passes and disabled prefix
+caching, so more of the same budget held experts. These are controlled
+benchmark settings, not today's automatic configuration; the 0.2.16 row is the pre-release benchmark of that release's
 configuration. The M5 Pro results are from the author; the
 others are community reports. The M5 Max rows are outside the target range:
 the model fits in memory on that Mac, and engines that keep it resident
@@ -198,7 +201,7 @@ confidence intervals. Endpoints are rounded outward to whole tok/s.
 | Installed RAM | Estimated warm reply speed | Basis and main inference |
 |---|---|---|
 | 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
-| 24–<48 GB | ~6–16 tok/s | The 32 GB M5 Air reported 6.22 tok/s on 0.2.11; the M5 Pro measured 15.86 tok/s on 0.2.19 at a 22 GB process target, the automatic target of a 32 GB Mac, rounded outward to 16. The upper end assumes a comparable chip and SSD; no Mac in this band has been timed on 0.2.19. |
+| 24–<48 GB | ~6–16 tok/s | The 32 GB M5 Air reported 6.22 tok/s on 0.2.11; the M5 Pro measured 15.86 tok/s on 0.2.19 at a 22 GB process target, rounded outward to 16. That benchmark used different prompt-workspace and cache settings from today's automatic plan. The upper end assumes a comparable chip and SSD; no Mac in this band has been timed on 0.2.19. |
 | 48–<96 GB | ~15–27 tok/s | The lower reference rounds down from the 48 GB M5 Pro's 15.86 tok/s on 0.2.19 at a 22 GB target, below its own 33.6 GB automatic target, whose larger cache has not been timed; the 0.2.16 result at a 20 GB target was 13.47 tok/s, and the older ~12 tok/s result remains historical evidence. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
 | 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. This row is outside Slotstream's target range: the model fits in memory from 96 GB. |
 
@@ -244,12 +247,14 @@ Speculative decoding in the source plans includes 0.2.16's decode lookahead.
 These are allocation plans, not measured performance tiers. The matching
 M5 Pro-based warm-decode estimates without speculative decoding are
 ~4 tok/s at 16 GB, ~5.5 tok/s at 18 GB and ~8 tok/s at 24 GB of simulated
-RAM. At 32 GB the automatic 22 GB target has been measured directly: the M5 Pro
-generates 15.86 tok/s on 0.2.19 with two drafts at about 100 experts per
-layer (14.38 with the 0.2.18 forecast), replacing the earlier estimate of
-about 10 tok/s from the two-draft measurement at 76 experts per layer on
-0.2.14. That assumes the M5 Pro's chip and SSD; the real M5 Air result above
-was slower.
+RAM. The historical 22 GB benchmark measured 15.86 tok/s on 0.2.19 with two
+drafts at about 100 experts per layer (14.38 with the 0.2.18 forecast).
+Although its total budget matches the 32 GB simulation, its smaller prompt
+passes and disabled prefix cache leave a different expert pool. It does not
+measure the current automatic plan. The earlier estimate of about 10 tok/s
+came from a two-draft measurement at 76 experts per layer on 0.2.14; the real
+M5 Air result above was slower. A shared memory budget does not establish
+matching runtime settings or speed.
 
 The 15.86 tok/s result with the corrected forecast at about 100 experts per
 layer, and the 13.47 tok/s result of 0.2.16 at about 88, are measured references,
