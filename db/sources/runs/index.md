@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-22T18:31:15.647633Z
+updated: 2026-09-22T18:38:32.912512Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-22-speed-tables-planner-review]] — Read-only installed-binary checks reproduce every automatic memory/context row; no model launch or new timing benchmark.
 - [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit-excluded]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[sources/runs/2026/09/2026-09-22-release-0-2-23-published-and-installed]] — v0.2.23 published from the exact CI archive, provenance verified, publicly installed and accepted: full native battery 32/32, 16K MTP 13/13, installed serving 31/31.
@@ -506,9 +507,8 @@ updated: 2026-09-22T18:31:15.647633Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-projection-shape-first-pass]] — First 64-row projection-shape witness passes unchanged C07 criteria
 - [[sources/runs/2026/09/2026-09-06-configurable-context-http-pressure-counterexample]] — Expanded HTTP matrix exposes supplied-controller pressure bypass
 - [[sources/runs/2026/09/2026-09-06-optimization-soak-prerequisite-binding]] — Enforce final native and paired prerequisites before lifetime qualification
-- [[sources/runs/2026/09/2026-09-06-configurable-context-cli-policy-and-driver-v1]] — Candidate context policy defaults and capacity driver failure checks
 
 ## More
 
-This folder has 663 files. The 500 most recent are listed above.
+This folder has 664 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

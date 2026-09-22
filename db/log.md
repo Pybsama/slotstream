@@ -1998,3 +1998,6 @@ Published v0.2.23 from the exact successful CI archive after 32 full native gate
 ## [2026-09-22 18:31] update | records/measurements/published-prompt-speed-audit-2026-09-22.md
 Audited installed releases and feature ablations across 123 completed requests. Three clean exact prose follow-ups show 85.62% less request time versus checkpoints disabled, not a release delta; short requests show no consistent gain. Preserve paging, thermal, validator and empty-output exclusions. Record larger-planner, Desktop MTP and checkpoint-affordability limits. Fix only prospective benchmark refusal validation; 51 harness tests, six offline replays and 12 analysis tests pass. Archive all evidence with per-file hashes; runtime unchanged and owned model processes reaped.
 
+## [2026-09-22 18:38] update | records/measurements/speed-tables-review-2026-09-22.md
+Checked the published planner against every automatic memory/context row and kept the latest qualified 0.2.19 decode reference. Added separately scoped long-prompt and reuse results to README and HARDWARE, with claim records and links to the existing qualification. Documented that historical planner throughput estimates have not been recalibrated; no new inference benchmark or runtime change.
+

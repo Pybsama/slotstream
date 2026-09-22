@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-21T03:58:48.567100Z
+updated: 2026-09-22T18:38:33.012017Z
 ---
 
 # records/claims
 
+- [[records/claims/prose-prefix-reuse-public-timing]] — Exact prose prefix reuse reduces follow-up request time
+- [[records/claims/mtp-prefill-policy-public-timing]] — Qualified long MTP prefill policy reduces paired prefill time
 - [[records/claims/sevra-mac-working-notes-eight-responses]] — Sevra keeps working notes in memory for the eight most recent responses
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM

@@ -48,7 +48,7 @@ Windows, Linux and Intel Macs are not supported. The
 ## Speed
 
 `tok/s` means tokens per second; a token is a small piece of text, often part
-of a word. Speeds describe replies after the model has warmed up.
+of a word. Reply speeds below describe generation after the model has warmed up.
 
 **Our development Mac, a 48 GB M5 Pro, generates 15.86 tok/s with 0.2.19 at a
 22 GB memory target, the automatic plan of a 32 GB Mac**, measured on eight
@@ -56,7 +56,8 @@ prompts the engine was never tuned on. The engine predicts which experts the
 next layers will need and reads them from the SSD before they are asked for,
 which changes speed and never the output. The
 [expert lookahead guide](docs/EXPERT-LOOKAHEAD.md) has the measurements behind
-each release.
+each release. This remains the latest qualified warm-reply benchmark; it has
+not been rerun as a full decode benchmark on 0.2.23.
 
 <a id="speed-by-memory"></a>
 <a id="speed-by-mac-memory"></a>
@@ -82,6 +83,23 @@ estimates, not limits. The hardware guide has the
 [basis of each range](docs/HARDWARE.md#planning-ranges), every result
 [measured on real Macs](docs/HARDWARE.md#results) with credits and test
 conditions, and [every automatic memory plan](docs/HARDWARE.md#automatic-memory-plans).
+
+### Recent prompt-processing results
+
+The changes shipped in 0.2.23 shorten prompt processing and repeated-history
+work. These measurements use the same 48 GB M5 Pro at a 10 GB target, with
+three clean pairs per comparison:
+
+| Workload | Matched control | Median times, control → enabled | Median paired time reduction |
+|---|---|---|---|
+| 16K inventory prompt, MTP on | Larger-read workspace policy off | 155.22 s → 53.94 s prefill | 65.40% |
+| 2K prose follow-up, MTP off | Prefix checkpoints disabled | 30.73 s → 4.42 s request | 85.62% |
+
+Both comparisons switch a feature off in the same tested binary. They measure
+prompt processing or a cached follow-up, not an increase in reply tok/s or a
+whole-release speedup. Times are arm medians; reductions are medians of paired
+changes. The [hardware guide](docs/HARDWARE.md#recent-prompt-processing-results)
+explains the fixtures and the latest audit's exclusions.
 
 <a id="memory"></a>
 <a id="context"></a>

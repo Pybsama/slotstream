@@ -31,7 +31,8 @@ slotstream doctor
 
 A **token** is a small piece of text, often part of a word. `tok/s` means
 tokens per second. The speeds below describe a reply after the model's
-cache has warmed up. The first reply also needs time to load the model and
+cache has warmed up. Prompt-processing measurements appear separately below.
+The first reply also needs time to load the model and
 process your question. Long conversations take longer to process.
 
 Your chip, SSD, and other running apps affect speed. A memory size alone
@@ -41,7 +42,9 @@ isn't enough to predict it.
 
 ## Results
 
-These results were measured on real Macs, using different releases and settings:
+These reply-generation results were measured on real Macs, using different
+releases and settings. The leading result remains the latest qualified warm
+decode benchmark; it has not been rerun as a full decode benchmark on 0.2.23:
 
 | Mac | Memory | Reply speed |
 |---|---|---|
@@ -118,6 +121,41 @@ the M5 Pro throughout, the M2 in C1, the M5 Max in C2, and the M5 Air in C3.
 
 </details>
 
+## Recent prompt-processing results
+
+Changes shipped in 0.2.23 have separate prompt-processing measurements on the
+48 GB M5 Pro at a 10 GB target. Each row has three clean matched pairs and
+identical generated token IDs within every pair. Times are medians within
+each arm; the percentage is the median of paired reductions, so it need not
+equal the percentage calculated from the two displayed medians.
+
+| Workload | Matched control | Median times, control → enabled | Median paired time reduction |
+|---|---|---|---|
+| 16K inventory prompt, MTP on | Larger-read workspace policy off | 155.22 s → 53.94 s prefill | 65.40% |
+| 2K prose follow-up, MTP off | Prefix checkpoints disabled | 30.73 s → 4.42 s request | 85.62% |
+
+The inventory fixture reads 16,387 synthetic tokens with two MTP drafts and
+emits 11 tokens before its stop token. Both arms use fused attention; the
+control disables fused-workspace accounting. It qualifies the automatic
+read policy before release, not the complete change from the prior release.
+See the [policy qualification](../db/records/measurements/mtp-prefill-policy-2026-09-21.md).
+
+The prose fixture tests the installed release. It reads 2,090 tokens on its
+first request, then 2,092 on the follow-up, reusing 2,048 and emitting the
+same 16 capped output tokens in both arms. The table measures only the
+follow-up. Only one complete two-request pair passes the timing gates, so the
+percentage is not a repeated full-session result. Earlier releases already
+had prefix caching; this is its benefit against disabled checkpoints, not an
+incremental release gain.
+
+The [published-release audit](../db/records/measurements/published-prompt-speed-audit-2026-09-22.md)
+also covers other prompt types, lengths, budgets, MTP settings and disk reuse.
+Short requests show no consistent speedup. Paging-affected long-request
+comparisons stay excluded from qualified timing claims; the larger-memory
+release comparison and kernel-only attribution have too few clean pairs for
+a repeated claim. None of these percentages updates the warm reply-speed
+ranges or establishes a speedup on another Mac.
+
 ## Does more memory help?
 
 Within Slotstream, yes: a larger expert cache reduces SSD reads and improves
@@ -182,7 +220,8 @@ guidance, independently of reply speed.
 
 ### Automatic memory plans
 
-The columns describe the current source plans in auto mode, which picks the
+The columns were checked against the published 0.2.23 binary. They describe
+the plans in auto mode, which picks the
 context window along with the target and speculative decoding. The draft file
 is available and no other apps hold memory. Simulated RAM is in decimal GB; a
 Mac's marketed memory capacity can produce a different decimal-GB device
@@ -244,7 +283,10 @@ window without speculative decoding.
 For prompts near 32,768 tokens, the planner estimates about 3 minutes of
 prefill from 24 GB and 6.4 minutes at 16 GB; near 65,536 it estimates
 about 8 minutes from 24 GB. These estimates use the M5 Pro's prefill curve,
-not measurements on those memory sizes. Windows above 128,256 tokens have no
+not measurements on those memory sizes. The planner's historical prefill
+curve has not been recalibrated for the new read policy; the bounded results
+above cannot supply a multiplier for every pass size, prompt and context.
+Windows above 128,256 tokens have no
 calibrated estimate yet. On the development Mac, a full 131,072-token prompt
 took 38 minutes to read at a 16 GB target, and its passes slowed as the prompt
 grew: the planner's estimates, which ignore position, came within a few
