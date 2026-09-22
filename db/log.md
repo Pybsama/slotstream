@@ -2007,3 +2007,6 @@ Preserved 27 completed installed-release requests with exact wire replay and fiv
 ## [2026-09-22 22:26] update | records/measurements/release-speed-calibration-2026-09-22.md
 Corrected prospective benchmark readiness to tolerate brief desktop bursts while screening sustained load. Preserved v1/v2 and froze v3 before any model request; 23 load tests, 13 analysis tests and a simulated metadata capture pass. The five-minute 10 GB pilot stayed below its 13 GB physical headroom requirement in all 144 samples, so no model loaded and no new speed result is claimed. Retained all observations and cleanup; release and estimator unchanged.
 
+## [2026-09-22 22:37] update | records/measurements/release-speed-calibration-2026-09-22.md
+Passed the v3 real-model harness pilot at an 8.1 GB target: two exact capture replays, stable live plans, no sampled swap activity and 6.066900808 GB native lifetime peak. Excluded capped pilot timings from calibration. The following 10 GB three-round 2K code/prose phase passed memory preflight but timed out before model launch on sustained background GPU activity. Preserved all evidence and cleanup. Added tested full-prefill family-held-out diagnostics and fail-closed population registration; 19 analysis tests pass. No new speed anchor or runtime change.
+

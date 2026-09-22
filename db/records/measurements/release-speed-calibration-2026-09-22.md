@@ -2,7 +2,7 @@
 type: measurement
 id: 01m359g1dvegvqf1carwzdrmcf
 created: 2026-09-22T19:29:15.707226+00:00
-updated: 2026-09-22T22:25:24.587543+00:00
+updated: 2026-09-22T22:37:17.428644+00:00
 summary: Incomplete active-Mac calibration preserves functional evidence, corrects historical benchmark equivalence and adds prospective host-load screening.
 date: 2026-09-22
 doc: measurements
@@ -60,3 +60,12 @@ The independent memory, native process footprint, thermal, power, model-lock, kn
 The host-load suite passes 23 tests, including burst tolerance, sustained-load rejection, unavailable telemetry and unchanged thermal/paging exclusions. The existing 13 analysis tests also pass. A simulated loopback metadata endpoint confirms the nested runtime-plan extraction, but does not replace the required real-model pilot.
 
 Evidence and the completed attempt status: [[sources/runs/2026/09/2026-09-22-release-calibration-load-screen-v3]]. The runtime, released binary, estimator and public speed tables are unchanged. No new speed gain is established by a benchmark-harness correction.
+
+## Native pilot after the readiness correction
+After the 10 GB pilot refused insufficient memory, a separately frozen 8.1 GB functional pilot passed both requests on the installed 0.2.23 release. This qualifies the v3 harness live-plan capture on that profile. Both requests retained 640 slots, 256-token compute passes, a 32,768-token window and MTP off; before/after runtime plans agreed with the native effective pool. Exact raw response replay and token/timing accounting pass. Neither request observed global swap activity, and the native lifetime peak was 6.066900808 GB under the 8.1 GB ceiling. The model exited cleanly and was reaped.
+
+The responses were deliberately capped at 16 and 32 output tokens. They validate request/capture wiring, not complete-answer quality or a speed baseline. The pilot remains excluded from calibration, so its token rate cannot update README headline throughput or estimator anchors.
+
+A prospective analysis extension now evaluates full-prefill misses using leave-one-prompt-family-out corrections within the same realized plan. Cached tokens, pilots, unregistered populations, changing plans and unequal outputs cannot train the correction. Nineteen analysis tests pass. This is an exploratory diagnostic, not a fitted production policy or evidence of transfer to other prompt lengths.
+
+The subsequent 10 GB timing attempt and its exact disposition are preserved with the pilot at [[sources/runs/2026/09/2026-09-22-release-calibration-native-pilot-v3]]. Earlier memory refusals and frozen v1/v2/v3 attempts remain unchanged. No runtime optimization or estimator change is established by the pilot.

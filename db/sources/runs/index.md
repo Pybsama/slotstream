@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-22T22:25:24.523028Z
+updated: 2026-09-22T22:37:17.364305Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-22-release-calibration-native-pilot-v3]] — Real-model 8.1 GB harness pilot passed; 10 GB timing phase refused sustained background GPU load.
 - [[sources/runs/2026/09/2026-09-22-release-calibration-load-screen-v3]] — Prospective windowed host-load correction passes offline checks; real-model pilot refuses insufficient physical headroom.
 - [[sources/runs/2026/09/2026-09-22-release-speed-calibration]] — Preserved 27 completed installed-release requests and the prospective idle-load correction; no new qualified speed baseline.
 - [[sources/runs/2026/09/2026-09-22-speed-tables-planner-review]] — Read-only installed-binary checks reproduce every automatic memory/context row; no model launch or new timing benchmark.
@@ -506,9 +507,8 @@ updated: 2026-09-22T22:25:24.523028Z
 - [[sources/runs/2026/09/2026-09-06-optimization-context-component-review]] — Review context integration: legacy dispatch and per-buffer allocation ownership
 - [[sources/runs/2026/09/2026-09-06-optimization-gdn-prefill-first-job-failure]] — GDN prefill warmed nonregression passes, first-job qualification fails
 - [[sources/runs/2026/09/2026-09-06-configurable-context-components-v3]] — Build 12 passes expanded CPU CLI and planner component contracts
-- [[sources/runs/2026/09/2026-09-06-configurable-context-projection-shape-first-pass]] — First 64-row projection-shape witness passes unchanged C07 criteria
 
 ## More
 
-This folder has 666 files. The 500 most recent are listed above.
+This folder has 667 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
