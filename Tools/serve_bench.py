@@ -193,7 +193,7 @@ def prefix_study(protocol):
     if study is None: return None
     if (type(study) is not dict or 'expected_reused_tokens' not in study
         or not set(study) <= {'expected_reused_tokens', 'complete_prompt', 'retention_only', 'partial_prefix',
-                             'expected_warmup_checkpoint_stores'}
+                             'expected_warmup_checkpoint_stores', 'expected_checkpoint_refusals'}
         or type(study.get('complete_prompt', False)) is not bool
         or type(study.get('retention_only', False)) is not bool
         or type(study.get('partial_prefix', False)) is not bool):
@@ -210,6 +210,16 @@ def prefix_study(protocol):
             or any(type(n) is not int or n not in [0, 1] for n in stores.values())
             or stores.get('reference') != 0):
             raise ValueError('combined complete-prompt warmup stores require exact zero/one counts for every arm')
+    if 'expected_checkpoint_refusals' in study:
+        # A bounded cache can keep the requested prefix while declining a
+        # second, optional complete-prompt snapshot. Declare exact phase/arm
+        # counts before running; never ignore refusals or relabel old results.
+        refusals = study['expected_checkpoint_refusals']
+        if (type(refusals) is not dict or set(refusals) != {'warmup', 'measured'}
+            or any(type(counts) is not dict or set(counts) != set(protocol['arms'])
+                   or any(type(n) is not int or not 0 <= n <= 2 for n in counts.values())
+                   for counts in refusals.values())):
+            raise ValueError('checkpoint refusal expectations require exact bounded counts for every phase and arm')
     if study.get('partial_prefix', False):
         if (study.get('retention_only', False) or study.get('complete_prompt', False)
             or expected.get('reference') != 0 or not any(expected.values())
@@ -321,7 +331,7 @@ def reserved_cooldown(seconds, wait_limit, lock_path=None):
 
 
 def validate_prefix_observation(expected, name, warm, measured, *, complete_prompt=False, retention_only=False,
-                                partial_prefix=False, warmup_checkpoint_stores=None):
+                                partial_prefix=False, warmup_checkpoint_stores=None, checkpoint_refusals=None):
     want = expected[name] if expected is not None else 0
     stats = measured['stats']
     if stats.get('reusedPrefixTokens') != want:
@@ -351,9 +361,13 @@ def validate_prefix_observation(expected, name, warm, measured, *, complete_prom
             or warm['stats'].get('completePromptHits') != 0
             or (full and warm['prompt_ids'] != measured['prompt_ids'])):
             raise ValueError('complete prompt identity or retained-logit mechanism differs')
-    for sample in [warm['stats'], stats]:
-        if sample.get('prefixCheckpointErrors') != 0 or sample.get('prefixCheckpointRefusals') != 0:
-            raise ValueError('checkpoint retention failed or exceeded its budget')
+    for phase, sample in [('warmup', warm['stats']), ('measured', stats)]:
+        errors, refusals = sample.get('prefixCheckpointErrors'), sample.get('prefixCheckpointRefusals')
+        wanted = checkpoint_refusals[phase][name] if checkpoint_refusals is not None else 0
+        if type(errors) is not int or errors != 0:
+            raise ValueError('checkpoint retention failed')
+        if type(refusals) is not int or refusals != wanted:
+            raise ValueError('checkpoint retention refusals differ from the frozen workload')
 
 
 def wait_for_headroom(needed_gb, seconds):
@@ -750,6 +764,7 @@ def main():
     retention_only = (protocol.get('prefix_cache') or {}).get('retention_only', False)
     partial_prefix = (protocol.get('prefix_cache') or {}).get('partial_prefix', False)
     warmup_checkpoint_stores = (protocol.get('prefix_cache') or {}).get('expected_warmup_checkpoint_stores')
+    checkpoint_refusals = (protocol.get('prefix_cache') or {}).get('expected_checkpoint_refusals')
     expected_work = work_constraints(protocol)
     startup_acceptance_results([], next(iter(protocol['arms'])), protocol.get('startup_acceptance'))
     stop_on_contention = contention_guard(protocol)
@@ -913,7 +928,7 @@ def main():
                         raise ValueError('effective configuration differs')
                     validate_prefix_observation(expected_prefix, name, warm['metrics'], m,
                         complete_prompt=complete_prompt, retention_only=retention_only, partial_prefix=partial_prefix,
-                        warmup_checkpoint_stores=warmup_checkpoint_stores)
+                        warmup_checkpoint_stores=warmup_checkpoint_stores, checkpoint_refusals=checkpoint_refusals)
                     validate_work_observation(expected_work, name, s)
                     if s['decodeTokens'] < protocol.get('minimum_output_tokens', 0):
                         raise ValueError('output shorter than declared workload')

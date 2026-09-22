@@ -1995,3 +1995,6 @@ Preparing release 0.2.23 at Carlos’s explicit request, including all current e
 ## [2026-09-22 14:57] update | records/measurements/release-0-2-23-published-2026-09-22.md
 Published v0.2.23 from the exact successful CI archive after 32 full native gates and 13 exact 16K MTP assertions. Verified public archive equality and provenance, installed through the public installer, and passed 31 installed serving checks with MTP on. Preserved earlier incomplete attempts and all raw receipts; cleaned up test processes.
 
+## [2026-09-22 18:31] update | records/measurements/published-prompt-speed-audit-2026-09-22.md
+Audited installed releases and feature ablations across 123 completed requests. Three clean exact prose follow-ups show 85.62% less request time versus checkpoints disabled, not a release delta; short requests show no consistent gain. Preserve paging, thermal, validator and empty-output exclusions. Record larger-planner, Desktop MTP and checkpoint-affordability limits. Fix only prospective benchmark refusal validation; 51 harness tests, six offline replays and 12 analysis tests pass. Archive all evidence with per-file hashes; runtime unchanged and owned model processes reaped.
+

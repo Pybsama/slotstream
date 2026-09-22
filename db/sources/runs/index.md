@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-22T14:57:45.124444Z
+updated: 2026-09-22T18:31:15.647633Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit-excluded]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
+- [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[sources/runs/2026/09/2026-09-22-release-0-2-23-published-and-installed]] — v0.2.23 published from the exact CI archive, provenance verified, publicly installed and accepted: full native battery 32/32, 16K MTP 13/13, installed serving 31/31.
 - [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-phase-screen]] — MTP phase accounting versus bounded writes: one-pair screen
 - [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-v1]] — MTP phase accounting alone: larger-scope gate failure preserved
@@ -505,10 +507,8 @@ updated: 2026-09-22T14:57:45.124444Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-http-pressure-counterexample]] — Expanded HTTP matrix exposes supplied-controller pressure bypass
 - [[sources/runs/2026/09/2026-09-06-optimization-soak-prerequisite-binding]] — Enforce final native and paired prerequisites before lifetime qualification
 - [[sources/runs/2026/09/2026-09-06-configurable-context-cli-policy-and-driver-v1]] — Candidate context policy defaults and capacity driver failure checks
-- [[sources/runs/2026/09/2026-09-06-slotpack-hugging-face-mac-network-interruption]] — Preserve the native Mac DNS-failure attempt, resumable verified progress and cross-client network diagnostics; its timing measurements are discarded.
-- [[sources/runs/2026/09/2026-09-06-configurable-context-key-domain-counterexample]] — Reference-aware key padding preserves nine numerical failures
 
 ## More
 
-This folder has 661 files. The 500 most recent are listed above.
+This folder has 663 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
