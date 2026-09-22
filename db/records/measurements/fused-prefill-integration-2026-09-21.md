@@ -2,7 +2,7 @@
 type: measurement
 id: 01m32yc3c8kgtmwcg6k6f7cydc
 created: 2026-09-21T21:36:23.432123+00:00
-updated: 2026-09-22T00:10:28.606326+00:00
+updated: 2026-09-22T05:41:23.359502+00:00
 summary: Qualified fused prefill integration and remaining bottlenecks
 date: 2026-09-21
 doc: measurements
@@ -44,4 +44,3 @@ The catalogue passes 72 groups / 31,677 assertions; the final upgrade rerun pass
 4. Expert matrix multiplication, GDN/dense layers, host synchronization and storage remain. Observed stage counters in the benchmark identify waits but do not fully attribute the remaining GPU work. A full trace should guide the next kernel change. The later upstream dispatch patch alone does not add another kernel gain to an already forced path.
 
 Raw evidence: [[sources/runs/2026/09/2026-09-21-fused-integration-correctness]], [[sources/runs/2026/09/2026-09-21-fused-integration-performance]], [[sources/runs/2026/09/2026-09-21-fused-integration-compatibility]], [[sources/runs/2026/09/2026-09-21-fused-integration-excluded-timings]]. Adoption: [[records/decisions/qualified-upstream-fused-prefill]].
-

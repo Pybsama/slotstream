@@ -2,7 +2,7 @@
 type: measurement
 id: 01m33767tsvxmbfh7mqcx7v6gq
 created: 2026-09-22T00:10:28.569421+00:00
-updated: 2026-09-22T02:43:13.657213+00:00
+updated: 2026-09-22T05:41:23.380035+00:00
 summary: 'Remaining long-prompt opportunities: tested gains and rejected alternatives'
 date: 2026-09-21
 doc: measurements
@@ -49,4 +49,3 @@ The actual 16K read envelope passes exact logits, all state bytes and continuati
 5. Remaining dense/MoE/GDN work and synchronization require attribution under the actual long-prompt candidate before assigning another whole-request speed percentage. Fixed-forward profile numbers do not provide that attribution.
 
 Raw runs: [[sources/runs/2026/09/2026-09-21-prefill-opportunities-performance]], [[sources/runs/2026/09/2026-09-21-prefill-opportunities-excluded]], [[sources/runs/2026/09/2026-09-21-prefill-opportunities-components]], [[sources/runs/2026/09/2026-09-21-prefill-opportunities-correctness]]. Decision: [[records/decisions/prefill-opportunities-remain-experimental]].
-

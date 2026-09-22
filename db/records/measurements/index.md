@@ -2,15 +2,15 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-22T05:04:53.699748Z
+updated: 2026-09-22T05:41:23.380035Z
 ---
 
 # records/measurements
 
-- [[records/measurements/automatic-prefill-policy-2026-09-21]] — Automatic prefill policy: validation and bounded adoption
-- [[records/measurements/mtp-prefill-policy-2026-09-21]] — Automatic MTP prefill: phase accounting and bounded expert writes
 - [[records/measurements/prefill-opportunities-2026-09-21]] — Remaining long-prompt opportunities: tested gains and rejected alternatives
 - [[records/measurements/fused-prefill-integration-2026-09-21]] — Qualified fused prefill integration and remaining bottlenecks
+- [[records/measurements/automatic-prefill-policy-2026-09-21]] — Automatic prefill policy: validation and bounded adoption
+- [[records/measurements/mtp-prefill-policy-2026-09-21]] — Automatic MTP prefill: phase accounting and bounded expert writes
 - [[records/measurements/prompt-speed-qualification-2026-09-21]] — Prompt speed: three qualified changes and one rejected attention upgrade
 - [[records/measurements/fused-attention-reassessment-2026-09-21]] — Fused attention reassessment: usability, fidelity and qualification
 - [[records/measurements/issue21-long-context-qualification-2026-09-21]] — Issue 21: long conversations and full acceptance pass; original intermittent failures remain unproven
