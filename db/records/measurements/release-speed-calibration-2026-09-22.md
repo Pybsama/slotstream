@@ -2,7 +2,7 @@
 type: measurement
 id: 01m359g1dvegvqf1carwzdrmcf
 created: 2026-09-22T19:29:15.707226+00:00
-updated: 2026-09-22T19:41:27.005956+00:00
+updated: 2026-09-22T22:25:24.587543+00:00
 summary: Incomplete active-Mac calibration preserves functional evidence, corrects historical benchmark equivalence and adds prospective host-load screening.
 date: 2026-09-22
 doc: measurements
@@ -49,3 +49,14 @@ Other Apple Silicon hardware still needs actual access. The registered Linux ser
 Both prospective idle pilot attempts ended without loading a model. The first exhausted its 900-second readiness window; its full observations are preserved in `idle-smoke-v2/`. A second attempt was stopped after continued background CPU work was independently identified as OS media-analysis activity. It left no model process. These are measurement-environment refusals, not inference failures.
 
 Validation: 13 analysis tests, 14 host-load parsing/gate tests, and independent replay of all 27 completed response streams pass. The five applicable narrow arithmetic/JSON output checks pass and are never used to select timing observations. The revised live-plan capture still needs its real-model functional pilot before a v2 timing campaign can qualify. Larger actual-default preflights failed the prescribed headroom test; no adaptive server launched.
+
+## Windowed readiness correction
+The earlier pointwise host-load rule rejected ordinary interactive desktop bursts and prevented useful measurement. A separate v3 protocol now evaluates sampled load over the readiness or request window. This is a prospective timing screen for an interactive Mac, not proof of complete host isolation. Historical v1/v2 protocols, raw observations and verdicts remain unchanged.
+
+The v3 window permits mean total background CPU of at most 100% of one core and mean largest-process CPU of at most 50%. Before requests, mean device GPU utilization must be at most 5%. No more than 20% of samples may exceed the burst thresholds of 200% total CPU, 100% largest-process CPU or 20% idle GPU. Aggregate GPU during model work remains diagnostic. CPU values from ps are decaying estimates, not exact interval accounting. These are explicitly chosen screening limits, informed by the earlier false readiness refusals, not measured performance boundaries. They were frozen before any v3 model request.
+
+The independent memory, native process footprint, thermal, power, model-lock, known competing-job and paging checks remain in force. Readiness still requires two minutes of continuous memory and thermal eligibility before loading a model. Between-request readiness remains 15 seconds. Each readiness attempt is now bounded to five minutes. Windowed CPU/GPU screening does not reset the whole readiness interval for one brief desktop spike; sustained competing work still fails it. Raw snapshots retain the stricter v2 pointwise flags for sensitivity analysis.
+
+The host-load suite passes 23 tests, including burst tolerance, sustained-load rejection, unavailable telemetry and unchanged thermal/paging exclusions. The existing 13 analysis tests also pass. A simulated loopback metadata endpoint confirms the nested runtime-plan extraction, but does not replace the required real-model pilot.
+
+Evidence and the completed attempt status: [[sources/runs/2026/09/2026-09-22-release-calibration-load-screen-v3]]. The runtime, released binary, estimator and public speed tables are unchanged. No new speed gain is established by a benchmark-harness correction.

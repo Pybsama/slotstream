@@ -2004,3 +2004,6 @@ Checked the published planner against every automatic memory/context row and kep
 ## [2026-09-22 19:42] update | records/measurements/release-speed-calibration-2026-09-22.md
 Preserved 27 completed installed-release requests with exact wire replay and five narrow output checks; stopped the incomplete timing population after concurrent activity was observed. Added and unit-tested prospective CPU/GPU idle screening and live-plan checks; both quiet pilots stayed before model launch. Corrected the historical 22 GB benchmark equivalence in public tables and claims. No new qualified speed baseline, estimator change or inference change; remaining profiles require idle hardware and headroom.
 
+## [2026-09-22 22:26] update | records/measurements/release-speed-calibration-2026-09-22.md
+Corrected prospective benchmark readiness to tolerate brief desktop bursts while screening sustained load. Preserved v1/v2 and froze v3 before any model request; 23 load tests, 13 analysis tests and a simulated metadata capture pass. The five-minute 10 GB pilot stayed below its 13 GB physical headroom requirement in all 144 samples, so no model loaded and no new speed result is claimed. Retained all observations and cleanup; release and estimator unchanged.
+
