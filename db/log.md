@@ -1992,3 +1992,6 @@ Completed next-release documentation for all six prompt-speed changes in CHANGEL
 ## [2026-09-22 05:40] update | records/measurements/mtp-prefill-policy-2026-09-21.md
 Preparing release 0.2.23 at Carlos’s explicit request, including all current engine, serving, memory, Mac app and documentation changes. The qualified runtime differs only in the version literal. Release remains pending complete main/Mac CI, native acceptance of the CI archive, and installed public-download verification.
 
+## [2026-09-22 14:57] update | records/measurements/release-0-2-23-published-2026-09-22.md
+Published v0.2.23 from the exact successful CI archive after 32 full native gates and 13 exact 16K MTP assertions. Verified public archive equality and provenance, installed through the public installer, and passed 31 installed serving checks with MTP on. Preserved earlier incomplete attempts and all raw receipts; cleaned up test processes.
+

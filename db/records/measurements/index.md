@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-22T05:41:23.380035Z
+updated: 2026-09-22T14:57:24.094183Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-23-published-2026-09-22]] — v0.2.23 published from the exact CI archive, provenance verified, publicly installed and accepted: full native battery 32/32, 16K MTP 13/13, installed serving 31/31.
 - [[records/measurements/prefill-opportunities-2026-09-21]] — Remaining long-prompt opportunities: tested gains and rejected alternatives
 - [[records/measurements/fused-prefill-integration-2026-09-21]] — Qualified fused prefill integration and remaining bottlenecks
 - [[records/measurements/automatic-prefill-policy-2026-09-21]] — Automatic prefill policy: validation and bounded adoption

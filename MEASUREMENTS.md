@@ -5979,3 +5979,21 @@ The primary cells report median prefill I/O time falling from 106.28 to 5.16 sec
 The 16K key envelope, later-context reservations, full indexer/mask work, expert assembly and main-model compute remain limits on further gains. Broader key ranges and the write-strategy crossover across other prompt/budget profiles need separate measured qualification. Images retain their existing main-workspace policy. At qualification time these were local changes; this record is not a release receipt.
 
 Decision: [[records/decisions/automatic-mtp-prefill-read-policy]]. Raw evidence: [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-timing]], [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-correctness]], [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-v1]], [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-phase-screen]].
+
+### v0.2.23 published, installed and accepted
+**v0.2.23 is published, installed and accepted.** It ships the session's automatic long-prompt prefill policy, MTP phase accounting and bounded expert writes, pinned fused-attention backend integration, exact persistent conversation reuse and live thinking-to-answer continuation, together with the documented serving, memory and Mac app source changes.
+
+Release: [v0.2.23](https://github.com/carloslfu/slotstream/releases/tag/v0.2.23), published 2026-09-22T14:53:23Z from commit `14fb9aa3c253908cf7705b62780b28039ab42f92`. The CI candidate, public archive and installed executable match exactly. Archive SHA-256: `1b499652c33e2eb46af702c64b4ed26f62191b9538804567d057b8914f62ed22`. Executable SHA-256: `5cb612361887c2a317376721dbe5df94810da5230759c47169fc6fa2e9b30b89`.
+
+| Acceptance | Result |
+|---|---|
+| Exact-commit hosted CI | Main engine, external library consumer, coverage, Mac app build/checks, docs and context contracts passed |
+| Engine catalogue | 73 groups, 31,841 assertions; no failures or skips |
+| Full native model battery | 32 top-level gates passed; API robustness 74/74, quality 15/15 and vision serving 25/25 |
+| Automatic 16K MTP | 13/13 assertions; actual 16,384-token group and bounded writes; exact state/logits/output; 9.401 GB complete peak inside 10 GB |
+| Public distribution | Exact CI archive published, checksum and provenance verified; public installer upgraded the standard installation |
+| Installed serving | 31/31 with a 10 GB target and MTP on; test server cleaned up |
+
+The earlier shared-machine attempts and the first generation's unexplained exit are preserved in the raw run, including the successful isolated reproduction and the complete passing rerun. No assertion was removed or tolerance widened. The rerun retains stderr that the original harness discarded. Global paging observations remain diagnostics, and this acceptance adds no new performance percentage.
+
+The performance results and their limits remain in [[records/measurements/prompt-speed-qualification-2026-09-21]], [[records/measurements/fused-prefill-integration-2026-09-21]] and [[records/measurements/mtp-prefill-policy-2026-09-21]]. Their percentages describe different comparisons and must not be combined. Separate decode experiments made after this release was frozen are outside the tagged archive.
