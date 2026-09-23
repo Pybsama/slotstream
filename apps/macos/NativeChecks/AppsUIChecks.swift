@@ -346,8 +346,8 @@ final class RecordingBroker: @unchecked Sendable {
         """
         let dbmd = URL(fileURLWithPath: env["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
         let engine = ScriptedInference(turns: [
-            EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["id": .string("file-1")])]),
-            EngineTurn(text: "", calls: [ProposedTool(name: "file.edit", arguments: ["id": .string("file-1"), "old": .string("Status: draft"), "new": .string("Status: approved")])]),
+            EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["path": .string("plan.md")])]),
+            EngineTurn(text: "", calls: [ProposedTool(name: "file.edit", arguments: ["id": .string("a1:plan.md"), "old": .string("Status: draft"), "new": .string("Status: approved")])]),
             EngineTurn(text: "I marked the plan approved. Review the change before it is written."),
             EngineTurn(text: "Here is a habit tracker.", calls: [ProposedTool(name: "app.propose", arguments: ["name": .string("Habits"), "description": .string("Track daily habits."),
                                                                                                           "data": .string("habits:write"), "html": .string(app)])]),

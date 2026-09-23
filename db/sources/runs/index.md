@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-23T16:45:29.052977Z
+updated: 2026-09-23T18:13:18.361633Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-23-sevra-live-folder-navigation]] — Live folder navigation, reliable continuation and real-model reviewed edits
 - [[sources/runs/2026/09/2026-09-23-sevra-native-replay-growth]] — Native Sevra replay and bounded warm cache growth
 - [[sources/runs/2026/09/2026-09-23-sevra-verification-exact-mtime]] — Sevra verification rejects corruption with exact nanosecond mtime restored
 - [[sources/runs/2026/09/2026-09-23-sevra-app-optimizations]] — Sevra desktop optimization trials and real-model acceptance
@@ -506,9 +507,8 @@ updated: 2026-09-23T16:45:29.052977Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-mtp-cancellation-exclusivity-counterexample]] — Actual MTP cancellation exposes an exclusive stats access abort
 - [[sources/runs/2026/09/2026-09-06-configurable-context-combined-shape-and-http-pass]] — Combined V176 context candidate passes all ten shape witnesses and HTTP contracts
 - [[sources/runs/2026/09/2026-09-06-optimization-indexer-score-preparation]] — Optimization indexer score prototype and guarded contract — V177
-- [[sources/runs/2026/09/2026-09-06-optimization-context-integrated-build]] — Context ownership component integrated and weight-free gates pass
 
 ## More
 
-This folder has 677 files. The 500 most recent are listed above.
+This folder has 678 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

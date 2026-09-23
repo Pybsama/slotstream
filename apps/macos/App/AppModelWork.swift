@@ -22,6 +22,7 @@ extension AppModel {
         guard !working, !attaching else { error = "Attach sources after the current response finishes."; return }
         let id = selectedID
         attaching = true
+        error = nil
         Task {
             defer { attaching = false }
             var problems: [String] = []

@@ -8,6 +8,15 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- The development Mac app attaches folders without a whole-tree scan or a
+  file-count cap. Live directory browsing, filename search and scoped content
+  search discover new and renamed files. Bounded continuations retain matches
+  within a file, detect directory changes and expire under resource pressure.
+  Reads can use a returned ID or a relative path inside the selected folder.
+- Edits require a fresh read after an external file change. Attachment errors
+  no longer offer the unrelated Home-reconciliation action, and the assistant
+  is told how local folder access is granted.
+
 - The development Mac app uses automatic speculative decoding when the draft
   head is available and fits the selected memory budget. Short conversations
   create earlier reusable checkpoints; longer prompts keep the engine's

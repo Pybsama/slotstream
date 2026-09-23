@@ -243,7 +243,9 @@ struct ContentView: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "exclamationmark.triangle").accessibilityHidden(true)
                 Text(error).font(.callout).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-                Button("Inspect Home changes…", action: model.inspectHomeChanges)
+                if model.snapshot?.storageNeedsReview == true {
+                    Button("Inspect Home changes…", action: model.inspectHomeChanges)
+                }
                 NativeIconButton(symbol: "xmark", title: "Dismiss error", help: "Dismiss this message", action: model.dismissError).frame(width: 28, height: 28)
             }.padding(12).background(Color.orange.opacity(0.08)).accessibilityElement(children: .contain).accessibilityLabel("Attention")
         }

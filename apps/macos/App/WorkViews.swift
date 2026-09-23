@@ -57,7 +57,8 @@ struct AttachmentBar: View {
         case .knowledge: return "db.md knowledge base"
         case .file: return "One file"
         case .folder:
-            let files = item.files == 1 ? "1 file" : "\(item.files) files"
+            guard let count = item.files else { return "Live folder · browsed when needed" }
+            let files = count == 1 ? "1 file" : "\(count) files"
             return item.skipped > 0 ? files + " · \(item.skipped) skipped (links, dependencies or unreadable)" : files
         }
     }

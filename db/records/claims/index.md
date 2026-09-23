@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-23T04:16:53.870119Z
+updated: 2026-09-23T17:54:18.617026Z
 ---
 
 # records/claims
 
+- [[records/claims/sevra-mac-folders-2000-files]] — Sevra reads folders of up to 2,000 files
 - [[records/claims/release-2k-prose-current-timing]] — Installed-release prose first-read range and ordinary exact-repeat latency at the measured small-budget profile.
 - [[records/claims/release-2k-code-current-timing]] — Installed-release code first-read range and ordinary exact-repeat latency at the measured small-budget profile.
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
@@ -46,7 +47,6 @@ updated: 2026-09-23T04:16:53.870119Z
 - [[records/claims/claude-code-instructions-about-15000-tokens]] — Claude Code's instructions and tool descriptions take about 15,000 tokens
 - [[records/claims/coding-agents-verified-versions]] — The coding agents guide names the agent versions that were verified
 - [[records/claims/claude-code-guide-verified-version]] — The Claude Code guide was verified with Claude Code 2.1.270
-- [[records/claims/sevra-mac-folders-2000-files]] — Sevra reads folders of up to 2,000 files
 - [[records/claims/sevra-mac-recognition-40-pages]] — Sevra recognizes text on at most 40 pages per request
 - [[records/claims/sevra-mac-documents-64-mb]] — Sevra reads rich documents up to 64 MB
 - [[records/claims/sevra-mac-text-files-8-mb]] — Sevra reads text and code files up to 8 MB each

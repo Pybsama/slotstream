@@ -87,8 +87,21 @@ the Home.
   without a text layer. Sevra recognizes their text on this Mac when a page is
   read, at most 40 pages per request, and marks such citations as recognized
   text.
-- **Folders:** up to 2,000 files. Hidden files, symbolic links and dependency
-  folders such as `node_modules` are skipped and counted, never followed.
+- **Folders:** live access without an upfront scan or a fixed file-count limit.
+  Sevra browses subfolders, finds filenames and searches content as needed.
+  New files, renames and edits appear on subsequent operations. Hidden entries
+  and symbolic links are excluded. Broad searches skip dependency folders such
+  as `node_modules`; Sevra can inspect a specific dependency folder when needed.
+
+Long listings and searches return bounded pages. Sevra can continue from where
+it stopped, including further matches in the same file. If a directory changes
+between pages, Sevra must restart the operation with current names. Search reports
+skipped or unreadable entries instead of treating them as searched. An attachment stays
+usable regardless of the size of its tree. Access remains limited to the files
+or folders you selected.
+
+Without an attachment, Sevra explains how to add one with the paperclip. Thread
+only affects remembered context; attached files remain available in that mode.
 
 Password-protected, damaged and oversized documents are refused with a reason.
 Sevra reads the text inside a document, not its layout; tables and multiple
@@ -578,6 +591,21 @@ the metallib copied as above and the same memory rules:
 apps/macos/.build/release/sevra-mac-checks --real-metrics \
   --home "$PWD/.build/sevra-disposable-real-metrics"
 ```
+
+The live-source fixture checks the model's explanation of file access, then
+attaches a large disposable folder, locates and cites a file, rediscovers it
+after a rename and edit, and proposes a reviewed change. It verifies the
+approved bytes and undo. Use a new destination and the same memory rules:
+
+```bash
+SEVRA_EXTRACT="$PWD/apps/macos/.build/release/sevra-extract" \
+  apps/macos/.build/release/sevra-mac-checks --real-sources \
+  --home "$PWD/.build/sevra-disposable-real-sources"
+```
+
+Its `receipt.json` records answers, actual tool traces, source excerpts and
+failures. The ordinary checks also cover live navigation and search pagination
+without loading a model; `sevra-mac-checks --sources` runs that group alone.
 
 Slotstream's original CLI, serving APIs, library products and package coordinates
 remain independently usable. This application work does not rename the public

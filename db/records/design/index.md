@@ -2,14 +2,14 @@
 type: index
 scope: type-folder
 folder: records/design
-updated: 2026-09-23T16:45:55.771564Z
+updated: 2026-09-23T17:54:06.365794Z
 ---
 
 # records/design
 
+- [[records/design/sevra-spec/runtime-contract]] — Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
 - [[records/design/4-2-slot-pool-mechanics]] — 4.2 Slot pool mechanics
 - [[records/design/sevra-spec/implementation-status]] — Mac application implementation progress and unpassed release gates
-- [[records/design/sevra-spec/runtime-contract]] — Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
 - [[records/design/sevra-spec/mac-platform]] — Mac native implementation baseline and dependency qualification
 - [[records/design/sevra-spec/ui-contract]] — Mac UI geometry, native text, appearance and review requirements
 - [[records/design/measured-operating-policies]] — Measured operating policies and revision criteria
