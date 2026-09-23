@@ -19,6 +19,10 @@ determines which version the installer downloads.
   New app launches and changed files require fresh verification. Immediate
   reloads also wait for macOS's memory-statistics refresh before replanning,
   preventing stale readings from unnecessarily shrinking the cache.
+- Growing the expert cache preserves slot positions and avoids gathering a
+  second copy of the occupied cache. The live governor also checks temporary
+  replacement memory against the process target and available system memory.
+  When growth cannot fit, it keeps the current warm cache and retries later.
 
 ## 0.2.24 - 2026-09-23
 

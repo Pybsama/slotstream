@@ -131,6 +131,20 @@ public enum GovernorPolicy {
     static let shrinkDeadbandGB = 1.0
     static let growDeadbandGB = 2.0
 
+    /// A final-size plan does not cover the old and replacement tensors that
+    /// coexist during warm growth. Unknown readings defer this optimization;
+    /// the current usable cache and future retry remain intact.
+    package static func growthFits(footprintBytes: UInt64, transientBytes: Int,
+                                   availableGB: Double?, targetGB: Double?, ramGB: Double) -> Bool {
+        guard footprintBytes > 0, transientBytes > 0,
+              let availableGB, availableGB.isFinite,
+              let targetGB, targetGB.isFinite, targetGB > 0,
+              ramGB.isFinite, ramGB > 0 else { return false }
+        let extra = Double(transientBytes) / 1e9
+        return Double(footprintBytes) / 1e9 + extra <= targetGB &&
+            extra + Planner.availabilitySlackGB(ramGB: ramGB) <= availableGB
+    }
+
     private static func settle(_ target: Int, _ current: Int, _ reason: String) -> Decision {
         let t = max(Geometry.floorSlots, min(target, Geometry.totalRecords))
         return t == current ? .hold : .resize(slots: t, reason: reason)
@@ -410,6 +424,13 @@ public final class MemoryGovernor: @unchecked Sendable {
         guard target != before else { return }
         let growing = target > before
         let ref = plan ?? engine.currentPlan
+        if growing {
+            MLX.Memory.clearCache()
+            guard GovernorPolicy.growthFits(footprintBytes: ProcessMemory.residentBytes(),
+                transientBytes: engine.model.pool.growthTransientBytes(to: target),
+                availableGB: Planner.deviceAvailableGB(), targetGB: ref?.targetGB,
+                ramGB: ref?.ramGB ?? Planner.deviceRAMGB()) else { return }
+        }
         // --max-context is also a hard ceiling on any one retained history.
         // A later governor resize must not undo the cap Serve applied at startup.
         let livePrefixTokens = min(prefixCacheTokens, engine.maxContextTokens)

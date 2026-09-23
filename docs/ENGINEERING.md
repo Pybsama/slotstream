@@ -243,6 +243,12 @@ greedy output with the other generation settings fixed. Changing the total
 memory target can also change prefill grouping or enable speculative decoding;
 those are separate changes, not part of that equality claim.
 
+Warm growth also needs room for temporary replacement tensors. The governor
+checks this extra allocation against both the process target and current
+system availability. If it cannot fit, the existing warm cache stays usable
+and growth waits. The copy preserves slot positions and appends capacity one
+tensor at a time, without gathering another copy of all occupied slots.
+
 To set a memory target yourself:
 
 ```bash

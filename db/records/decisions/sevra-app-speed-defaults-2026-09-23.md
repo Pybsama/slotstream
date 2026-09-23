@@ -2,7 +2,7 @@
 type: decision
 id: 01m37frm1n2sm0grtjgj59xjt6
 created: 2026-09-23T15:57:17.237252+00:00
-updated: 2026-09-23T15:57:17.237252+00:00
+updated: 2026-09-23T16:45:55.803837+00:00
 summary: Enable qualified desktop speedups without extra user switches
 decided_on: 2026-09-23
 evidence: '[[records/measurements/sevra-app-optimizations-2026-09-23]]'
@@ -21,3 +21,6 @@ Adopt these development-app defaults as one integration policy. Evidence and tes
 The objective is lower complete-conversation waiting with correct tools, exact cache provenance and bounded memory, without asking users to choose engine mechanisms. The measured tradeoff includes a slower checkpoint-creation turn, unchanged long-prompt work, retained foreground memory and the draft head's cost. Timing evidence comes from one M5 Pro/48 GiB machine at a 26 GB comparison budget; a separate 10 GB functional profile and simulated policy matrix do not establish other hardware's speed.
 
 Revisit the pass threshold/size when repeated matched short and long workflows show lower total latency without a long-input regression, or when checkpoint costs/arithmetic change. Revisit MTP through the engine's existing activation qualification, never from an isolated best run. Revisit readiness with real return intervals and reload costs. Revisit the verification cache if supported filesystem identity guarantees or the pinned manifest contract change; uncertainty falls back to hashing. Revisit the reload interval if OS statistics semantics change or a fresh supported observation API removes the stale-reading problem. Keep phased thinking, tools, cancellation, cache/privacy/crossover, same-size corruption, process budgets, idle/sleep and actual build identity in the acceptance gates.
+
+
+The completed native replay additionally found an unpriced warm-resize transient. Adopt piecewise append with preserved slot indices and physical-memory admission for temporary growth, across both app and CLI. Insufficient or unknown headroom defers growth and retains the warm cache, without another setting. Revisit if a replacement strategy demonstrates better recovery within the same process ceiling and exact-byte/output gates. Evidence: [[sources/runs/2026/09/2026-09-23-sevra-native-replay-growth]].

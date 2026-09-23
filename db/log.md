@@ -2031,3 +2031,6 @@ Enabled fully budgeted automatic MTP, short-chat checkpoints, foreground readine
 ## [2026-09-23 16:06] update | sources/runs/2026/09/2026-09-23-sevra-verification-exact-mtime
 Strengthened the session-verification corruption test to preserve exact nanosecond mtime, inode and size. Rebuilt the checker and passed the complete scoped verification, budget, idle, sleep and resource-handoff checks. Production app and measured implementation remain unchanged.
 
+## [2026-09-23 16:45] update | sources/runs/2026/09/2026-09-23-sevra-native-replay-growth
+Completed native replay after unlock; preserved the initial between-request memory overshoot, removed the redundant warm-growth gather and admitted temporary replacement memory. Passed exact-byte and generation parity, live governor recovery, 73 catalogue groups, static gates and final native requests/reload. Updated measurements and operating policy without changing public benchmark anchors or publishing a release.
+

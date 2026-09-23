@@ -6377,7 +6377,23 @@ The later [[sources/runs/2026/09/2026-09-23-sevra-verification-exact-mtime]] che
 
 ## Rebuilt app observation
 
-The new development app was rebuilt and its bundled input manifest exactly matches the current source inputs. The final visible-app replay could not start because the Mac was locked; native UI control explicitly required manual unlock. These new rates come from the real engine and app-runtime checks, not a completed new UI replay. The earlier actual-app baseline remains unchanged.
+The final native replay is complete after unlock. The first replay also exposed an idle cache-growth memory overshoot, which was fixed and retested. Exact captures, failed observations, source changes and test results are preserved in [[sources/runs/2026/09/2026-09-23-sevra-native-replay-growth]]. Earlier source captures remain unchanged.
+
+The final rebuilt development app completed the same synthetic bicycle/rain/RAM/greeting sequence. Its native UI displayed the persisted metrics. Automatic resolved to 33.000 GB, with thinking off:
+
+| Request | Answer tokens | Writing tok/s | First token, excluding load | Read / reused tokens |
+| --- | ---: | ---: | ---: | ---: |
+| cold-bicycle | 225 | 16.19 | 4.86 s | 143 / 0 |
+| warm-rain | 266 | 16.54 | 4.78 s | 418 / 0 |
+| warm-caching | 243 | 16.31 | 7.98 s | 737 / 0 |
+| warm-short | 2 | Tiny reply | 4.13 s | 490 / 512 |
+
+
+Initial model preparation took 9.08 seconds. After Release memory now in the same process, preparation took 1.28 seconds; prompt processing still took 9.76 seconds to first token. This short conversation did not meet the existing disk-save minimum. The full final sampled interval, including idle and reload, peaked at 29.65 GB within the displayed 33 GB ceiling.
+
+The initial replay peaked at 38.49 GB between requests and failed process-memory acceptance. Warm growth now preserves slot indices while appending capacity piece by piece, removes the full occupied-row gather, and checks the temporary allocation against both physical footprint and real availability. When it cannot fit, the existing warm cache stays usable and growth retries later. Exact-byte, generated-output parity, live governor recovery and the full static gates passed; the engine catalogue now has 31,919 assertions. This is an engine correction shared by Desktop and the CLI, with no extra switch.
+
+These native rates are single live-host observations with different answer lengths and availability. They do not replace the matched-input comparison above or justify a new public throughput anchor. Raw paging and thermal observations remain in the capture.
 
 ## Remaining costs
 
