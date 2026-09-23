@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import SevraRuntime
 
@@ -22,9 +23,19 @@ func modelVerificationChecks(root: URL) throws {
     // The repo's supported local Mac check volume is APFS. Other filesystems
     // deliberately fall back to hashing and make no reload-speed claim.
     let reusable = hashes == first
-    let oldDate = try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate!
-    try Data("corrupt! weights".utf8).write(to: file, options: [])
-    try FileManager.default.setAttributes([.modificationDate: oldDate], ofItemAtPath: file.path)
+    var original = stat()
+    try checkModelVerification(lstat(file.path, &original) == 0, "capture exact file timestamps")
+    let writer = try FileHandle(forWritingTo: file)
+    try writer.write(contentsOf: Data("corrupt! weights".utf8)); try writer.close()
+    // Date conversion can round nanoseconds and accidentally invalidate the
+    // cache through mtime alone. Restore the exact timespec on the same inode.
+    let timestamps = [original.st_atimespec, original.st_mtimespec]
+    let restored = timestamps.withUnsafeBufferPointer { utimensat(AT_FDCWD, file.path, $0.baseAddress, 0) }
+    try checkModelVerification(restored == 0, "restore exact modification time")
+    var changed = stat()
+    try checkModelVerification(lstat(file.path, &changed) == 0 && changed.st_ino == original.st_ino
+        && changed.st_size == original.st_size && changed.st_mtimespec.tv_sec == original.st_mtimespec.tv_sec
+        && changed.st_mtimespec.tv_nsec == original.st_mtimespec.tv_nsec, "corruption preserves inode, size and exact mtime")
     try checkModelVerification(!(try check()), "same-size corruption with restored mtime is rejected")
     try good.write(to: file); try checkModelVerification(try check(), "a repaired model is reverified")
     let beforeOptional = hashes

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-23T15:57:17.152896Z
+updated: 2026-09-23T16:09:29.703076Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-23-sevra-verification-exact-mtime]] — Sevra verification rejects corruption with exact nanosecond mtime restored
 - [[sources/runs/2026/09/2026-09-23-sevra-app-optimizations]] — Sevra desktop optimization trials and real-model acceptance
 - [[sources/runs/2026/09/2026-09-23-sevra-app-speed]] — Actual Sevra development-app speed and MTP diagnostic
 - [[sources/runs/2026/09/2026-09-23-release-0-2-24-performance]] — v0.2.24 versus v0.2.23: 72 captured requests, timing claims withheld
@@ -506,9 +507,8 @@ updated: 2026-09-23T15:57:17.152896Z
 - [[sources/runs/2026/09/2026-09-06-optimization-indexer-score-preparation]] — Optimization indexer score prototype and guarded contract — V177
 - [[sources/runs/2026/09/2026-09-06-optimization-context-integrated-build]] — Context ownership component integrated and weight-free gates pass
 - [[sources/runs/2026/09/2026-09-06-optimization-maximum-image-capacity-incomplete]] — Maximum-image query tiling: incomplete capacity qualification
-- [[sources/runs/2026/09/2026-09-06-configurable-context-short-tail-and-sparse-prefix-pass]] — Tiny-query shape correction passes short-tail and sparse-prefix controls
 
 ## More
 
-This folder has 675 files. The 500 most recent are listed above.
+This folder has 676 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

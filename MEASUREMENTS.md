@@ -6373,6 +6373,8 @@ All six real-model profiles passed: precise phase metrics with actual MTP drafts
 
 Native UI/runtime regressions, the final policy check, release builds, source-manifest verification, static gates and 73 engine catalogue checks (31,907 assertions) passed. The broader pure-policy sweep accepted 85 plans and safely refused 215. Functional acceptance is independent of global paging. The source changes preserve the independent CLI defaults and do not add another public release tag.
 
+The later [[sources/runs/2026/09/2026-09-23-sevra-verification-exact-mtime]] check strengthens the corruption test: it preserves inode, size and the exact nanosecond modification timestamp while corrupting the contents. Rejection and all scoped lifecycle checks passed. This test-only follow-up leaves the measured production implementation unchanged.
+
 ## Rebuilt app observation
 
 The new development app was rebuilt and its bundled input manifest exactly matches the current source inputs. The final visible-app replay could not start because the Mac was locked; native UI control explicitly required manual unlock. These new rates come from the real engine and app-runtime checks, not a completed new UI replay. The earlier actual-app baseline remains unchanged.

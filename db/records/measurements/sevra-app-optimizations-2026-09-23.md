@@ -2,7 +2,7 @@
 type: measurement
 id: 01m37frm11f9k0ac9dq217tkrx
 created: 2026-09-23T15:57:17.217770+00:00
-updated: 2026-09-23T15:58:31.021610+00:00
+updated: 2026-09-23T16:06:59.931728+00:00
 summary: 'Sevra desktop defaults: MTP, useful checkpoints and verified reloads'
 date: 2026-09-23
 doc: measurements
@@ -43,6 +43,8 @@ These are live-machine diagnostic timings: global swap-ins occurred and thermal 
 All six real-model profiles passed: precise phase metrics with actual MTP drafts, MTP disk restore/private isolation/cancellation/tools/crossover, thinking with Answer now, complete cited Cedar document creation after exact synthetic-fixture review, 10-to-9 GB lifecycle behavior, and ordinary 10 GB disk reuse. The MTP reload restored 2,048 prompt tokens at the full 26 GB budget; its immediate load was 2.085 seconds. The small-budget warm disk hit read only 168 tokens. Session-proof tests reject same-size corruption even after restoring mtime, optional arrival/removal, file replacement, symlink retargeting and mutation during verification, and honor cancellation.
 
 Native UI/runtime regressions, the final policy check, release builds, source-manifest verification, static gates and 73 engine catalogue checks (31,907 assertions) passed. The broader pure-policy sweep accepted 85 plans and safely refused 215. Functional acceptance is independent of global paging. The source changes preserve the independent CLI defaults and do not add another public release tag.
+
+The later [[sources/runs/2026/09/2026-09-23-sevra-verification-exact-mtime]] check strengthens the corruption test: it preserves inode, size and the exact nanosecond modification timestamp while corrupting the contents. Rejection and all scoped lifecycle checks passed. This test-only follow-up leaves the measured production implementation unchanged.
 
 ## Rebuilt app observation
 

@@ -2028,3 +2028,6 @@ Measured the actual September 21 development app: three substantial replies at 1
 ## [2026-09-23 15:57] update | records/measurements/sevra-app-optimizations-2026-09-23
 Enabled fully budgeted automatic MTP, short-chat checkpoints, foreground readiness and APFS session verification in the development app; fixed stale-memory immediate reload planning. Preserved failed trials and three final alternating comparisons, passed all six real-model profiles, static/native/runtime checks and 31,907 catalogue assertions, and verified the rebuilt bundle inputs. Live-machine timings remain diagnostic; see the measurement for visible-app verification status.
 
+## [2026-09-23 16:06] update | sources/runs/2026/09/2026-09-23-sevra-verification-exact-mtime
+Strengthened the session-verification corruption test to preserve exact nanosecond mtime, inode and size. Rebuilt the checker and passed the complete scoped verification, budget, idle, sleep and resource-handoff checks. Production app and measured implementation remain unchanged.
+
