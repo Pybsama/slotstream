@@ -8,7 +8,7 @@ determines which version the installer downloads.
 
 ## Unreleased
 
-## 0.2.24 - 2026-09-22
+## 0.2.24 - 2026-09-23
 
 - Nullable string tool parameters declared with a JSON Schema type array now
   stream incrementally and preserve numeric-looking strings, like the equivalent

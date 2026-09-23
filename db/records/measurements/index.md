@@ -2,14 +2,16 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-23T04:19:49.355461Z
+updated: 2026-09-23T06:29:30.563306Z
 ---
 
 # records/measurements
 
+- [[records/measurements/issue21-edge-fixes-2026-09-22]] — Issue 21 nullable tool strings and branched conversation reuse repaired
+- [[records/measurements/release-0-2-24-performance-2026-09-23]] — v0.2.24 post-release responsiveness and reuse comparison
+- [[records/measurements/release-0-2-24-published-2026-09-23]] — v0.2.24 published, installed and accepted
 - [[records/measurements/release-speed-calibration-2026-09-22]] — Incomplete active-Mac calibration preserves functional evidence, corrects historical benchmark equivalence and adds prospective host-load screening.
 - [[records/measurements/release-prefill-2k-2026-09-22]] — Measured installed-release 2K first reads and exact repeats at 10 GB; request history changes read batching and prevents a universal estimator correction.
-- [[records/measurements/issue21-edge-fixes-2026-09-22]] — Issue 21 nullable tool strings and branched conversation reuse repaired
 - [[records/measurements/issue21-current-review-2026-09-22]] — Issue 21 reassessment: v0.2.23 release acceptance is complete; fresh 51K/restart checks pass, but nullable-string schema and branched-cache defects remain.
 - [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/speed-tables-review-2026-09-22]] — Keep the latest qualified decode result and rough ranges; add scoped prompt-policy and reuse results, and mark historical planner calibration.

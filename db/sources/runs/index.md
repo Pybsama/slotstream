@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-23T04:19:49.282452Z
+updated: 2026-09-23T06:29:30.444515Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-23-release-0-2-24-performance]] — v0.2.24 versus v0.2.23: 72 captured requests, timing claims withheld
+- [[sources/runs/2026/09/2026-09-23-release-0-2-24-published-and-installed]] — v0.2.24 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-22-release-calibration-long-v3]] — Eight long-prompt requests completed; cache retention and thermal limits observed, then the next round refused background GPU activity.
 - [[sources/runs/2026/09/2026-09-22-release-calibration-2k-v3]] — Installed-release 2K prompt study: fourteen completed requests, thirteen timing-eligible, exact response replay and visible cache/history limits.
 - [[sources/runs/2026/09/2026-09-22-issue21-edge-fixes]] — Issue 21 edge fixes: baseline failure and repaired-build qualification
@@ -505,10 +507,8 @@ updated: 2026-09-23T04:19:49.282452Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-short-tail-and-sparse-prefix-pass]] — Tiny-query shape correction passes short-tail and sparse-prefix controls
 - [[sources/runs/2026/09/2026-09-06-configurable-context-allocation-ownership-pass]] — Per-buffer allocation and aggregate request ownership pass bounded gates
 - [[sources/runs/2026/09/2026-09-06-configurable-context-floor-fixture-counterexample]] — Restored legacy batch floor exposes eight stale diagnostic expectations
-- [[sources/runs/2026/09/2026-09-06-configurable-context-short-tail-counterexample]] — One-row terminal subpass fails two unchanged numerical criteria
-- [[sources/runs/2026/09/2026-09-06-configurable-context-projection-prefix-pass]] — Both small-pass sizes preserve ordinary partial and reused-prefix witnesses
 
 ## More
 
-This folder has 671 files. The 500 most recent are listed above.
+This folder has 673 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

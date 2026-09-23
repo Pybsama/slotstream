@@ -2,13 +2,13 @@
 type: measurement
 id: 01m363qqvq22nj9fnbbppf2qvd
 created: 2026-09-23T03:07:51.031832+00:00
-updated: 2026-09-23T03:09:19.989428+00:00
+updated: 2026-09-23T06:29:30.563306+00:00
 summary: Issue 21 nullable tool strings and branched conversation reuse repaired
 date: 2026-09-22
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
-note: Local unreleased fixes; complete catalogue and targeted live/native/51K restart checks pass. Original intermittent failures remain unproven.
+note: Originally local fixes, now published in v0.2.24 with full native and installed acceptance; see the publication record. Original intermittent failures remain unproven.
 order: '1645'
 runs: '[[sources/runs/2026/09/2026-09-22-issue21-edge-fixes]]'
 title: Issue 21 nullable tool strings and branched conversation reuse repaired
@@ -52,3 +52,6 @@ The original intermittent daemon exits, prolonged CPU-busy stall and pressure-re
 ## Final validation
 
 The full static suite passed on the repaired executable, including syntax, harness, catalogue-support, download/installer, planner, memory-override and documentation checks. The source audit still matched the frozen build. Final evidence and process cleanup are linked from [[sources/runs/2026/09/2026-09-22-issue21-edge-fixes]]. The store retains its two historical log warnings; this repair does not rewrite historical logs.
+
+## Publication follow-up
+The original repair capture above remains unchanged. These fixes were subsequently published as v0.2.24 on September 23. Full release qualification and public installation passed: [[records/measurements/release-0-2-24-published-2026-09-23]]. Post-release comparison and timing limits: [[records/measurements/release-0-2-24-performance-2026-09-23]].

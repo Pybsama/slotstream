@@ -2019,3 +2019,6 @@ Repaired nullable type-array string streaming/coercion and compatible branch sel
 ## [2026-09-23 04:20] update | records/measurements/release-prefill-2k-2026-09-22.md
 Preserved fourteen completed installed-release 2K requests, thirteen primary timing-eligible, exact replay, scoped first-read ranges and actual cache reuse; updated README/HARDWARE claims. Also preserved eight incomplete long-prompt requests, explicit thermal/checkout exclusions and the subsequent GPU readiness refusal. No runtime or estimator change.
 
+## [2026-09-23 06:29] update | records/measurements/release-0-2-24-published-2026-09-23
+Published v0.2.24 from the exact CI archive and verified public installation: 73 catalogue groups/31,907 assertions, 33 native gates and 31 installed end-to-end checks passed. Preserved 72 post-release A/B requests: nullable tool streaming/type and branch reread benefits repeat; no general speed percentage qualifies under the frozen load/paging rule. Archived hashed evidence, linked historical repair follow-up and updated generated measurements.
+
