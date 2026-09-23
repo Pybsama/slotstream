@@ -107,6 +107,20 @@ whole-release speedup. Times are arm medians; reductions are medians of paired
 changes. The [hardware guide](docs/HARDWARE.md#recent-prompt-processing-results)
 explains the fixtures and the latest audit's exclusions.
 
+A fresh installed-release study used ordinary caching at the same memory
+target. These are observed first-read ranges and median exact-repeat request
+times across the prescribed request order, with capped replies:
+
+| Prompt | Eligible first reads / repeats | First-read prefill range | Median repeated request |
+|---|---:|---:|---:|
+| 2K code | 4 / 3 | 13.86–28.11 s | 2.79 s |
+| 2K prose | 3 / 3 | 14.91–26.51 s | 3.22 s |
+
+The desktop load screen passed for the included observations, but several
+runs had system swap-ins. Request history changed read batching, so these
+results do not replace the general speed estimates or decode headline.
+See the [measurement and its limits](db/records/measurements/release-prefill-2k-2026-09-22.md).
+
 <a id="memory"></a>
 <a id="context"></a>
 

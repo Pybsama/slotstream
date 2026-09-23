@@ -159,6 +159,26 @@ release comparison and kernel-only attribution have too few clean pairs for
 a repeated claim. None of these percentages updates the warm reply-speed
 ranges or establishes a speedup on another Mac.
 
+### Fresh installed-release first reads and exact repeats
+
+The same development Mac and memory target were measured with ordinary
+caching and planner-owned settings. The table separates prompt processing
+from the full repeated request, which includes a capped reply:
+
+| Prompt | Eligible first reads / repeats | First-read prefill range | Median repeated request |
+|---|---:|---:|---:|
+| 2K code | 4 / 3 | 13.86–28.11 s | 2.79 s |
+| 2K prose | 3 / 3 | 14.91–26.51 s | 3.22 s |
+
+The prospective desktop load and process-page-in screen passed for the
+included observations. Several runs had system swap-ins; the stricter global
+no-swap subset is insufficient for a repeated first-read claim. Request
+history changed read batching despite an unchanged memory plan. The linked
+[measurement](../db/records/measurements/release-prefill-2k-2026-09-22.md)
+keeps server-first prompts and later misses separate and preserves every
+excluded request. These observations do not establish a new decode headline,
+a general ETA correction, or a whole-release speedup.
+
 ## Does more memory help?
 
 Within Slotstream, yes: a larger expert cache reduces SSD reads and improves

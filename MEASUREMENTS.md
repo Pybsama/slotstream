@@ -6147,3 +6147,35 @@ The responses were deliberately capped at 16 and 32 output tokens. They validate
 A prospective analysis extension now evaluates full-prefill misses using leave-one-prompt-family-out corrections within the same realized plan. Cached tokens, pilots, unregistered populations, changing plans and unequal outputs cannot train the correction. Nineteen analysis tests pass. This is an exploratory diagnostic, not a fitted production policy or evidence of transfer to other prompt lengths.
 
 The subsequent 10 GB timing attempt and its exact disposition are preserved with the pilot at [[sources/runs/2026/09/2026-09-22-release-calibration-native-pilot-v3]]. Earlier memory refusals and frozen v1/v2/v3 attempts remain unchanged. No runtime optimization or estimator change is established by the pilot.
+
+## Completed 2K installed-release measurements
+The subsequent v3 timing phase completed three fresh-server rounds and one prospectively declared code supplemental repetition. Thirteen of fourteen requests qualify under the primary screen; all response captures replay exactly. The measured ranges and cache reuse results are now published separately at [[records/measurements/release-prefill-2k-2026-09-22]], with immutable evidence at [[sources/runs/2026/09/2026-09-22-release-calibration-2k-v3]]. Server history changes the read batches even at an unchanged memory plan, and the strict global no-swap subset is insufficient for a repeated first-read claim. The broader profile matrix, history-independent ETA calibration and full-answer decode baseline remain unfinished; the production estimator is unchanged.
+
+## Longer-prompt continuation and remaining limits
+A separate prospective 8K/16K code/prose phase completed eight requests in its first round. All raw captures replay exactly and the maximum native lifetime peak was 8.250117504 GB under the 10 GB target. Two requests failed the original thermal screen. One further repeat is excluded in derived analysis because a documentation checkout by this task overlapped it; the exclusion was registered before inspecting its result and original verdicts remain unchanged. Five observations remain eligible, with no fixture reaching three repetitions.
+
+Every 8K/16K exact repeat in this round reused zero prompt tokens. The normal runtime cache was enabled, but its 13,382-token-unit retention allowance could not keep the requested checkpoint beside the active future sequence reservation. The generator selected the last eligible pass boundary and checkpoint admission refused it. These are real limits in this measured configuration, not evidence that the cache is disabled or that larger-budget profiles have the same result. Initial read batches also differed from later reads despite an unchanged nominal plan.
+
+The second-round readiness attempt timed out before model launch: final-window background GPU averaged 15.90% against the frozen 5% screen. Thermal state had returned to nominal and memory headroom passed. All owned processes were reaped. Evidence: [[sources/runs/2026/09/2026-09-22-release-calibration-long-v3]].
+
+Two follow-up hypotheses deserve matched experiments: trim genuinely unused allocator buffers before choosing an optional read scope when doing so could buy a larger scope, and retain a smaller existing pass-boundary checkpoint when the deepest one cannot fit. MLX cache-limit assignment does not itself immediately trim the cache; the allocator enforces the cap during allocation. Neither idea has been implemented or shown faster in this attempt. Both must preserve numerical pass boundaries, physical and reservation limits, active state, MTP and persistent-cache lineage. Do not turn these hypotheses into a speed claim.
+
+### Installed-release 2K prompt timing and ordinary cache reuse
+The installed v0.2.23 release now has a repeated 2K prompt measurement on the 48 GiB M5 Pro with a 10 GB process target. This is a small-budget configuration on that Mac, not a measurement of a different Mac or a new automatic-default decode baseline. Normal prefix caching and planner-owned settings selected 961 expert slots, 256-token compute passes, a 32,768-token context and MTP off.
+
+Three fresh-server rounds rotated code and prose order. One prospectively declared supplemental code repetition followed a background-CPU exclusion. All fourteen requests completed and their raw responses replay exactly; thirteen qualify under the primary screen. Every first read and repeat of a fixture emitted identical sixteen-token output IDs. These capped replies do not establish complete-answer quality. The maximum native lifetime footprint was below the 10 GB ceiling; consult the raw per-request peaks rather than treating the configured target as measured usage.
+
+| Prompt | Eligible first reads / repeats | First-read prefill range | Median repeated request |
+|---|---:|---:|---:|
+| 2K code | 4 / 3 | 13.86–28.11 s | 2.79 s |
+| 2K prose | 3 / 3 | 14.91–26.51 s | 3.22 s |
+
+All formatted prompts contain 2,061 tokens. Mixed-order median first-read prefill is 14.8590 seconds for code and 26.1293 for prose; median full first-request time is 17.1836 and 28.4049 seconds, respectively. Three eligible first/repeat pairs per fixture give median paired end-to-end reductions of 85.4666% and 88.3625%. Those are the benefit of actual reuse in this release, not a matched feature-off experiment, a whole-release speedup or a new reply-generation rate. First-repeat comparisons also include warm process/OS caches.
+
+History matters. Server-first code reads used a 2,048-token read group followed by the thirteen-token tail; the later code miss used 256-token read groups. Prose shows the same order effect. Compute passes stayed at 256 tokens and output IDs were unchanged. Immediate repeats reused either the complete prompt or its 2,048-token boundary. The artifact reports server-first and later-miss observations separately; the mixed-order medians are descriptive summaries of this prescribed sequence, not history-independent ETA anchors.
+
+The primary screen is prospective v3 desktop load screening plus nominal power/thermal state, no host swap-outs and bounded process page-ins. Global swap-ins occurred on several runs: only one code first read and no prose first read passes the stricter global no-swap sensitivity. These results must not be described as a fully isolated or entirely swap-free calibration. The one automatically excluded repeat is retained, including its fast observed latency. No observation was selected by speed.
+
+A simple family-held-out multiplicative correction transfers poorly between these prompt/order mixtures. It is an exploratory diagnostic and confounds family with the prescribed server history. The production estimator remains unchanged. Larger prompt lengths, more memory profiles, real adaptive defaults and full-answer decode remain separate qualification work.
+
+Evidence: [[sources/runs/2026/09/2026-09-22-release-calibration-2k-v3]].
