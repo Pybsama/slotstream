@@ -6316,3 +6316,67 @@ The shared-desktop screen accepted 68/72 requests. The stricter no-global-paging
 No measured family meets the timing claim threshold. The one-token warmup mechanically meets the analyzer's pair count, but is explicitly excluded from all speed claims. All loaded/paging captures remain preserved rather than cherry-picked. The final audit replayed all 72 captures, checked the frozen inputs, and verified all 12 server processes exited zero and were reaped.
 
 The README throughput anchors and hardware estimates remain unchanged. Establishing a new general speed percentage requires three clean matched pairs with equivalent work; the corrected branch alone cannot provide that comparison. This patch contains no new inference computation optimization. The earlier long-prompt and fused-attention gains remain scoped to their own studies and must not be combined with these counts.
+
+### Sevra desktop speed: short-turn rereads and disabled MTP
+**The actual development app wrote substantial replies at 10.5 to 12.6 tok/s, but spent 4.7 to 8.1 seconds before its first token.** Prompt processing dominates the delay in the short final reply. These are observed live-session timings, not new clean-host throughput anchors. Raw receipts: [[sources/runs/2026/09/2026-09-23-sevra-app-speed]].
+
+| App request | Output tokens | Writing tok/s | First token, excluding load | Prompt tokens read / reused |
+| --- | --- | --- | --- | --- |
+| Bicycle explanation, first request | 258 | 12.53 | 4.68 s | 143 / 0 |
+| Rain explanation, warm | 304 | 10.46 | 6.94 s | 451 / 0 |
+| RAM/SSD explanation, warm | 271 | 12.58 | 5.65 s | 808 / 0 |
+| Brief greeting, warm | 2 | Not a steady-speed sample | 8.13 s | 1101 / 0 |
+
+The first request also loaded the model for 9.05 seconds. The final greeting spent 8.10 seconds reading context and 0.39 seconds generating its two tokens. The app's displayed rate correctly excludes prompt reading and model load; the tiny final denominator should not be read as steady throughput. All runs used a 33 GB automatic budget, context 32768 and thinking off. Expert hit rates for the substantial replies were 92.4%, 94.0% and 93.5%. No thermal or low-power restriction was observed. Some global swap-ins occurred, so these results are diagnostic.
+
+## Concrete integration gaps
+
+1. The launched app is an older development bundle, built September 21. Its embedded engine version declaration is 0.2.22, with additional then-uncommitted work. The public CLI update to 0.2.24 does not rebuild or replace the app's statically linked engine. Its manifest differs from current engine inputs. This establishes a stale integration, not a measured causal slowdown from every changed file.
+2. Desktop's `PerformancePolicy.plan` explicitly requests `mtp: .off`. That source matches the running app's recorded input. The app therefore does not get speculative decoding; this is independent of the Think longer control.
+3. Numerical-safe reuse admits only compatible complete compute-pass boundaries. A short prompt that ends inside a large pass supplies no eligible continuation boundary. All four observed app turns reused zero tokens. The present equivalent 33 GB MTP-off engine plan chooses 4096-token passes, illustrating the mismatch between long-prompt efficiency and short-conversation reuse. The old app's exact pass size was not directly instrumented, so that current plan is explanatory evidence, not a reconstructed live plan.
+4. Automatic readiness releases the model after about ten idle minutes in this configuration. That saves memory but introduces another load on the next message. The observed first load was 9.05 seconds.
+
+## MTP opportunity and limits
+
+A separate installed-v0.2.24 comparison, with one warmed 33 GB engine and fixed expert pool, measured median plain 13.50 tok/s versus speculative 17.45 tok/s over three rotating pairs. Each arm repeated its own output, but plain and speculative text differed from token 18. The observed ratio is about 1.29. Global paging occurred during the experiment, so this is **not a qualified general speedup or an app improvement already delivered**. It shows that enabling and qualifying the app's automatic MTP path is worth testing. This loop-only comparison retains draft-head memory in both arms and does not reproduce the app's independent MTP-off allocation.
+
+The next implementation work should rebuild and verify the app against current engine inputs, qualify automatic MTP in its ordinary and phased-thinking paths, and measure a short-conversation checkpoint/pass policy without weakening numerical provenance. Improve readiness based on cold/warm latency and memory measurements. Do not silently trade cache correctness for a smaller first-token number or infer a universal optimum from these four requests. No app code or saved performance preference changed in this investigation, and the app was reopened after the diagnostic.
+
+### Sevra desktop defaults: MTP, useful checkpoints and verified reloads
+The development app now uses the engine's qualified automatic MTP policy, a short-chat checkpoint schedule, foreground-aware readiness and session-scoped model verification. This addresses the integration gaps in [[records/measurements/sevra-app-speed-2026-09-23]]. Code and failed trials are preserved in [[sources/runs/2026/09/2026-09-23-sevra-app-optimizations]]. The policy and revision criteria are in [[records/decisions/sevra-app-speed-defaults-2026-09-23]].
+
+## Final matched-input comparison
+
+Three alternating pairs on the M5 Pro/48 GiB Mac using the pinned Qwen3.8-Flash-Next 4-bit model, MLX 0.32.2, and the 0.2.24 engine plus this development patch: 26 GB total budgets, 32,768 context, fixed 96-token replies and identical input histories:
+
+| Turn | Plain writing tok/s | New policy writing tok/s | Plain reading | New policy reading | New policy reused tokens |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1 | 11.51 | 16.03 | 3.88 s | 3.91 s | 0 |
+| 2 | 11.90 | 14.59 | 4.32 s | 5.94 s | 0 |
+| 3 | 11.67 | 19.03 | 4.67 s | 3.40 s | 512 |
+
+The median sum of prompt-reading and generation time across the three turns fell from **37.80 to 30.76 seconds**, an observed **18.6% reduction**. This includes the second turn's checkpoint-creation cost. It excludes model construction, UI overhead and the extra cold parity replay. Each within-policy cached result reproduced the cold output IDs exactly. MTP/plain text can differ, so this is matched token work and inputs, not a claim of identical answers across decoding methods.
+
+These are live-machine diagnostic timings: global swap-ins occurred and thermal state varied between nominal and fair. No new README throughput anchor or hardware estimate is justified. The earlier three-arm screen found automatic MTP already supplied most of the generation gain. Fixed smaller batches were slower for longer inputs; the hybrid keeps larger passes there. The 9,295-token inventory took roughly 31 seconds to read across the screening arms, with correct answers. That screening omitted a small optional correction charge from planning; the final comparison includes it.
+
+## What changed and what it costs
+
+- MTP activates automatically only when its optional head is present and the fully charged plan qualifies. Both the head and configured lookahead correction fit inside the app's displayed total ceiling. The automatic Desktop ceiling stays 33 GB; custom ceilings remain adaptive. Smaller budgets retain ordinary decoding.
+- Below 1,536 prompt tokens, compute passes are at most 512 tokens or the smaller live plan. This makes an eligible checkpoint available earlier. Longer prompts keep the planned schedule. The larger workspace reservation remains available; it is not silently spent on more experts. Creating a checkpoint can slow an earlier turn, and crossing schedules requires a fresh read when arithmetic is incompatible. Selection happens under the generation lock after a governor resize and is stable across a thinking continuation.
+- Automatic readiness retains an already-loaded model while the app is foreground and has a visible non-minimized window. Background inactivity starts a fresh interval. Pressure, power saving and sleep retain their release behavior. This does not preload the model merely because the app opened.
+- The first load still hashes the pinned files. Within one inference owner's lifetime, an unchanged APFS file-identity/size/mtime/ctime signature can reuse that successful proof. Changed or replaced files, optional-file changes, a new process and other filesystems require fresh hashing. No proof or private inference state is persisted by this mechanism.
+- Immediate reloads wait only the remaining 1.05 seconds after model release before reading real availability. XNU's one-second shared statistics cache otherwise undercounted newly freed memory and disabled MTP in two reproduced reload checks. No synthetic availability credit or safety bypass is used. [Apple kernel source](https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/kern/host.c) documents the caching window.
+
+## Correctness and integration
+
+All six real-model profiles passed: precise phase metrics with actual MTP drafts, MTP disk restore/private isolation/cancellation/tools/crossover, thinking with Answer now, complete cited Cedar document creation after exact synthetic-fixture review, 10-to-9 GB lifecycle behavior, and ordinary 10 GB disk reuse. The MTP reload restored 2,048 prompt tokens at the full 26 GB budget; its immediate load was 2.085 seconds. The small-budget warm disk hit read only 168 tokens. Session-proof tests reject same-size corruption even after restoring mtime, optional arrival/removal, file replacement, symlink retargeting and mutation during verification, and honor cancellation.
+
+Native UI/runtime regressions, the final policy check, release builds, source-manifest verification, static gates and 73 engine catalogue checks (31,907 assertions) passed. The broader pure-policy sweep accepted 85 plans and safely refused 215. Functional acceptance is independent of global paging. The source changes preserve the independent CLI defaults and do not add another public release tag.
+
+## Rebuilt app observation
+
+The new development app was rebuilt and its bundled input manifest exactly matches the current source inputs. The final visible-app replay could not start because the Mac was locked; native UI control explicitly required manual unlock. These new rates come from the real engine and app-runtime checks, not a completed new UI replay. The earlier actual-app baseline remains unchanged.
+
+## Remaining costs
+
+First launch still pays pinned weight verification. Uncached or schedule-incompatible context still requires real prompt computation and expert reads. MTP adds head memory and speculative work, so smaller plans must keep the existing activation guard. Short-batch checkpoint creation has an up-front cost. No universal maximum, cross-hardware speedup, or free continuation after every short message has been established. Revisit these operating choices with repeated complete-workflow measurements and the same numerical, privacy, process-budget and lifecycle gates.

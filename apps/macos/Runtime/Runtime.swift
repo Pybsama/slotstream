@@ -28,6 +28,7 @@ public actor SevraRuntime {
     private var performancePreferences: PerformancePreferences
     private var pendingPerformance = false
     private var lastWorkEnded = ProcessInfo.processInfo.systemUptime
+    private var lastUserPresent: TimeInterval?
     private var performanceCache: PerformanceSnapshot?
     var lastError: String?
     private var modelStatus = "Model unloaded"
@@ -405,19 +406,21 @@ public actor SevraRuntime {
             pendingPerformance = value != performancePreferences
         } while pendingPerformance && !shuttingDown
     }
-    /// Independent of window visibility. The caller uses a slow lifecycle tick;
+    /// The caller supplies foreground presence on a slow lifecycle tick;
     /// the engine's governor owns active pressure response and cache elasticity.
-    public func maintainPerformance(now: TimeInterval = ProcessInfo.processInfo.systemUptime) async {
+    public func maintainPerformance(now: TimeInterval = ProcessInfo.processInfo.systemUptime, userPresent: Bool = false) async {
         guard !shuttingDown else { return }
+        if userPresent { lastUserPresent = now }
         if !driving && !modelMaintenance {
             do {
                 try await applyPerformancePreferences()
                 if !driving, !modelMaintenance, let telemetry = inference.performanceTelemetry, telemetry.isLoaded {
                     let conditions = ProcessMemory.operatingConditions()
                     let conserving = conditions.lowPowerModeEnabled || ["serious", "critical"].contains(conditions.thermalState)
-                    if sleeping || PerformancePolicy.shouldRelease(idleSeconds: max(0, now - lastWorkEnded),
+                    let idleSince = conserving ? lastWorkEnded : max(lastWorkEnded, lastUserPresent ?? lastWorkEnded)
+                    if sleeping || PerformancePolicy.shouldRelease(idleSeconds: max(0, now - idleSince),
                         preparationSeconds: telemetry.lastPreparationSeconds, preferences: performancePreferences,
-                        pressure: telemetry.underPressure, conservingPower: conserving) {
+                        pressure: telemetry.underPressure, conservingPower: conserving, userPresent: userPresent) {
                         try await unload()
                     }
                 }

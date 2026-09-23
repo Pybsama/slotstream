@@ -436,6 +436,16 @@ text model and context fixed while adapting cache residency to the Mac and
 other applications. The recommendation inherits the engine’s measured
 operating ceiling; it is not a promise of optimal performance on every Mac.
 
+Desktop also uses the engine's automatic speculative decoding when the optional
+draft head is installed and its full memory cost fits. Smaller budgets keep
+ordinary decoding. This is independent of **Think longer** and needs no user
+switch. Short chats use smaller prompt-processing batches to create useful
+conversation checkpoints; longer inputs retain the engine's throughput schedule.
+Crossing between schedules can require a fresh read because incompatible
+checkpoints are never reused.
+The [operating-policy record](../db/records/decisions/sevra-app-speed-defaults-2026-09-23.md)
+contains the comparisons, costs and conditions for revising these choices.
+
 **Custom limit** means “use up to” the selected budget within the displayed
 supported range, which comes from this Mac's hardware rather than the automatic
 default. It retains automatic pressure protection. Switching to Custom starts
@@ -446,9 +456,17 @@ CPU/GPU memory is counted once.
 If a saved limit exceeds the current Mac's supported range, Settings shows
 the saved value and asks you to lower it or choose Automatic.
 
-The model loads with the first request. **Keep model ready → Automatic**
-releases it after inactivity, with a bounded delay informed by observed
-preparation time and power conditions. **While app is open** favors warm
+The model loads with the first request and verifies the pinned files. Within
+that app session, unchanged files on APFS can reuse the successful verification
+after unloading. File identity, size and modification/change timestamps are
+checked again; changes require fresh hashing. Other filesystems and new app
+launches always hash again. No verification proof is stored on disk. An immediate
+reload lets macOS refresh its memory statistics before sizing the next model,
+so memory just released is not incorrectly counted as still occupied.
+**Keep model ready → Automatic** keeps it loaded while Sevra is in the foreground,
+including while you read or compose. Leaving the foreground starts an inactivity
+interval, with a bounded delay informed by observed preparation time. Memory
+pressure, power saving and sleep can release it sooner. **While app is open** favors warm
 follow-ups but still yields to memory pressure and sleep. **Release memory
 now** preserves saved conversations and personal memory. Ordinary conversations
 can reuse a disposable prompt cache in that Home after a reload. Thinking and
@@ -470,6 +488,15 @@ during generation, release/reload, responsive metadata and automatic idle
 release. Follow the same model-process and headroom rules as the real fixture
 below. Full hardware qualification and clean paired performance measurements
 remain separate from these functional checks.
+
+Real cache, response-metrics, thinking and source-tool checks also accept
+`--mtp-profile-gb <budget>` for an explicitly requested MTP performance profile.
+They require the chosen budget plus the ordinary headroom, refuse a profile
+that does not actually enable MTP, and use disposable Homes. The default checks
+retain their small budgets. `--real-speed --memory-gb <budget> --arm <policy>`
+compares complete allocations and checks reused output against a fresh run;
+`--extended` includes a longer inventory. These are development measurements,
+not public hardware qualification.
 
 ## Checks and internal CLI
 

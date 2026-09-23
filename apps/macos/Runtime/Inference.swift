@@ -169,6 +169,8 @@ public actor LocalInference: Inference {
     private var engine: Engine?
     private var governor: MemoryGovernor?
     private let model: URL
+    private let modelVerification = ModelVerificationCache()
+    private var releasedAt: TimeInterval?
     private var preferences: PerformancePreferences
     private var inTurn = false
     private var cacheContext: InferenceCacheContext?
@@ -234,15 +236,33 @@ public actor LocalInference: Inference {
             performanceTelemetry?.update(state: "Loading", detail: "Preparing the local model.")
             buffer.stage("Verifying the local model")
             let store = WeightStore(modelDirectory: model)
-            let status: WeightStatus
-            do { status = try store.status(shouldContinue: { !cancellation.isCancelled }) }
+            let verified: Bool
+            do {
+                verified = try modelVerification.check(files: PinnedModel.files.map { model.appendingPathComponent($0.path) },
+                    shouldContinue: { !cancellation.isCancelled }) {
+                        try store.status(shouldContinue: { !cancellation.isCancelled }).isReady
+                    }
+            }
             catch { try cancellation.check(); throw error }
-            guard status.isReady else { throw SevraError.unavailable("The local model is missing or incomplete. Set up the model before sending.") }
+            guard verified else { throw SevraError.unavailable("The local model is missing or incomplete. Set up the model before sending.") }
             try cancellation.check()
+            // XNU caches host_statistics64 for a one-second window. A fast
+            // verified reload can otherwise size against our already-freed
+            // model, disable MTP and invalidate compatible disk checkpoints.
+            // Wait only for the remainder of that window; never invent credit
+            // for released bytes or override the real availability guard.
+            if let releasedAt {
+                let remaining = PerformancePolicy.memoryObservationDelay - (ProcessInfo.processInfo.systemUptime - releasedAt)
+                if remaining > 0 { try await Task.sleep(nanoseconds: UInt64(remaining * 1e9)) }
+                try cancellation.check()
+            }
             let machine = Machine.current()
-            let plan = try PerformancePolicy.plan(preferences, on: machine)
+            let plan = try PerformancePolicy.plan(preferences, on: machine, mtpAvailable: MTPWeights.present(modelDir: model),
+                decodeLookahead: .environment(modelDirectory: model))
             buffer.stage("Loading the local model")
             engine = try await Engine(modelDir: model, plan: plan)
+            try engine?.configureShortPromptPrefill(maxPromptTokens: PerformancePolicy.shortPromptTokens,
+                chunk: PerformancePolicy.shortPromptChunk)
             configurePersistentCache()
             if let engine {
                 governor = MemoryGovernor(engine: engine)
@@ -373,6 +393,7 @@ public actor LocalInference: Inference {
     }
     public func unload() async {
         while inTurn { try? await Task.sleep(nanoseconds: 20_000_000) }
+        let wasLoaded = engine != nil
         performanceTelemetry?.update(state: "Releasing memory", detail: "Returning model memory to your Mac.")
         await governor?.stopAndWait(); governor = nil
         autoreleasepool {
@@ -381,6 +402,7 @@ public actor LocalInference: Inference {
             privateWorkingState = false
             Engine.releaseUnusedMemory()
         }
+        if wasLoaded { releasedAt = ProcessInfo.processInfo.systemUptime }
         performanceTelemetry?.update(state: "Model not loaded", detail: "Loads when you send a message.")
     }
 }

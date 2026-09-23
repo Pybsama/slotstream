@@ -300,12 +300,12 @@ import Combine
                     return try SevraRuntime(homeURL: root, dbmd: dbmd, inference: engine, performancePreferences: preferences)
                 }.value
                 if let runtime { endpoint = try await Task.detached { try LocalEndpoint(runtime: runtime) }.value }
-                await runtime?.maintainPerformance()
+                await runtime?.maintainPerformance(userPresent: hasForegroundWindow)
                 performancePoll = Task { [weak self] in
                     while !Task.isCancelled {
                         try? await Task.sleep(nanoseconds: 2_000_000_000)
                         guard !Task.isCancelled else { break }
-                        await self?.runtime?.maintainPerformance()
+                        await self?.runtime?.maintainPerformance(userPresent: self?.hasForegroundWindow == true)
                     }
                 }
                 await refresh()
@@ -501,9 +501,12 @@ import Combine
         Task {
             do {
                 try await runtime.setPerformancePreferences(performancePreferences)
-                await runtime.maintainPerformance(); await refresh()
+                await runtime.maintainPerformance(userPresent: hasForegroundWindow); await refresh()
             } catch { self.error = error.localizedDescription }
         }
+    }
+    private var hasForegroundWindow: Bool {
+        NSApp.isActive && NSApp.windows.contains { $0.isVisible && !$0.isMiniaturized }
     }
     func prepareForSleep() {
         preparingForSleep = true; setup?.cancel()
@@ -520,7 +523,7 @@ import Combine
         Task {
             await sleepTask?.value; sleepTask = nil
             await runtime?.wake(); preparingForSleep = false
-            await runtime?.maintainPerformance(); await refresh()
+            await runtime?.maintainPerformance(userPresent: hasForegroundWindow); await refresh()
         }
     }
     func setUpModel(download: Bool) {

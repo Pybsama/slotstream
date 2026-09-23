@@ -965,9 +965,9 @@ struct PerformanceSettings: View {
             })) {
                 Text("Automatic").tag(PerformancePreferences.Readiness.automatic)
                 Text("While app is open").tag(PerformancePreferences.Readiness.keepReady)
-            }.disabled(status == nil).help("Choose whether to unload after idle time or keep the model ready while the app is open")
+            }.disabled(status == nil).help("Automatic keeps the model ready while you use Sevra and releases it after idle time in the background")
             Text(model.performancePreferences.readiness == .automatic
-                 ? "Releases memory after about \(status?.idleMinutes ?? 10) idle minutes. The next message reloads the model."
+                 ? "Keeps the model ready while you use Sevra. In the background, releases it after about \(status?.idleMinutes ?? 10) idle minutes. Memory pressure, power saving and sleep can release it sooner."
                  : "Keeps the model ready after your first message for faster follow-ups. Memory pressure and sleep can still release it.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let status {

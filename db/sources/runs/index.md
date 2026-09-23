@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-23T06:29:30.444515Z
+updated: 2026-09-23T15:57:17.152896Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-23-sevra-app-optimizations]] — Sevra desktop optimization trials and real-model acceptance
+- [[sources/runs/2026/09/2026-09-23-sevra-app-speed]] — Actual Sevra development-app speed and MTP diagnostic
 - [[sources/runs/2026/09/2026-09-23-release-0-2-24-performance]] — v0.2.24 versus v0.2.23: 72 captured requests, timing claims withheld
 - [[sources/runs/2026/09/2026-09-23-release-0-2-24-published-and-installed]] — v0.2.24 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-22-release-calibration-long-v3]] — Eight long-prompt requests completed; cache retention and thermal limits observed, then the next round refused background GPU activity.
@@ -505,10 +507,8 @@ updated: 2026-09-23T06:29:30.444515Z
 - [[sources/runs/2026/09/2026-09-06-optimization-context-integrated-build]] — Context ownership component integrated and weight-free gates pass
 - [[sources/runs/2026/09/2026-09-06-optimization-maximum-image-capacity-incomplete]] — Maximum-image query tiling: incomplete capacity qualification
 - [[sources/runs/2026/09/2026-09-06-configurable-context-short-tail-and-sparse-prefix-pass]] — Tiny-query shape correction passes short-tail and sparse-prefix controls
-- [[sources/runs/2026/09/2026-09-06-configurable-context-allocation-ownership-pass]] — Per-buffer allocation and aggregate request ownership pass bounded gates
-- [[sources/runs/2026/09/2026-09-06-configurable-context-floor-fixture-counterexample]] — Restored legacy batch floor exposes eight stale diagnostic expectations
 
 ## More
 
-This folder has 673 files. The 500 most recent are listed above.
+This folder has 675 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

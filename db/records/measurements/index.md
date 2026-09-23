@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-23T06:29:30.563306Z
+updated: 2026-09-23T15:58:31.021610Z
 ---
 
 # records/measurements
 
+- [[records/measurements/sevra-app-optimizations-2026-09-23]] — Sevra desktop defaults: MTP, useful checkpoints and verified reloads
+- [[records/measurements/sevra-app-speed-2026-09-23]] — Sevra desktop speed: short-turn rereads and disabled MTP
 - [[records/measurements/issue21-edge-fixes-2026-09-22]] — Issue 21 nullable tool strings and branched conversation reuse repaired
 - [[records/measurements/release-0-2-24-performance-2026-09-23]] — v0.2.24 post-release responsiveness and reuse comparison
 - [[records/measurements/release-0-2-24-published-2026-09-23]] — v0.2.24 published, installed and accepted

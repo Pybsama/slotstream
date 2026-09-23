@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-09-22T05:04:53.680440Z
+updated: 2026-09-23T15:57:17.237252Z
 ---
 
 # records/decisions
 
+- [[records/decisions/sevra-app-speed-defaults-2026-09-23]] — Enable qualified desktop speedups without extra user switches
 - [[records/decisions/automatic-prefill-read-policy]] — Apply supported prefill improvements automatically
 - [[records/decisions/automatic-mtp-prefill-read-policy]] — Apply MTP prefill improvements automatically
 - [[records/decisions/qualified-upstream-fused-prefill]] — Adopt qualified upstream fused prefill on the measured M5 Pro profile

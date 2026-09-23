@@ -8,6 +8,18 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- The development Mac app uses automatic speculative decoding when the draft
+  head is available and fits the selected memory budget. Short conversations
+  create earlier reusable checkpoints; longer prompts keep the engine's
+  throughput schedule and all checkpoint provenance checks.
+- Automatic readiness retains a loaded model while you read or compose in
+  the foreground. Background inactivity, memory pressure, power saving and
+  sleep still release it. Reloads within an app session reuse successful pinned
+  verification only when APFS file identity and change timestamps still match.
+  New app launches and changed files require fresh verification. Immediate
+  reloads also wait for macOS's memory-statistics refresh before replanning,
+  preventing stale readings from unnecessarily shrinking the cache.
+
 ## 0.2.24 - 2026-09-23
 
 - Nullable string tool parameters declared with a JSON Schema type array now

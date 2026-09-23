@@ -16,6 +16,7 @@ Task {
         if try seedUIIfRequested() { return }
         if try seedPromotionUIIfRequested() { return }
         if try await auditIfRequested() { return }
+        if try await realSpeedCheckIfRequested() { return }
         if try await realPerformanceCheckIfRequested() { return }
         if try await realCheckIfRequested() { return }
         if try await realThinkingCheckIfRequested() { return }

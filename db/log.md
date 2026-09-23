@@ -2022,3 +2022,9 @@ Preserved fourteen completed installed-release 2K requests, thirteen primary tim
 ## [2026-09-23 06:29] update | records/measurements/release-0-2-24-published-2026-09-23
 Published v0.2.24 from the exact CI archive and verified public installation: 73 catalogue groups/31,907 assertions, 33 native gates and 31 installed end-to-end checks passed. Preserved 72 post-release A/B requests: nullable tool streaming/type and branch reread benefits repeat; no general speed percentage qualifies under the frozen load/paging rule. Archived hashed evidence, linked historical repair follow-up and updated generated measurements.
 
+## [2026-09-23 07:28] update | records/measurements/sevra-app-speed-2026-09-23
+Measured the actual September 21 development app: three substantial replies at 10.5-12.6 tok/s, zero prompt reuse, 4.7-8.1 s to first token and 9.1 s first load. Verified stale embedded engine and explicit MTP-off desktop policy. Preserved three paired installed-engine MTP diagnostics, withheld clean gain claims because of paging and differing output, reaped the benchmark and reopened Sevra without changing its settings.
+
+## [2026-09-23 15:57] update | records/measurements/sevra-app-optimizations-2026-09-23
+Enabled fully budgeted automatic MTP, short-chat checkpoints, foreground readiness and APFS session verification in the development app; fixed stale-memory immediate reload planning. Preserved failed trials and three final alternating comparisons, passed all six real-model profiles, static/native/runtime checks and 31,907 catalogue assertions, and verified the rebuilt bundle inputs. Live-machine timings remain diagnostic; see the measurement for visible-app verification status.
+

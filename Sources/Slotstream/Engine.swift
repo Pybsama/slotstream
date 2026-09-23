@@ -261,6 +261,21 @@ public final class Engine {
     }
 
     private let lock = GenerationGate()
+    private var shortPromptPrefill: (limit: Int, chunk: Int)?
+
+    /// An embedding may favor earlier checkpoints for short conversations.
+    /// The full planned workspace stays reserved. Zero disables this policy.
+    /// Selection runs under the generation gate, after any governor resize,
+    /// and never exceeds the current plan. Existing CLI behavior is unchanged.
+    public func configureShortPromptPrefill(maxPromptTokens: Int, chunk: Int) throws {
+        guard (0...ContextPolicy.modelLimit).contains(maxPromptTokens), (256...4096).contains(chunk) else {
+            throw PlanError("short-prompt prefill requires a supported token limit and a chunk between 256 and 4096")
+        }
+        withExclusive {
+            shortPromptPrefill = maxPromptTokens == 0 ? nil : (maxPromptTokens, chunk)
+            if maxPromptTokens == 0, let plan = currentPlan { generator.prefillChunk = plan.prefillChunk }
+        }
+    }
     package let pressureBoundary = PressureBoundary()
     // Immutable after startup, so the governor never reads mutable model
     // controls concurrently with a request changing its diagnostic options.
@@ -1123,6 +1138,12 @@ public final class Engine {
         let queueSeconds = RuntimeClock.seconds(since: requestStart)
         let preparationSeconds = max(0, control.elapsedSeconds - queueSeconds)
         defer { control.releaseDispatchReservation(); if !gateHeld { lock.unlock() } }
+        if continuing == nil, let policy = shortPromptPrefill, let plan = currentPlan {
+            // The applied chunk is part of the numerical checkpoint key.
+            // A schedule crossover therefore cannot reuse incompatible state.
+            generator.prefillChunk = promptIds.count < policy.limit
+                ? min(policy.chunk, plan.prefillChunk) : plan.prefillChunk
+        }
         var params = params.sanitized()
         // A queued request may acquire the lock before the waiting governor.
         // Refuse it before image encoding, cache checkout or GPU allocation.
