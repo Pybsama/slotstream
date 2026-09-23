@@ -3,7 +3,7 @@ import Darwin
 
 extension PersistentPrefixCache {
     /// Attach exact generated ids to an existing aligned checkpoint. Only
-    /// `longestExtension` reads these ids; restore still uses `entry.tokens`.
+    /// Transcript extension lookup reads these ids; restore still uses `entry.tokens`.
     /// This preserves omitted reasoning across restarts without saving an
     /// unaligned recurrent state or allowing it to resume as a checkpoint.
     @discardableResult

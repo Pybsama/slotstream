@@ -184,23 +184,34 @@ extension Catalogue {
             c.equal("wire arguments at split \(split)", arguments, complete.calls[0].inputJSON)
             c.equal("identity emitted once at split \(split)", wire.filter { $0["id"] != nil }.count, 1)
         }
-        let longParser = ToolCallSplitter(tools: tools.map { $0.schema }, idFactory: countingIDs())
-        let longOutput = OpenAIOutput(tools: tools, choice: .required, parallel: true,
-            streamToolArguments: true, allowLengthTruncation: true)
-        _ = longOutput.consume(longParser.push("<tool_call><function=read_file><parameter=path>\n"))
-        let span = "a\\\"\t🙂\n"
-        var fragments = 0
-        for _ in 0..<16_000 {
-            let deltas = longOutput.consume(longParser.push(span))
-            fragments += deltas.count
+        let stringShapes: [(String, JSONValue)] = [
+            ("scalar", .object(["type": .string("string")])),
+            ("nullable anyOf", .object(["anyOf": .array([
+                .object(["type": .string("string")]), .object(["type": .string("null")])])])),
+            ("nullable type array", .object(["type": .array([.string("string"), .string("null")])])),
+            ("null first type array", .object(["type": .array([.string("null"), .string("string")])])),
+        ]
+        for (label, shape) in stringShapes {
+            let definition = ToolDefinition(name: "read_file", description: "", parameters: .object([
+                "type": .string("object"), "properties": .object(["path": shape])]))
+            let longParser = ToolCallSplitter(tools: [definition.schema], idFactory: countingIDs())
+            let longOutput = OpenAIOutput(tools: [definition], choice: .required, parallel: true,
+                streamToolArguments: true, allowLengthTruncation: true)
+            _ = longOutput.consume(longParser.push("<tool_call><function=read_file><parameter=path>\n"))
+            let span = "a\\\"\t🙂\n"
+            var fragments = 0
+            for _ in 0..<16_000 {
+                let deltas = longOutput.consume(longParser.push(span))
+                fragments += deltas.count
+            }
+            c.expect("\(label): large argument streams before its closing tag", fragments > 15_000 && longOutput.calls.isEmpty)
+            _ = longOutput.consume(longParser.flush())
+            c.equal("\(label): truncated argument ends with length", longOutput.finishReason("length"), "length")
+            c.expect("\(label): length is not a server error or executable completion", longOutput.error == nil && longOutput.calls.isEmpty)
+            let pending = (longOutput.message["tool_calls"] as? [[String: Any]])?.first?["function"] as? [String: Any]
+            c.equal("\(label): truncated wire preserves every stable string byte", pending?["arguments"] as? String,
+                "{\"path\":\"" + String(JSONValue.quote(String(repeating: span, count: 16_000)).dropFirst().dropLast()))
         }
-        c.expect("large argument streams before its closing tag", fragments > 15_000 && longOutput.calls.isEmpty)
-        _ = longOutput.consume(longParser.flush())
-        c.equal("truncated argument ends with length", longOutput.finishReason("length"), "length")
-        c.expect("length is not a server error or executable completion", longOutput.error == nil && longOutput.calls.isEmpty)
-        let pending = (longOutput.message["tool_calls"] as? [[String: Any]])?.first?["function"] as? [String: Any]
-        c.equal("truncated wire preserves every stable string byte", pending?["arguments"] as? String,
-            "{\"path\":\"" + String(JSONValue.quote(String(repeating: span, count: 16_000)).dropFirst().dropLast()))
         let cappedBeforeCall = OpenAIOutput(tools: tools, choice: .required, parallel: true,
             streamToolArguments: true, allowLengthTruncation: true)
         c.equal("budget before required call is still length", cappedBeforeCall.finishReason("length"), "length")

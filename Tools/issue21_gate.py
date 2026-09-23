@@ -94,20 +94,56 @@ def main():
         'tools': [tool], 'max_tokens': 16000})
     assert finish == 'stop' and 0 < usage['completion_tokens'] < 128
     assert ''.join(choice['delta'].get('content', '') for choice in choices).strip() == '4'
-    choices, finish, usage = request('long-truncated-argument', {
-        'messages': [{'role': 'user', 'content': 'Call save_page now with a complete 2000-word essay about the ocean as content. Write the entire essay inside that argument.'}],
-        'tools': [tool], 'tool_choice': {'type': 'function', 'function': {'name': 'save_page'}}, 'max_tokens': 256})
-    deltas = [call for choice in choices for call in choice['delta'].get('tool_calls', [])]
-    fragments = [call.get('function', {}).get('arguments', '') for call in deltas]
-    assert finish == 'length' and usage['completion_tokens'] == 256
-    assert sum(bool(fragment) for fragment in fragments) > 10, deltas
-    assert sum('id' in call for call in deltas) == 1
-    assert ''.join(fragments).startswith('{"content":"')
-    timing = json.loads((args.output / 'long-truncated-argument.json').read_text())
-    argument_times = [arrival for event, arrival in zip(timing['events'], timing['arrivals'])
-                      if isinstance(event, dict) and any(call.get('function', {}).get('arguments')
-                         for choice in event.get('choices', []) for call in choice['delta'].get('tool_calls', []))]
-    assert argument_times[-1] - argument_times[0] > 0.5, 'arguments arrived only after generation'
+    for label, shape in [('long-truncated-argument', 'string'),
+                         ('nullable-truncated-argument', ['string', 'null'])]:
+        argument_tool = json.loads(json.dumps(tool))
+        argument_tool['function']['parameters']['properties']['content']['type'] = shape
+        choices, finish, usage = request(label, {
+            'messages': [{'role': 'user', 'content': 'Call save_page now with a complete 2000-word essay about the ocean as content. Write the entire essay inside that argument.'}],
+            'tools': [argument_tool], 'tool_choice': {'type': 'function', 'function': {'name': 'save_page'}}, 'max_tokens': 256})
+        deltas = [call for choice in choices for call in choice['delta'].get('tool_calls', [])]
+        fragments = [call.get('function', {}).get('arguments', '') for call in deltas]
+        assert finish == 'length' and usage['completion_tokens'] == 256
+        assert sum(bool(fragment) for fragment in fragments) > 10, deltas
+        assert sum('id' in call for call in deltas) == 1
+        assert ''.join(fragments).startswith('{"content":"')
+        timing = json.loads((args.output / (label + '.json')).read_text())
+        argument_times = [arrival for event, arrival in zip(timing['events'], timing['arrivals'])
+                          if isinstance(event, dict) and any(call.get('function', {}).get('arguments')
+                             for choice in event.get('choices', []) for call in choice['delta'].get('tool_calls', []))]
+        assert argument_times[-1] - argument_times[0] > 0.5, 'arguments arrived only after generation'
+
+    # Seed actual numerical histories on two branches with different supplied
+    # assistant replies. Supplying the first replies makes the collision
+    # deterministic instead of depending on stochastic regeneration.
+    shared = [{'role': 'system', 'content': 'Reference: ' +
+               ' '.join(f'Station {i} records tides and wind.' for i in range(100))},
+              {'role': 'user', 'content': 'Name a color.'}]
+    alpha = shared + [{'role': 'assistant', 'content': 'Blue.',
+                       'reasoning_content': 'I will select blue from the available colors.'},
+                      {'role': 'user', 'content': 'Additional reference: ' +
+                       'The coastal station monitors tides and rainfall. ' * 50 +
+                       'What is 2+2? Answer briefly.'}]
+    beta = shared + [{'role': 'assistant', 'content': 'Green.',
+                      'reasoning_content': 'I will select green from the available colors.'},
+                     {'role': 'user', 'content': 'Additional reference: ' +
+                      'The coastal station monitors tides, rainfall and wind direction. ' * 75 +
+                      'What is 3+3? Answer briefly.'}]
+    choices, finish, alpha_usage = request('branch-alpha-seed', {
+        'messages': alpha, 'reasoning_effort': 'low', 'max_tokens': 256})
+    assert finish == 'stop'
+    alpha_answer = ''.join(choice['delta'].get('content', '') for choice in choices)
+    assert alpha_answer
+    _, finish, beta_usage = request('branch-beta-seed', {
+        'messages': beta, 'reasoning_effort': 'low', 'max_tokens': 256})
+    assert finish == 'stop' and beta_usage['prompt_tokens'] > alpha_usage['prompt_tokens']
+    alpha_history = [{k: v for k, v in message.items() if k != 'reasoning_content'} for message in alpha]
+    alpha_history += [{'role': 'assistant', 'content': alpha_answer},
+                      {'role': 'user', 'content': 'What is 4+4? Answer briefly.'}]
+    _, finish, usage = request('branch-alpha-followup', {
+        'messages': alpha_history, 'reasoning_effort': 'low', 'max_tokens': 256})
+    assert finish == 'stop'
+    assert usage['prompt_tokens_details']['cached_tokens'] >= alpha_usage['prompt_tokens'] - 256, (alpha_usage, usage)
 
     # Each earlier assistant reply was generated with reasoning which the
     # client intentionally omits. A descendant must still describe each turn.

@@ -269,6 +269,12 @@ check "context-check: process memory remains under target" \
       "python3 Tools/memory_gate.py /tmp/ssv_ctx.json --limit-gb $BIG_MEMORY"
 
 echo "== serving robustness (inputs that used to crash or corrupt output) =="
+safety_before 13
+if python3 Tools/issue21_e2e.py --binary "$BIN" --out "$VERIFY_OUT/issue21"; then
+  echo "PASS  issue 21 streaming, branched reuse and exact restart"; PASS=$((PASS+1))
+else
+  echo "FAIL  issue 21 serving regression suite"; FAIL=$((FAIL+1))
+fi
 echo "== behavioural sanity: has the conversion lost anything obvious? =="
 # NOT the FP8 comparison the plan calls for (see N4) — that needs an inference
 # credential for Qwen3.8-Flash-Next FP8, which is not provisioned. This catches

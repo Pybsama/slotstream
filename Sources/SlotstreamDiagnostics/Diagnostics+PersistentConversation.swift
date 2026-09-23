@@ -42,6 +42,15 @@ extension Diagnostics {
         tier = nil
         tier = try PersistentPrefixCache(configuration: config, identity: identity)
         c.equal("generated ids survive restart", tier!.longestExtension(of: [1, 2, 3, 4]), conversation)
+        let cache = PrefixCache(maxTokens: 100)
+        let other = [1, 2, 3, 9, 9, 9, 9, 9]
+        let state = Qwen4ExpModel.State()
+        state.tokenCount = other.count
+        cache.store(state: state, tokens: other)
+        cache.attachPersistent(tier)
+        c.equal("restart still selects compatible disk metadata over a longer memory branch",
+            cache.peek(extending: [1, 2, 3], matching: { $0 == conversation }), conversation)
+        cache.attachPersistent(nil)
         c.equal("quota counts conversation metadata", tier!.storedBytes, size)
         c.equal("metadata survives ordinary format validation", tier!.indexedEntries.first?.splicingTokens, conversation)
         tier = nil

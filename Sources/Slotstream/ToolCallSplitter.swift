@@ -147,7 +147,7 @@ public enum JSONValue: Sendable, Equatable {
     }
 }
 
-/// The declared type of one tool parameter. `unknown` covers `anyOf`, a union,
+/// The declared type of one tool parameter. `unknown` covers unresolved unions
 /// and a parameter the schema does not mention at all.
 public enum ToolParamKind: String, Sendable, Equatable {
     case string, integer, number, boolean, array, object, unknown
@@ -546,9 +546,10 @@ public struct ToolDefinition: Sendable {
         self.parameters = parameters
     }
 
-    /// The parameter types, read off the schema. `anyOf`, a union, an absent
-    /// `type`, and anything unrecognized all become `.unknown`, which the
-    /// coercion treats conservatively.
+    /// The parameter types, including a single non-null type expressed through
+    /// `type: ["string", "null"]` or `anyOf`. Genuine unions and unrecognized
+    /// declarations stay `.unknown`. A nullable string must retain its bytes
+    /// and stream just like the equivalent scalar string declaration.
     public var schema: ToolSchema {
         var params: [String: ToolParamKind] = [:]
         if case .object(let root) = parameters, case .object(let props)? = root["properties"] {
@@ -557,8 +558,8 @@ public struct ToolDefinition: Sendable {
                     params[key] = .unknown
                     continue
                 }
-                if case .string(let t)? = field["type"] {
-                    params[key] = ToolParamKind(rawValue: t) ?? .unknown
+                if let type = field["type"] {
+                    params[key] = Self.typeKind(type) ?? .unknown
                 } else if let resolved = Self.anyOfKind(field["anyOf"]) {
                     // `anyOf: [{"type":"string"},{"type":"null"}]` is how fx
                     // declares an optional string, and it is the shape of three
@@ -576,21 +577,36 @@ public struct ToolDefinition: Sendable {
         return ToolSchema(name: name, params: params)
     }
 
+    private static func typeKind(_ raw: JSONValue) -> ToolParamKind? {
+        if case .string(let type) = raw { return ToolParamKind(rawValue: type) }
+        guard case .array(let options) = raw else { return nil }
+        var types: [String] = []
+        for option in options {
+            guard case .string(let type) = option else { return nil }
+            types.append(type)
+        }
+        return singleNonNullKind(types)
+    }
+
+    private static func singleNonNullKind(_ types: [String]) -> ToolParamKind? {
+        let concrete = types.filter { $0 != "null" }
+        guard concrete.count == 1 else { return nil }
+        return ToolParamKind(rawValue: concrete[0])
+    }
+
     /// The single non-null type in an `anyOf`, when there is exactly one.
     /// A genuine union of two real types stays `.unknown`, where the
     /// conservative coercion is the right answer.
     static func anyOfKind(_ raw: JSONValue?) -> ToolParamKind? {
         guard case .array(let options)? = raw else { return nil }
-        var kinds: [ToolParamKind] = []
+        var types: [String] = []
         for option in options {
             guard case .object(let o) = option, case .string(let t)? = o["type"] else {
                 return nil
             }
-            if t == "null" { continue }
-            guard let k = ToolParamKind(rawValue: t) else { return nil }
-            kinds.append(k)
+            types.append(t)
         }
-        return kinds.count == 1 ? kinds[0] : nil
+        return singleNonNullKind(types)
     }
 
     /// The value the chat template expects in its `tools` list.

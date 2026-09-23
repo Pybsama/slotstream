@@ -375,6 +375,14 @@ public final class PersistentPrefixCache {
         }
     }
 
+    package func extensions(of prefix: [Int]) -> [[Int]] {
+        let now = Self.now()
+        return lock.withLock {
+            PersistentPrefixPolicy.extensions(heads, identity: identity.digest, of: prefix, now: now,
+                maxAge: configuration.maxAge)
+        }
+    }
+
     /// How many leading tokens of `prompt` some own unexpired state shares:
     /// the boundary a shared-prefix save of this prompt would use.
     package func longestCommonPrefix(with prompt: [Int]) -> Int {

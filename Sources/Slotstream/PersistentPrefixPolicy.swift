@@ -163,13 +163,24 @@ package enum PersistentPrefixPolicy {
     package static func longestExtension(_ entries: [PersistentPrefixEntry], identity: String, of prefix: [Int],
                                          now: Double, maxAge: TimeInterval?) -> [Int]? {
         var best: [Int]?
+        for ids in extensions(entries, identity: identity, of: prefix, now: now, maxAge: maxAge) {
+            if best == nil || ids.count > best!.count { best = ids }
+        }
+        return best
+    }
+
+    /// Metadata candidates only. The caller checks the assistant turn before
+    /// choosing a branch; numerical restore still uses `bestMatch`.
+    package static func extensions(_ entries: [PersistentPrefixEntry], identity: String, of prefix: [Int],
+                                   now: Double, maxAge: TimeInterval?) -> [[Int]] {
+        var candidates: [[Int]] = []
         for entry in entries where entry.identity == identity
             && !isExpired(entry, now: now, maxAge: maxAge) {
             let ids = entry.splicingTokens ?? entry.tokens
             guard ids.count > prefix.count, ids.starts(with: prefix) else { continue }
-            if best == nil || ids.count > best!.count { best = ids }
+            candidates.append(ids)
         }
-        return best
+        return candidates
     }
 
     /// Own states a save of `tokens` makes redundant: every strict prefix

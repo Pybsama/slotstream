@@ -562,13 +562,16 @@ public final class Engine {
             let bridge = String(fullText[index(consumed)..<index(headText.count)])
             let producer =
                 spliced + (bridge.isEmpty ? [] : tokenizer.encode(text: bridge, addSpecialTokens: false))
-            guard let entry = prefixCache.peek(extending: producer) else { break }
+            guard let entry = try prefixCache.peek(extending: producer, matching: { entry in
+                try request?.check(phase: "chat prefix matching, cached branch")
+                let generated = Self.assistantTurnIds(in: entry, after: producer.count, turnEnd: turnEnd)
+                return Self.spliceDescribes(tokenizer.decode(tokens: generated, skipSpecialTokens: false),
+                    messages[k], tools: tools)
+            }) else { break }
             // A retained descendant can include several later turns. Match
             // only this assistant turn, then validate each later turn in the
             // loop. Never compare the whole descendant to the first reply.
             let generated = Self.assistantTurnIds(in: entry, after: producer.count, turnEnd: turnEnd)
-            let genText = tokenizer.decode(tokens: generated, skipSpecialTokens: false)
-            guard Self.spliceDescribes(genText, messages[k], tools: tools) else { break }
             guard
                 let end = fullText.range(
                     of: "<|im_end|>", range: index(headText.count)..<fullText.endIndex)

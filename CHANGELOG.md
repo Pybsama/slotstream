@@ -6,6 +6,20 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+## 0.2.24 - 2026-09-22
+
+- Nullable string tool parameters declared with a JSON Schema type array now
+  stream incrementally and preserve numeric-looking strings, like the equivalent
+  scalar and `anyOf` forms. Truncated arguments retain the ordinary length
+  termination behavior.
+- Conversation splicing checks compatible branches in memory and on disk before
+  choosing a retained transcript. A longer incompatible branch no longer hides
+  a shorter matching conversation. Numerical checkpoint validation is unchanged.
+- The native acceptance battery now runs the issue-21 streaming, branch-reuse
+  and restart suite, including OpenAI compatibility checks.
+
 ## 0.2.23 - 2026-09-22
 
 - Long prompts share expert reads across more existing compute passes, reducing

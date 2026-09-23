@@ -141,6 +141,23 @@ extension Diagnostics {
                 branched.outcome == .saved && branched.reusedBytes > 0 && tier.storedStates == 3)
             c.equal("the branch restores exactly", try restore(tier, branch).map(digests), branchExpected)
             c.equal("the first continuation still restores exactly", try restore(tier, child).map(digests), childExpected)
+            c.equal("shorter matching disk branch survives a longer incompatible transcript",
+                cache.peek(extending: base, matching: { $0 == branch }), branch)
+            let memoryBranch = base + [42]
+            let memoryState = Qwen4ExpModel.State()
+            memoryState.tokenCount = memoryBranch.count
+            cache.store(state: memoryState, tokens: memoryBranch)
+            c.equal("short matching memory branch survives longer disk branches",
+                cache.peek(extending: base, matching: { $0 == memoryBranch }), memoryBranch)
+            let longMemory = base + Array(repeating: 43, count: 400)
+            let longState = Qwen4ExpModel.State()
+            longState.tokenCount = longMemory.count
+            cache.store(state: longState, tokens: longMemory)
+            c.equal("matching disk branch survives longer incompatible memory branch",
+                cache.peek(extending: base, matching: { $0 == branch }), branch)
+            c.expect("neither tier invents a match",
+                cache.peek(extending: base, matching: { $0.last == -1 }) == nil)
+            cache.attachPersistent(nil)
 
             // A third turn keeps its parent and removes the older ancestor,
             // but not the rows its descendants share.

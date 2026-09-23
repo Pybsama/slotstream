@@ -9,6 +9,8 @@ updated: 2026-09-23T04:19:49.282452Z
 
 - [[sources/runs/2026/09/2026-09-22-release-calibration-long-v3]] — Eight long-prompt requests completed; cache retention and thermal limits observed, then the next round refused background GPU activity.
 - [[sources/runs/2026/09/2026-09-22-release-calibration-2k-v3]] — Installed-release 2K prompt study: fourteen completed requests, thirteen timing-eligible, exact response replay and visible cache/history limits.
+- [[sources/runs/2026/09/2026-09-22-issue21-edge-fixes]] — Issue 21 edge fixes: baseline failure and repaired-build qualification
+- [[sources/runs/2026/09/2026-09-22-issue21-current-review]] — Current-code issue 21 audit: published acceptance verified, fresh API and 51K restart pass, two additional defects reproduced.
 - [[sources/runs/2026/09/2026-09-22-release-calibration-native-pilot-v3]] — Real-model 8.1 GB harness pilot passed; 10 GB timing phase refused sustained background GPU load.
 - [[sources/runs/2026/09/2026-09-22-release-calibration-load-screen-v3]] — Prospective windowed host-load correction passes offline checks; real-model pilot refuses insufficient physical headroom.
 - [[sources/runs/2026/09/2026-09-22-release-speed-calibration]] — Preserved 27 completed installed-release requests and the prospective idle-load correction; no new qualified speed baseline.
@@ -505,10 +507,8 @@ updated: 2026-09-23T04:19:49.282452Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-floor-fixture-counterexample]] — Restored legacy batch floor exposes eight stale diagnostic expectations
 - [[sources/runs/2026/09/2026-09-06-configurable-context-short-tail-counterexample]] — One-row terminal subpass fails two unchanged numerical criteria
 - [[sources/runs/2026/09/2026-09-06-configurable-context-projection-prefix-pass]] — Both small-pass sizes preserve ordinary partial and reused-prefix witnesses
-- [[sources/runs/2026/09/2026-09-06-configurable-context-http-pressure-correction]] — Corrected expanded HTTP matrix passes 835 assertions
-- [[sources/runs/2026/09/2026-09-06-optimization-context-component-review]] — Review context integration: legacy dispatch and per-buffer allocation ownership
 
 ## More
 
-This folder has 669 files. The 500 most recent are listed above.
+This folder has 671 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

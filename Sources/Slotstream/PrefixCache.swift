@@ -513,24 +513,34 @@ public final class PrefixCache {
     /// entry does not describe the turn the client sent, and the entry is then
     /// wanted for the ordinary `take` that follows.
     public func peek(extending prefix: [Int]) -> [Int]? {
-        let (retained, tier) = lock.withLock { () -> ([Int]?, PersistentPrefixCache?) in
-            guard _enabled else { return (nil, nil) }
-            var best: [Int]?
+        peek(extending: prefix, matching: { _ in true })
+    }
+
+    /// Find the longest compatible transcript, not merely the longest branch.
+    /// Snapshot metadata under the locks, then validate outside them so the
+    /// caller can tokenize and check request cancellation without holding a
+    /// cache lock. No state is consumed and no tensor payload is restored.
+    package func peek(extending prefix: [Int], matching accepts: ([Int]) throws -> Bool) rethrows -> [Int]? {
+        let (retained, tier) = lock.withLock { () -> ([[Int]], PersistentPrefixCache?) in
+            guard _enabled else { return ([], nil) }
+            var candidates: [[Int]] = []
             // Vision entries are skipped: the caller splices these ids into a
             // text-only render that carries no images, and the resulting prompt
             // would claim placeholder tokens it has no embeddings for.
             for e in entries
             where !e.reusable && e.images.isEmpty && e.tokens.count > prefix.count
                 && e.tokens.starts(with: prefix) {
-                if best == nil || e.tokens.count > best!.count { best = e.tokens }
+                candidates.append(e.tokens)
             }
-            return (best, _persistent)
+            return (candidates, _persistent)
         }
         // After a restart, or for a conversation longer than memory retains,
         // the previous turn's exact ids exist only in the persistent tier.
-        guard let stored = tier?.longestExtension(of: prefix), stored.count > (retained?.count ?? 0)
-        else { return retained }
-        return stored
+        var best: [Int]?
+        for ids in retained + (tier?.extensions(of: prefix) ?? []) {
+            if ids.count > (best?.count ?? 0), try accepts(ids) { best = ids }
+        }
+        return best
     }
 
     /// Retain `state` as the consumer of exactly `tokens`, evicting
