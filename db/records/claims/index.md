@@ -2,16 +2,22 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-23T17:54:18.617026Z
+updated: 2026-09-24T17:32:26.893733Z
 ---
 
 # records/claims
 
+- [[records/claims/warm-decode-m3-max-64gb-community]] — M3 Max 64 GB community report: 12.38 tok/s
+- [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
+- [[records/claims/warm-decode-m4-max-36gb-community]] — M4 Max 36 GB community report: 8.41 tok/s
+- [[records/claims/warm-decode-m4-max-64gb-external-ssd-community]] — M4 Max 64 GB from a 10 Gb/s external SSD: 2.98 tok/s
+- [[records/claims/warm-decode-m4-max-64gb-community]] — M4 Max 64 GB community report: 15.93 tok/s
+- [[records/claims/warm-decode-m2-16gb-0-2-3-rerun-community]] — M2 mini 0.2.3 re-run: 1.48 tok/s
+- [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/sevra-mac-folders-2000-files]] — Sevra reads folders of up to 2,000 files
 - [[records/claims/release-2k-prose-current-timing]] — Installed-release prose first-read range and ordinary exact-repeat latency at the measured small-budget profile.
 - [[records/claims/release-2k-code-current-timing]] — Installed-release code first-read range and ordinary exact-repeat latency at the measured small-budget profile.
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
-- [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/hardware-planning-range-medium]] — Estimated warm reply range for 24 to less than 48 GB Macs
 - [[records/claims/warm-decode-0-2-19-at-22-gb]] — Warm decode is 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target on the development Mac
 - [[records/claims/prose-prefix-reuse-public-timing]] — Exact prose prefix reuse reduces follow-up request time
@@ -98,7 +104,6 @@ updated: 2026-09-23T17:54:18.617026Z
 - [[records/claims/automatic-target-43-2-gb-at-64-gb]] — Auto targets 43.2 GB at 64 GB with its 131,072-token window
 - [[records/claims/automatic-context-window-131072-at-64-gb]] — Auto takes a 131,072-token window at 64 GB
 - [[records/claims/auto-ceiling-34-6-gb-with-the-head]] — The auto ceiling is 34.6 GB with the draft head at the 32,768-token window
-- [[records/claims/two-tier-rows-are-measured-on-real-macs]] — Hardware reports cover the M5 Pro, M2 mini, M5 Max, and M5 Air; planner estimates remain separate.
 - [[records/claims/tier-rows-are-estimates-from-the-48-gb-curve]] — Small-memory planner estimates use the M5 Pro curve; README has broader ranges
 - [[records/claims/hardware-planning-range-low]] — Estimated warm reply range for 16 to less than 24 GB Macs
 - [[records/claims/context-state-27-kib-per-token]] — Main sequence-cache capacity costs about 27 KiB per allocated token

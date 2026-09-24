@@ -2049,3 +2049,12 @@ Incognito cleanup after a private reply now drops that conversation's prompt sta
 ## [2026-09-24 07:23] update | records/design/sevra-spec/ui-contract
 Recorded the sticky latest page, partial transcript layout that holds the reader's line while the rest is laid out, message-anchored reading positions, parallel rendering with a bounded cache of recently shown messages, and panels that cover a kept conversation. Linked diagnostic before-and-after timings; scroll checks cover the new behavior.
 
+## [2026-09-24 17:32] create | records/measurements/c5-macbook-pro-m4-max-64gb-community
+Recorded community reports C4 (#20, 64 GB M3 Max, 0.2.18), C5 (#22 and #23, one 64 GB M4 Max from its internal SSD and from a 10 Gb/s external drive, 0.2.22) and C6 (#26, 36 GB M4 Max, 0.2.22): verbatim sources with home paths redacted, three machine records, hardware rows and five claims. The 0.2.22 runs lacked the 0.2.19 forecast file; the external drive decoded 5.3 times slower than the internal SSD on the same plan.
+
+## [2026-09-24 17:32] update | records/measurements/c1-mac-mini-m2-16gb-base-storage-community-2026-09-02
+Recorded @flol's 0.2.3 re-run from issue #5, posted 2026-09-03 and never captured: 1.48 tok/s warm, and the 8,192-token prompt C1 asked for in 12.1 min (11 tok/s) against the planner's ~1.6 min. New source, hardware row beside the 0.2.2 row, and claim.
+
+## [2026-09-24 17:32] update | records/measurements/hardware-planning-ranges-2026-09-13
+The 64 GB M3 Max's 12.38 tok/s on 0.2.18 is below the 48-<96 GB floor of ~15. The floor stays until that Mac is rerun on the current release; the range's basis and claim now name the report. Medium keeps ~6-16 with the 36 GB M4 Max at 8.41 inside it.
+

@@ -2479,6 +2479,39 @@ sequential ceiling has far less of that to give. The prediction on record is
 that this machine gains from the grouped GEMM's share of the pass and little
 from the reads — well under the dev Mac's 2x.
 
+## The 0.2.3 re-run, recorded 2026-09-24
+
+`@flol` re-ran the whole procedure on 0.2.3 the day after the first report,
+built from source, and posted it as a
+[comment on issue #5](https://github.com/carloslfu/slotstream/issues/5#issuecomment-5525389653).
+It was not recorded at the time. The raw text is in
+[[sources/community/2026/09/2026-09-03-mac-mini-m2-16gb-flol-0-2-3-rerun]].
+
+| | 0.2.2 report above | 0.2.3 re-run |
+|---|---|---|
+| Auto plan | 10.2 GB target, ~21 experts per layer | 10.7 GB target, ~25 experts per layer |
+| Warm decode, three identical requests | 1.41 tok/s | **1.48 tok/s** |
+| Cold decode, 128 tokens | 1.39 tok/s | 1.42 tok/s |
+| Cold reads, 28-token prefill | 13.2 GB at 1.5 GB/s | 13.2 GB at 1.5 GB/s |
+| Long prompt, 8,192 tokens | step failed | **12.1 min, 11 tok/s**; peak RSS 8.1 GB against a 9.7 GB plan |
+
+For the re-run the reporter closed every other app and heard no fans; 12.9 of
+17 GB was reclaimable, against 11.7 GB for the first report, so auto planned a
+slightly larger cache.
+
+**The long prompt is the number this section asked for.** 8,192 tokens took
+12.1 min, 7.6 times the ~1.6 min the planner printed before starting; its
+prefill estimate of ~85 tok/s has the same missing bandwidth term as the
+decode estimate. Once passes were running, the progress lines' remaining-time
+estimates (8.4, 5.7 and 2.9 min) followed the actual pace.
+
+**What it does not settle.** The prediction above, that this machine gains
+little from the sweep's reads, needs a long-prompt time on 0.2.2 to compare
+with, and 0.2.2 could not run `context-check`. Warm decode moved from 1.41 to
+1.48 tok/s with a slightly larger cache, inside the run-to-run spread, so it
+is not a speedup claim. The hardware table keeps the 0.2.2 row and adds this
+run beside it.
+
 ## C2: MacBook Pro M5 Max, 128 GB (community, 2026-09-03)
 Reported by `@waterliu1981` in [issue #6](https://github.com/carloslfu/slotstream/issues/6).
 The original report and its follow-up are preserved in
@@ -2578,6 +2611,118 @@ published v0.2.11 source, but did not independently rerun the reporter's binary.
 This adds a real 32 GB Mac to the hardware reports. It does not turn the
 planner's roughly 9 tok/s estimate into a measurement, or isolate the effects
 of chip, cooling, storage, context, and settings from one another.
+
+## C4: MacBook Pro M3 Max, 64 GB (community, 2026-09-16)
+Reported by `@merken` in [issue #20](https://github.com/carloslfu/slotstream/issues/20),
+preserved in [[sources/community/2026/09/2026-09-16-macbook-pro-m3-max-64gb-merken]].
+
+MacBook Pro 14-inch (2023), M3 Max (`applegpu_g15s`), 64 GB, 512 GB SSD,
+macOS 27.0, Slotstream 0.2.18. The report does not say whether the SSD is
+internal or describe other load. Auto planned a 48.1 GB target with about 119
+experts per layer, speculative decoding, the decode lookahead and a
+262,144-token window.
+
+| | Reported |
+|---|---|
+| Warm decode, three identical requests | 11.68, 12.49 and **12.38 tok/s** |
+| Cold decode, 128 tokens | 11.47 tok/s; 74 of 106 drafts accepted |
+| Cold reads, 18-token prefill | 9.4 GB of experts at 6.1 GB/s |
+| Long prompt, 8,192 tokens at context-check's 34.6 GB target | 39 s, **213 tok/s**; process peak 30.1 GB against a 33.6 GB plan |
+
+The hardware row uses **12.38 tok/s**, the third request. The planner
+estimated about 11 tok/s for the served plan. The warm requests' prefill rates
+of about 34 million tok/s are an artifact of the measurement recipe, not a
+prefill result: the repeated prompt was reused whole, and `prompt_eval_count`
+counts reused tokens while `prompt_eval_duration` times only what was read.
+
+**Below the band's estimated floor.** This is the first report from a Mac
+with 48 to less than 96 GB other than the development Mac, and it sits below
+the ~15 tok/s floor the README gives that band. The 64 GB M4 Max in
+[[records/measurements/c5-macbook-pro-m4-max-64gb-community]] ran the same
+auto plan and, by its logs, the same pre-0.2.19 decode forecast, and decoded
+at 15.93 tok/s. The cold decode splits put the difference in both parts of the
+step: reads took 4.00 s here against 2.69 s there, over 5,351 records against
+4,424, and the rest of the step took 7.1 s against 5.6 s. That points at the
+older chip and the smaller SSD more than the release, though the two runs also
+differ in release (0.2.18 and 0.2.22) and neither was rerun. The 1.10x that
+0.2.19's corrected forecast measured on the development Mac has not run here.
+The floor stays until this Mac is rerun on the current release, with
+`slotstream pull` run first; the hardware guide names this report beside the
+range.
+
+One report, one run of each step, not rerun by the author.
+
+## C5: MacBook Pro M4 Max, 64 GB, internal and external SSD (community, 2026-09-19)
+Reported by `@YenHub` in [issue #22](https://github.com/carloslfu/slotstream/issues/22)
+(internal SSD) and [issue #23](https://github.com/carloslfu/slotstream/issues/23)
+(external SSD), preserved in
+[[sources/community/2026/09/2026-09-19-macbook-pro-m4-max-64gb-internal-yenhub]]
+and [[sources/community/2026/09/2026-09-19-macbook-pro-m4-max-64gb-external-yenhub]].
+The same reporter proposed the hardware rows in
+[pull request #25](https://github.com/carloslfu/slotstream/pull/25).
+
+MacBook Pro 16-inch (November 2024), M4 Max (`applegpu_g16s`), 64 GB,
+macOS 27.0, Slotstream 0.2.22, each run after a fresh reboot with only a
+terminal open. Both reports used the same auto plan: a 48.1 GB target with
+about 119 experts per layer, speculative decoding, the decode lookahead and a
+262,144-token window. The first read the model from the internal 1 TB SSD, the
+second from a Crucial X10 Pro 1 TB external SSD over USB 3.2 Gen 2 (10 Gb/s).
+
+| | Internal SSD | External SSD |
+|---|---|---|
+| Warm decode, three identical requests | 14.95, 16.22 and **15.93 tok/s** | 2.81, 3.04 and **2.98 tok/s** |
+| Cold decode, 128 tokens | 15.30 tok/s | 2.89 tok/s |
+| Cold reads, 28-token prefill | 13.2 GB at 7.6 GB/s | 13.2 GB at 0.9 GB/s |
+| Long prompt, 8,192 tokens at context-check's 34.6 GB target | 30 s, **270 tok/s**; process peak 30.1 GB | 2.7 min, **51 tok/s**; process peak 30.2 GB |
+
+The rows use the third requests, 15.93 and 2.98 tok/s. The warm prefill rates
+in the millions of tok/s are the recipe artifact described in
+[[records/measurements/c4-macbook-pro-m3-max-64gb-community]].
+
+**Same Mac, plan and release, 5.3 times slower from a 10 Gb/s drive.** This is
+the first pair in the store that isolates the disk. The external drive read
+0.9 GB/s against the internal SSD's 7.6 GB/s, warm decode fell from 15.93 to
+2.98 tok/s, and the long prompt fell by the same factor, from 270 to 51 tok/s.
+The planner assumes a disk like the development Mac's and printed about
+11 tok/s for both.
+
+**Both runs used the pre-0.2.19 decode forecast.** Each context-check log
+prints `[expert-lookahead] boundary forecast: no correction at
+lookahead/tap-correction-attention-rank128-v1.safetensors`. The model was
+downloaded before 0.2.19 and `slotstream pull` was not run again, so the
+37.5 MB correction file was absent and the engine ran the earlier forecast.
+0.2.19's 1.10x was measured on the development Mac with the file present and
+is not applied to these numbers.
+
+One reporter, one run of each step on each disk, not rerun by the author.
+
+## C6: MacBook Pro M4 Max, 36 GB (community, 2026-09-20)
+Reported by `@JohnClarkson` in [issue #26](https://github.com/carloslfu/slotstream/issues/26),
+preserved in [[sources/community/2026/09/2026-09-20-macbook-pro-m4-max-36gb-johnclarkson]].
+
+MacBook Pro (November 2024), M4 Max (`applegpu_g16s`), 36 GB, internal 1 TB
+SSD, macOS 26.0.1, Slotstream 0.2.22, run just after a reboot with a terminal
+and one screen-sharing window open. Auto planned a 27.1 GB target with about
+90 experts per layer, speculative decoding, the decode lookahead and a
+65,536-token window.
+
+| | Reported |
+|---|---|
+| Warm decode, three identical requests | 8.48, 8.61 and **8.41 tok/s** |
+| Cold decode, 128 tokens | 8.63 tok/s; 74 of 106 drafts accepted |
+| Cold reads, 28-token prefill | 13.2 GB of experts at 5.5 GB/s |
+| Long prompt, 8,192 tokens at context-check's 27.1 GB target (about 121 experts per layer) | 49 s, **166 tok/s**; process peak 24.8 GB against a 26.1 GB plan |
+
+The hardware row uses **8.41 tok/s**, the third request; the planner
+estimated about 9 tok/s. This is the first 36 GB report. Like
+[[records/measurements/c5-macbook-pro-m4-max-64gb-community]], its
+context-check log prints `no correction at
+lookahead/tap-correction-attention-rank128-v1.safetensors`, so it ran the
+pre-0.2.19 decode forecast. The warm prefill rates in the millions of tok/s
+are the recipe artifact described in
+[[records/measurements/c4-macbook-pro-m3-max-64gb-community]].
+
+One report, one run of each step, not rerun by the author.
 
 ## Decode: where the time goes, and the two knobs that moved it (2026-09-03)
 Decode had no equivalent of the prefill split, so "decode is slow" could not be
@@ -4930,6 +5075,29 @@ automatic plan of a 32 GB Mac and cannot qualify a release-wide speed ratio.
 The new calibration attempt, retained raw observations, stricter prospective
 host-load screen and remaining gaps are recorded in
 [[records/measurements/release-speed-calibration-2026-09-22]].
+
+## Reports from 36 and 64 GB Macs, 2026-09-24
+
+Three community reports added real Macs to the two middle bands
+([[records/measurements/c4-macbook-pro-m3-max-64gb-community]],
+[[records/measurements/c5-macbook-pro-m4-max-64gb-community]] and
+[[records/measurements/c6-macbook-pro-m4-max-36gb-community]]):
+
+- 24 to less than 48 GB: a 36 GB M4 Max reported 8.41 tok/s on 0.2.22, inside
+  ~6–16 tok/s.
+- 48 to less than 96 GB: a 64 GB M4 Max reported 15.93 tok/s on 0.2.22, and a
+  64 GB M3 Max 12.38 tok/s on 0.2.18, both from internal SSDs with the same
+  auto plan. The M3 Max sits below the ~15 floor. Its report predates 0.2.19,
+  so the floor stays ~15 until a rerun on the current release, with
+  `slotstream pull` run first, says whether the gap is the release or the
+  hardware. C4 records why the release is unlikely to close it: the M4 Max
+  ran the same pre-0.2.19 forecast and still decoded faster. The public range
+  names the M3 Max report beside it.
+- The same M4 Max decoded at 2.98 tok/s from a 10 Gb/s external drive. The
+  ranges assume the model on a fast internal SSD; that result is the slow-SSD
+  case described above, not a band endpoint.
+
+No release-speedup multiplier was applied to the community reports.
 
 ## Automatic context window: plans by Mac memory
 Weights-free checks and simulated `doctor` plans for the candidate that picks the context window for each Mac ([[records/plan/configurable-context-window-2026-09-06]]). Carlos asked on 2026-09-13 for auto to choose the best window for every memory tier and for `--max-context` to accept the model's 262,144 tokens, using best guesses from what the development Mac can measure. No model process ran for these plans, and nothing here is timed.

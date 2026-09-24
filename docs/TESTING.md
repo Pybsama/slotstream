@@ -541,7 +541,9 @@ them. Run one model process at a time.
    results. The third is the warm number. If you would rather not run the
    Python one-liner, the JSON carries `eval_count` and `eval_duration` in
    nanoseconds; decode tok/s is the first divided by the second, times a
-   billion.
+   billion. Only decode is printed: the second and third requests reuse the
+   whole prompt, so their prompt timings measure no prefill. Step 5
+   measures prefill.
 
    ```bash
    for i in 1 2 3; do
@@ -550,7 +552,7 @@ them. Run one model process at a time.
        "prompt": "Explain how a hash map works, in about 200 words.",
        "stream": false,
        "options": {"temperature": 0, "num_predict": 128}
-     }' | python3 -c 'import json,sys; d=json.load(sys.stdin); print("decode %.2f tok/s, prefill %.1f tok/s" % (d["eval_count"]/d["eval_duration"]*1e9, d["prompt_eval_count"]/d["prompt_eval_duration"]*1e9))'
+     }' | python3 -c 'import json,sys; d=json.load(sys.stdin); print("decode %.2f tok/s" % (d["eval_count"]/d["eval_duration"]*1e9))'
    done
    ```
 

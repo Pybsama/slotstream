@@ -2,11 +2,16 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-23T16:45:55.741336Z
+updated: 2026-09-24T17:32:26.874836Z
 ---
 
 # records/measurements
 
+- [[records/measurements/c4-macbook-pro-m3-max-64gb-community]] — C4: MacBook Pro M3 Max, 64 GB (community, 2026-09-16)
+- [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
+- [[records/measurements/c1-mac-mini-m2-16gb-base-storage-community-2026-09-02]] — C1 — Mac mini M2, 16 GB, base storage (community, 2026-09-02): 1.41 tok/s warm decode against a ~4 tok/s estimate, because a 1.5 GB/s SSD puts the IO ceiling at 2.00 tok/s.
+- [[records/measurements/c6-macbook-pro-m4-max-36gb-community]] — C6: MacBook Pro M4 Max, 36 GB (community, 2026-09-20)
+- [[records/measurements/c5-macbook-pro-m4-max-64gb-community]] — C5: MacBook Pro M4 Max, 64 GB, internal and external SSD (community, 2026-09-19)
 - [[records/measurements/sevra-app-optimizations-2026-09-23]] — Sevra desktop defaults: MTP, useful checkpoints and verified reloads
 - [[records/measurements/sevra-app-speed-2026-09-23]] — Sevra desktop speed: short-turn rereads and disabled MTP
 - [[records/measurements/issue21-edge-fixes-2026-09-22]] — Issue 21 nullable tool strings and branched conversation reuse repaired
@@ -15,7 +20,6 @@ updated: 2026-09-23T16:45:55.741336Z
 - [[records/measurements/release-speed-calibration-2026-09-22]] — Incomplete active-Mac calibration preserves functional evidence, corrects historical benchmark equivalence and adds prospective host-load screening.
 - [[records/measurements/release-prefill-2k-2026-09-22]] — Measured installed-release 2K first reads and exact repeats at 10 GB; request history changes read batching and prevents a universal estimator correction.
 - [[records/measurements/issue21-current-review-2026-09-22]] — Issue 21 reassessment: v0.2.23 release acceptance is complete; fresh 51K/restart checks pass, but nullable-string schema and branched-cache defects remain.
-- [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits
 - [[records/measurements/speed-tables-review-2026-09-22]] — Keep the latest qualified decode result and rough ranges; add scoped prompt-policy and reuse results, and mark historical planner calibration.
 - [[records/measurements/published-prompt-speed-audit-2026-09-22]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[records/measurements/release-0-2-23-published-2026-09-22]] — v0.2.23 published from the exact CI archive, provenance verified, publicly installed and accepted: full native battery 32/32, 16K MTP 13/13, installed serving 31/31.
@@ -102,7 +106,6 @@ updated: 2026-09-23T16:45:55.741336Z
 - [[records/measurements/m1-expert-locality-on-a-real-trace-2026-09-03]] — M1 closed: expert locality on a real trace, and the eviction policy is not the lever (2026-09-03)
 - [[records/measurements/the-pass-peaks-on-a-plateau-not-one-transient-2026-09-03]] — The pass peaks on a plateau, not on one transient (2026-09-03)
 - [[records/measurements/decode-where-the-time-goes-and-two-knobs-2026-09-03]] — Decode: where the time goes, and the two knobs that moved it (2026-09-03)
-- [[records/measurements/c1-mac-mini-m2-16gb-base-storage-community-2026-09-02]] — C1 — Mac mini M2, 16 GB, base storage (community, 2026-09-02): 1.41 tok/s warm decode against a ~4 tok/s estimate, because a 1.5 GB/s SSD puts the IO ceiling at 2.00 tok/s.
 - [[records/measurements/m0-5-disk-the-number-the-whole-io-model-rests-on]] — M0.5 — Disk (the number the whole IO model rests on)
 - [[records/measurements/the-numbers-8k-prose-the-floor-the-ladder-and-decode-after-a-long-prompt]] — The numbers: 8k, prose, the floor, the ladder, and decode after a long prompt
 - [[records/measurements/what-the-sweep-does-not-settle]] — What the sweep does not settle
