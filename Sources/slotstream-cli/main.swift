@@ -1407,11 +1407,14 @@ struct ElasticDrill: ParsableCommand {
                 let smallRecovery = Geometry.gb(s0 - Geometry.floorSlots) < 2
                 let shrinkAvailability = smallRecovery ? min(realAvail, target + 3) : 2.0
                 Planner.availabilityOverride = shrinkAvailability
+                // A plain-decode plan can run the decode lookahead. The governor
+                // keeps its reserve across re-plans, so predict with it too.
                 func inputs(at available: Double) -> GovernorPolicy.Inputs {
                     GovernorPolicy.Inputs(currentSlots: engine.model.pool.slots, availableGB: available,
                         ramGB: plan.ramGB, workingSetGB: plan.workingSetGB, ramPercent: plan.ramPercent,
                         maxContextTokens: engine.maxContextTokens,
                         ownedAdditionalBytes: engine.prefixCache.ownedAdditionalBytes(mtpResident: false),
+                        decodeLookahead: plan.decodeLookahead, lookaheadReserveBytes: plan.lookaheadReserveBytes,
                         memoryLimitGB: plan.memoryLimitGB)
                 }
                 func pollBounded(pressure: GovernorPolicy.Pressure? = nil) throws {
