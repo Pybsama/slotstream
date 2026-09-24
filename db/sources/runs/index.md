@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-24T19:31:02.731309Z
+updated: 2026-09-24T22:54:56.403048Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-24-release-0-2-25-published-and-installed]] — v0.2.25 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-24-draft-stream-landed]] — Landed streamed draft head and plain-decode lookahead: confirmation under paging, a prototype cross-check and gates
 - [[sources/runs/2026/09/2026-09-24-decode-overlap-landed]] — Landed GPU keepalive and direct demand reads: release and on/off confirmation under paging, and gates
 - [[sources/runs/2026/09/2026-09-24-decode-perf-experiments]] — Decode speed experiments: keepalive, direct demand reads, streamed draft head, plain-decode lookahead and rejected ideas
@@ -506,9 +507,8 @@ updated: 2026-09-24T19:31:02.731309Z
 - [[sources/runs/2026/09/2026-09-06-optimization-probe-review-and-pressure-recovery]] — Optimization probe preflight review and typed pressure recovery — V181–182
 - [[sources/runs/2026/09/2026-09-06-configurable-context-retained-functional-swap-exclusion]] — Four conversations complete and reuse exact prefixes; capacity excluded by swap activity
 - [[sources/runs/2026/09/2026-09-06-configurable-context-pressure-feasible-recovery-pass]] — Pressure cancellation and feasible admission recovery pass with fixed MTP
-- [[sources/runs/2026/09/2026-09-06-optimization-mtp-fix-and-cache-qualification]] — Optimization MTP cancellation fix and remaining cache qualification — V178–180
 
 ## More
 
-This folder has 684 files. The 500 most recent are listed above.
+This folder has 685 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
