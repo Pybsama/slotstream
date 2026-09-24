@@ -27,6 +27,16 @@ determines which version the installer downloads.
   [@jasen215](https://github.com/jasen215) in
   [#27](https://github.com/carloslfu/slotstream/pull/27), for
   [#18](https://github.com/carloslfu/slotstream/issues/18).
+- The prefix cache's disk tier now writes states from 1,024 tokens instead
+  of 2,048 (`--prefix-cache-min-tokens`). After a restart, a 1,919-token
+  conversation re-read its whole prompt in 45.5 s under the old default and
+  resumed with 6.0 s of prefill under the new one. The servers `slotstream
+  launch` starts and the development Mac app use this default, so Pi's
+  opening prompt of about 1,600 tokens now reaches the disk. Each turn of a
+  conversation between the two lengths now writes its state, about 120 to
+  170 MB, within the same quota. Measured by
+  [@jasen215](https://github.com/jasen215) in
+  [#17](https://github.com/carloslfu/slotstream/issues/17).
 
 - The development Mac app uses automatic speculative decoding when the draft
   head is available and fits the selected memory budget. Short conversations

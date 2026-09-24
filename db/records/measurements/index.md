@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-24T17:54:58.586860Z
+updated: 2026-09-24T19:27:43.392684Z
 ---
 
 # records/measurements
 
+- [[records/measurements/prefix-cache-floor-community-2026-09-16]] — Prefix-cache floor at 2048 and 1024 tokens across a restart (community, 2026-09-16)
 - [[records/measurements/c5-macbook-pro-m4-max-64gb-community]] — C5: MacBook Pro M4 Max, 64 GB, internal and external SSD (community, 2026-09-19)
 - [[records/measurements/c4-macbook-pro-m3-max-64gb-community]] — C4: MacBook Pro M3 Max, 64 GB (community, 2026-09-16)
 - [[records/measurements/hardware-planning-ranges-2026-09-13]] — Hardware speed planning ranges and inference limits

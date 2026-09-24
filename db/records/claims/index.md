@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-24T17:32:26.893733Z
+updated: 2026-09-24T19:28:14.428838Z
 ---
 
 # records/claims
 
+- [[records/claims/persistent-prefix-default-minimum-tokens]] — The persistent prefix cache writes states of 1024 tokens or more by default
 - [[records/claims/warm-decode-m3-max-64gb-community]] — M3 Max 64 GB community report: 12.38 tok/s
 - [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/warm-decode-m4-max-36gb-community]] — M4 Max 36 GB community report: 8.41 tok/s
@@ -79,7 +80,6 @@ updated: 2026-09-24T17:32:26.893733Z
 - [[records/claims/decode-lookahead-11-8-to-13-5-tok-s]] — Median decode rose from 11.79 to 13.47 tok/s with decode lookahead on the development Mac
 - [[records/claims/decode-lookahead-1-11x-on-held-out-prompts]] — The decode lookahead makes decode 1.11x faster on held-out prompts
 - [[records/claims/context-read-38-minutes-at-131072]] — A 131,072-token prompt took 38 minutes to read at a 16 GB target
-- [[records/claims/persistent-prefix-default-minimum-tokens]] — The opt-in persistent prefix cache writes states of 2048 tokens or more by default
 - [[records/claims/shared-prefix-save-grid-256-tokens]] — A shared prefix is saved at the last existing prefill pass end at or before its boundary, the 256-token grid by default
 - [[records/claims/shared-prefix-minimum-512-tokens]] — A shared prefix is kept from 512 tokens; the disk tier's own minimum applies on top
 - [[records/claims/hardware-planning-range-ultra]] — Estimated warm reply range for 96 GB or more Macs
