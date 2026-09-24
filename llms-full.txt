@@ -5973,7 +5973,7 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## Unreleased
+## 0.2.25 - 2026-09-24
 
 - The GPU stays awake while a request generates. Streamed decode leaves the
   GPU idle between short bursts of work, and an idle GPU lowers its clock and
