@@ -177,6 +177,21 @@ private func check(_ condition: Bool, _ label: String, line: Int = #line) throws
                 try check(store.messages.count == 1 && session.issue == nil, "one message, no warning")
                 session.finish()
             }
+            try await run("typing that never pauses still saves about once per wait, never back to back") {
+                let store = Store()
+                let session = ComposerSession(store: .init(read: store.read, write: store.write, send: store.send),
+                                              debounceNanoseconds: 50_000_000, maxWaitNanoseconds: 200_000_000)
+                try await session.open("home")
+                let start = Date()
+                var n = 0
+                while Date().timeIntervalSince(start) < 1.0 { n += 1; session.edit("typing \(n)"); try await Task.sleep(nanoseconds: 20_000_000) }
+                let during = store.writes.count
+                try check(during >= 3, "saved while typing without a pause (\(during) writes)")
+                try check(during <= 8, "one write per wait, not back to back (\(during) writes)")
+                try await within(10, "final save after typing stops") { session.saved }
+                try check(store.drafts["home"]?.text == "typing \(n)" && store.maximumConcurrentWrites == 1, "newest text saved, one write at a time")
+                session.finish()
+            }
             try await run("Send before autosave atomically accepts the prompt and clears the older draft") {
                 let store = Store(), session = try await store.session()
                 session.edit("older saved"); _ = await session.flush()

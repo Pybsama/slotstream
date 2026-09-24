@@ -2037,3 +2037,15 @@ Completed native replay after unlock; preserved the initial between-request memo
 ## [2026-09-23 18:13] update | sources/runs/2026/09/2026-09-23-sevra-live-folder-navigation
 Replaced whole-folder inventory with live bounded native navigation, path reads and complete search continuation; preserved scoped grants, fresh-read edit checks and reviewed writes. Qualified large synthetic folders, real-model discovery after rename/edit, approval and undo, native UI and all runtime suites. Rebuilt and opened the local app, withdrew the old folder-cap claim and preserved raw evidence. No throughput or public-release claim.
 
+## [2026-09-24 07:23] create | sources/runs/2026/09/2026-09-24-sevra-window-responsiveness
+Captured offscreen window-harness output for 75430a5 and the working tree on a 1,002-thread, 9,990-message Home with scripted inference. Marked discarded because the Mac was in ordinary use; diagnostic before-and-after only, no public claim.
+
+## [2026-09-24 07:23] update | records/design/sevra-spec/runtime-contract
+Recorded write-behind saving beside the runtime, where only promised durability waits for disk and concurrent changes join the next save; draft autosave at least once a second during continuous typing; model verification starting at launch at utility priority. Full Mac check suite passed: 189 checks.
+
+## [2026-09-24 07:23] update | records/design/sevra-spec/mac-platform
+Incognito cleanup after a private reply now drops that conversation's prompt state and reusable buffers but keeps the weights loaded.
+
+## [2026-09-24 07:23] update | records/design/sevra-spec/ui-contract
+Recorded the sticky latest page, partial transcript layout that holds the reader's line while the rest is laid out, message-anchored reading positions, parallel rendering with a bounded cache of recently shown messages, and panels that cover a kept conversation. Linked diagnostic before-and-after timings; scroll checks cover the new behavior.
+

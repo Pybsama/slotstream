@@ -105,6 +105,7 @@ Task {
         try await longConversationChecks(root: root, dbmd: dbmd)
         try await promotionChecks(root: root, dbmd: dbmd)
         try await performanceChecks(root: root, dbmd: dbmd)
+        try await writeBehindChecks(root: root, dbmd: dbmd)
         try await adverseChecks(root: root, dbmd: dbmd)
         try await ipcChecks(root: root, dbmd: dbmd)
         try await personalLoopChecks(root: root, dbmd: dbmd)
