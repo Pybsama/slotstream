@@ -104,6 +104,7 @@ public final class Qwen4ExpModel {
         pool.contiguousSlotWrites = optimizations.contiguousSlotWrites
         pool.wordSlotWrites = optimizations.wordSlotWrites
         pool.cpuSlotWrites = optimizations.cpuSlotWrites
+        pool.directDemandReads = optimizations.directDemandReads == true
         pool.layerLocalFloorEviction = optimizations.layerLocalFloorCache
         if routerCacheConfigured != optimizations.cachedRouterWeights {
             for layer in moe.values { layer.routerProjection.configure(cached: optimizations.cachedRouterWeights) }

@@ -114,6 +114,13 @@ public struct GenStats: Codable {
     public var decodeSlotWordBuffers = 0
     public var prefillSlotCPUBatches = 0
     public var decodeSlotCPUBatches = 0
+    /// Demand batches read straight into their slots; nil in statistics
+    /// written before the direct path existed.
+    public var prefillSlotDirectBatches: Int?
+    public var decodeSlotDirectBatches: Int?
+    /// Whether this request kept the GPU awake (`GPUKeepAlive`); nil in
+    /// statistics written before it existed.
+    public var gpuKeptAwake: Bool?
     public var prefixCheckpointForks = 0
     public var prefixCheckpointStores = 0
     public var prefixCheckpointRefusals = 0
@@ -1199,6 +1206,7 @@ public final class Generator {
         stats.prefillSlotSliceBatches = model.pool.slotSliceBatches
         stats.prefillSlotWordBatches = model.pool.slotWordBatches
         stats.prefillSlotCPUBatches = model.pool.slotCPUBatches
+        stats.prefillSlotDirectBatches = model.pool.slotDirectBatches
         stats.prefillMLXActiveBytes = MLX.Memory.activeMemory
         stats.prefillMLXCacheBytes = MLX.Memory.cacheMemory
         stats.prefillPhysicalFootprintBytes = ProcessMemory.residentBytes()
@@ -1322,6 +1330,7 @@ public final class Generator {
         stats.decodeSlotWordBatches = model.pool.slotWordBatches
         stats.decodeSlotWordBuffers = model.pool.slotWordBuffers
         stats.decodeSlotCPUBatches = model.pool.slotCPUBatches
+        stats.decodeSlotDirectBatches = model.pool.slotDirectBatches
         stats.decodeReadBytes = model.pool.recordsFetched * model.pool.recordBytes
         stats.ngramRowHits = model.ngram.rowHits
         stats.ngramRowMisses = model.ngram.rowMisses

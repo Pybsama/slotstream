@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-09-23T18:14:44.276641Z
+updated: 2026-09-24T17:32:26.722070Z
 ---
 
 # records/decisions
 
+- [[records/decisions/direct-demand-reads-default]] — Cache misses are read into host scratch and copied straight into their pool slots, without staging arrays or a GPU scatter: 1.16x alone at 10 GB, identical output
+- [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%
 - [[records/decisions/sevra-live-folder-navigation]] — Live folder access with bounded navigation, reliable search cursors and fresh-read edit checks
 - [[records/decisions/sevra-app-speed-defaults-2026-09-23]] — Enable qualified desktop speedups without extra user switches
 - [[records/decisions/automatic-prefill-read-policy]] — Apply supported prefill improvements automatically

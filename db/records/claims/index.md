@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-09-24T17:32:26.893733Z
+updated: 2026-09-24T17:32:39.221501Z
 ---
 
 # records/claims
 
+- [[records/claims/gpu-keepalive-energy-7-percent-at-16-gb]] — The GPU keepalive raised energy per generated token 7% at 16 GB
+- [[records/claims/keepalive-and-direct-reads-1-22x-at-22-gb]] — The GPU keepalive and direct demand reads made decode 1.22x faster at 22 GB with the draft head and lookahead
+- [[records/claims/keepalive-and-direct-reads-1-28x-at-10-gb]] — The GPU keepalive and direct demand reads made decode 1.28x faster at a 10 GB target without the draft head
 - [[records/claims/warm-decode-m3-max-64gb-community]] — M3 Max 64 GB community report: 12.38 tok/s
 - [[records/claims/hardware-planning-range-high]] — Estimated warm reply range for 48 to less than 96 GB Macs
 - [[records/claims/warm-decode-m4-max-36gb-community]] — M4 Max 36 GB community report: 8.41 tok/s

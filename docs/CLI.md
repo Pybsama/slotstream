@@ -262,6 +262,7 @@ With no sizing override, auto sizes the process to the machine (see
 | `--pool-gb <gb>` | Raw expert-pool size (1 GB is about 7.5 experts per layer). |
 | `--vision auto\|on\|off` | Accept images (default `auto`). `auto` loads the image encoder on first use; `on` also requires the checkpoint to contain vision weights; `off` rejects images. |
 | `--mtp auto\|on\|off` | Speculative decode (default `auto`); see [Speculative decode](#speculative-decode). |
+| `--gpu-keepalive auto\|on\|off` | `run` and `serve`: keep the GPU busy while a request generates (default `auto`). Streamed decode leaves the GPU idle between short bursts of work, and an idle GPU lowers its clock and starts the next burst late. A one-thread kernel on its own queue keeps it awake; outputs are unchanged. It costs power: `auto` keeps it on with AC power outside Low Power Mode and off on battery. See [GPU keepalive](ENGINEERING.md#gpu-keepalive-and-direct-demand-reads). |
 | `--max-ram-percent <p>` | Auto only: the largest share of RAM auto may target (default 70). Alone it cannot raise the 33 GB base ceiling plus enabled draft/context charges. With `--memory-limit-gb`, it can further lower that ceiling; without this percentage option the adaptive limit is bounded by hardware and availability. Ignored when a fixed size is given. |
 
 Precedence when several are given: `--experts-per-layer` beats `--pool-gb`,
@@ -310,6 +311,9 @@ chronological passes remain the fallback. Explicit prefill and optimization
 controls retain their precedence and validation. With the draft head, the
 [decode lookahead](#decode-lookahead) is on by default too, and so is the
 [split verify attention](#speculative-decode) from 6,144 tokens of context.
+Experts missing from the cache are read into host memory and copied straight
+into their cache slots, without staging arrays or a GPU scatter, and on AC
+power the [GPU keepalive](#memory-options) runs while a request generates.
 
 Prompt checkpoints help only when the token and image history actually
 matches. Use `--no-prefix-cache` for comparisons that require fresh prompt
@@ -353,6 +357,8 @@ See
 | `SLOTSTREAM_OPT_VERIFY_SPLIT` | engine | `0` runs the speculative verify pass through the dense attention kernel at every context, the previous behavior. The default splits it into two-row vector-kernel calls from 6,144 tokens of context. |
 | `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT` | engine | Context, in tokens, from which the verify pass splits (default 6144, the measured crossover on the development Mac); `0` splits at every context. |
 | `SLOTSTREAM_OPT_ROW_INVARIANT` | engine | `1` selects the exact mode: the model's small dense matmuls run through one kernel at every row count, and the split verify attention makes one call per row. With `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT=0`, speculative and plain decode give identical output for draft depths up to 4. It changes plain decode's rounding, so it is off by default. |
+| `SLOTSTREAM_GPU_KEEPALIVE` | engine | `auto`, `on` or `off`: the default for `--gpu-keepalive`. Any other value is refused. |
+| `SLOTSTREAM_OPT_DIRECT_DEMAND` | engine | `0` reads cache misses through staging arrays and a GPU scatter, the previous path; the default reads them into host memory and copies each record straight into its slot. Both put the same bytes in the same slots. |
 | `SLOTSTREAM_DECODE_BARRIER_LAYERS` | engine | Layers between GPU drains, 1…48. The decode lookahead uses 4; `1` drains after every layer. A pass that could not keep that many layers of experts pinned drains after every layer anyway. |
 | `SLOTSTREAM_EXPERT_PREFETCH_TAP` | engine | `boundary` keeps the 0.2.16 forecast (the layer-boundary router forecast at stride 2) when the correction file is present, charging 373 MiB instead of 409; the configuration 0.2.19 was benchmarked against. Other values belong to the experimental configuration and are for comparisons only. |
 | `SLOTSTREAM_ROOT_DIR` | installer | Install somewhere other than `~/.slotstream`. |
@@ -388,6 +394,7 @@ own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
 | `prefix-check` | Conversation prefix reuse is equivalent, bounded, and deterministic. `--slots` (640), `--max-tokens` (24). |
 | `prefix-exact-check` | A continued conversation computes what a cold one does: same tokens and bit-identical prompt logits whether a turn resumed a retained state or read its whole prompt, with reuse still happening, an identical prompt reusing its complete state, an edited history rebuilding, and a second conversation resuming a shared prefix. `--slots` (640), `--max-tokens` (24), `--plan` to run a real memory plan so `--memory-gb` and `--mtp` apply. |
 | `sweep-check` | The prefill sweep (passes of 256 tokens or more) stays inside the prefill-rechunk band against the pool path, is deterministic, gives bit-identical logits on a cold and a warm pool, and leaves the pool consistent after admission. `--slots` (640). |
+| `decode-overlap-check` | Direct demand reads and the GPU keepalive leave output exact: the same ids as the staged reads with the keepalive off, on a cold floor-sized cache, with and without the draft head, and a failed direct read leaves no stale slot. `--tokens` (24). |
 | `parity` | N truncated layers match the Python reference dumps. `--layers` (4), `--tokens`, `--compare <dir>`, `--out <dir>`. |
 | `template-check` | Renders the chat template for a canned conversation and prints token ids. `--think`. |
 | `ngram-golden` | Prints n-gram row ids for a token sequence, for comparison with Python. `--tokens`. |

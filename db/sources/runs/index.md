@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-24T12:18:57.790824Z
+updated: 2026-09-24T17:31:45.441981Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-24-decode-overlap-landed]] — Landed GPU keepalive and direct demand reads: release and on/off confirmation under paging, and gates
+- [[sources/runs/2026/09/2026-09-24-decode-perf-experiments]] — Decode speed experiments: keepalive, direct demand reads, streamed draft head, plain-decode lookahead and rejected ideas
 - [[sources/runs/2026/09/2026-09-23-shared-prefix-boundary-upgrade]] — Shared prefix head upgrade: the T1 case that fails without it, and the live session where no shared save reached disk
 - [[sources/runs/2026/09/2026-09-24-shared-prefix-live-acceptance]] — The fixed build in a live serve process: a shared prefix colliding with a conversation checkpoint is upgraded, reused by another conversation, kept by a deeper save and restored across a restart
 - [[sources/runs/2026/09/2026-09-24-sevra-window-responsiveness]] — Sevra window responsiveness before and after on a long-history Home, offscreen harness, diagnostic
@@ -505,10 +507,8 @@ updated: 2026-09-24T12:18:57.790824Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-pressure-feasible-recovery-pass]] — Pressure cancellation and feasible admission recovery pass with fixed MTP
 - [[sources/runs/2026/09/2026-09-06-optimization-mtp-fix-and-cache-qualification]] — Optimization MTP cancellation fix and remaining cache qualification — V178–180
 - [[sources/runs/2026/09/2026-09-06-configurable-context-governor-invocation-prerequisite]] — Pressure fixture invocation stopped because its required option was missing
-- [[sources/runs/2026/09/2026-09-06-configurable-context-unchanged-adaptive-mtp-counterexample]] — Combined candidate preserves the known rejected adaptive MTP counterexample
-- [[sources/runs/2026/09/2026-09-06-configurable-context-mtp-cancellation-recovery-pass]] — MTP cancellation fix passes typed and legacy recovery on the combined candidate
 
 ## More
 
-This folder has 681 files. The 500 most recent are listed above.
+This folder has 683 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

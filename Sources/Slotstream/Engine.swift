@@ -321,6 +321,11 @@ public final class Engine {
         try await self.init(modelDir: modelDir, poolSlots: plan.slots, plan: plan)
     }
 
+    /// Whether generations keep the GPU awake (`GPUKeepAlive`). The default
+    /// comes from SLOTSTREAM_GPU_KEEPALIVE, `auto` when unset or invalid; the
+    /// CLI validates its own flag.
+    public var gpuKeepAlive: GPUKeepAlive.Policy = (try? GPUKeepAlive.environmentPolicy()) ?? .auto
+
     public init(modelDir: URL, poolSlots: Int, plan: MemoryPlan? = nil) async throws {
         // A plan made for a simulated machine may be printed and compared,
         // never loaded. Simulating memory the machine does not have still
@@ -1303,6 +1308,10 @@ public final class Engine {
             return limit.isFinite && limit > 0 && limit < Double(Int.max) / 1e9
                 ? Int(limit * 1e9) : 0
         }
+        // Only the model's own work keeps the GPU awake, never a queue wait.
+        let keepAwake = GPUKeepAlive.keepsAwake(gpuKeepAlive, power: .current)
+        let keepAlive = keepAwake ? GPUKeepAlive.shared : nil
+        keepAlive?.begin()
         var (ids, stats) = generator.generate(
             promptIds: promptIds, params: params, eosIds: eosIds, cache: prefixCache,
             vision: vision,
@@ -1312,6 +1321,8 @@ public final class Engine {
                 return shouldContinue?() ?? true
             }, onToken: tokenHandler, request: control, onAdmitted: onAdmitted,
             continuing: continuing, retaining: retaining)
+        keepAlive?.end()
+        stats.gpuKeptAwake = keepAlive != nil
 
         var text = tokenizer.decode(tokens: ids, skipSpecialTokens: true)
         if !stops.isEmpty, let from = Self.answerStart(text, reasoningOpen: reasoningOpen),

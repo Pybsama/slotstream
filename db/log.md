@@ -2058,6 +2058,9 @@ Recorded @flol's 0.2.3 re-run from issue #5, posted 2026-09-03 and never capture
 ## [2026-09-24 17:32] update | records/measurements/hardware-planning-ranges-2026-09-13
 The 64 GB M3 Max's 12.38 tok/s on 0.2.18 is below the 48-<96 GB floor of ~15. The floor stays until that Mac is rerun on the current release; the range's basis and claim now name the report. Medium keeps ~6-16 with the 36 GB M4 Max at 8.41 inside it.
 
+## [2026-09-24 17:32] create | records/measurements/decode-perf-2026-09-24
+Captured the decode speed experiments and the landed GPU keepalive and direct demand reads: runs, confirmation, gates and a verified archive of 2,411 files. Decided the keepalive on AC power and direct reads by default; three claims on docs/ENGINEERING.md, llms.txt and CHANGELOG.md use only comparisons with three or more pairs free of swap activity. The streamed draft head, its floor and the plain-decode lookahead are measured here and land separately. Validation: zero errors, the two historical log warnings.
+
 ## [2026-09-24 17:54] update | records/measurements/c5-macbook-pro-m4-max-64gb-community
 Corrected why the forecast file was absent: through 0.2.24 only slotstream pull fetched it, so a model downloaded through the first-use offer of slotstream run lacked it as well as one downloaded before 0.2.19. The earlier text assumed the latter.
 

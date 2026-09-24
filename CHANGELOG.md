@@ -8,6 +8,21 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- The GPU stays awake while a request generates. Streamed decode leaves the
+  GPU idle between short bursts of work, and an idle GPU lowers its clock and
+  starts the next burst late; a one-thread kernel on its own command queue now
+  keeps it busy, with outputs unchanged. It costs power, so
+  `--gpu-keepalive auto`, the default, runs it only on AC power outside Low
+  Power Mode; `on` and `off` override it, and `SLOTSTREAM_GPU_KEEPALIVE` sets
+  the default. Saved statistics report `gpuKeptAwake`.
+- Cache misses are read into host memory and copied straight into their cache
+  slots instead of passing through staging arrays and a GPU scatter.
+  `SLOTSTREAM_OPT_DIRECT_DEMAND=0` restores the previous path.
+- Together, on the development Mac with identical output, the two made decode
+  1.28x faster at a 10 GB target without the draft head and 1.22x faster at
+  22 GB with it. `decode-overlap-check` compares both against the previous
+  paths on a cold cache and covers the direct reads' failure recovery.
+
 - The development Mac app attaches folders without a whole-tree scan or a
   file-count cap. Live directory browsing, filename search and scoped content
   search discover new and renamed files. Bounded continuations retain matches

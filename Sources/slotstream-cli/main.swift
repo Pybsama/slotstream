@@ -16,7 +16,7 @@ struct Slotstream: ParsableCommand {
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
             PrefixCheck.self, PrefixExactCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPRowCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
-            ContextCheck.self, PrefillScheduleCommand.self, SweepCheck.self,
+            ContextCheck.self, PrefillScheduleCommand.self, SweepCheck.self, DecodeOverlapCheck.self,
             VisionParity.self, OptimizationStateCheck.self, PackExperts.self,
             ExpertLookaheadCapture.self, ExpertLookaheadBench.self, ExpertLookaheadCheck.self, ExpertLookaheadPredict.self,
         ]
@@ -137,6 +137,28 @@ struct ModelOptions: ParsableArguments {
                 insufficient. off refuses images outright.
                 """))
     var vision: String = "auto"
+
+    @Option(
+        name: .customLong("gpu-keepalive"),
+        help: ArgumentHelp(
+            "Keep the GPU awake while generating: auto | on | off (default auto).",
+            discussion: """
+                Streamed decode leaves the GPU idle between short bursts, and \
+                an idle GPU clocks down and starts the next burst late. A tiny \
+                kernel keeps it busy while a request generates: faster decode \
+                for somewhat more energy per token. auto keeps it on with AC \
+                power outside Low Power Mode and off on battery. \
+                SLOTSTREAM_GPU_KEEPALIVE sets the default.
+                """))
+    var gpuKeepAlive: String?
+
+    func gpuKeepAlivePolicy() throws -> GPUKeepAlive.Policy {
+        guard let gpuKeepAlive else { return try GPUKeepAlive.environmentPolicy() }
+        guard let policy = GPUKeepAlive.Policy(rawValue: gpuKeepAlive) else {
+            throw PlanError("--gpu-keepalive must be auto, on, or off (got \(gpuKeepAlive))")
+        }
+        return policy
+    }
 
     // Resolved once here so the tokenizer, the draft-head probe, and the index
     // all see the real directory; Foundation will not list a symlinked one.
@@ -417,9 +439,11 @@ struct Run: ParsableCommand {
         let sem = DispatchSemaphore(value: 0)
         var result: Result<Void, Error> = .success(())
         let plan = try model.announcedPlan(window: maxContext, maxPrefillWait: maxPrefillWait)
+        let keepAlive = try model.gpuKeepAlivePolicy()
         Task {
             do {
                 let engine = try await Engine(modelDir: model.modelURL, plan: plan)
+                engine.gpuKeepAlive = keepAlive
                 let loadSeconds = RuntimeClock.seconds(since: launchStart)
                 engine.generator.footprintSampling = sampleFootprint
                 let control = try engine.beginRequest()
@@ -659,6 +683,7 @@ struct Serve: ParsableCommand {
         let plan = try model.announcedPlan(window: maxContext, prefixCacheEnabled: !noPrefixCache, maxPrefillWait: maxPrefillWait)
         // Claim the port first: failing here after a full model load wastes
         // half a minute and used to be a fatalError.
+        let keepAlive = try model.gpuKeepAlivePolicy()
         let listenFD = try Server.bindPort(port)
         let sem = DispatchSemaphore(value: 0)
         var engine: Engine!
@@ -669,6 +694,7 @@ struct Serve: ParsableCommand {
         }
         sem.wait()
         if let e = err { throw e }
+        engine.gpuKeepAlive = keepAlive
         engine.maxContextTokens = plan.maxContextTokens
         // Long prompts announce themselves in the server log with the wait to
         // expect, then report elapsed progress, including a slow short suffix.
