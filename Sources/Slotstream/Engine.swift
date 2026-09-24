@@ -135,7 +135,7 @@ public final class Engine {
                     notes: p.notes, simulated: p.simulated, runtimeAllocationPolicy: p.runtimeAllocationPolicy,
                     maxPrefillWaitMinutes: p.maxPrefillWaitMinutes, contextQualification: p.contextQualification,
                     lookaheadReserveBytes: p.lookaheadReserveBytes, decodeLookahead: p.decodeLookahead,
-                    memoryLimitGB: p.memoryLimitGB))
+                    memoryLimitGB: p.memoryLimitGB, mtpStreamedExperts: p.mtpStreamedExperts))
             }
         }
     }
@@ -406,15 +406,15 @@ public final class Engine {
         // nothing is allocated until an image actually arrives.
         self.visionAvailable = VisionTower.present(index: index)
         self.visionAllowed = plan?.visionEnabled ?? visionAvailable
-        if plan?.mtpEnabled == true {
-            try model.enableMTP(modelDir: modelDir)
+        if let plan, plan.mtpEnabled {
+            try model.enableMTP(modelDir: modelDir, streamedExperts: plan.mtpStreamedExperts)
         }
         self.generator = Generator(model: model)
         if prefetchConfiguration.active {
-            if model.mtpHead == nil {
-                // The qualified mode is MTP text decode. Without the draft
-                // head there are no start features; ordinary demand loading
-                // stays in force and the bypass is announced, not hidden.
+            if model.mtpHead == nil && !qualifiedLookahead {
+                // An experimental prefetch was tuned for MTP text decode.
+                // Without the draft head there are no start features; ordinary
+                // demand loading stays in force and the bypass is announced.
                 FileHandle.standardError.write(
                     "[expert-lookahead] prefetch requested without the MTP draft head; ordinary demand loading stays active\n"
                         .data(using: .utf8)!)
@@ -430,6 +430,9 @@ public final class Engine {
                 if prefetchConfiguration.adoption == .slot { model.pool.attachSpeculativeSlots(to: scheduler) }
                 let session = ExpertLookaheadSession()
                 session.prefetch = scheduler
+                // A plan that chose the lookahead without the head runs it
+                // in plain decode, forecasting from each pass's own layers.
+                session.forecastsPlainPasses = model.mtpHead == nil
                 model.lookahead = session
                 if qualifiedLookahead {
                     // The rest of the qualified configuration. An explicit

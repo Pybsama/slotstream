@@ -16,7 +16,7 @@ struct Slotstream: ParsableCommand {
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
             PrefixCheck.self, PrefixExactCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPRowCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
-            ContextCheck.self, PrefillScheduleCommand.self, SweepCheck.self, DecodeOverlapCheck.self,
+            ContextCheck.self, PrefillScheduleCommand.self, SweepCheck.self, DecodeOverlapCheck.self, DraftStreamCheck.self,
             VisionParity.self, OptimizationStateCheck.self, PackExperts.self,
             ExpertLookaheadCapture.self, ExpertLookaheadBench.self, ExpertLookaheadCheck.self, ExpertLookaheadPredict.self,
         ]
@@ -115,12 +115,15 @@ struct ModelOptions: ParsableArguments {
             discussion: """
                 The model's own next-next-token head drafts \(Generator.defaultDraftDepth) tokens by default \
                 and the main model verifies them in one batched pass. \
-                SLOTSTREAM_DRAFT_DEPTH overrides the depth (1...16). Costs \
-                a fixed 1.6 GB of memory; auto enables it only when the \
-                expert cache still reaches ~120 experts/layer after paying, \
-                which is where the multiplier beats spending the same RAM on \
-                cache. Needs the separately converted mtp.safetensors next \
-                to the model (Tools/mtp_convert.py).
+                SLOTSTREAM_DRAFT_DEPTH overrides the depth (1...16). On a \
+                cache of 76 experts/layer or more its experts stay resident \
+                (1.6 GB); below that they stream through a small cache \
+                (0.4 GB). auto enables it when the expert cache still \
+                reaches 28 experts/layer after paying, the smallest cache \
+                where it was measured faster; without it, the decode \
+                lookahead runs in plain decode. SLOTSTREAM_MTP_EXPERTS \
+                forces resident or streamed. Needs the separately converted \
+                mtp.safetensors next to the model (Tools/mtp_convert.py).
                 """))
     var mtp: String = "auto"
 
@@ -220,7 +223,8 @@ struct ModelOptions: ParsableArguments {
             mtp: requireMTP ? .on : requestedMTP, mtpAvailable: MTPWeights.present(modelDir: modelURL),
             vision: visionMode(), visionAvailable: visionAvailable(),
             maxContextTokens: maxContext, qualification: qualification,
-            runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: modelURL))
+            runtimePolicy: policy, decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: modelURL),
+            mtpExperts: try Planner.MTPExpertPlacement.environment())
         let plan = try runtimePlan(base, prefixCacheEnabled: prefixCacheEnabled).withRequestPolicy(configuration)
         if plan.source == .auto || plan.source == .memoryGB {
             try Planner.validateMemoryBudget(plan, availableGB: plan.availableGB)
@@ -239,8 +243,9 @@ struct ModelOptions: ParsableArguments {
         }
         _ = try ContextConfiguration(maxPrefillWaitMinutes: maxPrefillWait)
         let policy = try runtimePolicy(prefixCacheEnabled: prefixCacheEnabled)
-        let request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB, memoryLimitGB: memoryLimitGB,
+        var request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB, memoryLimitGB: memoryLimitGB,
             maxRAMPercent: maxRAMPercent, mtp: try mtpMode(), vision: try visionMode())
+        request.mtpExperts = try Planner.MTPExpertPlacement.environment()
         try ensureWeights()
         let resolved = try Planner.resolveContextWindow(.automatic, request: request, on: .current(),
             mtpAvailable: MTPWeights.present(modelDir: modelURL), visionAvailable: visionAvailable(),
@@ -262,8 +267,9 @@ struct ModelOptions: ParsableArguments {
     /// The window `serve --max-context auto` would choose on this Mac now,
     /// with these options. Prints nothing and downloads nothing.
     func automaticWindow() throws -> Int {
-        let request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB, memoryLimitGB: memoryLimitGB,
+        var request = PlanRequest(expertsPerLayer: expertsPerLayer, poolGB: poolGB, memoryGB: memoryGB, memoryLimitGB: memoryLimitGB,
             maxRAMPercent: maxRAMPercent, mtp: try mtpMode(), vision: try visionMode())
+        request.mtpExperts = try Planner.MTPExpertPlacement.environment()
         return try Planner.resolveContextWindow(.automatic, request: request, on: .current(),
             mtpAvailable: MTPWeights.present(modelDir: modelURL), visionAvailable: visionAvailable(),
             runtimePolicy: try runtimePolicy(),
@@ -980,9 +986,10 @@ struct Doctor: ParsableCommand {
         if let tokens = self.maxContext.tokens {
             maxContext = tokens
         } else {
-            let tierRequest = PlanRequest(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
+            var tierRequest = PlanRequest(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
                 memoryGB: model.memoryGB, memoryLimitGB: model.memoryLimitGB, maxRAMPercent: model.maxRAMPercent,
                 mtp: try model.mtpMode(), vision: try model.visionMode())
+            tierRequest.mtpExperts = try Planner.MTPExpertPlacement.environment()
             let mtpPresent = MTPWeights.present(modelDir: model.modelURL)
             let visionPresent = model.visionAvailable()
             let policy = try model.runtimePolicy()
@@ -999,9 +1006,10 @@ struct Doctor: ParsableCommand {
             }
         }
         let configuration = try ContextConfiguration(maxContextTokens: maxContext, maxPrefillWaitMinutes: maxPrefillWait)
-        let request = PlanRequest(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
+        var request = PlanRequest(expertsPerLayer: model.expertsPerLayer, poolGB: model.poolGB,
             memoryGB: model.memoryGB, memoryLimitGB: model.memoryLimitGB, maxRAMPercent: model.maxRAMPercent,
             mtp: try model.mtpMode(), vision: try model.visionMode(), maxContextTokens: maxContext)
+        request.mtpExperts = try Planner.MTPExpertPlacement.environment()
         let feasibility = Planner.contextFeasibility(request, on: device,
             mtpAvailable: MTPWeights.present(modelDir: model.modelURL),
             visionAvailable: model.visionAvailable(), runtimePolicy: try model.runtimePolicy(),
@@ -1015,7 +1023,8 @@ struct Doctor: ParsableCommand {
                 mtp: model.mtpMode(), mtpAvailable: MTPWeights.present(modelDir: model.modelURL),
                 vision: model.visionMode(), visionAvailable: model.visionAvailable(),
                 maxContextTokens: maxContext, simulated: device.isSimulated, qualification: false,
-                runtimePolicy: model.runtimePolicy(), decodeLookahead: lookahead)
+                runtimePolicy: model.runtimePolicy(), decodeLookahead: lookahead,
+                mtpExperts: try Planner.MTPExpertPlacement.environment())
         } else { advisory = nil }
         guard let requestedPlan = feasibility.requestedPlan ?? advisory else {
             if asJSON {

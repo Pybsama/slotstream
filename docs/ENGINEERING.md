@@ -138,15 +138,24 @@ At a 28 GB memory target, that one-draft configuration improved greedy decode
 by ×1.24 (10.3 → 12.8 tok/s); the improvement was ×1.18 with default server
 sampling.
 
-`--mtp auto` enables this when the expert cache can still hold 76 experts per
-layer after allocating 1.6 GB for the head, before the separate lookahead
-reservation, a 21 GB target at the 32,768-token window. Availability and
-context can change activation. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
-faster than plain decode on the same memory at 76 per layer. The automatic
-ceiling is 34.6 GB with the head enabled at the 32,768-token window; larger
-windows add their context charges. `--mtp off` disables the head.
+`--mtp auto` enables this when the expert cache can still hold 28 experts per
+layer after the head's charge, before the separate lookahead reservation, a
+12 GB target at the 32,768-token window. Availability and context can change
+activation. The head's 512 experts are 1.42 GB of its 1.47 GB. On a cache of
+76 experts per layer or more after the full 1.6 GB charge they stay resident.
+Below that the head reads them from the SSD through a 64-expert cache of its
+own, a 0.4 GB charge, and the main cache keeps the other 1.2 GB. A draft row
+routes to ten experts; about half are already in that cache. At a 12 GB
+target this made the head 1.23x faster than plain decode with the lookahead,
+where a resident head only tied, and the head now runs on 24 GB Macs. The
+floor was 120 until 0.2.16 and 76 until now; on 0.2.14, two drafts decoded
+31.7% faster than plain decode on the same memory at 76 per layer. The
+automatic ceiling is 34.6 GB with the head enabled at the 32,768-token window;
+larger windows add their context charges. `--mtp off` disables the head.
 
-With the head on, 0.2.16 also runs the decode lookahead. After each layer, the
+With the head on, 0.2.16 also runs the decode lookahead, and without the head
+it now runs in plain decode too, where it made plain decode 1.11x faster at a
+10 GB target. After each layer, the
 router of the layer two ahead runs on the current hidden state, and the experts
 it picks are read from the SSD straight into cache slots before that layer asks
 for them. FP32 copies of the router weights save a conversion on every routing
@@ -194,7 +203,8 @@ and failed experiments behind these results.
 
 **Prompt, conversation history, images, and reply share one window, which auto
 picks for each Mac.** It takes the largest of 32,768, 65,536, 131,072 and
-262,144 tokens that keeps speculative decoding, retains one complete
+262,144 tokens that keeps speculative decoding as the 32,768-token plan has
+it, including a draft head's resident experts, retains one complete
 conversation and adds at most 10% to the planner's estimate for a typical
 request. A flat estimate beyond its measured cache range is not evidence that
 extra cache has no value: auto declines reductions in that range and reports

@@ -357,6 +357,7 @@ See
 | `SLOTSTREAM_OPT_VERIFY_SPLIT` | engine | `0` runs the speculative verify pass through the dense attention kernel at every context, the previous behavior. The default splits it into two-row vector-kernel calls from 6,144 tokens of context. |
 | `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT` | engine | Context, in tokens, from which the verify pass splits (default 6144, the measured crossover on the development Mac); `0` splits at every context. |
 | `SLOTSTREAM_OPT_ROW_INVARIANT` | engine | `1` selects the exact mode: the model's small dense matmuls run through one kernel at every row count, and the split verify attention makes one call per row. With `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT=0`, speculative and plain decode give identical output for draft depths up to 4. It changes plain decode's rounding, so it is off by default. |
+| `SLOTSTREAM_MTP_EXPERTS` | planner | `resident` or `streamed` forces where the draft head keeps its 512 experts; unset or `automatic`, they stay resident on a cache of 76 experts per layer or more after the resident charge and stream below it. For comparisons. |
 | `SLOTSTREAM_GPU_KEEPALIVE` | engine | `auto`, `on` or `off`: the default for `--gpu-keepalive`. Any other value is refused. |
 | `SLOTSTREAM_OPT_DIRECT_DEMAND` | engine | `0` reads cache misses through staging arrays and a GPU scatter, the previous path; the default reads them into host memory and copies each record straight into its slot. Both put the same bytes in the same slots. |
 | `SLOTSTREAM_DECODE_BARRIER_LAYERS` | engine | Layers between GPU drains, 1…48. The decode lookahead uses 4; `1` drains after every layer. A pass that could not keep that many layers of experts pinned drains after every layer anyway. |
@@ -395,6 +396,7 @@ own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
 | `prefix-exact-check` | A continued conversation computes what a cold one does: same tokens and bit-identical prompt logits whether a turn resumed a retained state or read its whole prompt, with reuse still happening, an identical prompt reusing its complete state, an edited history rebuilding, and a second conversation resuming a shared prefix. `--slots` (640), `--max-tokens` (24), `--plan` to run a real memory plan so `--memory-gb` and `--mtp` apply. |
 | `sweep-check` | The prefill sweep (passes of 256 tokens or more) stays inside the prefill-rechunk band against the pool path, is deterministic, gives bit-identical logits on a cold and a warm pool, and leaves the pool consistent after admission. `--slots` (640). |
 | `decode-overlap-check` | Direct demand reads and the GPU keepalive leave output exact: the same ids as the staged reads with the keepalive off, on a cold floor-sized cache, with and without the draft head, and a failed direct read leaves no stale slot. `--tokens` (24). |
+| `draft-stream-check` | A draft head whose experts stream decodes the same ids as a resident head at a 12 GB target, reads and reuses its cached experts, and a failed draft expert read ends only its own request; plain decode with the lookahead decodes the same ids as without it at 10 GB. `--tokens` (32). |
 | `parity` | N truncated layers match the Python reference dumps. `--layers` (4), `--tokens`, `--compare <dir>`, `--out <dir>`. |
 | `template-check` | Renders the chat template for a canned conversation and prints token ids. `--think`. |
 | `ngram-golden` | Prints n-gram row ids for a token sequence, for comparison with Python. `--tokens`. |
@@ -408,12 +410,19 @@ own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
   model's draft head, `mtp.safetensors`, which `pull` fetches with the
   weights. The file is optional; downloads can complete without it. `on`
   without the file is an error; `auto`, the default, turns it on when the
-  cache reaches 76 experts per layer after the head's 1.6 GB and context
-  charges, before the separate lookahead reservation. A 21 GB target qualifies
-  at the default context; actual availability and the selected window can
-  keep the head off on a larger Mac. Before 0.2.16 the floor
-  was 120; two drafts later measured 31.7% faster than plain decode on the same
-  memory at 76 per layer
+  cache still reaches 28 experts per layer after the head's charge, before the
+  separate lookahead reservation. A 12 GB target qualifies at the default
+  context; actual availability and the selected window can keep the head off
+  on a larger Mac. On a cache of 76 experts per layer or more after the full
+  1.6 GB charge, the head keeps its 512 experts resident. Below that it reads
+  them from the SSD through a 64-expert cache of its own, which charges 0.4 GB
+  and leaves the rest to the main cache; the output is the same either way.
+  At a 12 GB target the head with streamed experts decoded 1.23x faster than
+  plain decode with the lookahead, where a resident head only tied
+  ([decision](../db/records/decisions/draft-head-streams-its-experts-below-76-per-layer.md)).
+  `SLOTSTREAM_MTP_EXPERTS=resident` or `streamed` forces one placement. Before
+  0.2.16 the floor was 120, and then 76; two drafts measured 31.7% faster
+  than plain decode on the same memory at 76 per layer
   ([decision](../db/records/decisions/draft-head-auto-floor-76-per-layer.md)).
   The floor is separate from draft depth. The historical one-draft measurement
   at the former 28 GB memory target was ×1.24 decode; MEASUREMENTS.md M9
@@ -465,8 +474,10 @@ own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
 ### Decode lookahead
 
 From 0.2.16 the decode lookahead runs by default with the draft head when
-the cache reaches the same 76-per-layer floor before the lookahead's own
-reservation. The final printed cache can therefore be smaller. As each layer's
+the cache reaches the head's floor before the lookahead's own reservation.
+Without the head it now runs in plain decode too, from 20 experts per layer
+before its reservation: at a 10 GB target it made plain decode 1.11x faster.
+The final printed cache can therefore be smaller. As each layer's
 routing comes back, the engine reads the model's state after the previous layer's
 attention step, applies the next layer's router to it, corrects the result with a
 small learned table shipped for the checkpoint

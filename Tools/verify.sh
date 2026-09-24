@@ -173,6 +173,7 @@ check "sweep within the prefill-rechunk control, identical cold and warm (sweep-
 
 echo "== decode overlap: direct demand reads and the GPU keepalive leave output exact =="
 check "direct reads and keepalive equal the staged path on a cold cache (decode-overlap-check)" "run_binary decode-overlap-check"
+check "streamed draft experts and the plain-decode lookahead leave output exact (draft-stream-check)" "run_binary draft-stream-check"
 
 # The MTP draft head is a separately converted artifact (Tools/mtp_convert.py),
 # not part of `pull` — a fresh install legitimately lacks it, so these SKIP

@@ -2067,3 +2067,6 @@ Corrected why the forecast file was absent: through 0.2.24 only slotstream pull 
 ## [2026-09-24 18:07] create | records/measurements/shared-prefix-boundary-upgrade-2026-09-23
 Ported @jasen215's fix and records from pull request #27, which he closed unmerged: a head written at a shared prefix's boundary is upgraded to shared instead of answered present, and skipped or failed shared saves are logged. The T1 regression passes 110 assertions and fails 7 without the condition; the live acceptance ran on his 32 GB MacBook Air. Home paths in the run log redacted.
 
+## [2026-09-24 19:31] create | records/decisions/draft-head-streams-its-experts-below-76-per-layer
+Landed the streamed draft head, its automatic floor of 28 experts per layer and the plain-decode lookahead from 20: confirmation on the landed build, a prototype cross-check, gates and a verified archive of 277 files. Decided both; reversed the 76 floor, which now marks where the head's experts stay resident; withdrew the 21 GB target claim for its 12 GB successor and added claims for 1.23x at 12 GB, the plain-decode gains, both floors and the 0.4 GB charge. Updated the window decision, the hardware guide's tier table and estimates, and the frozen fixtures (default v3, automatic v2). Validation: zero errors, the two historical log warnings.
+

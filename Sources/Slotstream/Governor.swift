@@ -50,6 +50,9 @@ public enum GovernorPolicy {
         public var ramPercent: Double
         public var memoryLimitGB: Double?
         public var mtpEnabled: Bool
+        /// Whether the loaded head streams its experts. A re-plan keeps the
+        /// placement it loaded with and credits that charge.
+        public var mtpStreamedExperts = false
         public var visionEnabled: Bool
         public var visionResidentReserved: Bool
         public var maxContextTokens: Int
@@ -157,7 +160,7 @@ public enum GovernorPolicy {
     /// state under contention double-reserves ~4 GB).
     public static func desiredPlan(_ i: Inputs) -> MemoryPlan? {
         let credited = i.availableGB + Geometry.gb(i.currentSlots) + Planner.fixedFootprintGB
-            + (i.mtpEnabled ? Planner.mtpResidentGB : 0)
+            + (i.mtpEnabled ? (i.mtpStreamedExperts ? Planner.mtpStreamedGB : Planner.mtpResidentGB) : 0)
             + (i.visionResidentReserved ? Planner.visionResidentGB : 0)
             + Double(i.ownedAdditionalBytes) / 1e9
             + Double(i.lookaheadReserveBytes) / 1e9
@@ -169,8 +172,9 @@ public enum GovernorPolicy {
             vision: i.visionEnabled ? .on : .off, visionAvailable: i.visionEnabled,
             visionResidentReserved: i.visionResidentReserved, maxContextTokens: i.maxContextTokens,
             qualification: i.contextQualification, runtimePolicy: i.runtimeAllocationPolicy,
-            decodeLookahead: .retained(enabled: i.decodeLookahead, bytes: i.lookaheadReserveBytes)),
-            plan.mtpEnabled == i.mtpEnabled else { return nil }
+            decodeLookahead: .retained(enabled: i.decodeLookahead, bytes: i.lookaheadReserveBytes),
+            mtpExperts: i.mtpStreamedExperts ? .streamed : .resident),
+            plan.mtpEnabled == i.mtpEnabled, plan.mtpStreamedExperts == (i.mtpEnabled && i.mtpStreamedExperts) else { return nil }
         // Startup preserves a legacy advisory floor at ordinary contexts.
         // A live governor must not interpret that advisory as permission to
         // admit work after an infeasible replan. Price the complete resolved
@@ -330,7 +334,7 @@ public final class MemoryGovernor: @unchecked Sendable {
             return nil
         }
         let now = Date()
-        return GovernorPolicy.Inputs(
+        var inputs = GovernorPolicy.Inputs(
             currentSlots: engine.model.pool.slots,
             availableGB: avail,
             ramGB: cur.ramGB,
@@ -347,6 +351,8 @@ public final class MemoryGovernor: @unchecked Sendable {
             contextQualification: cur.contextQualification,
             decodeLookahead: cur.decodeLookahead, lookaheadReserveBytes: cur.lookaheadReserveBytes,
             memoryLimitGB: cur.memoryLimitGB)
+        inputs.mtpStreamedExperts = cur.mtpStreamedExperts
+        return inputs
     }
 
     /// OS pressure events see what availability math cannot: compressor and
@@ -476,7 +482,7 @@ public final class MemoryGovernor: @unchecked Sendable {
                 contextQualification: ref?.contextQualification ?? false,
                 lookaheadReserveBytes: ref?.lookaheadReserveBytes ?? 0,
                 decodeLookahead: ref?.decodeLookahead ?? false,
-                memoryLimitGB: ref?.memoryLimitGB))
+                memoryLimitGB: ref?.memoryLimitGB, mtpStreamedExperts: ref?.mtpStreamedExperts ?? false))
         }
         lastResizeAt = Date()
         log(String(

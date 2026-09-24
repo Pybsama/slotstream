@@ -686,15 +686,24 @@ At a 28 GB memory target, that one-draft configuration improved greedy decode
 by ×1.24 (10.3 → 12.8 tok/s); the improvement was ×1.18 with default server
 sampling.
 
-`--mtp auto` enables this when the expert cache can still hold 76 experts per
-layer after allocating 1.6 GB for the head, before the separate lookahead
-reservation, a 21 GB target at the 32,768-token window. Availability and
-context can change activation. The floor was 120 until 0.2.16; on 0.2.14, two drafts decoded 31.7%
-faster than plain decode on the same memory at 76 per layer. The automatic
-ceiling is 34.6 GB with the head enabled at the 32,768-token window; larger
-windows add their context charges. `--mtp off` disables the head.
+`--mtp auto` enables this when the expert cache can still hold 28 experts per
+layer after the head's charge, before the separate lookahead reservation, a
+12 GB target at the 32,768-token window. Availability and context can change
+activation. The head's 512 experts are 1.42 GB of its 1.47 GB. On a cache of
+76 experts per layer or more after the full 1.6 GB charge they stay resident.
+Below that the head reads them from the SSD through a 64-expert cache of its
+own, a 0.4 GB charge, and the main cache keeps the other 1.2 GB. A draft row
+routes to ten experts; about half are already in that cache. At a 12 GB
+target this made the head 1.23x faster than plain decode with the lookahead,
+where a resident head only tied, and the head now runs on 24 GB Macs. The
+floor was 120 until 0.2.16 and 76 until now; on 0.2.14, two drafts decoded
+31.7% faster than plain decode on the same memory at 76 per layer. The
+automatic ceiling is 34.6 GB with the head enabled at the 32,768-token window;
+larger windows add their context charges. `--mtp off` disables the head.
 
-With the head on, 0.2.16 also runs the decode lookahead. After each layer, the
+With the head on, 0.2.16 also runs the decode lookahead, and without the head
+it now runs in plain decode too, where it made plain decode 1.11x faster at a
+10 GB target. After each layer, the
 router of the layer two ahead runs on the current hidden state, and the experts
 it picks are read from the SSD straight into cache slots before that layer asks
 for them. FP32 copies of the router weights save a conversion on every routing
@@ -742,7 +751,8 @@ and failed experiments behind these results.
 
 **Prompt, conversation history, images, and reply share one window, which auto
 picks for each Mac.** It takes the largest of 32,768, 65,536, 131,072 and
-262,144 tokens that keeps speculative decoding, retains one complete
+262,144 tokens that keeps speculative decoding as the 32,768-token plan has
+it, including a draft head's resident experts, retains one complete
 conversation and adds at most 10% to the planner's estimate for a typical
 request. A flat estimate beyond its measured cache range is not evidence that
 extra cache has no value: auto declines reductions in that range and reports
@@ -2266,6 +2276,7 @@ See
 | `SLOTSTREAM_OPT_VERIFY_SPLIT` | engine | `0` runs the speculative verify pass through the dense attention kernel at every context, the previous behavior. The default splits it into two-row vector-kernel calls from 6,144 tokens of context. |
 | `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT` | engine | Context, in tokens, from which the verify pass splits (default 6144, the measured crossover on the development Mac); `0` splits at every context. |
 | `SLOTSTREAM_OPT_ROW_INVARIANT` | engine | `1` selects the exact mode: the model's small dense matmuls run through one kernel at every row count, and the split verify attention makes one call per row. With `SLOTSTREAM_OPT_VERIFY_SPLIT_CONTEXT=0`, speculative and plain decode give identical output for draft depths up to 4. It changes plain decode's rounding, so it is off by default. |
+| `SLOTSTREAM_MTP_EXPERTS` | planner | `resident` or `streamed` forces where the draft head keeps its 512 experts; unset or `automatic`, they stay resident on a cache of 76 experts per layer or more after the resident charge and stream below it. For comparisons. |
 | `SLOTSTREAM_GPU_KEEPALIVE` | engine | `auto`, `on` or `off`: the default for `--gpu-keepalive`. Any other value is refused. |
 | `SLOTSTREAM_OPT_DIRECT_DEMAND` | engine | `0` reads cache misses through staging arrays and a GPU scatter, the previous path; the default reads them into host memory and copies each record straight into its slot. Both put the same bytes in the same slots. |
 | `SLOTSTREAM_DECODE_BARRIER_LAYERS` | engine | Layers between GPU drains, 1…48. The decode lookahead uses 4; `1` drains after every layer. A pass that could not keep that many layers of experts pinned drains after every layer anyway. |
@@ -2304,6 +2315,7 @@ own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
 | `prefix-exact-check` | A continued conversation computes what a cold one does: same tokens and bit-identical prompt logits whether a turn resumed a retained state or read its whole prompt, with reuse still happening, an identical prompt reusing its complete state, an edited history rebuilding, and a second conversation resuming a shared prefix. `--slots` (640), `--max-tokens` (24), `--plan` to run a real memory plan so `--memory-gb` and `--mtp` apply. |
 | `sweep-check` | The prefill sweep (passes of 256 tokens or more) stays inside the prefill-rechunk band against the pool path, is deterministic, gives bit-identical logits on a cold and a warm pool, and leaves the pool consistent after admission. `--slots` (640). |
 | `decode-overlap-check` | Direct demand reads and the GPU keepalive leave output exact: the same ids as the staged reads with the keepalive off, on a cold floor-sized cache, with and without the draft head, and a failed direct read leaves no stale slot. `--tokens` (24). |
+| `draft-stream-check` | A draft head whose experts stream decodes the same ids as a resident head at a 12 GB target, reads and reuses its cached experts, and a failed draft expert read ends only its own request; plain decode with the lookahead decodes the same ids as without it at 10 GB. `--tokens` (32). |
 | `parity` | N truncated layers match the Python reference dumps. `--layers` (4), `--tokens`, `--compare <dir>`, `--out <dir>`. |
 | `template-check` | Renders the chat template for a canned conversation and prints token ids. `--think`. |
 | `ngram-golden` | Prints n-gram row ids for a token sequence, for comparison with Python. `--tokens`. |
@@ -2317,12 +2329,19 @@ own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
   model's draft head, `mtp.safetensors`, which `pull` fetches with the
   weights. The file is optional; downloads can complete without it. `on`
   without the file is an error; `auto`, the default, turns it on when the
-  cache reaches 76 experts per layer after the head's 1.6 GB and context
-  charges, before the separate lookahead reservation. A 21 GB target qualifies
-  at the default context; actual availability and the selected window can
-  keep the head off on a larger Mac. Before 0.2.16 the floor
-  was 120; two drafts later measured 31.7% faster than plain decode on the same
-  memory at 76 per layer
+  cache still reaches 28 experts per layer after the head's charge, before the
+  separate lookahead reservation. A 12 GB target qualifies at the default
+  context; actual availability and the selected window can keep the head off
+  on a larger Mac. On a cache of 76 experts per layer or more after the full
+  1.6 GB charge, the head keeps its 512 experts resident. Below that it reads
+  them from the SSD through a 64-expert cache of its own, which charges 0.4 GB
+  and leaves the rest to the main cache; the output is the same either way.
+  At a 12 GB target the head with streamed experts decoded 1.23x faster than
+  plain decode with the lookahead, where a resident head only tied
+  ([decision](../db/records/decisions/draft-head-streams-its-experts-below-76-per-layer.md)).
+  `SLOTSTREAM_MTP_EXPERTS=resident` or `streamed` forces one placement. Before
+  0.2.16 the floor was 120, and then 76; two drafts measured 31.7% faster
+  than plain decode on the same memory at 76 per layer
   ([decision](../db/records/decisions/draft-head-auto-floor-76-per-layer.md)).
   The floor is separate from draft depth. The historical one-draft measurement
   at the former 28 GB memory target was ×1.24 decode; MEASUREMENTS.md M9
@@ -2374,8 +2393,10 @@ own bounded allocation. `prefix-exact-check` accepts it with `--plan`;
 ### Decode lookahead
 
 From 0.2.16 the decode lookahead runs by default with the draft head when
-the cache reaches the same 76-per-layer floor before the lookahead's own
-reservation. The final printed cache can therefore be smaller. As each layer's
+the cache reaches the head's floor before the lookahead's own reservation.
+Without the head it now runs in plain decode too, from 20 experts per layer
+before its reservation: at a 10 GB target it made plain decode 1.11x faster.
+The final printed cache can therefore be smaller. As each layer's
 routing comes back, the engine reads the model's state after the previous layer's
 attention step, applies the next layer's router to it, corrects the result with a
 small learned table shipped for the checkpoint
@@ -5799,7 +5820,7 @@ confidence intervals. Endpoints are rounded outward to whole tok/s.
 
 | Installed RAM | Estimated warm reply speed | Basis and main inference |
 |---|---|---|
-| 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 4 to 5.5 tok/s. The upper end has not been measured on a real Mac in this band. |
+| 16–<24 GB | ~1–6 tok/s | The M2 mini reported 1.41 tok/s; the M5 Pro-based 16/18 GB simulations estimate about 3.5 to 5 tok/s before the decode lookahead's gain. The upper end has not been measured on a real Mac in this band. |
 | 24–<48 GB | ~6–16 tok/s | The 32 GB M5 Air reported 6.22 tok/s on 0.2.11; the M5 Pro measured 15.86 tok/s on 0.2.19 at a 22 GB process target, rounded outward to 16. That benchmark used different prompt-workspace and cache settings from today's automatic plan. The upper end assumes a comparable chip and SSD; no Mac in this band has been timed on 0.2.19. The 36 GB M4 Max reported 8.41 tok/s on 0.2.22, inside the range. |
 | 48–<96 GB | ~15–27 tok/s | The lower reference rounds down from the 48 GB M5 Pro's 15.86 tok/s on 0.2.19 at a 22 GB target, below its own 33.6 GB automatic target, whose larger cache has not been timed; the 0.2.16 result at a 20 GB target was 13.47 tok/s, and the older ~12 tok/s result remains historical evidence. A 64 GB M4 Max reported 15.93 tok/s on 0.2.22. A 64 GB M3 Max reported 12.38 tok/s on 0.2.18, below this range; a rerun on the current release is pending. The upper end transfers the M5 Max's 26.9 tok/s at a 48 GB process target to a comparable Mac with enough available memory. That run used a 128 GB Mac; it was not a measurement of a 48 GB Mac. |
 | 96 GB+ | ~20–32 tok/s | The 128 GB M5 Max reported about 21 to 22 tok/s in auto and 31.5 tok/s at a 73 GB process target. Applying this range to other Macs in the band is an estimate. This row is outside Slotstream's target range: the model fits in memory from 96 GB. |
@@ -5823,31 +5844,33 @@ guidance, independently of reply speed.
 
 ### Automatic memory plans
 
-The columns were checked against the published 0.2.23 binary. They describe
-the plans in auto mode, which picks the
+The columns were checked against a build of `main` after 0.2.24, which
+streams the draft head's experts on smaller caches and runs the decode
+lookahead in plain decode. They describe the plans in auto mode, which picks the
 context window along with the target and speculative decoding. The draft file
 is available and no other apps hold memory. Simulated RAM is in decimal GB; a
 Mac's marketed memory capacity can produce a different decimal-GB device
 reading and target. Auto picks 32,768 tokens through 32 GB of simulated RAM,
 65,536 at 36 GB, 32,768 at 48 GB, 131,072 at 64 GB and 262,144 from 96 GB.
 
-| Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Automatic context window |
-|---|---|---|---|
-| 8 GB | No plan fits | Not applicable | Not applicable |
-| 16 GB | 10 GB | Off | 32,768 |
-| 18 GB | 11.5 GB | Off | 32,768 |
-| 24 GB | 16 GB | Off | 32,768 |
-| 32 GB | 22 GB | On | 32,768 |
-| 36 GB | 25 GB | On | 65,536 |
-| 48 GB | 33.6 GB | On | 32,768 |
-| 64 GB | 43.2 GB | On | 131,072 |
-| 96 or 128 GB | 54.7 GB | On | 262,144 |
+| Simulated RAM (decimal GB) | Automatic memory target | Speculative decoding | Decode lookahead | Automatic context window |
+|---|---|---|---|---|
+| 8 GB | No plan fits | Not applicable | Not applicable | Not applicable |
+| 16 GB | 10 GB | Off | On | 32,768 |
+| 18 GB | 11.5 GB | Off | On | 32,768 |
+| 24 GB | 16 GB | On, experts streamed | On | 32,768 |
+| 32 GB | 22 GB | On | On | 32,768 |
+| 36 GB | 25 GB | On | On | 65,536 |
+| 48 GB | 33.6 GB | On | On | 32,768 |
+| 64 GB | 43.2 GB | On | On | 131,072 |
+| 96 or 128 GB | 54.7 GB | On | On | 262,144 |
 
-Speculative decoding in the source plans includes 0.2.16's decode lookahead.
-These are allocation plans, not measured performance tiers. The matching
-M5 Pro-based warm-decode estimates without speculative decoding are
-~4 tok/s at 16 GB, ~5.5 tok/s at 18 GB and ~8 tok/s at 24 GB of simulated
-RAM. The historical 22 GB benchmark measured 15.86 tok/s on 0.2.19 with two
+These are allocation plans, not measured performance tiers. The planner's
+M5 Pro-based warm-decode estimates for the rows without speculative decoding
+are ~3.5 tok/s at 16 GB and ~5 tok/s at 18 GB of simulated RAM. They leave
+out the decode lookahead, which made plain decode 1.05x to 1.11x faster on
+the development Mac. At 24 GB the draft head now runs with its experts
+streamed. The historical 22 GB benchmark measured 15.86 tok/s on 0.2.19 with two
 drafts at about 100 experts per layer (14.38 with the 0.2.18 forecast).
 Although its total budget matches the 32 GB simulation, its smaller prompt
 passes and disabled prefix cache leave a different expert pool. It does not
@@ -5865,12 +5888,14 @@ development Mac's release speedup to those community figures.
 
 **Auto mode picks the memory target, cache size, speculative decoding and
 context window.** It takes the largest window of 32,768, 65,536, 131,072 or
-262,144 tokens that keeps speculative decoding and the decode lookahead as the
-32,768-token plan has them, keeps one complete conversation of that length for
-follow-up turns, and adds at most 10% to the planner's estimate for a typical
-request of 2,000 prompt tokens and a 400-token reply. `slotstream doctor
+262,144 tokens that keeps speculative decoding, the draft head's resident
+experts and the decode lookahead as the 32,768-token plan has them, keeps
+one complete conversation of that length for follow-up turns, and adds at
+most 10% to the planner's estimate for a typical request of 2,000 prompt
+tokens and a 400-token reply. `slotstream doctor
 --sim-ram <GB>` shows every candidate and its reason. At 24 GB a 65,536-token
-window would add 18%, and at 32 GB it would turn speculative decoding off.
+window would add 22%, and at 32 GB it would stream the draft head's experts,
+whose reads the estimate does not price.
 At 36 GB it adds 9%, as the cache drops from 96 to 75 experts per layer.
 At 48 GB, auto keeps the original cache because its size exceeds the measured
 decode range: the estimate cannot price the loss, even when it reports little
@@ -5883,11 +5908,12 @@ same cache and speed rules before choosing its window. A larger Mac can
 therefore receive a smaller window when widening it would sacrifice cache
 whose performance benefit is unmeasured. `--max-context N` fixes any
 window up to 262,144; on a 32 GB Mac, `--max-context 65536` gives the larger
-window without speculative decoding.
+window with the draft head's experts streamed.
 
 For prompts near 32,768 tokens, the planner estimates about 3 minutes of
 prefill from 24 GB and 6.4 minutes at 16 GB; near 65,536 it estimates
-about 8 minutes from 24 GB. These estimates use the M5 Pro's prefill curve,
+about 9 minutes at 24 GB, where the draft head's experts stream and the
+prefill pass is smaller, and about 8 minutes from 32 GB. These estimates use the M5 Pro's prefill curve,
 not measurements on those memory sizes. The planner's historical prefill
 curve has not been recalibrated for the new read policy; the bounded results
 above cannot supply a multiplier for every pass size, prompt and context.
@@ -5963,6 +5989,28 @@ determines which version the installer downloads.
   1.28x faster at a 10 GB target without the draft head and 1.22x faster at
   22 GB with it. `decode-overlap-check` compares both against the previous
   paths on a cold cache and covers the direct reads' failure recovery.
+- The draft head can stream its experts. On a cache below 76 experts per
+  layer after the head's full 1.6 GB charge, its 512 experts now stay on the
+  SSD and pass through a 64-expert cache of their own, charged 0.4 GB, so the
+  main cache keeps the other 1.2 GB; the output is the same. Automatic mode
+  turns the head on from 28 experts per layer instead of 76, a 12 GB target,
+  so 24 GB Macs now run speculative decoding. At a 12 GB target the head
+  decoded 1.23x faster than plain decode with the lookahead.
+  `SLOTSTREAM_MTP_EXPERTS=resident|streamed` forces a placement and
+  `doctor --json` reports `mtp_streamed_experts`. The automatic context window
+  never trades a resident head for a streamed one, so the draft-head tiers
+  keep their windows; `--max-context 65536` on a 32 GB Mac now keeps
+  speculative decoding with the head's experts streamed, and `--mtp on` fits
+  from an 8.5 GB target.
+- Without the draft head, the decode lookahead now runs in plain decode from
+  20 experts per layer before its charge, including `--mtp off` and installs
+  without the head's file. It made plain decode 1.11x faster at a 10 GB
+  target with identical output. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns it
+  off. Its 373 MiB moves a 48 GB Mac without the head from 152 to 149 experts
+  per layer, inside the measured decode range, so that Mac's automatic window
+  becomes 131,072 tokens.
+- `draft-stream-check` compares a streamed head with a resident one and plain
+  decode with and without the lookahead, and injects a failed draft read.
 
 - The development Mac app attaches folders without a whole-tree scan or a
   file-count cap. Live directory browsing, filename search and scoped content

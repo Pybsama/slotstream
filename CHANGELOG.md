@@ -22,6 +22,28 @@ determines which version the installer downloads.
   1.28x faster at a 10 GB target without the draft head and 1.22x faster at
   22 GB with it. `decode-overlap-check` compares both against the previous
   paths on a cold cache and covers the direct reads' failure recovery.
+- The draft head can stream its experts. On a cache below 76 experts per
+  layer after the head's full 1.6 GB charge, its 512 experts now stay on the
+  SSD and pass through a 64-expert cache of their own, charged 0.4 GB, so the
+  main cache keeps the other 1.2 GB; the output is the same. Automatic mode
+  turns the head on from 28 experts per layer instead of 76, a 12 GB target,
+  so 24 GB Macs now run speculative decoding. At a 12 GB target the head
+  decoded 1.23x faster than plain decode with the lookahead.
+  `SLOTSTREAM_MTP_EXPERTS=resident|streamed` forces a placement and
+  `doctor --json` reports `mtp_streamed_experts`. The automatic context window
+  never trades a resident head for a streamed one, so the draft-head tiers
+  keep their windows; `--max-context 65536` on a 32 GB Mac now keeps
+  speculative decoding with the head's experts streamed, and `--mtp on` fits
+  from an 8.5 GB target.
+- Without the draft head, the decode lookahead now runs in plain decode from
+  20 experts per layer before its charge, including `--mtp off` and installs
+  without the head's file. It made plain decode 1.11x faster at a 10 GB
+  target with identical output. `SLOTSTREAM_OPT_EXPERT_PREFETCH=0` turns it
+  off. Its 373 MiB moves a 48 GB Mac without the head from 152 to 149 experts
+  per layer, inside the measured decode range, so that Mac's automatic window
+  becomes 131,072 tokens.
+- `draft-stream-check` compares a streamed head with a resident one and plain
+  decode with and without the lookahead, and injects a failed draft read.
 
 - The development Mac app attaches folders without a whole-tree scan or a
   file-count cap. Live directory browsing, filename search and scoped content

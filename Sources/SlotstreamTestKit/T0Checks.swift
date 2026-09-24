@@ -172,6 +172,19 @@ extension Catalogue {
                     && (json["candidates"] as? [[String: Any]])?.count == ContextPolicy.automaticWindows.count)
             c.measure("window_at_\(gb)_gb", Double(choice.window))
         }
+        // The estimate holds speculative decoding fixed, so a larger window
+        // that would move the head's experts from resident to streamed is
+        // declined; asked for explicitly, that window keeps the head.
+        let mac32 = Machine(ramGB: 32, workingSetGB: 24, availableGB: 32, isSimulated: true)
+        let choice32 = Planner.automaticContextWindow(PlanRequest(), on: mac32, mtpAvailable: true, visionAvailable: true)
+        let declined32 = choice32.candidates.first { $0.window == 65_536 }
+        c.expect("32 GB declines 65,536 because the head's experts would stream",
+            declined32?.accepted == false && declined32?.reason.contains("streams the draft head's experts") == true,
+            declined32?.reason ?? "no candidate")
+        let explicit32 = try Planner.resolveContextWindow(.tokens(65_536), request: PlanRequest(), on: mac32,
+            mtpAvailable: true, visionAvailable: true)
+        c.expect("an explicit 65,536 on 32 GB keeps the head by streaming its experts",
+            explicit32.plan.mtpEnabled && explicit32.plan.mtpStreamedExperts && explicit32.plan.decodeLookahead)
         let big = Machine(ramGB: 128, workingSetGB: 96, availableGB: 128, isSimulated: true)
         c.expect("a fixed cache size keeps the default window",
             Planner.automaticContextWindow(PlanRequest(expertsPerLayer: 120), on: big, mtpAvailable: true).window
