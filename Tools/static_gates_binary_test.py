@@ -53,6 +53,7 @@ BIN=${BIN:-.build/release/slotstream}
         self.write('Tools/api_generation_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_API_GENERATION') == '1' else 0)\n")
         self.write('Tools/consumer_smoke_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_CONSUMER') == '1' else 0)\n")
         self.write('Tools/process_memory_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_NATIVE_MEMORY') == '1' else 0)\n")
+        self.write('Tools/launch_path_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_LAUNCH_PATH') == '1' else 0)\n")
         self.write('Tools/memory_override_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MEMORY_OVERRIDES') == '1' else 0)\n")
         for suite in OPTIMIZATION_SUITES:
             self.write(f'Tools/{suite}_test.py', f'''import json, os
@@ -116,6 +117,19 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_NATIVE_MEMORY': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
         self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
+
+    def test_failed_launch_path_regression_stops_acceptance(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_LAUNCH_PATH': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
+        self.assertNotIn('STATIC GATES PASS', result.stdout)
+
+    def test_missing_launch_path_regression_is_a_failure(self):
+        (self.root/'Tools/launch_path_gate.py').unlink()
+        result, rows = self.run_entry({})
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
+        self.assertNotIn('STATIC GATES PASS', result.stdout)
 
     def test_failed_memory_override_matrix_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_MEMORY_OVERRIDES': '1'})

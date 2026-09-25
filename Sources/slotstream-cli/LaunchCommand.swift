@@ -729,8 +729,11 @@ struct Launch: ParsableCommand {
     // MARK: Tools
 
     static func find(_ name: String, path: String) -> String? {
-        for directory in path.split(separator: ":") where !directory.isEmpty {
-            let candidate = (String(directory) as NSString).expandingTildeInPath + "/" + name
+        for directory in path.split(separator: ":", omittingEmptySubsequences: false) {
+            // An empty PATH component means the current directory, at this
+            // position in the search order, just as when the shell launches it.
+            let directory = directory.isEmpty ? "." : String(directory)
+            let candidate = (directory as NSString).expandingTildeInPath + "/" + name
             var isDirectory: ObjCBool = false
             if FileManager.default.fileExists(atPath: candidate, isDirectory: &isDirectory), !isDirectory.boolValue,
                FileManager.default.isExecutableFile(atPath: candidate) {

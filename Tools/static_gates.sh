@@ -47,6 +47,7 @@ fi
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.
 python3 Tools/process_memory_gate.py
+python3 Tools/launch_path_gate.py
 "$BIN" pull-check
 python3 Tools/slotpack/checks.py
 Tools/planner_gates.sh
