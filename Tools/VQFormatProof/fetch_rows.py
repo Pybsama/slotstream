@@ -69,7 +69,11 @@ for label, module in targets:
     (dest / 'codebook.bin').write_bytes(read_tensor(module + '.codebook'))
     for suffix, name in [('.codes', 'codes.bin'), ('.vq_scales', 'scales.bin')]:
         (dest / name).write_bytes(b''.join(read_tensor(module + suffix, first, count) for first, count in spans))
-    (dest / 'source.json').write_text(json.dumps({'revision': RECEIPT['revision'], 'module': module, 'flattened_row_spans': spans}, indent=2) + '\n')
+    components = {name: {'bytes': (dest / name).stat().st_size,
+                        'sha256': hashlib.sha256((dest / name).read_bytes()).hexdigest()}
+                  for name in ('geometry.json', 'codes.bin', 'codebook.bin', 'scales.bin')}
+    (dest / 'source.json').write_text(json.dumps({'model': RECEIPT['model'], 'revision': RECEIPT['revision'],
+        'module': module, 'flattened_row_spans': spans, 'components': components}, indent=2) + '\n')
 
 result = {'revision': RECEIPT['revision'], 'real_fixture_cases': len(targets),
           'total_range_bytes': downloaded, 'full_model_downloaded': False, 'ranges': sources}

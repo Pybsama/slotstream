@@ -42,11 +42,17 @@ python3 Tools/VQFormatProof/fetch_metadata.py /tmp/slotstream-vq-data
 python3 Tools/VQFormatProof/fetch_headers.py /tmp/slotstream-vq-data
 python3 Tools/VQFormatProof/audit.py /tmp/slotstream-vq-data
 python3 Tools/VQFormatProof/fetch_rows.py /tmp/slotstream-vq-data
+python3 Tools/VQFormatProof/test_audit.py /tmp/slotstream-vq-data
+python3 Tools/VQFormatProof/test_provenance.py /tmp/slotstream-vq-data/real-fixtures
 python3 Tools/VQFormatProof/test_proof.py /tmp/slotstream-vq-proof --real /tmp/slotstream-vq-data/real-fixtures
 ```
 
 The six real fixtures sample first/middle/last experts or PLE shard rows;
 each has24rows. Receipts retain revision, byte ranges and local hashes.
+The harness requires all six, verifies their component hashes and pinned
+identities before computing an oracle, and includes those receipts in its
+result. The header cache retains original raw JSON bytes and verifies their
+digest and parsed contents; the audit also checks config/index hashes.
 Those partial hashes establish repeatability, not verification of a complete
 weight file against its LFS hash. Metadata/header audit covers all tensors,
 but numerical evidence covers only the sampled rows and synthetic cases.

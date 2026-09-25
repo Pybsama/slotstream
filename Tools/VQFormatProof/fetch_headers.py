@@ -36,9 +36,14 @@ def byte_range(name, start, count, total):
 def fetch(item):
     name, size = item["name"], item["bytes"]
     saved = OUT / (name + ".json")
-    if saved.exists():
+    raw_saved = OUT / (name + ".header.bin")
+    if saved.exists() and raw_saved.exists():
         cached = json.loads(saved.read_text())
-        if cached['revision'] != RECEIPT['revision'] or cached['file_bytes'] != size:
+        raw = raw_saved.read_bytes()
+        if (cached['revision'] != RECEIPT['revision'] or cached['file_bytes'] != size or
+            cached['file'] != name or len(raw) != cached['header_bytes'] or
+            hashlib.sha256(raw).hexdigest() != cached['header_sha256'] or
+            json.loads(raw) != cached['tensors']):
             raise ValueError('cached header identity mismatch')
         return cached
     prefix = byte_range(name, 0, 8, size)
@@ -51,6 +56,7 @@ def fetch(item):
               "header_bytes": length, "header_sha256": hashlib.sha256(header).hexdigest(),
               "bytes_downloaded": length + 8, "payload_downloaded": False,
               "tensors": tensors}
+    raw_saved.write_bytes(header)
     saved.write_text(json.dumps(result, indent=2) + "\n")
     return result
 

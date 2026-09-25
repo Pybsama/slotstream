@@ -1,5 +1,6 @@
 """Independent binary16 oracle and native CPU/Metal regression driver."""
 import argparse
+import hashlib
 import json
 import pathlib
 import random
@@ -9,6 +10,39 @@ import tempfile
 
 if not __debug__:
     raise RuntimeError('Verification requires Python assertions; do not use -O')
+
+REAL_MODULES = {
+    'protected_gate': 'model.layers.0.mlp.switch_mlp.gate_proj',
+    'protected_down': 'model.layers.0.mlp.switch_mlp.down_proj',
+    'packed14_gate': 'model.layers.2.mlp.switch_mlp.gate_proj',
+    'packed8_down': 'model.layers.2.mlp.switch_mlp.down_proj',
+    'packed8_gate': 'model.layers.27.mlp.switch_mlp.gate_proj',
+    'ple': 'model.layers.1.ple.ple_embedding.ngram_embedding.shard_127',
+}
+
+
+def real_fixtures(root):
+    if not root.is_dir(): raise ValueError('real fixture directory missing')
+    fixtures = {p.name: p for p in root.iterdir() if p.is_dir()}
+    if set(fixtures) != set(REAL_MODULES): raise ValueError('expected all six real fixture directories')
+    verified = {}
+    for label, directory in sorted(fixtures.items()):
+        source = json.loads((directory / 'source.json').read_text())
+        if (source['model'] != 'TheDrainFlorist/Qwen3.8-Flash-Next-VQ-2.1bpw' or
+            source['revision'] != '8684640a3956b01c47f5d47f9b999e2ab8b985f1' or
+            source['module'] != REAL_MODULES[label]):
+            raise ValueError('real fixture source identity mismatch')
+        required = {'geometry.json', 'codes.bin', 'codebook.bin', 'scales.bin'}
+        if set(source['components']) != required: raise ValueError('incomplete fixture hashes')
+        for name, receipt in source['components'].items():
+            data = (directory / name).read_bytes()
+            if len(data) != receipt['bytes'] or hashlib.sha256(data).hexdigest() != receipt['sha256']:
+                raise ValueError('real fixture bytes changed: ' + label + '/' + name)
+        geometry = json.loads((directory / 'geometry.json').read_text())
+        if geometry['rows'] != 24 or sum(count for _, count in source['flattened_row_spans']) != 24:
+            raise ValueError('unexpected sampled row count')
+        verified[directory] = source
+    return verified
 
 
 def half(value):
@@ -78,6 +112,7 @@ def main():
     parser.add_argument('--real', type=pathlib.Path)
     parser.add_argument('--mode', choices=['cpu', 'metal', 'both'], default='both')
     args = parser.parse_args()
+    verified = real_fixtures(args.real) if args.real is not None else {}
     modes = ['cpu', 'metal'] if args.mode == 'both' else [args.mode]
     results, rejected = [], []
     with tempfile.TemporaryDirectory(prefix='slotstream-vq-proof-') as temp:
@@ -95,10 +130,23 @@ def main():
             synthetic(root / label, *params, special=label.endswith('edges'))
         synthetic(root / 'maximum_tile', 8, 16384, 64, 4096, 'packed32', 'f16', rows=64)
         synthetic(root / 'one_row', 8, 16384, 64, 640, 'packed32', 'f16', rows=1)
+        for label, output in [('half_product_ties', 'f16'), ('bfloat_product_ties', 'bf16')]:
+            dest = root / label
+            synthetic(dest, 2, 256, 32, 128, 'u8', output, special=True)
+            book = bytearray((dest / 'codebook.bin').read_bytes())
+            # Products land on both even/odd binary16 ties, including
+            # subnormal underflow. Other groups exercise the BF16 rounding.
+            values = [2**-24, 3*2**-24, 5*2**-24, -3*2**-24,
+                      1.0009765625, 1.0029296875, -1.0009765625, -1.0029296875,
+                      1.00390625, 1.01171875, -1.00390625, -1.01171875,
+                      2**-14, -2**-14, 0.0, -0.0]
+            book[:32] = b''.join(half(value) for value in values)
+            (dest / 'codebook.bin').write_bytes(book)
+            (dest / 'scales.bin').write_bytes(b''.join(half(x) for x in [0.5, 1.5, 1.0, -1.0] * 3))
         fixtures = [root / item[0] for item in cases]
         fixtures += [root / 'maximum_tile', root / 'one_row']
-        if args.real:
-            fixtures += sorted(p.parent for p in args.real.glob('*/geometry.json'))
+        fixtures += [root / 'half_product_ties', root / 'bfloat_product_ties']
+        fixtures += list(verified)
         for fixture in fixtures:
             oracle = expected(fixture)
             for mode in modes:
@@ -132,7 +180,9 @@ def main():
                 run = subprocess.run([str(args.binary), str(dest), mode], capture_output=True)
                 assert run.returncode != 0 and not run.stdout, f'{name}/{mode} accepted'
                 rejected.append(name + '/' + mode)
-    print(json.dumps({'passed': results, 'malformed_rejected': rejected, 'model_support_claimed': False}, indent=2))
+    print(json.dumps({'passed': results, 'malformed_rejected': rejected,
+                     'real_sources': {path.name: receipt for path, receipt in verified.items()},
+                     'model_support_claimed': False}, indent=2))
 
 
 if __name__ == '__main__': main()
