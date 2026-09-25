@@ -410,7 +410,11 @@ extension Catalogue {
         c.equal("independent properties may share references", tool.schema.params["second"], .string)
         c.equal("recursive object needs no recursive value coercion", tool.schema.params["recursive"], .object)
         let template = tool.templateValue["function"] as? [String: any Sendable]
-        c.equal("prompt retains the original schema document", template?["parameters"].map(JSONValue.from), parameters)
+        let templateParameters = template?["parameters"]
+            .flatMap { try? JSONSerialization.data(withJSONObject: $0, options: [.sortedKeys]) }
+        let originalParameters = try? JSONSerialization.data(withJSONObject: parameters.any, options: [.sortedKeys])
+        c.expect("original schema document serializes", originalParameters != nil)
+        c.equal("prompt retains the original schema document", templateParameters, originalParameters)
         c.equal("root ref loop terminates", ToolDefinition(name: "echo", description: "",
             parameters: ref("#")).schema.params, [:])
         return c.report()
