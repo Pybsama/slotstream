@@ -32,11 +32,24 @@ with tempfile.TemporaryDirectory(prefix='vq-audit-') as tmp:
         ('same_width_dtype_corruption', lambda d: d['tensors']['model.layers.1.attn_hyper_connection.block_inject_weight.scales'].update(dtype='F16')),
     ]
     for name, mutate in tests:
-        data = json.loads(original); mutate(data); header_file.write_text(json.dumps(data))
+        data = json.loads(original); mutate(data)
+        if name not in ('revision', 'file_size', 'same_width_dtype_corruption'):
+            # Keep an internally consistent raw representation so these
+            # mutations reach shape/dtype/range checks, not only integrity.
+            # Removing optional metadata leaves room for longer corrupt
+            # values while preserving the original header/payload offsets.
+            data['tensors'].pop('__metadata__', None)
+            raw = json.dumps(data['tensors'], separators=(',', ':')).encode()
+            assert len(raw) <= len(original_raw)
+            raw = raw.ljust(len(original_raw), b' ')
+            data['header_sha256'] = hashlib.sha256(raw).hexdigest()
+            raw_file.write_bytes(raw)
+        header_file.write_text(json.dumps(data))
         try: audit(root)
         except (AssertionError, KeyError, ValueError): passed.append(name)
         else: raise RuntimeError('audit accepted ' + name)
         header_file.write_bytes(original)
+        raw_file.write_bytes(original_raw)
     for name, file, mutate in [
         ('missing_index', 'model.safetensors.index.json', lambda d: d['weight_map'].pop(key)),
         ('wrong_index_file', 'model.safetensors.index.json', lambda d: d['weight_map'].__setitem__(key, 'model-00001.safetensors')),

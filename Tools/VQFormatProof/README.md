@@ -33,9 +33,9 @@ malformed inputs. Python verification must run without `-O`.
 ## Real checkpoint rows and header audit
 
 The following explicitly performs small public downloads into a directory
-you choose. It fetches metadata, all139safetensors headers, and350,864bytes
+you choose. It fetches metadata, all 139 safetensors headers, and 350,864 bytes
 of real row/codebook payload. No complete weight file is downloaded.
-HTTP range responses must have the exact206status, Content-Range and length.
+HTTP range responses must have the exact 206 status, Content-Range and length.
 
 ```sh
 python3 Tools/VQFormatProof/fetch_metadata.py /tmp/slotstream-vq-data
@@ -48,7 +48,7 @@ python3 Tools/VQFormatProof/test_proof.py /tmp/slotstream-vq-proof --real /tmp/s
 ```
 
 The six real fixtures sample first/middle/last experts or PLE shard rows;
-each has24rows. Receipts retain revision, byte ranges and local hashes.
+each has 24 rows. Receipts retain revision, byte ranges and local hashes.
 The harness requires all six, verifies their component hashes and pinned
 identities before computing an oracle, and includes those receipts in its
 result. The header cache retains original raw JSON bytes and verifies their
@@ -59,13 +59,13 @@ but numerical evidence covers only the sampled rows and synthetic cases.
 The downloaded model files retain their upstream LICENSE; they are not
 redistributed as part of this source tool.
 
-Proof bounds are64rows, input width4096, and512KiB decoded output per call.
+Proof bounds are 64 rows, input width 4096, and 512 KiB decoded output per call.
 These keep the experiment small; they are not production allocator defaults.
 The GPU uses shared codebooks, performs one F16 product rounding, and rounds
 PLE output to BF16 afterwards. This does not yet implement SSD expert
 scheduling, the model's GEMM reductions, cache identity or planner policy.
 
 Full support still requires maintainer design alignment, format-aware
-streaming and resident quantization, reference model parity, existing4-bit
+streaming and resident quantization, reference model parity, existing 4-bit
 regressions and real-machine acceptance. Images and the optional MTP sidecar
 have separate qualification gates.

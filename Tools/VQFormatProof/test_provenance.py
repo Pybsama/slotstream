@@ -26,6 +26,9 @@ with tempfile.TemporaryDirectory(prefix='vq-provenance-') as temp:
                               ('model', 'model', 'wrong/model')]:
         source = json.loads(original); source[key] = value; provenance.write_text(json.dumps(source))
         reject('wrong_' + label, fixtures); provenance.write_bytes(original)
+    source = json.loads(original); source['flattened_row_spans'][0][0] = 1
+    provenance.write_text(json.dumps(source)); reject('wrong_sampled_row_start', fixtures)
+    provenance.write_bytes(original)
     geom = fixtures / 'protected_gate/geometry.json'; original = geom.read_bytes()
     source = json.loads(original); source['rows'] = 1; geom.write_text(json.dumps(source))
     reject('changed_geometry', fixtures); geom.write_bytes(original)

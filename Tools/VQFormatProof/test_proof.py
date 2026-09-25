@@ -39,8 +39,11 @@ def real_fixtures(root):
             if len(data) != receipt['bytes'] or hashlib.sha256(data).hexdigest() != receipt['sha256']:
                 raise ValueError('real fixture bytes changed: ' + label + '/' + name)
         geometry = json.loads((directory / 'geometry.json').read_text())
-        if geometry['rows'] != 24 or sum(count for _, count in source['flattened_row_spans']) != 24:
-            raise ValueError('unexpected sampled row count')
+        height = 2560 if label.endswith('_down') else 640
+        spans = ([[0, 8], [1250006, 8], [2500004, 8]] if label == 'ple' else
+                 [[0, 8], [255 * height + 7, 8], [512 * height - 8, 8]])
+        if geometry['rows'] != 24 or source['flattened_row_spans'] != spans:
+            raise ValueError('unexpected sampled row spans')
         verified[directory] = source
     return verified
 
