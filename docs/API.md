@@ -419,7 +419,7 @@ Every API accepts images, using these request shapes:
 | Ollama generate | `images: [base64]` on the request |
 | OpenAI chat | An `image_url` content part with a `data:` URL |
 | OpenAI Responses | An `input_image` part with an `image_url` data URL, in a message or a `function_call_output` |
-| AI SDK gateway | A `file` part with an `image/*` media type and inline `data` |
+| AI SDK gateway | A `file` part with an `image/*` media type and inline `data`: a base64 string, or the `{type: "data", data}` object `@ai-sdk/gateway` sends |
 
 This Python 3 example sends `cat.jpg` to the Ollama chat endpoint. It uses
 only the standard library:

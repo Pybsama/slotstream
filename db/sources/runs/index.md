@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-24T22:54:56.403048Z
+updated: 2026-09-27T14:16:41.563128Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-27-release-0-2-26-published-and-installed]] — v0.2.26 published, publicly installed and accepted
+- [[sources/runs/2026/09/2026-09-26-prefix-turn-writes-e2e]] — Live per-turn prefix cache writes: the released 0.2.25 rewrites a continued turn's own state as a shared prefix, the fix writes it once with identical ids
 - [[sources/runs/2026/09/2026-09-24-release-0-2-25-published-and-installed]] — v0.2.25 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-24-draft-stream-landed]] — Landed streamed draft head and plain-decode lookahead: confirmation under paging, a prototype cross-check and gates
 - [[sources/runs/2026/09/2026-09-24-decode-overlap-landed]] — Landed GPU keepalive and direct demand reads: release and on/off confirmation under paging, and gates
@@ -505,10 +507,8 @@ updated: 2026-09-24T22:54:56.403048Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-external-consumer-deprecation-counterexample]] — External Swift consumer compiles but strict warning gate exposes deprecated stride metadata
 - [[sources/runs/2026/09/2026-09-06-configurable-context-actual-32k-client-contracts]] — Actual Ollama and AI SDK clients pass at32K; Hermes enforces its64K minimum
 - [[sources/runs/2026/09/2026-09-06-optimization-probe-review-and-pressure-recovery]] — Optimization probe preflight review and typed pressure recovery — V181–182
-- [[sources/runs/2026/09/2026-09-06-configurable-context-retained-functional-swap-exclusion]] — Four conversations complete and reuse exact prefixes; capacity excluded by swap activity
-- [[sources/runs/2026/09/2026-09-06-configurable-context-pressure-feasible-recovery-pass]] — Pressure cancellation and feasible admission recovery pass with fixed MTP
 
 ## More
 
-This folder has 685 files. The 500 most recent are listed above.
+This folder has 687 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

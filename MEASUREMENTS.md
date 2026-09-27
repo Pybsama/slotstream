@@ -2691,7 +2691,7 @@ prints `[expert-lookahead] boundary forecast: no correction at
 lookahead/tap-correction-attention-rank128-v1.safetensors`: the 37.5 MB
 correction file was absent, so the engine ran the earlier forecast. Through
 0.2.24 only `slotstream pull` fetched that file; a model downloaded before
-0.2.19, or through the download `slotstream run` offers on first use, lacked
+0.2.19, or through the download `slotstream run`, `serve` or `launch` offers on first use, lacked
 it.
 0.2.19's 1.10x was measured on the development Mac with the file present and
 is not applied to these numbers.
@@ -2758,6 +2758,48 @@ saw disk reads of about 2 GB/s; the server reported no tok/s there.
 
 One report: two warm rounds and one run of each other step, not rerun by the
 author.
+
+## The 0.2.25 re-run, recorded 2026-09-27
+
+`@davidcavazos` re-ran the procedure on 0.2.25 and posted it as a [comment on
+issue
+#41](https://github.com/carloslfu/slotstream/issues/41#issuecomment-5850068364),
+preserved in
+[[sources/community/2026/09/2026-09-26-macbook-pro-m4-pro-24gb-davidcavazos-0-2-25-rerun]].
+It was not a fresh boot: other apps held about 5.5 GB, and 419 MB of swap
+stayed unchanged before and after the tests.
+
+| | 0.2.24 report above | 0.2.25 re-run |
+|---|---|---|
+| Auto plan (`doctor`) | 15.9 GB target, ~53 experts per layer; no draft head or decode lookahead | 17.4 GB target, ~58 experts per layer; draft head and decode lookahead on |
+| Warm decode, three identical requests | 3.61, 3.52 and **3.57 tok/s** | 5.58, 4.92 and **5.41 tok/s** |
+| Cold decode, 128 tokens | 3.17 tok/s | 5.57 tok/s; 74 of 106 drafts accepted |
+| Cold reads, 28-token prefill | 13.1 GB at 3.7 GB/s | 13.1 GB at 3.7 GB/s |
+| Long prompt, 8,192 tokens at context-check's 18.0 GB target | 1.5 min, 93 tok/s, ~78 experts per layer; peak 16.6 GB against 17.0 GB | 1.6 min, 86 tok/s, ~72 experts per layer; peak 16.7 GB against 17.0 GB |
+
+The hardware row now uses **5.41 tok/s**, the third request and the round's
+median. On 0.2.25 this Mac decoded about half again as fast: the draft head
+accepted 70% of its drafts, and the long-prompt log shows the corrected decode
+forecast loaded. It is still below the planner's ~8 tok/s and below the ~6
+floor the 24 to less than 48 GB range had, which now rounds down to ~5
+([[records/measurements/hardware-planning-ranges-2026-09-13]]).
+
+The cold read rate did not move: 3.7 GB/s through the engine, and the reporter
+saw 2 to 3 GB/s of disk reads during warm decode. The first report set that
+against the development Mac's 17.3 GB/s, which is a raw SSD figure. Through
+the engine the development Mac read cold experts at 11.5 GB/s in
+[[sources/runs/2026/09/2026-09-05-optimization-cache-policy-screen]] and 12.6
+GB/s in [[sources/runs/2026/09/2026-09-18-memory-budget-native-verification]],
+so this Mac reads about a third as fast, not a fifth. Both plans were also
+sized down because other apps held memory, to 15.9 and 17.4 GB from the usual
+18.0 GB. One re-run cannot separate the SSD from the plan size.
+
+The plan column is `doctor`'s plan, as the hardware guide defines it. The warm
+server's own plan was not posted either time. The first report's cold run held
+about 38 experts per layer; the re-run's held about 58, matching its `doctor`
+plan.
+
+One re-run, one round of each step, not rerun by the author.
 
 ## Decode: where the time goes, and the two knobs that moved it (2026-09-03)
 Decode had no equivalent of the prefill split, so "decode is slow" could not be
@@ -5146,6 +5188,27 @@ No release-speedup multiplier was applied to the community reports.
   separates the release from the hardware; the public range names the report
   beside it.
 
+## The 24 GB re-run, 2026-09-27
+
+The 24 GB M4 Pro's 0.2.25 re-run decoded **5.41 tok/s**
+([[records/measurements/c7-macbook-pro-m4-pro-24gb-community]]), up from 3.57
+on 0.2.24, with the draft head, the decode lookahead and the corrected
+forecast on. That is the rerun the 2026-09-26 section waited for, and it stays
+below ~6, so the 24 to less than 48 GB range now rounds outward from 5.41 and
+15.86: ~5–16 tok/s. The upper end is unchanged. That Mac read cold experts at
+3.7 GB/s through the engine, about a third of the development Mac's engine
+rate, and other apps held memory during both of its runs; the range does not
+say which of these sets the gap.
+
+Corrections to the two sections above. The 64 GB M3 Max report gives a 512 GB
+SSD without saying whether it is internal, so only the M4 Max's reports are
+known to be from an internal SSD. C4's reason is weaker than "unlikely to
+close it": the M4 Max ran the same pre-0.2.19 forecast and still decoded
+faster, which points at the chip and SSD more than the release, but the two
+runs also differ in release, 0.2.18 against 0.2.22. And the 3.7 GB/s against
+17.3 GB/s comparison set an engine read rate against a raw SSD figure; through
+the engine the development Mac read 11.5 to 12.6 GB/s (C7).
+
 ## Automatic context window: plans by Mac memory
 Weights-free checks and simulated `doctor` plans for the candidate that picks the context window for each Mac ([[records/plan/configurable-context-window-2026-09-06]]). Carlos asked on 2026-09-13 for auto to choose the best window for every memory tier and for `--max-context` to accept the model's 262,144 tokens, using best guesses from what the development Mac can measure. No model process ran for these plans, and nothing here is timed.
 
@@ -6675,7 +6738,7 @@ prompt, about 1,600 tokens ([[records/design/measured-operating-policies]]),
 is also below 2048, so the servers `slotstream launch` starts kept it in memory
 but never wrote it to disk.
 
-On this evidence the default fell to 1024 tokens on 2026-09-24. The cost is one
+On this evidence the default fell to 1024 tokens on main on 2026-09-25, after 0.2.25. The cost is one
 head plus the new rows on each turn of a conversation between 1,024 and 2,048
 tokens, within the same disk quota. Nothing below 1,024 was measured.
 
@@ -6691,6 +6754,17 @@ again here.
 
 One run per configuration on one machine, with single timings, as the report
 states.
+
+## A continued conversation writes one state per turn: the end of a reply is not a shared prefix
+**Outcome: a continued conversation now writes one state per turn; the released 0.2.25 also rewrote the turn's own state as a shared prefix.** In [[sources/runs/2026/09/2026-09-26-prefix-turn-writes-e2e]], one `serve --memory-gb 10` process per build over a fresh cache directory ran a system prompt of 1,615 tokens and three turns with 320-token replies. On 0.2.25 the second turn wrote its 1,792-token state (122.8 MB) and then the same state again as a shared prefix (115.7 MB), and the directory ended with two shared prefixes: the system prompt at 1,536 and that turn's own state. On the fix the second turn wrote only its state, and the system prompt stayed the only shared prefix. Prompt and output ids were identical on every turn, and the three turns wrote 526.4 MB against 642.1 MB.
+
+**Why it happened.** Under aligned resume, the default since 0.2.22, the memory tier keeps each finished turn as a conversation entry holding its prompt and reply, but never continues it; the next turn resumes from the boundary checkpoint. The shared-prefix rule took the longest prefix the prompt had in common with any held state as a target, so the end of the previous reply became one. Once the reply crossed a pass boundary beyond what the turn reused, its save point was a pass end past that checkpoint: a second state when the new message crossed another boundary, otherwise the turn's own checkpoint, which 0.2.25's colliding-boundary upgrade ([[records/measurements/shared-prefix-live-acceptance-2026-09-24]]) rewrote with the shared flag. A shared prefix is never removed as a redundant ancestor, and a childless one is classed with states nobody continued, so each of these stayed until the quota or the age limit removed it, and a turn's latest state, once flagged, was the first candidate for eviction. In this run the second prompt matched the first prompt and all 320 reply tokens; the held entry ends one token earlier, because the last sampled token is never consumed.
+
+**The rule now.** A target counts only where the prompt parts from what another held state read as input. A state it extends outright, or parts from inside the reply that state generated, is its own conversation's earlier turn. The memory tier records where a conversation entry's prompt ended; disk heads under aligned resume hold prompt tokens only. The system prompt boundary is unchanged.
+
+**The existing gate did not reach the case.** `Tools/shared_prefix_e2e.py` passed on both builds with 320-token replies: its later turns ran after a restart, or after another conversation had evicted the entry. `Tools/prefix_turn_writes_e2e.py` keeps three turns in one process and exits 2 unless a later prompt reaches the old save point; on 0.2.25 it fails two of its four checks.
+
+**Limits.** One 48 GB M5 Pro in ordinary use, one plan (`--memory-gb 10`, 256-token passes), one prompt shape and the Ollama chat endpoint. Timings are incidental and not a claim. A client that sends a reply back changed was not exercised live; the rule for it is covered by `optimization-prefix-client-capacity`.
 
 ## Decode speed: GPU keepalive, direct demand reads, a streamed draft head and plain-decode lookahead
 **Outcome: four decode changes won on the development Mac with unchanged output, and the other ideas tried did not.** A GPU keepalive and direct demand reads together made decode 1.28x faster at a 10 GB target without the draft head and 1.22x at 22 GB with the head and lookahead, over the pairs with no swap activity. Streaming the draft head's routed experts through a 64-expert cache freed 1.2 GB for the main cache, which made the head worth running at 12 GB: 1.23x over plain decode with the lookahead at 28.4 experts per layer, over three swap-free pairs (1.21x over all eight). Letting the decode lookahead run in plain decode added 1.11x at 10 GB. Together, at a 16 GB target, the four decoded 1.79x faster than the shipped default of that commit. The keepalive raised energy per generated token by 7%. The measured configurations were environment-guarded prototypes on an export of commit 37fcb8e; the landed implementations have their own confirmation below.
@@ -6751,3 +6825,21 @@ Release: [v0.2.25](https://github.com/carloslfu/slotstream/releases/tag/v0.2.25)
 The first candidate, `5a54b68`, passed CI but failed both elastic drills and was not tagged. The drill predicted the governor without the decode lookahead's reserve, which plain decode now charges; the governor was right. The fix, `a0cca84`, changes only the drill, and both drills then passed on the released bytes. [[sources/runs/2026/09/2026-09-24-release-0-2-25-published-and-installed]] retains the commands, both candidates' native logs, the fix confirmation, source/build identity, workflow output, installer and process-cleanup receipts. The historical backend reference remains visible beside the passing current-backend reference; no tolerance was widened.
 
 These are functional acceptance results, not speed claims. The decode gains this release ships, and their limits, are in [[records/measurements/decode-perf-2026-09-24]].
+
+### v0.2.26 published, installed and accepted
+**v0.2.26 is public, installed and accepted.** It ships the prefix cache's 1,024-token disk floor from [#30](https://github.com/carloslfu/slotstream/pull/30), one prefix cache write per continued turn with the other review fixes from [#46](https://github.com/carloslfu/slotstream/pull/46), and the contributed fixes from [#31](https://github.com/carloslfu/slotstream/pull/31) to [#43](https://github.com/carloslfu/slotstream/pull/43) listed in the changelog.
+
+Release: [v0.2.26](https://github.com/carloslfu/slotstream/releases/tag/v0.2.26), published 2026-09-27T14:12:39Z from `a8a5294a8a826ee9356c900df76614646e756bba`. The CI candidate, public archive and installed executable match exactly. Archive SHA-256: `eb4f52d7655b7d1978c2ef28a19597c687d9e513d8ca0625eaefbc3a72547b3b`. Executable SHA-256: `37243fe333423b238e087448823b93a19712d9473937353fce9e145dfe10e645`.
+
+| Acceptance | Result |
+| --- | --- |
+| Exact-commit hosted CI | Engine, instrumented coverage, external library consumer and context contracts passed; the Mac app built, and its scripted checks failed only the intermittent scroll-position check that also fails on main |
+| Engine catalogue | 85 groups, 32,636 assertions, no failures or skips, locally before the candidate existed; CI ran the same catalogue on the candidate |
+| Full native battery | 35 top-level gates passed on the exact CI bytes, including both elastic governor drills, `draft-stream-check`, `decode-overlap-check`, quality 15/15, API robustness 74/74 and vision serving 25/25. Vision parity's two gates ran separately on the same bytes after the battery skipped them for a missing reference environment |
+| Prefix cache live gates | One write per continued turn 4/4 (turn 2 wrote 122.8 MB, not 0.2.25's 238.4 MB); disk tier restart 12/12 after its checks were corrected for the system prompt's shared prefix |
+| Public distribution | Preserved CI archive published, public checksum/provenance verified, public installer upgraded the standard installation from 0.2.25 |
+| Installed serving | 31/31 with a 10 GB target and MTP on; owned server reaped |
+
+The disk tier restart gate's five file-count checks failed identically on 0.2.25 and on 0.2.26, with byte-identical writes: they predated the shared prefix turn 1 keeps for its system prompt, while its restart, regeneration and output-id checks passed. Commit `6dcba83` corrects them. [[sources/runs/2026/09/2026-09-27-release-0-2-26-published-and-installed]] retains the commands, the candidate's native logs, the vision parity run, both live gates, the local pre-candidate checks, source/build identity, workflow output, installer and process-cleanup receipts.
+
+These are functional acceptance results, not speed claims. The per-turn write measurement is in [[records/measurements/prefix-turn-writes-2026-09-26]].

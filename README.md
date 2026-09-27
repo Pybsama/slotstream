@@ -80,7 +80,7 @@ range; other apps and memory pressure pull results down.
 |---|---|---|
 | 8 GB | **Support coming soon.** The current model doesn't fit yet. | Not available yet |
 | 16–<24 GB | ~1–6 tok/s | 32,768 tokens |
-| 24–<48 GB | ~6–16 tok/s | 32,768 through 32 GB; 65,536 at 36 GB |
+| 24–<48 GB | ~5–16 tok/s | 32,768 through 32 GB; 65,536 at 36 GB |
 | 48–<96 GB | ~15–27 tok/s | 32,768 at 48 GB; 131,072 at 64 GB |
 | 96 GB+, the model fits in memory | ~20–32 tok/s | 262,144 tokens, the model's full window |
 
@@ -312,10 +312,10 @@ none of it runs when you use Slotstream. See [Built native](#built-native).
 
 Generation reads the model files without rewriting them. macOS swap adds
 writes when memory runs short. Automatic memory sizing helps, but a small
-Mac or an oversized manual setting can still swap heavily. With
-`serve --prefix-cache-dir`, Slotstream also saves long conversations to that
-folder after each reply, and the system prompts conversations share, within a
-disk quota.
+Mac or an oversized manual setting can still swap heavily. Servers that
+`slotstream launch` starts, and `serve --prefix-cache-dir`, also save each
+turn of a longer conversation to a cache folder, and the system prompts
+conversations share, within a disk quota.
 
 ### Can I run it on Linux or Windows?
 

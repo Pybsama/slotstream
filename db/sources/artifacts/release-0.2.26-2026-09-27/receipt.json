@@ -1,0 +1,9 @@
+{
+  "files": 145,
+  "uncompressed_bytes": 28007807,
+  "archive_bytes": 6645945,
+  "archive_sha256": "d3df9a4d948f50cb67d6a78f4fcfef50ae201ad5b112f2f1a0d3451b68e0883b",
+  "manifest_sha256": "82992670bb2c326a2e329db057ec999ea4be7c0015b503024d57abf2f7ec7984",
+  "excluded_bytes": 5357075664,
+  "verified": true
+}

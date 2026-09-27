@@ -4,8 +4,9 @@
 One three-turn conversation, served by separate servers at an explicit small
 memory target, one model process at a time:
 
-  first       answers turns 1, 2 and 3; every turn after the first writes only
-              its new rows and keeps the previous turn's state as its parent
+  first       answers turns 1, 2 and 3; turn 1 keeps the system prompt as a
+              shared prefix, and every turn after the first writes only its
+              new rows and keeps the previous turn's state as its parent
   restart     a new server over a copy of the directory taken after turn 2
               answers turn 3 by restoring the turn-2 state, whose rows live in
               the segments turns 1 and 2 wrote
@@ -351,13 +352,21 @@ def main():
         p1, p2, p3 = first_1["persistent"], first_2["persistent"], first_3["persistent"]
         pr, pg = restart_3["persistent"], regenerate_3["persistent"]
         files = result["files"]
+        # The system prompt is long enough to be kept as a shared prefix: turn 1
+        # writes it first, then its own state reusing its rows. It stays in
+        # every snapshot beside the conversation's own states.
+        shared = 1 if p1.get("sharedSaveOutcome") == "saved" else 0
+        result["shared_prefixes"] = shared
+        states = listing.get("states", [])
         checks = {
-            "turn 1 wrote its whole state": p1.get("saveOutcome") == "saved" and not p1.get("reusedBytes"),
-            "turn 2 wrote only its new rows": p2.get("saveOutcome") == "saved" and (p2.get("reusedBytes") or 0) > 0
-                and (p2.get("saveBytes") or 0) < (p1.get("saveBytes") or 0),
-            "turn 2 kept the turn-1 state as its parent": files["after_turn_2"]["heads"] == 2,
+            "turn 1 wrote its whole state, reusing only its shared prefix's rows": p1.get("saveOutcome") == "saved"
+                and (p1.get("reusedBytes") or 0) <= (p1.get("sharedSaveBytes") or 0),
+            "turn 2 wrote only its new rows": p2.get("saveOutcome") == "saved"
+                and (p2.get("reusedBytes") or 0) > (p1.get("reusedBytes") or 0)
+                and (p2.get("saveBytes") or 0) < (p1.get("saveBytes") or 0) + (p1.get("sharedSaveBytes") or 0),
+            "turn 2 kept the turn-1 state as its parent": files["after_turn_2"]["heads"] == 2 + shared,
             "turn 3 removed the turn-1 state and kept turn 2": p3.get("saveOutcome") == "saved"
-                and files["after_turn_3"]["heads"] == 2,
+                and files["after_turn_3"]["heads"] == 2 + shared,
             "a restarted server restored the turn-2 state from its segments":
                 pr.get("restoredTokens", 0) > 0 and pr.get("restoredTokens") == p2.get("savedTokens"),
             "restart turn-3 prompt ids equal the first server's": restart_3["prompt_ids"] == first_3["prompt_ids"],
@@ -370,7 +379,8 @@ def main():
             "a restarted server regenerating turn 3 restored the kept parent or deeper":
                 pg.get("restoredTokens", 0) >= (p2.get("savedTokens") or 0) > 0,
             "regenerated turn-3 output ids equal the first server's": regenerate_3["output_ids"] == first_3["output_ids"],
-            "prefix-cache lists both states of the snapshot": len(listing.get("states", [])) == 2
+            "prefix-cache lists both states of the snapshot and its shared prefix":
+                sum(not s.get("shared") for s in states) == 2 and sum(bool(s.get("shared")) for s in states) == shared
                 and listing.get("in_use") is False,
             "prefix-cache --clear empties a copy": (removed.get("removed_files") or 0) >= 3
                 and not emptied.get("states") and emptied.get("segments") == 0,
