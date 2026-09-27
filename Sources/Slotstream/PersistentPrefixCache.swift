@@ -404,6 +404,17 @@ public final class PersistentPrefixCache {
         lock.withLock { heads.reduce(Int64(0)) { $0 + $1.bytes } + segments.values.reduce(Int64(0)) { $0 + $1.bytes } }
     }
 
+    /// Called before writing under `operations`; no imagined ancestor or
+    /// segment cleanup may reduce the current disk charge.
+    package func canWrite(incoming: Int64, replacingHead name: String) -> Bool {
+        lock.withLock {
+            let charged = heads.reduce(Int64(0)) { $0 + $1.bytes } + segments.values.reduce(Int64(0)) { $0 + $1.bytes }
+            let replacement = heads.first { $0.file == name }?.bytes ?? 0
+            return PersistentPrefixPolicy.writeFitsQuota(chargedBytes: charged, replacingHeadBytes: replacement,
+                incoming: incoming, quota: configuration.maxBytes)
+        }
+    }
+
     package var indexedEntries: [PersistentPrefixEntry] { lock.withLock { heads } }
     package var indexedSegments: [String: PersistentPrefixSegmentEntry] { lock.withLock { segments } }
 

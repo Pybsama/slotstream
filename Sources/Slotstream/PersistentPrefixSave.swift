@@ -175,18 +175,16 @@ extension PersistentPrefixCache {
         func temporary(_ file: String) -> String {
             directory.appendingPathComponent(".\(file).\(getpid()).\(UUID().uuidString).tmp").path
         }
-        // The victims' orphan segments may also have resisted deletion.
-        // Their retained charge must be included before starting this write.
-        let hasRoom = lock.withLock {
-            let orphanBytes = PersistentPrefixPolicy.unreferencedSegments(heads, segments: segments.keys)
-                .filter { !reuse.segments.contains($0) }
-                .reduce(Int64(0)) { $0 + (segments[$1]?.bytes ?? 0) }
-            return PersistentPrefixPolicy.evictionVictims(heads, segments: segments.mapValues(\.bytes),
-                identity: identity.digest, quota: configuration.maxBytes - orphanBytes, incoming: estimate,
-                pinned: reuse.segments, freed: Set(redundant.map(\.file) + [name]), now: now,
-                maxAge: configuration.maxAge)?.isEmpty == true
+        // Before any write, count what is still on disk. Redundant ancestors
+        // release bytes only after unlink succeeds; replacing the same-name
+        // head guarantees only that head's bytes, never its old segments.
+        let older = redundant.map(\.file).filter { $0 != name }
+        if !canWrite(incoming: estimate, replacingHead: name) {
+            removed += remove(heads: older, .replaced, keeping: reuse.segments)
         }
-        guard hasRoom else { return finish(.failed("could not reclaim prefix cache disk quota")) }
+        guard canWrite(incoming: estimate, replacingHead: name) else {
+            return finish(.failed("could not reclaim prefix cache disk quota"))
+        }
 
         var newSegment: PersistentPrefixSegmentEntry?
         let entry: PersistentPrefixEntry
@@ -254,8 +252,8 @@ extension PersistentPrefixCache {
         }
         state.persistedLineage = PersistentPrefixLineage(tier: instance, head: name, tokenCount: tokens.count,
             sequences: entry.sequences)
-        let older = redundant.map(\.file).filter { $0 != name }
-        removed += remove(heads: older, .replaced)
+        let remainingOlder = lock.withLock { Set(heads.map(\.file)).intersection(older).sorted() }
+        removed += remove(heads: remainingOlder, .replaced)
         let result = finish(.saved)
         report((shared ? "saved shared \(tokens.count)-token prefix (" : "saved \(tokens.count) tokens (")
             + "\(Self.megabytes(written)) written"

@@ -7,6 +7,14 @@ import SlotstreamDiagnostics
 extension Catalogue {
     static func persistentPrefixRemovalFailures() throws -> CheckReport {
         var c = CheckBuilder("persistent-prefix-removal-failures")
+        let fits = PersistentPrefixPolicy.writeFitsQuota
+        c.expect("an undeleted ancestor's head bytes cannot be credited", !fits(300, 0, 100, 350))
+        c.expect("successful ancestor cleanup admits the same write", fits(200, 0, 100, 350))
+        c.expect("atomic same-name replacement credits its head", fits(300, 100, 150, 350))
+        c.expect("old exclusive segments stay charged during head replacement", !fits(200, 100, 100, 150))
+        c.expect("exact quota is admitted", fits(250, 0, 100, 350))
+        c.expect("an Int64-sized incoming write cannot overflow admission", !fits(1, 0, Int64.max, Int64.max))
+        c.expect("an Int64-sized head replacement fits its exact quota", fits(Int64.max, Int64.max, Int64.max, Int64.max))
         guard geteuid() != 0 else {
             c.skip("permission failures require an unprivileged user")
             return c.report()
@@ -79,6 +87,14 @@ extension Catalogue {
             c.equal("\(kind): undeleted head retains index", tier.storedStates, kind == "orphan" ? 0 : 1)
             c.equal("\(kind): undeleted segment stays indexed", tier.storedSegments, 1)
             c.equal("\(kind): undeleted disk bytes stay charged", tier.storedBytes, kind == "orphan" ? segmentBytes : bytes)
+            c.expect("\(kind): undeleted charges prevent a write past quota", !tier.canWrite(
+                incoming: config(directory).maxBytes - tier.storedBytes + 1, replacingHead: "new-head"))
+            if kind != "orphan" {
+                c.expect("\(kind): same-name replacement credits only head bytes", tier.canWrite(
+                    incoming: config(directory).maxBytes - segmentBytes, replacingHead: headName))
+                c.expect("\(kind): same-name replacement keeps old segments charged", !tier.canWrite(
+                    incoming: config(directory).maxBytes - segmentBytes + 1, replacingHead: headName))
+            }
             c.equal("\(kind): no successful segment removal is counted", tier.json()["removed_segments"] as? Int, 0)
             c.expect("\(kind): segment bytes survive", fm.fileExists(atPath: directory.appendingPathComponent(segmentName).path))
             guard chmod(directory.path, 0o700) == 0 else { throw ModelError("cannot restore fixture permissions") }

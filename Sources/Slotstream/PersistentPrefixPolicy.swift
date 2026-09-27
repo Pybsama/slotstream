@@ -276,6 +276,16 @@ package enum PersistentPrefixPolicy {
         return entries.reduce(Int64(0)) { $0 + $1.bytes } + referenced.reduce(Int64(0)) { $0 + (segments[$1] ?? 0) }
     }
 
+    /// Final write admission counts every still-indexed file. Only an atomic
+    /// same-name head replacement guarantees a charge will be released;
+    /// old segments and ancestors stay charged until their unlink succeeds.
+    package static func writeFitsQuota(chargedBytes: Int64, replacingHeadBytes: Int64,
+                                       incoming: Int64, quota: Int64) -> Bool {
+        guard chargedBytes >= 0, replacingHeadBytes >= 0, replacingHeadBytes <= chargedBytes,
+              incoming >= 0, quota >= 0, incoming <= quota else { return false }
+        return chargedBytes - replacingHeadBytes <= quota - incoming
+    }
+
     /// Heads to remove so `incoming` new bytes fit the quota once `freed`
     /// heads are gone. A segment's bytes return only when no remaining head
     /// and no pinned segment of the incoming save uses it. Nil when not even
