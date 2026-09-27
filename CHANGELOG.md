@@ -50,6 +50,14 @@ determines which version the installer downloads.
   exits with an error, instead of reporting only the files it removed. By
   [@Pybsama](https://github.com/Pybsama) in
   [#34](https://github.com/carloslfu/slotstream/pull/34).
+- A tool argument declared through a local `$ref` in its tool's schema keeps
+  the declared type on `/v1/chat/completions`, `/v1/responses`,
+  `/v1/messages` and the AI SDK gateway. A string argument such as `00123`
+  reached the client as the number `123`, and the text `false` as a Boolean,
+  although the same declaration written inline kept the string; a referenced
+  decimal could arrive as a string. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#35](https://github.com/carloslfu/slotstream/pull/35).
 - Control+C while `slotstream pull`, or the download `run`, `serve` and
   `launch` offer on first use, fetches the decode-forecast file now stops
   the command with exit code 130. The fetch caught the cancellation, so
@@ -66,6 +74,16 @@ determines which version the installer downloads.
   without it until the file can be read. By
   [@Pybsama](https://github.com/Pybsama) in
   [#37](https://github.com/carloslfu/slotstream/pull/37).
+- The AI SDK gateway matches tool results to their calls by `toolCallId` and
+  puts them back in call order, as `/v1/chat/completions` does. The model's
+  template pairs results with calls by position, so results sent in another
+  order, as direct gateway requests and stored histories can, reached the
+  model paired with the wrong calls. A missing, duplicate or unmatched result
+  or a mismatched tool name is refused; a call's ID may recur in a later
+  turn. The gateway also accepts an inline image in the `{type: "data"}` form
+  the published `@ai-sdk/gateway` package sends, which it refused. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#38](https://github.com/carloslfu/slotstream/pull/38).
 - `/v1/messages` joins consecutive messages of one role into one turn, as
   the Messages API does. Tool results split across adjacent user messages
   are accepted, and a turn's tool calls may continue in the next assistant
