@@ -47,9 +47,10 @@ extension Catalogue {
             }
             _ = try File.writeContainer(to: directory.appendingPathComponent(segmentName).path,
                 payloads: [.host([42])], expected: [1]) { placed in
-                try File.encodeHeader(File.Segment(format: File.formatVersion, kind: .segment, identity: identity.digest,
-                    rows: [.init(name: "rows", dtype: "uint8", leading: [], trailing: [], start: 0, end: 1,
-                        offset: placed[0].offset, byteCount: placed[0].byteCount, crc32: placed[0].crc32)]))
+                let header: [String: Any] = ["format": File.formatVersion, "kind": "segment", "identity": identity.digest,
+                    "rows": [["name": "rows", "dtype": "uint8", "leading": [], "trailing": [], "start": 0, "end": 1,
+                        "offset": placed[0].offset, "byteCount": placed[0].byteCount, "crc32": placed[0].crc32]]]
+                return try JSONSerialization.data(withJSONObject: header, options: [.sortedKeys])
             }
             return directory
         }
