@@ -397,7 +397,9 @@ public final class CheckpointIndex {
         // The format requires the tensor ranges to cover the entire data
         // buffer without holes or overlaps.
         var cursor = 0
-        for p in parsed.sorted(by: { $0.start < $1.start }) {
+        // Empty tensors may share a start with a nonempty tensor. As in the
+        // reference format, place the empty range first at an equal start.
+        for p in parsed.sorted(by: { ($0.start, $0.end) < ($1.start, $1.end) }) {
             guard p.start == cursor else {
                 throw corrupt("tensor data has a hole or overlap before \(p.name)")
             }
