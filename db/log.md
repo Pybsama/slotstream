@@ -2142,3 +2142,9 @@ Corrected the date the default changed to 2026-09-25 (#30 merge).
 ## [2026-09-27 05:04] update | records/measurements/c5-macbook-pro-m4-max-64gb-community
 serve and launch offered the same first-use download without the forecast file through 0.2.24.
 
+## [2026-09-27 14:16] create | sources/runs/2026/09/2026-09-27-release-0-2-26-published-and-installed
+v0.2.26 publication, exact-candidate qualification, both prefix cache live gates and installed acceptance.
+
+## [2026-09-27 14:16] create | records/measurements/release-0-2-26-published-2026-09-27
+v0.2.26 is public, installed and accepted: 35 native gates, prefix cache live gates 4/4 and 12/12, installed serving 31/31.
+
