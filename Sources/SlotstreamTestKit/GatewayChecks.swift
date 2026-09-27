@@ -12,6 +12,7 @@ extension Catalogue {
     static var gatewayChecks: [Check] {
         [
             Check("gateway-request", tier: .t0) { gatewayRequest() },
+            Check("gateway-numeric", tier: .t0) { gatewayNumeric() },
             Check("gateway-prompt", tier: .t0) { gatewayPrompt() },
             Check("gateway-catalog", tier: .t0) { gatewayCatalog() },
             Check("gateway-events", tier: .t0) { gatewayEvents() },
@@ -171,6 +172,80 @@ extension Catalogue {
         c.equal("agent temperature", agent.temperature, 0.2)
         c.equal("agent top-p", agent.topP, 0.9)
         c.equal("agent presence penalty", agent.presencePenalty, 0)
+        return c.report()
+    }
+
+    /// Wrong numeric types must not select a different sampler or budget.
+    static func gatewayNumeric() -> CheckReport {
+        var c = CheckBuilder("gateway-numeric")
+        let user: [[String: Any]] = [["role": "user", "content": [["type": "text", "text": "hi"]]]]
+        let discrete = ["seed", "topK", "maxOutputTokens"]
+        let continuous = ["temperature", "topP", "presencePenalty", "frequencyPenalty"]
+        func parse(_ key: String, _ value: Any, wire: Bool = true) -> Result<GatewayDialect.Request, GatewayDialect.Failure> {
+            let body = fxBody(prompt: user, extra: [key: value])
+            guard wire else { return GatewayDialect.parse(body, modelID: "m") }
+            do {
+                let data = try JSONSerialization.data(withJSONObject: body)
+                let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+                return GatewayDialect.parse(json, modelID: "m")
+            } catch { return .failure(.init("fixture_error", "\(error)")) }
+        }
+        for key in discrete + continuous {
+            var wrong: [(String, Any)] = [("true", true), ("false", false), ("string", "1"), ("array", [1]), ("object", ["n": 1])]
+            wrong += discrete.contains(key) ? [("fraction", 1.5), ("negative fraction", -1.5), ("huge", 1e300), ("Int overflow", 9.223372036854776e18), ("tiny fraction", 1e-300)]
+                : [("positive Float overflow", 1e300), ("negative Float overflow", -1e300)]
+            for (label, value) in wrong {
+                switch parse(key, value) {
+                case .failure(let f):
+                    c.equal("\(key) \(label): invalid type", f.code, "invalid_request")
+                    c.expect("\(key) \(label): names field", f.message.contains(key))
+                case .success: c.expect("\(key) \(label): refused", false)
+                }
+            }
+            for value in [Double.infinity, -Double.infinity, Double.nan] {
+                if case .failure(let f) = parse(key, NSNumber(value: value), wire: false) {
+                    c.equal("\(key): nonfinite refused", f.code, "invalid_request")
+                    c.expect("\(key): nonfinite names field", f.message.contains(key))
+                } else { c.expect("\(key): nonfinite refused", false) }
+            }
+            if case .success(let r) = parse(key, NSNull()) {
+                c.expect("\(key): null defaults", r.seed == nil && r.topK == nil && r.maxOutputTokens == nil
+                    && r.temperature == nil && r.topP == nil && r.presencePenalty == nil)
+            } else { c.expect("\(key): null accepted", false) }
+        }
+        for key in discrete {
+            for token in ["9223372036854775808", "9.223372036854776e18", "-9223372036854775809"] {
+                let body = "{\"prompt\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}],\"\(key)\":\(token)}"
+                let json = try! JSONSerialization.jsonObject(with: Data(body.utf8)) as! [String: Any]
+                if case .failure(let f) = GatewayDialect.parse(json, modelID: "m") {
+                    c.equal("\(key): raw boundary \(token)", f.code, "invalid_request")
+                    c.expect("\(key): raw boundary names field", f.message.contains(key))
+                } else { c.expect("\(key): raw boundary refused \(token)", false) }
+            }
+            for n in [Int.min, -1, 0, 1, 9007199254740993, Int.max] {
+                if case .success(let r) = parse(key, n) {
+                    let got = key == "seed" ? r.seed : key == "topK" ? r.topK : r.maxOutputTokens
+                    c.equal("\(key): exact integer \(n)", got, n)
+                } else { c.expect("\(key): exact integer accepted", false) }
+            }
+            if case .success(let r) = parse(key, 1.0) {
+                c.equal("\(key): integral float", key == "seed" ? r.seed : key == "topK" ? r.topK : r.maxOutputTokens, 1)
+            } else { c.expect("\(key): integral float accepted", false) }
+        }
+        for (key, value) in [("temperature", 0.2), ("topP", 0.9), ("presencePenalty", -0.1),
+                             ("temperature", 0.0), ("topP", -1.0)] {
+            if case .success(let r) = parse(key, value) {
+                c.equal("\(key): finite value preserved", key == "temperature" ? r.temperature : key == "topP" ? r.topP : r.presencePenalty, Float(value))
+            } else { c.expect("\(key): finite accepted", false) }
+        }
+        c.expect("frequency zero accepted", { if case .success = parse("frequencyPenalty", 0) { return true }; return false }())
+        if case .failure(let f) = parse("frequencyPenalty", 0.5) {
+            c.equal("finite frequency remains unsupported", f.code, "frequency_penalty_unsupported")
+        } else { c.expect("finite frequency remains unsupported", false) }
+        if case .success(let r) = GatewayDialect.parse(fxBody(prompt: user), modelID: "m") {
+            c.expect("unset fields preserve defaults", r.seed == nil && r.topK == nil && r.maxOutputTokens == nil
+                && r.temperature == nil && r.topP == nil && r.presencePenalty == nil)
+        } else { c.expect("unset fields accepted", false) }
         return c.report()
     }
 
