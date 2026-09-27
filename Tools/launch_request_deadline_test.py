@@ -17,6 +17,10 @@ class Peer(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
+        if self.path == "/empty":
+            self.send_response(204)
+            self.end_headers()
+            return
         if self.path == "/redirect":
             self.send_response(302)
             self.send_header("Location", "/fast")
@@ -29,6 +33,11 @@ class Peer(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
+        if self.path == "/truncated":
+            self.wfile.write(body[:1])
+            self.wfile.flush()
+            self.close_connection = True
+            return
         try:
             for byte in body:
                 self.wfile.write(bytes([byte]))
@@ -88,6 +97,14 @@ print(String(decoding: data, as: UTF8.self))
     def test_redirect_remains_supported(self):
         answer = self.request("/redirect")
         self.assertEqual((answer["status"], answer["body"]), (200, "response"))
+
+    def test_successful_empty_response_is_preserved(self):
+        answer = self.request("/empty")
+        self.assertEqual((answer["status"], answer["body"]), (204, ""))
+
+    def test_incomplete_body_is_not_reported_as_success(self):
+        answer = self.request("/truncated")
+        self.assertIsNone(answer["status"], answer)
 
     def test_slow_progress_cannot_extend_the_total_deadline(self):
         answer = self.request("/slow")
