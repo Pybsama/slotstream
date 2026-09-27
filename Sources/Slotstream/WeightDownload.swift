@@ -412,6 +412,7 @@ final class PullJob: NSObject, URLSessionDataDelegate {
                     break
                 } catch {
                     if error is DownloadCancelled { return }
+                    if shouldStop(file: chunk.file) { continue chunks }
                     lastError = error
                     let ns = error as NSError
                     let http = error as? DownloadHTTPError
@@ -441,7 +442,7 @@ final class PullJob: NSObject, URLSessionDataDelegate {
         }
     }
 
-    /// Stop a cooldown when the pull fails or this optional file is skipped.
+    /// Stop an active request or cooldown when the pull fails or this optional file is skipped.
     /// The worker can still take another file when only this one was skipped.
     private func shouldStop(file: Int) -> Bool {
         lock.lock()
@@ -552,7 +553,7 @@ final class PullJob: NSObject, URLSessionDataDelegate {
         task.taskDescription = String(rid)
         task.resume()
         while state.sem.wait(timeout: .now() + .milliseconds(100)) == .timedOut {
-            if cancellation.isCancelled { task.cancel() }
+            if shouldStop(file: chunk.file) { task.cancel() }
         }
         lock.lock()
         live.removeValue(forKey: rid)
