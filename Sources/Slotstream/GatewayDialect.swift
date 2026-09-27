@@ -207,6 +207,13 @@ public enum GatewayDialect {
             }
         }
 
+        if choice == .required, tools.isEmpty {
+            return .failure(Failure("invalid_tool_choice", "`toolChoice.type: required` needs an executable function tool"))
+        }
+        if case .tool(let name) = choice, !tools.contains(where: { $0.name == name }) {
+            return .failure(Failure("invalid_tool_choice", "`toolChoice.toolName` must name a declared function tool: \(name)"))
+        }
+
         var stops: [String] = []
         if let s = json["stopSequences"] as? [String] { stops = s }
 
