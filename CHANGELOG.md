@@ -6,7 +6,7 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## Unreleased
+## 0.2.26 - 2026-09-27
 
 - The prefix cache's disk tier now writes states from 1,024 tokens instead
   of 2,048 (`--prefix-cache-min-tokens`). On 0.2.18, after a restart, a
