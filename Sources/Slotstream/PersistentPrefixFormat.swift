@@ -340,14 +340,16 @@ package enum PersistentPrefixFile {
     /// Fixed payloads hold their whole shape. Zero-size arrays and scalars
     /// are valid geometry, even though sequence buffers require positive dims.
     package static func fixedCapacity(shape: [Int], itemBytes: Int) -> Int? {
-        guard shape.allSatisfy({ $0 >= 0 }), itemBytes > 0,
+        guard shape.allSatisfy({ $0 >= 0 && $0 <= Int(Int32.max) }), itemBytes > 0,
               let bytes = product(shape + [itemBytes]), bytes <= maximumArrayBytes else { return nil }
         return bytes
     }
 
-    /// Byte geometry of one array, or nil for any invalid or overflowing shape.
+    /// Byte geometry of one array, or nil for an invalid, overflowing or
+    /// unrepresentable shape. MLX's raw-pointer initializer bridges each dim
+    /// through Int32, so the disk reader must reject it before allocating.
     package static func layout(shape: [Int], axis: Int, length: Int, itemBytes: Int) -> Layout? {
-        guard !shape.isEmpty, shape.allSatisfy({ $0 > 0 }), axis >= 0, axis < shape.count,
+        guard !shape.isEmpty, shape.allSatisfy({ $0 > 0 && $0 <= Int(Int32.max) }), axis >= 0, axis < shape.count,
               length >= 0, length <= shape[axis], itemBytes > 0,
               let leading = product(Array(shape[..<axis])), let trailing = product(Array(shape[(axis + 1)...])),
               let rowBytes = product([trailing, itemBytes]), let chunk = product([leading, rowBytes]),

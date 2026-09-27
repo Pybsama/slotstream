@@ -39,6 +39,11 @@ extension Catalogue {
             original[name] = try Data(contentsOf: url)
             return name
         }
+        let dimensionLimit = Int(Int32.max)
+        c.expect("MLX boundary dimension fits without allocating it", File.layout(shape: [dimensionLimit], axis: 0,
+            length: 0, itemBytes: 1) != nil)
+        c.expect("MLX oversized dimension is rejected without allocating it", File.layout(shape: [dimensionLimit + 1],
+            axis: 0, length: 0, itemBytes: 1) == nil)
         let valid = [try write(), try write(extra: [1, 2, 3, 4]), try write(extra: []), try write(extra: [1]) {
             $0.arrays[1].shape = [] // A scalar uses one element, with no dimensions.
         }, try write(extra: [1, 2]) {
@@ -46,6 +51,8 @@ extension Catalogue {
             $0.sequences = [.init(name: "rows", dtype: "uint8", shape: [4], axis: 0, base: 0, live: 0, extents: [])]
             $0.sequenceBytes = 4
             $0.residentBytes = 6
+        }, try write(extra: []) {
+            $0.arrays[1].shape = [0, dimensionLimit]
         }]
         for name in valid {
             if case let .head(entry) = try PersistentPrefixCache.readFile(directory: directory, name: name) {
@@ -53,6 +60,14 @@ extension Catalogue {
             } else { c.expect("valid head is readable", false) }
         }
         let invalid: [(String, String)] = [
+            ("MLX oversized sequence dimension", try write {
+                $0.sequences = [.init(name: "rows", dtype: "uint8", shape: [dimensionLimit + 1], axis: 0,
+                    base: 0, live: 0, extents: [])]
+                $0.sequenceBytes = dimensionLimit + 1; $0.residentBytes = dimensionLimit + 1
+            }),
+            ("MLX oversized empty fixed dimension", try write(extra: []) {
+                $0.arrays[1].shape = [0, dimensionLimit + 1]
+            }),
             ("negative resident ledger", try write { $0.residentBytes = -1 }),
             ("overstated resident ledger", try write { $0.residentBytes = 1 }),
             ("understated fixed capacity", try write(extra: [1, 2]) { $0.residentBytes = 1 }),
