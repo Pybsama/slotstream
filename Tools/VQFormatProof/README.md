@@ -69,3 +69,56 @@ Full support still requires maintainer design alignment, format-aware
 streaming and resident quantization, reference model parity, existing 4-bit
 regressions and real-machine acceptance. Images and the optional MTP sidecar
 have separate qualification gates.
+
+## Separate sampled projection arithmetic probe
+
+This additional standalone probe multiplies input vectors by the five expert
+fixtures' sampled rows. The samples span different experts; these rows are
+not a whole expert matrix, and this does not perform routing or a MoE layer.
+PLE is an embedding and is excluded from multiplication. Existing decoding
+checks and their entry point are unchanged.
+
+```sh
+xcrun swiftc -O Tools/VQFormatProof/Decoder.swift \
+  Tools/VQFormatProof/Projection.swift Tools/VQFormatProof/projection/main.swift \
+  -o /tmp/slotstream-vq-projection
+python3 Tools/VQFormatProof/test_projection.py /tmp/slotstream-vq-projection \
+  --real-root /tmp/slotstream-vq-data --out /tmp/slotstream-vq-projection-results
+```
+
+Use the metadata/header/fixture commands above first, or omit `--real-root`
+to run synthetic cases only. The harness verifies the existing pinned
+metadata, headers, fixture provenance and model.py text hash before real
+checks. It never imports or executes the downloaded model code. `--mode cpu`
+is available without Metal and cannot establish a GPU result.
+
+The native CLI accepts `fixture input-f16.bin batch cpu|metal`. Inputs are
+little-endian F16 `[batch,input]`; outputs are little-endian F32 `[batch,rows]`.
+Rows and input width retain the decoder's bounds; batch is limited to 128.
+BF16/PLE weights, invalid batch, wrong input length, non-finite inputs and
+overflowing decoded F16 products are rejected before Metal allocation.
+
+The CPU accumulates in Double. Metal reads compressed codes, codebooks and
+scales directly without making a decoded weight matrix, rounds each decoded
+product to F16, and accumulates F32 FMA in increasing input-column order.
+This is a deliberately simple arithmetic probe, without a performance claim.
+A quiet-NaN output sentinel detects unwritten GPU outputs.
+
+The separate Python oracle uses whole-row integer decoding and `math.fsum`
+over exactly rounded F16 inputs/weights. Basis and zero vectors require exact
+F32 outputs. Dense vectors use the fixed, predeclared budget
+`abs(error) <= 1e-4 + 2e-5 * abs(reference)`; this is tolerance-based arithmetic
+evidence, not bitwise parity. The cases use single-vector and batched shapes,
+packed tails, differing token results and maximum bounded sizes. Rejection
+checks run in both native modes. Raw outputs and machine-readable results
+are saved under `--out`.
+
+`explicit_metal_buffer_bytes` reports the sum of the five requested MTLBuffer
+lengths (codes, codebook, scales, input and output). It excludes host arrays,
+driver/compiler allocations, internal constant storage and process peak
+memory. It is not a production memory cap or an admission-policy measurement.
+
+A pass does not qualify the checkpoint reference's fused, simdgroup or
+grouped-prefill reductions, BF16 dispatch, full expert projection, decode/
+prefill equivalence, model inference or throughput. Those remain separate
+gates before any engine integration or model-support claim.
