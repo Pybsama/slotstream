@@ -595,10 +595,13 @@ public struct ToolDefinition: Sendable {
             // A resource ID does not affect a directly declared scalar type,
             // but references anywhere beneath it need unsupported rebasing.
             guard let reference = field["$ref"] else { return (field, visited, canReference) }
-            // Ref siblings have different semantics across schema drafts. Only
-            // annotations/definitions are safe here; do not merge constraints.
-            guard canReference, Set(field.keys).isSubset(of: Self.refSiblings),
-                  case .string(let ref) = reference, ref.unicodeScalars.first == "#",
+            // Ref siblings have different semantics across schema drafts. Keep
+            // the existing inference from this field's own declarations when
+            // constraints are present, rather than merging them with the target.
+            guard Set(field.keys).isSubset(of: Self.refSiblings) else {
+                return (field, visited, canReference)
+            }
+            guard canReference, case .string(let ref) = reference, ref.unicodeScalars.first == "#",
                   let pointer = String(ref.unicodeScalars.dropFirst()).removingPercentEncoding,
                   pointer.isEmpty || pointer.unicodeScalars.first == "/" else { return nil }
             var tokens: [String] = []

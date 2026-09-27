@@ -357,9 +357,41 @@ extension Catalogue {
         c.equal("ref annotations do not hide its type", kind(.object([
             "$ref": .string("#/$defs/Text"), "description": .string("Text"), "default": .null,
         ]), definitions: defs), .string)
-        c.equal("conflicting ref siblings are not guessed", kind(.object([
+        c.equal("a ref sibling retains its directly declared type", kind(.object([
             "$ref": .string("#/$defs/Text"), "type": .string("number"),
+        ]), definitions: defs), .number)
+        for pointer in ["#/$defs/Text", "#/$defs/Missing", "#/$defs/Self", "other.json#/$defs/Text", "#bad~2"] {
+            c.equal("a direct string survives a ref sibling: \(pointer)", kind(.object([
+                "$ref": .string(pointer), "type": .string("string"),
+            ]), definitions: defs), .string)
+        }
+        c.equal("nullable type siblings retain the original inference", kind(.object([
+            "$ref": .string("#/$defs/Text"), "type": .array([.string("number"), .string("null")]),
+        ]), definitions: defs), .number)
+        c.equal("anyOf siblings retain the original inference", kind(.object([
+            "$ref": .string("#/$defs/Missing"),
+            "anyOf": .array([string, .object(["type": .string("null")])]),
+        ]), definitions: defs), .string)
+        c.equal("sibling fallback preserves the resource boundary", kind(.object([
+            "$id": .string("other.json"), "$ref": .string("#/$defs/Text"),
+            "anyOf": .array([ref("#/$defs/Text"), .object(["type": .string("null")])]),
         ]), definitions: defs), .unknown)
+        let siblingRoot: JSONValue = .object([
+            "$ref": .string("#/$defs/Other"),
+            "$defs": .object(["Text": string, "Other": .object([
+                "properties": .object(["ignored": .object(["type": .string("number")])]),
+            ])]),
+            "properties": .object(["direct": string, "referenced": ref("#/$defs/Text")]),
+        ])
+        let siblingTool = ToolDefinition(name: "echo", description: "", parameters: siblingRoot)
+        c.equal("root ref preserves its own properties", siblingTool.schema.params,
+            ["direct": .string, "referenced": .string])
+        let siblingEvents = ToolCallSplitter.parseAll(
+            "<tool_call><function=echo><parameter=direct>00123</parameter></function></tool_call>",
+            tools: [siblingTool.schema], idFactory: countingIDs())
+        let siblingCall = siblingEvents.compactMap { if case .toolCall(let call) = $0 { return call }; return nil }.first
+        c.equal("root ref sibling preserves string argument bytes",
+            siblingCall?.arguments["direct"], .string("00123"))
         c.equal("ref composition is not flattened", kind(.object([
             "$ref": .string("#/$defs/Text"), "allOf": .array([string]),
         ]), definitions: defs), .unknown)
