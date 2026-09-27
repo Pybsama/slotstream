@@ -332,6 +332,7 @@ public final class PersistentPrefixCache {
         }
         var expected = Int64(PersistentPrefixFile.magic.count)
         var names = Set<String>()
+        var residentBytes = 0
         for record in header.arrays {
             // Validate against the real payload before adding an untrusted
             // length: a damaged header must throw, not overflow and trap.
@@ -340,16 +341,37 @@ public final class PersistentPrefixCache {
                   names.insert(record.name).inserted else {
                 throw Failure("array \(record.name) is out of place")
             }
+            guard let dtype = PersistentPrefixFile.dtype(named: record.dtype), record.axis == 0,
+                  record.length == (record.shape.first ?? 1),
+                  let capacity = PersistentPrefixFile.fixedCapacity(shape: record.shape, itemBytes: dtype.size),
+                  Int64(capacity) == record.byteCount else {
+                throw Failure("array \(record.name) has an invalid fixed layout")
+            }
+            // Save charges tensor storage, excluding the host token payload.
+            if record.name != "tokens" {
+                let (total, overflow) = residentBytes.addingReportingOverflow(capacity)
+                guard !overflow else { throw Failure("resident capacity overflows") }
+                residentBytes = total
+            }
             expected += record.byteCount
         }
         guard expected == payloadEnd else { throw Failure("arrays do not end at the header") }
+        var sequenceBytes = 0
         for record in header.sequences {
             guard names.insert(record.name).inserted, let dtype = PersistentPrefixFile.dtype(named: record.dtype),
-                  PersistentPrefixFile.layout(shape: record.shape, axis: record.axis, length: record.live,
-                    itemBytes: dtype.size) != nil,
+                  let layout = PersistentPrefixFile.layout(shape: record.shape, axis: record.axis, length: record.live,
+                    itemBytes: dtype.size),
                   PersistentPrefixPolicy.tiles(record) else {
                 throw Failure("sequence \(record.name) is invalid")
             }
+            let (sequences, sequenceOverflow) = sequenceBytes.addingReportingOverflow(layout.capacityBytes)
+            let (resident, residentOverflow) = residentBytes.addingReportingOverflow(layout.capacityBytes)
+            guard !sequenceOverflow, !residentOverflow else { throw Failure("sequence capacity overflows") }
+            sequenceBytes = sequences
+            residentBytes = resident
+        }
+        guard header.sequenceBytes == sequenceBytes, header.residentBytes == residentBytes else {
+            throw Failure("recorded memory accounting differs from array capacity")
         }
     }
 

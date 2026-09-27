@@ -337,6 +337,14 @@ package enum PersistentPrefixFile {
         return result
     }
 
+    /// Fixed payloads hold their whole shape. Zero-size arrays and scalars
+    /// are valid geometry, even though sequence buffers require positive dims.
+    package static func fixedCapacity(shape: [Int], itemBytes: Int) -> Int? {
+        guard shape.allSatisfy({ $0 >= 0 }), itemBytes > 0,
+              let bytes = product(shape + [itemBytes]), bytes <= maximumArrayBytes else { return nil }
+        return bytes
+    }
+
     /// Byte geometry of one array, or nil for any invalid or overflowing shape.
     package static func layout(shape: [Int], axis: Int, length: Int, itemBytes: Int) -> Layout? {
         guard !shape.isEmpty, shape.allSatisfy({ $0 > 0 }), axis >= 0, axis < shape.count,

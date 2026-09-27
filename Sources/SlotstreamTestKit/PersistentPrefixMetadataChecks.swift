@@ -39,13 +39,37 @@ extension Catalogue {
             original[name] = try Data(contentsOf: url)
             return name
         }
-        let valid = [try write(), try write(extra: [1, 2, 3, 4]), try write(extra: [])]
+        let valid = [try write(), try write(extra: [1, 2, 3, 4]), try write(extra: []), try write(extra: [1]) {
+            $0.arrays[1].shape = [] // A scalar uses one element, with no dimensions.
+        }, try write(extra: [1, 2]) {
+            // Capacity is charged even when this sequence has no live rows.
+            $0.sequences = [.init(name: "rows", dtype: "uint8", shape: [4], axis: 0, base: 0, live: 0, extents: [])]
+            $0.sequenceBytes = 4
+            $0.residentBytes = 6
+        }]
         for name in valid {
             if case let .head(entry) = try PersistentPrefixCache.readFile(directory: directory, name: name) {
                 c.equal("valid head retains its token", entry.tokens.count, 1)
             } else { c.expect("valid head is readable", false) }
         }
         let invalid: [(String, String)] = [
+            ("negative resident ledger", try write { $0.residentBytes = -1 }),
+            ("overstated resident ledger", try write { $0.residentBytes = 1 }),
+            ("understated fixed capacity", try write(extra: [1, 2]) { $0.residentBytes = 1 }),
+            ("overstated fixed capacity", try write(extra: [1, 2]) { $0.residentBytes = 3 }),
+            ("negative sequence ledger", try write { $0.sequenceBytes = -1 }),
+            ("overstated sequence ledger", try write { $0.sequenceBytes = 1 }),
+            ("understated sequence capacity", try write {
+                $0.sequences = [.init(name: "rows", dtype: "uint8", shape: [4], axis: 0, base: 0, live: 0, extents: [])]
+                $0.sequenceBytes = 0; $0.residentBytes = 4
+            }),
+            ("understated total capacity", try write {
+                $0.sequences = [.init(name: "rows", dtype: "uint8", shape: [4], axis: 0, base: 0, live: 0, extents: [])]
+                $0.sequenceBytes = 4; $0.residentBytes = 0
+            }),
+            ("invalid fixed dtype", try write(extra: [1]) { $0.arrays[1].dtype = "unknown" }),
+            ("invalid fixed capacity", try write(extra: [1]) { $0.arrays[1].shape = [2] }),
+            ("partial fixed array", try write(extra: [1]) { $0.arrays[1].length = 0 }),
             ("first array overflow", try write { $0.arrays[0].byteCount = Int64.max }),
             ("later array overflow", try write(extra: [1]) { $0.arrays[1].byteCount = Int64.max }),
             ("cumulative overflow", try write(extra: [1]) {
