@@ -192,8 +192,12 @@ public final class PersistentPrefixCache {
         var result = Maintenance()
         var found: [PersistentPrefixEntry] = []
         var foundSegments: [String: PersistentPrefixSegmentEntry] = [:]
-        func discard(_ name: String, _ bytes: Int64, _ reason: WritableKeyPath<Maintenance, Int>) {
-            unlink(directory.appendingPathComponent(name).path)
+        func discard(_ name: String, _ bytes: Int64, _ reason: WritableKeyPath<Maintenance, Int>) throws {
+            guard unlink(directory.appendingPathComponent(name).path) == 0 else {
+                let code = errno
+                if code == ENOENT { return }
+                throw ModelError("cannot remove prefix cache file \(name): \(String(cString: strerror(code)))")
+            }
             result[keyPath: reason] += 1
             result.bytes += bytes
         }
@@ -202,7 +206,7 @@ public final class PersistentPrefixCache {
             let path = directory.appendingPathComponent(name).path
             if name.hasPrefix("."), name.hasSuffix(".tmp") {
                 // An interrupted write. The directory lock proves no writer is live.
-                discard(name, Self.fileSize(path), \.incomplete)
+                try discard(name, Self.fileSize(path), \.incomplete)
                 continue
             }
             guard name.hasSuffix("." + PersistentPrefixFile.headExtension)
@@ -211,24 +215,24 @@ public final class PersistentPrefixCache {
                 switch try Self.readFile(directory: directory, name: name) {
                 case .head(let entry) where entry.identity == identity.digest: found.append(entry)
                 case .segment(let segment) where segment.identity == identity.digest: foundSegments[name] = segment
-                case .head(let entry): discard(name, entry.bytes, \.otherBuilds)
-                case .segment(let segment): discard(name, segment.bytes, \.otherBuilds)
-                case .otherFormat(let bytes): discard(name, bytes, \.otherBuilds)
+                case .head(let entry): try discard(name, entry.bytes, \.otherBuilds)
+                case .segment(let segment): try discard(name, segment.bytes, \.otherBuilds)
+                case .otherFormat(let bytes): try discard(name, bytes, \.otherBuilds)
                 }
             } catch is PersistentPrefixFileError {
-                discard(name, Self.fileSize(path), \.unreadable)
+                try discard(name, Self.fileSize(path), \.unreadable)
             } catch {
                 throw UnreadableFile(name: name, reason: "\(error)")
             }
         }
         let now = Self.now()
-        found.removeAll { head in
+        try found.removeAll { head in
             if PersistentPrefixPolicy.isExpired(head, now: now, maxAge: configuration.maxAge) {
-                discard(head.file, head.bytes, \.expired)
+                try discard(head.file, head.bytes, \.expired)
                 return true
             }
             if PersistentPrefixPolicy.danglingReason(head, segments: foundSegments) != nil {
-                discard(head.file, head.bytes, \.incomplete)
+                try discard(head.file, head.bytes, \.incomplete)
                 return true
             }
             return false
@@ -238,11 +242,11 @@ public final class PersistentPrefixCache {
                 identity: identity.digest, quota: configuration.maxBytes, incoming: 0, pinned: [], freed: [],
                 now: now, maxAge: configuration.maxAge), !victims.isEmpty {
             let files = Set(victims.map(\.file))
-            for victim in victims { discard(victim.file, victim.bytes, \.overQuota) }
+            for victim in victims { try discard(victim.file, victim.bytes, \.overQuota) }
             found.removeAll { files.contains($0.file) }
         }
         for name in PersistentPrefixPolicy.unreferencedSegments(found, segments: foundSegments.keys) {
-            discard(name, foundSegments[name]?.bytes ?? 0, \.orphanSegments)
+            try discard(name, foundSegments[name]?.bytes ?? 0, \.orphanSegments)
             foundSegments[name] = nil
         }
         lock.withLock {
@@ -466,7 +470,9 @@ public final class PersistentPrefixCache {
     func remove(heads files: [String], _ reason: Removal, keeping: Set<String> = []) -> Int {
         var removed = 0
         for file in files {
-            if unlink(path(file)) == 0 || errno == ENOENT { removed += 1 }
+            let outcome = removeFile(file)
+            guard outcome.gone else { continue }
+            if outcome.removed { removed += 1 }
             lock.withLock {
                 heads.removeAll { $0.file == file }
                 switch reason {
@@ -481,20 +487,33 @@ public final class PersistentPrefixCache {
         return removed + collectGarbage(keeping: keeping)
     }
 
+    /// Only a successful unlink or an already absent file releases its charge.
+    /// Permission and I/O failures leave its entry available for a later retry.
+    func removeFile(_ file: String) -> (gone: Bool, removed: Bool) {
+        if unlink(path(file)) == 0 { return (true, true) }
+        let code = errno
+        if code == ENOENT { return (true, false) }
+        report("could not remove prefix cache file \(file): \(String(cString: strerror(code)))")
+        return (false, false)
+    }
+
     /// Called with `operations` held.
     @discardableResult
     func collectGarbage(keeping: Set<String> = []) -> Int {
         let orphans = lock.withLock {
             PersistentPrefixPolicy.unreferencedSegments(heads, segments: segments.keys).filter { !keeping.contains($0) }
         }
+        var removed = 0
         for name in orphans {
-            unlink(path(name))
+            let outcome = removeFile(name)
+            guard outcome.gone else { continue }
+            if outcome.removed { removed += 1 }
             lock.withLock {
                 segments[name] = nil
-                counters.removedSegments += 1
+                if outcome.removed { counters.removedSegments += 1 }
             }
         }
-        return orphans.count
+        return removed
     }
 
     /// Called with `operations` held.
@@ -505,8 +524,11 @@ public final class PersistentPrefixCache {
             heads.filter { PersistentPrefixPolicy.isExpired($0, now: now, maxAge: configuration.maxAge) }.map(\.file)
         }
         guard !expired.isEmpty else { return 0 }
-        report("forgot \(expired.count) state\(expired.count == 1 ? "" : "s") unused past the maximum age")
-        return remove(heads: expired, .expired, keeping: keeping)
+        let removed = remove(heads: expired, .expired, keeping: keeping)
+        let remaining = lock.withLock { Set(heads.map(\.file)) }
+        let forgotten = expired.filter { !remaining.contains($0) }.count
+        report("forgot \(forgotten) state\(forgotten == 1 ? "" : "s") unused past the maximum age")
+        return removed
     }
 
     func touch(_ file: String) {
@@ -521,12 +543,20 @@ public final class PersistentPrefixCache {
     public func clear() -> Int {
         operations.withLock {
             let names = (try? FileManager.default.contentsOfDirectory(atPath: configuration.directory.path)) ?? []
-            var removed = 0
-            for name in names where Self.isStateFile(name) && unlink(path(name)) == 0 { removed += 1 }
-            lock.withLock {
-                counters.deleted += heads.count
-                heads.removeAll()
-                segments.removeAll()
+            let headFiles = Set(names.filter { $0.hasSuffix("." + PersistentPrefixFile.headExtension) })
+                .union(lock.withLock { heads.map(\.file) })
+            var removed = remove(heads: headFiles.sorted(), .deleted)
+            // An undeleted head still owns its segments. Clear only files no
+            // remaining head needs, including unindexed files of other builds.
+            let referenced = lock.withLock { Set(heads.flatMap(\.segments)) }
+            let remaining = (try? FileManager.default.contentsOfDirectory(atPath: configuration.directory.path)) ?? []
+            for name in remaining where Self.isStateFile(name) && !headFiles.contains(name) && !referenced.contains(name) {
+                let outcome = removeFile(name)
+                guard outcome.gone else { continue }
+                if outcome.removed { removed += 1 }
+                lock.withLock {
+                    if segments.removeValue(forKey: name) != nil, outcome.removed { counters.removedSegments += 1 }
+                }
             }
             report("cleared \(removed) file\(removed == 1 ? "" : "s")")
             return removed
@@ -547,8 +577,10 @@ public final class PersistentPrefixCache {
             }
             guard !files.isEmpty else { return 0 }
             remove(heads: files, .deleted)
-            report("removed \(files.count) state\(files.count == 1 ? "" : "s") of a deleted conversation")
-            return files.count
+            let remaining = lock.withLock { Set(heads.map(\.file)) }
+            let removed = files.filter { !remaining.contains($0) }.count
+            report("removed \(removed) state\(removed == 1 ? "" : "s") of a deleted conversation")
+            return removed
         }
     }
 

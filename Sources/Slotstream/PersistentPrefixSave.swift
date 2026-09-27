@@ -146,8 +146,11 @@ extension PersistentPrefixCache {
         let continued = parent != nil || strictPrefixes > 0
         let now = Self.now()
         let victims = lock.withLock {
-            PersistentPrefixPolicy.evictionVictims(heads, segments: segments.mapValues(\.bytes),
-                identity: identity.digest, quota: configuration.maxBytes, incoming: estimate, pinned: reuse.segments,
+            let orphanBytes = PersistentPrefixPolicy.unreferencedSegments(heads, segments: segments.keys)
+                .filter { !reuse.segments.contains($0) }
+                .reduce(Int64(0)) { $0 + (segments[$1]?.bytes ?? 0) }
+            return PersistentPrefixPolicy.evictionVictims(heads, segments: segments.mapValues(\.bytes),
+                identity: identity.digest, quota: configuration.maxBytes - orphanBytes, incoming: estimate, pinned: reuse.segments,
                 freed: Set(redundant.map(\.file) + [name]), now: now, maxAge: configuration.maxAge)
         }
         guard let victims else {
@@ -158,16 +161,33 @@ extension PersistentPrefixCache {
             return finish(.skipped("less than \(Self.megabytes(estimate + Self.minimumFreeBytes)) free on the volume"))
         }
         if !victims.isEmpty {
-            for victim in victims {
+            removed += remove(heads: victims.map(\.file), .evicted, keeping: reuse.segments)
+            let remaining = lock.withLock { Set(heads.map(\.file)) }
+            for victim in victims where !remaining.contains(victim.file) {
                 report("evicted \(victim.tokens.count)-token state \(victim.file) (\(Self.megabytes(victim.bytes)))")
             }
-            removed += remove(heads: victims.map(\.file), .evicted, keeping: reuse.segments)
+            guard victims.allSatisfy({ !remaining.contains($0.file) }) else {
+                return finish(.failed("could not remove prefix cache states to make room"))
+            }
         }
 
         let directory = configuration.directory
         func temporary(_ file: String) -> String {
             directory.appendingPathComponent(".\(file).\(getpid()).\(UUID().uuidString).tmp").path
         }
+        // The victims' orphan segments may also have resisted deletion.
+        // Their retained charge must be included before starting this write.
+        let hasRoom = lock.withLock {
+            let orphanBytes = PersistentPrefixPolicy.unreferencedSegments(heads, segments: segments.keys)
+                .filter { !reuse.segments.contains($0) }
+                .reduce(Int64(0)) { $0 + (segments[$1]?.bytes ?? 0) }
+            return PersistentPrefixPolicy.evictionVictims(heads, segments: segments.mapValues(\.bytes),
+                identity: identity.digest, quota: configuration.maxBytes - orphanBytes, incoming: estimate,
+                pinned: reuse.segments, freed: Set(redundant.map(\.file) + [name]), now: now,
+                maxAge: configuration.maxAge)?.isEmpty == true
+        }
+        guard hasRoom else { return finish(.failed("could not reclaim prefix cache disk quota")) }
+
         var newSegment: PersistentPrefixSegmentEntry?
         let entry: PersistentPrefixEntry
         do {
@@ -222,8 +242,9 @@ extension PersistentPrefixCache {
                 sequences: Dictionary(uniqueKeysWithValues: sequences.map { ($0.name, $0) }))
         } catch {
             if let newSegment {
-                unlink(path(newSegment.file))
-                lock.withLock { segments[newSegment.file] = nil }
+                if removeFile(newSegment.file).gone {
+                    lock.withLock { segments[newSegment.file] = nil }
+                }
             }
             return finish(.failed("\(error)"))
         }
