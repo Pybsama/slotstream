@@ -235,7 +235,6 @@ public enum GatewayDialect {
         var pending: [String: String] = [:]
         var pendingOrder: [String] = []
         var pendingResults: [String: ChatMessage] = [:]
-        var callIDs = Set<String>()
 
         for (i, m) in raw.enumerated() {
             let role = m["role"] as? String ?? ""
@@ -315,9 +314,9 @@ public enum GatewayDialect {
                     case "tool-call":
                         let id = p["toolCallId"] as? String ?? ""
                         let name = p["toolName"] as? String ?? ""
-                        guard !id.isEmpty, !name.isEmpty, callIDs.insert(id).inserted else {
+                        guard !id.isEmpty, !name.isEmpty, pending[id] == nil else {
                             return .failure(Failure("invalid_tool_call",
-                                "prompt[\(i)]: tool calls need unique nonempty IDs and names"))
+                                "prompt[\(i)]: tool calls need nonempty IDs and names, and IDs unique among pending calls"))
                         }
                         // `input` is a JSON string in the specification, but fx
                         // sends the object; both are accepted.

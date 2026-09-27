@@ -418,6 +418,25 @@ extension Catalogue {
             c.equal("later tool turn keeps its own result", mapped.filter { $0.role == "tool" }.map(\.content),
                     ["A contents", "B contents", "C contents"])
         } else { c.expect("multiple tool turns parse", false) }
+        var reusedCall = call("a", "new A")
+        reusedCall["toolName"] = "write"
+        let reused: [String: Any] = ["role": "assistant", "content": [reusedCall, call("b", "new B")]]
+        for (label, between) in [("adjacent completed groups", [[String: Any]]()), ("later user turn", [user])] {
+            let prompt = [user, assistant, ["role": "tool", "content": [b, a]]] + between + [reused,
+                ["role": "tool", "content": [result("b", "new B contents")]],
+                ["role": "tool", "content": [result("a", "new A contents", name: "write")]]]
+            switch GatewayDialect.mapPrompt(prompt) {
+            case .success(let mapped):
+                let results = mapped.filter { $0.role == "tool" }
+                c.equal(label + ": completed IDs may be reused", results.map { $0.toolCallId ?? "" }, ["a", "b", "a", "b"])
+                c.equal(label + ": each group retains call order", results.map { $0.content },
+                    ["A contents", "B contents", "new A contents", "new B contents"])
+                c.equal(label + ": reused ID follows its new call name", results.map { $0.toolName ?? "" },
+                    ["read", "read", "write", "read"])
+            case .failure(let failure):
+                c.expect(label + ": completed IDs may be reused", false, failure.message)
+            }
+        }
         let invalid: [(String, [[String: Any]])] = [
             ("missing result", [user, assistant, ["role": "tool", "content": [a]]]),
             ("user before complete results", [user, assistant, ["role": "tool", "content": [b]], user]),
