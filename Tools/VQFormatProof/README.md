@@ -3,8 +3,10 @@
 This standalone tool investigates [issue #7](https://github.com/carloslfu/slotstream/issues/7).
 It does **not** add model support to Slotstream or modify the existing engine.
 It checks the exact file layout, then compares Swift CPU and native Metal
-row decoding to a separate Python binary16 oracle. It does not validate
-matrix multiplication, inference, quality, throughput or end-to-end memory.
+row decoding to a separate Python binary16 oracle. A separate sampled
+projection arithmetic probe is described below. Full expert/reference-kernel
+matrix multiplication, inference, quality, throughput and end-to-end memory
+remain unqualified.
 
 Target: [`TheDrainFlorist/Qwen3.8-Flash-Next-VQ-2.1bpw` at
 `8684640a3956b01c47f5d47f9b999e2ab8b985f1`](https://huggingface.co/TheDrainFlorist/Qwen3.8-Flash-Next-VQ-2.1bpw/tree/8684640a3956b01c47f5d47f9b999e2ab8b985f1).
