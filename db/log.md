@@ -2148,3 +2148,9 @@ v0.2.26 publication, exact-candidate qualification, both prefix cache live gates
 ## [2026-09-27 14:16] create | records/measurements/release-0-2-26-published-2026-09-27
 v0.2.26 is public, installed and accepted: 35 native gates, prefix cache live gates 4/4 and 12/12, installed serving 31/31.
 
+## [2026-09-28 21:01] create | sources/references/2026/09/2026-09-28-qwen-flash-next-vq-model-card
+The VQ checkpoint's model card quality table, pinned at the revision issue 7 inspected.
+
+## [2026-09-28 21:01] create | records/decisions/vq-weights-behind-qualification-gates
+VQ builds approved as a second weight format behind parity, quality and speed gates (issue 7).
+
