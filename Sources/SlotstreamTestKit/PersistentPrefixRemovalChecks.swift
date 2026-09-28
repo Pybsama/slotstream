@@ -64,6 +64,8 @@ extension Catalogue {
                 c.expect("startup refuses unsuccessful cleanup", false)
             } catch {
                 c.expect("startup refusal names undeleted target", "\(error)".contains(blocked.lastPathComponent), "\(error)")
+                // The only refusal `serve` survives, by running without the disk tier.
+                c.expect("startup refusal is an InaccessibleFile", error is PersistentPrefixCache.InaccessibleFile, "\(error)")
             }
             c.expect("startup failure preserves ordinary head", fm.fileExists(atPath: directory.appendingPathComponent(headName).path))
             c.expect("startup failure preserves referenced segment", fm.fileExists(atPath: directory.appendingPathComponent(segmentName).path))

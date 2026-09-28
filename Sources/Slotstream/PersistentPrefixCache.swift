@@ -197,7 +197,9 @@ public final class PersistentPrefixCache {
             guard unlink(directory.appendingPathComponent(name).path) == 0 else {
                 let code = errno
                 if code == ENOENT { return }
-                throw ModelError("cannot remove prefix cache file \(name): \(String(cString: strerror(code)))")
+                // Kept like a file the system refuses to read, so `serve`
+                // runs without the disk tier instead of refusing to start.
+                throw InaccessibleFile(name: name, reason: "cannot remove it: \(String(cString: strerror(code)))")
             }
             result[keyPath: reason] += 1
             result.bytes += bytes

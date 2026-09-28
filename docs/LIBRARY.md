@@ -231,8 +231,8 @@ start from, least recently used first. `maxAge`
 (30 days by default, `nil` to keep states until the quota needs room) removes
 unused states. Opening the directory removes files from other binaries, models
 or settings, expired and damaged files, and anything over the quota;
-`tier.maintenance` reports what it removed. A file the system refuses to read,
-because of its permissions or an I/O error, is kept: opening throws
+`tier.maintenance` reports what it removed. A file the system refuses to read
+or remove, because of its permissions or an I/O error, is kept: opening throws
 `PersistentPrefixCache.InaccessibleFile`, which names it, and `slotstream
 serve` then runs without the disk tier.
 
