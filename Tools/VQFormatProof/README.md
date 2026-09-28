@@ -124,3 +124,44 @@ A pass does not qualify the checkpoint reference's fused, simdgroup or
 grouped-prefill reductions, BF16 dispatch, full expert projection, decode/
 prefill equivalence, model inference or throughput. Those remain separate
 gates before any engine integration or model-support claim.
+
+## One complete expert gate, still a mathematical probe
+
+`fetch_full_gate.py` takes only the three exact HTTP 206 ranges needed for
+expert 0 of `model.layers.2.mlp.switch_mlp.gate_proj` from the fixed checkpoint
+revision: 358,400 bytes of packed codes, 51,200 bytes of F16 scales, and a
+262,144-byte shared F16 codebook. It checks the saved raw safetensors header,
+revision, tensor layout, response status, `Content-Range`, length and local
+SHA-256; a later cached replay checks those receipts without another request.
+It does not verify the complete shard's LFS hash. Run the metadata and header
+commands above first, then use a fresh output directory:
+
+```sh
+python3 Tools/VQFormatProof/fetch_full_gate.py \
+  --source-root /tmp/slotstream-vq-data --out /tmp/slotstream-vq-fullgate
+xcrun swiftc -O Tools/VQFormatProof/Decoder.swift \
+  Tools/VQFormatProof/main.swift -o /tmp/slotstream-vq-fullgate/vq-decoder
+xcrun swiftc -O Tools/VQFormatProof/Decoder.swift \
+  Tools/VQFormatProof/Projection.swift Tools/VQFormatProof/projection/main.swift \
+  -o /tmp/slotstream-vq-fullgate/vq-projection
+python3 Tools/VQFormatProof/test_full_gate.py \
+  /tmp/slotstream-vq-fullgate/vq-decoder \
+  /tmp/slotstream-vq-fullgate/vq-projection \
+  --root /tmp/slotstream-vq-fullgate
+```
+
+The harness covers all 640 output rows in ten disjoint tiles of at most 64
+rows, then separately checks an overlapping one-row tail. Every tile first
+requires CPU and Metal decoded F16 values to match the independent Python
+binary16 oracle bit for bit. Seven F16 input vectors then test the bounded
+F32 projection against a whole-row `math.fsum` oracle with the predeclared
+budget above. Raw outputs, source hashes and resource observations are
+retained locally. The scripts reject Python optimization mode, which would
+otherwise remove verification assertions.
+
+This is a complete **expert-0 mathematical projection**, not parity with the
+checkpoint's default low-N `devx + simd_sum` path. That path changes the
+reduction order and returns F16 or BF16 rather than this probe's F32. The
+grouped prefill kernel, other experts, routing, SSD caching, full inference,
+quality, speed and production memory remain unverified. Do not describe this
+standalone tool as model support in the Slotstream engine.
