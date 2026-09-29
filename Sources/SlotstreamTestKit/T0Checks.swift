@@ -1,5 +1,5 @@
-// T0: pure Swift. No MLX, no GPU, no files, no weights. Everything here runs
-// on any Mac in milliseconds, which is what makes it a gate on every push.
+// T0 checks use pure Swift and small bundled fixtures. They do not load model
+// weights or start Metal work, making them a gate on every push.
 
 import Foundation
 import Slotstream
@@ -8,6 +8,7 @@ import SlotstreamDiagnostics
 extension Catalogue {
     static var t0Checks: [Check] {
         [
+            Check("vq-record-profile", tier: .t0) { try vqRecordProfile() },
             Check("persistent-prefix-metadata-bounds", tier: .t0) { try persistentPrefixMetadataBounds() },
             Check("prefill-schedule", tier: .t0) { Diagnostics.prefillSchedule() },
             Check("context-policy", tier: .t0) { contextPolicy() },
