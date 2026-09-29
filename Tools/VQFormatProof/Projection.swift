@@ -94,7 +94,61 @@ kernel void vq_sampled_projection(device const uchar* codes [[buffer(0)]],
 }
 """
 
+// Isolated numerical candidate for one 64-row tile of the fixed F16 expert.
+// The historical kernel above stays byte-identical as the control mode.
+private let projectionUnroundedSerialMetalSource = """
+#include <metal_stdlib>
+using namespace metal;
+kernel void vq_unrounded_serial_projection(device const uchar* codes [[buffer(0)]],
+                                  device const half* book [[buffer(1)]],
+                                  device const half* scales [[buffer(2)]],
+                                  device const half* x [[buffer(3)]],
+                                  device float* output [[buffer(4)]],
+                                  constant uint* dims [[buffer(5)]],
+                                  uint index [[thread_position_in_grid]]) {
+    const uint rows = dims[0], width = dims[1], d = dims[2], group = dims[3];
+    const uint stride = dims[4], bits = dims[5], packed = dims[6], batch = dims[7];
+    if (index >= batch * rows) return;
+    const uint token = index / rows, row = index % rows;
+    const device uchar* source = codes + row * stride;
+    float total = 0.0f;
+    for (uint column = 0; column < width; ++column) {
+        const uint sub = column / d;
+        uint code;
+        if (packed) {
+            const device uint* words = reinterpret_cast<const device uint*>(source);
+            const uint bit = sub * bits, at = bit / 32, shift = bit % 32;
+            code = words[at] >> shift;
+            if (shift + bits > 32) code |= words[at + 1] << (32 - shift);
+            code &= (1u << bits) - 1u;
+        } else code = source[sub];
+        const float weight = float(book[code * d + column % d]) *
+                                 float(scales[row * (width / group) + column / group]);
+        total = fma(float(x[token * width + column]), float(weight), total);
+    }
+    output[index] = total;
+}
+"""
+
 func projectMetal(_ input: ProjectionInput) throws -> ([Float], Int) {
+    try projectMetalKernel(input, source: projectionMetalSource,
+                           functionName: "vq_sampled_projection")
+}
+
+func projectMetalUnroundedSerial(_ input: ProjectionInput) throws -> ([Float], Int) {
+    let g = input.fixture.geometry
+    // The 640-row expert is supplied as ten disjoint 64-row fixtures. This
+    // candidate intentionally accepts only the first-tile geometry.
+    guard g.rows == 64, g.input == 2560, g.dimension == 8, g.groupSize == 64,
+          g.codebookSize == 16384, g.storage == "packed32", g.output == "f16" else {
+        throw ProofError("unsupported unrounded-serial proof geometry")
+    }
+    return try projectMetalKernel(input, source: projectionUnroundedSerialMetalSource,
+                                  functionName: "vq_unrounded_serial_projection")
+}
+
+private func projectMetalKernel(_ input: ProjectionInput, source: String,
+                                functionName: String) throws -> ([Float], Int) {
     let g = input.fixture.geometry
     guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else {
         throw ProofError("Metal device unavailable")
@@ -102,8 +156,8 @@ func projectMetal(_ input: ProjectionInput) throws -> ([Float], Int) {
     let options = MTLCompileOptions()
     if #available(macOS 15.0, *) { options.mathMode = .safe }
     else { options.fastMathEnabled = false }
-    let library = try device.makeLibrary(source: projectionMetalSource, options: options)
-    guard let function = library.makeFunction(name: "vq_sampled_projection") else {
+    let library = try device.makeLibrary(source: source, options: options)
+    guard let function = library.makeFunction(name: functionName) else {
         throw ProofError("Metal projection function unavailable")
     }
     let pipeline = try device.makeComputePipelineState(function: function)
