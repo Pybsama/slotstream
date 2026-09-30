@@ -2166,3 +2166,9 @@ Landed from the September 22 decode opportunities study (baseline 0.2.23), which
 ## [2026-09-28 21:24] create | records/decisions/decode-opportunities-stay-opt-in-2026-09-22
 Landed from the September 22 decode opportunities study (baseline 0.2.23), which was recorded but never committed: neither remaining decode proposal qualified a default change.
 
+## [2026-09-30 17:23] create | sources/references/2026/09/2026-09-30-qwen-flash-next-vq-expert-record-sizes
+Routed-expert record sizes of the VQ 2.1-bit build, read from its shard headers: 1,280,000, 1,382,400 or 2,611,200 bytes by layer.
+
+## [2026-09-30 17:23] update | records/decisions/vq-weights-behind-qualification-gates
+Revised: reads are about 39% of decode, slots of 1,382,400 bytes instead of the largest record, stronger quality and speed gates, and product rules.
+
