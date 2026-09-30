@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-09-27T14:16:52.684697Z
+updated: 2026-09-30T19:23:40.228026Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-27-published-2026-09-30]] — v0.2.27 published, installed and accepted
 - [[records/measurements/release-0-2-26-published-2026-09-27]] — v0.2.26 published, installed and accepted
 - [[records/measurements/c5-macbook-pro-m4-max-64gb-community]] — C5: MacBook Pro M4 Max, 64 GB, internal and external SSD (community, 2026-09-19)
 - [[records/measurements/prefix-cache-floor-community-2026-09-16]] — Prefix-cache floor at 2048 and 1024 tokens across a restart (community, 2026-09-16)
