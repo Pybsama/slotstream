@@ -96,6 +96,36 @@ extension Diagnostics {
         c.expect("depth change pins survive two retirements", grown[2] && grown[5])
         grown.retireGeneration()
         c.expect("depth change pins retire on the third", !grown[2] && !grown[5] && grown.count == 0)
+        // A pass can return to the one-generation barrier policy.
+        // Pins acquired under the ring must remain protected at the switch,
+        // then become reusable at the next single-generation retirement.
+        for sparse in [false, true] {
+            for depth in [2, 3, 5] {
+                let label = "pin downgrade \(depth)->1, sparse=\(sparse)"
+                var pins = SlotPins(count: 8, sparse: sparse)
+                pins.pin(1)
+                pins.configure(depth: depth)
+                pins.pin(4)
+                pins.retireGeneration()
+                pins.pin(6)
+                pins.configure(depth: 1)
+                c.equal("\(label): keeps live count", pins.count, 3)
+                c.expect("\(label): keeps live flags",
+                    (0..<8).allSatisfy { pins[$0] == [1, 4, 6].contains($0) })
+                pins.retireGeneration()
+                c.equal("\(label): retirement clears count", pins.count, 0)
+                c.expect("\(label): retirement clears every flag",
+                    (0..<8).allSatisfy { !pins[$0] })
+                pins.pin(4)
+                c.equal("\(label): retired slot can be repinned", pins.count, 1)
+                c.expect("\(label): repin owns only one slot",
+                    (0..<8).allSatisfy { pins[$0] == ($0 == 4) })
+                pins.unpin(4)
+                c.equal("\(label): explicit unpin clears count", pins.count, 0)
+                c.expect("\(label): explicit unpin clears every flag",
+                    (0..<8).allSatisfy { !pins[$0] })
+            }
+        }
         return c.report()
     }
 }

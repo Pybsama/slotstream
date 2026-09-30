@@ -121,6 +121,9 @@ package struct SlotPins {
         head = 0
         if wanted == 1 {
             ring = []; pinnedIn = []
+            // Ring-owned pins were never added to the sparse single-generation
+            // list. Preserve their protection now and clear them on retirement.
+            if sparse { touched = flags.indices.filter { flags[$0] } }
         } else {
             ring = Array(repeating: [], count: wanted)
             pinnedIn = Array(repeating: -1, count: flags.count)
