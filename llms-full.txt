@@ -5990,6 +5990,51 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+- Raw downloads stop their other requests as soon as a required file fails,
+  or an optional file is skipped, instead of finishing chunks the pull then
+  discards. By [@Pybsama](https://github.com/Pybsama) in
+  [#48](https://github.com/carloslfu/slotstream/pull/48).
+- `slotstream launch` gives up on a reply that has not finished within its
+  request's deadline, from its server or from GitHub, and treats a reply cut
+  off by an error as no reply. A reply that kept trickling in could hold it
+  indefinitely. By [@Pybsama](https://github.com/Pybsama) in
+  [#48](https://github.com/carloslfu/slotstream/pull/48).
+- `/v1/responses` refuses a function call that arrives after outputs for the
+  calls before it have started, instead of replaying it in the wrong turn. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#48](https://github.com/carloslfu/slotstream/pull/48).
+- The AI SDK gateway refuses a `seed`, `topK` or `maxOutputTokens` that is
+  not an exact integer, and a sampling value that is not a finite number,
+  instead of rounding or coercing it, and reads `null` fields as absent. It
+  refuses a `required` `toolChoice` without tools, or one naming an
+  undeclared tool, before generating, and a call to an undeclared tool ends
+  the stream with one error instead of reaching the client. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#48](https://github.com/carloslfu/slotstream/pull/48).
+- Opening the prefix cache directory checks each state's shapes and
+  recorded memory size against its arrays, and removes a file whose header
+  disagrees as damaged. A file that cannot be deleted stays counted against
+  the quota until a later attempt removes it, and a write goes ahead only
+  when it fits what is actually on disk. When opening the directory cannot
+  remove a stale file, `serve` runs without the disk tier and names the
+  file, as it does for a file it cannot read. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#48](https://github.com/carloslfu/slotstream/pull/48).
+- A checkpoint whose empty tensors start where the next tensor starts loads
+  instead of being refused as overlapping. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#48](https://github.com/carloslfu/slotstream/pull/48).
+- `slotstream optimization-state-check --variant lifecycle` passes again.
+  Since 0.2.22 a later turn re-reads a short decoded continuation that
+  ends between prefill passes instead of reusing it, and the check still
+  expected reuse. It now checks both that policy and the previous one. A
+  new `decode-barrier` variant checks that the four-layer decode barrier
+  gives the same output as one layer, and `mtp-passcost` rebuilds long
+  prefixes in bounded passes and refuses to time a pass that reads
+  experts. [Decode opportunities, September 22](MEASUREMENTS.md#remaining-decode-opportunities-current-backend-tests-do-not-qualify-new-defaults)
+
 ## 0.2.26 - 2026-09-27
 
 - The prefix cache's disk tier now writes states from 1,024 tokens instead
