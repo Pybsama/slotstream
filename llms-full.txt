@@ -6026,6 +6026,20 @@ determines which version the installer downloads.
   instead of being refused as overlapping. By
   [@Pybsama](https://github.com/Pybsama) in
   [#48](https://github.com/carloslfu/slotstream/pull/48).
+- `serve` refuses a request whose body framing is ambiguous: a repeated
+  `Content-Length` or `Transfer-Encoding` field, both together, a length that
+  is not plain digits or does not fit, or a transfer encoding other than
+  chunked. The last repeated field used to win, so a length over the limit
+  followed by `Content-Length: 0` was accepted. A chunked body still gets 411.
+  By [@Pybsama](https://github.com/Pybsama) in
+  [#52](https://github.com/carloslfu/slotstream/pull/52).
+- With sparse pin clearing on (`SLOTSTREAM_OPT_POOL_PINS=1`, off by default),
+  a pass that returns to one-generation expert pins after deferred decode
+  barriers releases the pins taken under the deeper setting at its next
+  retirement. They used to stay set while the pin count read zero, so a repin
+  was ignored and an explicit unpin drove the count negative. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#53](https://github.com/carloslfu/slotstream/pull/53).
 - `slotstream optimization-state-check --variant lifecycle` passes again.
   Since 0.2.22 a later turn re-reads a short decoded continuation that
   ends between prefill passes instead of reusing it, and the check still
