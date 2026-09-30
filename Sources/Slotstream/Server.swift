@@ -332,27 +332,45 @@ public final class Server {
         }
         var contentLength = 0
         var sawContentLength = false
+        var sawTransferEncoding = false
         for l in lines.dropFirst() {
             let kv = l.split(separator: ":", maxSplits: 1)
             if kv.count == 2 {
                 let key = kv[0].trimmingCharacters(in: .whitespaces).lowercased()
                 let value = kv[1].trimmingCharacters(in: .whitespaces)
-                req.headers[key] = value
                 if key == "content-length" {
+                    if sawContentLength {
+                        return .fail(status: "400 Bad Request", message: "Content-Length appears more than once")
+                    }
                     sawContentLength = true
-                    contentLength = Int(value) ?? -1
+                    // Framing accepts one ASCII decimal field, never a signed
+                    // value or a comma-list assembled from multiple fields.
+                    guard !value.isEmpty, value.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }),
+                          let length = Int(value) else {
+                        return .fail(status: "400 Bad Request", message: "Content-Length is not a number")
+                    }
+                    contentLength = length
+                } else if key == "transfer-encoding" {
+                    if sawTransferEncoding {
+                        return .fail(status: "400 Bad Request", message: "Transfer-Encoding appears more than once")
+                    }
+                    sawTransferEncoding = true
                 }
+                req.headers[key] = value
             }
         }
-        // A chunked body carries no Content-Length, so it used to be read as
-        // zero bytes and failed further in as "messages must be an array".
-        if let te = req.headers["transfer-encoding"], te.lowercased().contains("chunked") {
-            return .fail(
-                status: "411 Length Required",
-                message: "chunked request bodies are not supported; send Content-Length")
+        if sawTransferEncoding && sawContentLength {
+            return .fail(status: "400 Bad Request", message: "Transfer-Encoding and Content-Length cannot be combined")
         }
-        if sawContentLength, contentLength < 0 {
-            return .fail(status: "400 Bad Request", message: "Content-Length is not a number")
+        if let te = req.headers["transfer-encoding"] {
+            // A chunked body carries no Content-Length, so it used to be read
+            // as zero bytes and failed further in as "messages must be an array".
+            if te.lowercased().split(separator: ",").last?.trimmingCharacters(in: .whitespaces) == "chunked" {
+                return .fail(
+                    status: "411 Length Required",
+                    message: "chunked request bodies are not supported; send Content-Length")
+            }
+            return .fail(status: "400 Bad Request", message: "Transfer-Encoding is not supported")
         }
         if contentLength > maxBodyBytes {
             return .fail(
