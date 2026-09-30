@@ -5990,7 +5990,7 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## Unreleased
+## 0.2.27 - 2026-09-30
 
 - Raw downloads stop their other requests as soon as a required file fails,
   or an optional file is skipped, instead of finishing chunks the pull then
