@@ -29,15 +29,13 @@ extension PersistentPrefixCache {
                 let files = lock.withLock {
                     heads.filter { $0.file == entry.file || !$0.segments.isDisjoint(with: error.segments) }.map(\.file)
                 }
-                for segment in error.segments {
-                    unlink(path(segment))
-                    lock.withLock {
-                        if segments.removeValue(forKey: segment) != nil { counters.removedSegments += 1 }
-                    }
-                }
+                // Heads are removed first. A head the OS keeps still owns
+                // its segments, even when those bytes failed validation.
                 remove(heads: files, .rejected)
                 lock.withLock { counters.restoreFailures += 1 }
-                report("removed \(files.count) unusable state\(files.count == 1 ? "" : "s"): \(error)")
+                let remaining = lock.withLock { Set(heads.map(\.file)) }
+                let removed = files.filter { !remaining.contains($0) }.count
+                report("removed \(removed) unusable state\(removed == 1 ? "" : "s"): \(error)")
                 throw error
             } catch {
                 lock.withLock { counters.restoreFailures += 1 }

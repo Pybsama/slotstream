@@ -127,7 +127,8 @@ public enum GatewayDialect {
 
     // MARK: - Parsing
 
-    public static func parse(_ json: [String: Any], modelID: String) -> Result<Request, Failure> {
+    public static func parse(_ rawJSON: [String: Any], modelID: String) -> Result<Request, Failure> {
+        let json = rawJSON.filter { !($0.value is NSNull) }
         let unknown = Set(json.keys).subtracting(knownFields).sorted()
         if !unknown.isEmpty {
             return .failure(
@@ -145,6 +146,16 @@ public enum GatewayDialect {
                 Failure(
                     "response_format_unsupported",
                     "this model serves text only; `responseFormat.type` must be \"text\""))
+        }
+        for key in ["seed", "topK", "maxOutputTokens"] where json[key] != nil {
+            guard int(json[key]) != nil else {
+                return .failure(Failure("invalid_request", "`\(key)` must be a representable integer"))
+            }
+        }
+        for key in ["temperature", "topP", "presencePenalty", "frequencyPenalty"] where json[key] != nil {
+            guard num(json[key]) != nil else {
+                return .failure(Failure("invalid_request", "`\(key)` must be a finite representable number"))
+            }
         }
         if let f = num(json["frequencyPenalty"]), f != 0 {
             return .failure(
@@ -194,6 +205,13 @@ public enum GatewayDialect {
                 return .failure(
                     Failure("invalid_tool_choice", "unknown toolChoice type '\(other)'"))
             }
+        }
+
+        if choice == .required, tools.isEmpty {
+            return .failure(Failure("invalid_tool_choice", "`toolChoice.type: required` needs an executable function tool"))
+        }
+        if case .tool(let name) = choice, !tools.contains(where: { $0.name == name }) {
+            return .failure(Failure("invalid_tool_choice", "`toolChoice.toolName` must name a declared function tool: \(name)"))
         }
 
         var stops: [String] = []
@@ -443,16 +461,18 @@ public enum GatewayDialect {
     }
 
     static func num(_ v: Any?) -> Double? {
-        if let d = v as? Double { return d }
-        if let i = v as? Int { return Double(i) }
-        if let n = v as? NSNumber { return n.doubleValue }
-        return nil
+        guard let n = v as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
+        let d = n.doubleValue
+        guard d.isFinite, Float(d).isFinite else { return nil }
+        return d
     }
 
     static func int(_ v: Any?) -> Int? {
-        if let i = v as? Int { return i }
-        if let n = v as? NSNumber { return n.intValue }
-        return nil
+        guard let n = v as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() else { return nil }
+        // Foundation can bridge a floating 2^63 to Int.max even through
+        // Int(exactly: NSNumber). Compare the decimal value to keep it exact.
+        guard let value = Int(exactly: n), n.decimalValue == Decimal(value) else { return nil }
+        return value
     }
 
     // MARK: - Catalogue

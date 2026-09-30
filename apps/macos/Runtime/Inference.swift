@@ -214,8 +214,8 @@ public actor LocalInference: Inference {
         guard !privateWorkingState, let engine, let directory = cacheContext?.directory else { return }
         // Acceleration is optional: an unwritable/full cache must never
         // prevent a model request. The engine detaches before opening a tier.
-        // A file the system refuses to read is kept, and the tier stays off
-        // until it can be read (PersistentPrefixCache.InaccessibleFile).
+        // A file the system refuses to read or remove is kept, and the tier
+        // stays off until it can be (PersistentPrefixCache.InaccessibleFile).
         persistentCacheActive = (try? engine.enablePersistentPrefixCache(.init(directory: directory))) != nil
     }
     public func configure(_ preferences: PerformancePreferences) async throws {

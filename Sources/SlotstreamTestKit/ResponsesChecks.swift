@@ -17,6 +17,7 @@ extension Catalogue {
             Check("responses-request", tier: .t0) { responsesRequest() },
             Check("responses-events", tier: .t0) { responsesEvents() },
             Check("responses-replay", tier: .t0) { responsesReplay() },
+            Check("responses-pending-turn", tier: .t0) { responsesPendingTurn() },
             Check("responses-codex-tools", tier: .t0) { responsesCodexTools() },
             Check("responses-codex-fixture", tier: .t0) { responsesCodexFixture() },
         ]
@@ -488,6 +489,63 @@ extension Catalogue {
             c.equal("new assistant turn keeps its own content", r.messages[4].content, "Another turn.")
             c.equal("new assistant turn keeps its own reasoning", r.messages[4].reasoning, "Another thought.")
         } catch { c.expect("completed results allow a new assistant turn", false, "\(error)") }
+        return c.report()
+    }
+
+    /// A new call cannot regain ownership once results or context flushed its turn.
+    static func responsesPendingTurn() -> CheckReport {
+        var c = CheckBuilder("responses-pending-turn")
+        let user: [String: Any] = ["role": "user", "content": "run"]
+        func call(_ id: String, _ custom: Bool) -> [String: Any] {
+            custom ? ["type": "custom_tool_call", "call_id": id, "name": "patch", "input": id]
+                : ["type": "function_call", "call_id": id, "name": "echo", "arguments": "{}"]
+        }
+        func result(_ id: String, _ custom: Bool) -> [String: Any] {
+            ["type": custom ? "custom_tool_call_output" : "function_call_output",
+             "call_id": id, "output": id + " result"]
+        }
+        func rejected(_ label: String, _ items: [[String: Any]]) {
+            do { _ = try ResponsesDialect.parse(["input": items]); c.expect(label, false) }
+            catch let f as ResponsesDialect.Failure { c.equal(label, f.code, "invalid_request") }
+            catch { c.expect(label, false, "\(error)") }
+        }
+        for (label, a, b, d) in [("function", false, false, false), ("custom", true, true, true),
+                                  ("mixed", false, true, false)] {
+            let ca = call("a", a), cb = call("b", b), cd = call("c", d)
+            let ra = result("a", a), rb = result("b", b), rd = result("c", d)
+            rejected("\(label): call after partial results", [user, ca, cb, ra, cd, rb, rd])
+            for role in ["developer", "system"] {
+                rejected("\(label): call after \(role)",
+                    [user, ca, ["role": role, "content": "context"], cb, ra, rb])
+            }
+            for empty: [String: Any] in [["role": "assistant", "content": ""], ["type": "reasoning", "summary": []]] {
+                rejected("\(label): empty continuation cannot reopen partial results", [user, ca, cb, ra, empty, cd, rb, rd])
+            }
+            rejected("\(label): user before results", [user, ca, user, ra])
+            for context in [false, true] {
+                let middle: [[String: Any]] = context ? [["role": "developer", "content": "context"]] : []
+                do {
+                    let r = try ResponsesDialect.parse(["input": [user, ca, cb, rb, ra] + middle + [cd, rd]])
+                    c.equal("\(label): completed roles context=\(context)", r.messages.map(\.role),
+                        context ? ["user", "assistant", "tool", "tool", "user", "assistant", "tool"]
+                                : ["user", "assistant", "tool", "tool", "assistant", "tool"])
+                    c.equal("\(label): completed assistant associations", r.messages.filter { $0.role == "assistant" }.map { $0.toolCalls.map(\.id) }, [["a", "b"], ["c"]])
+                    let results = r.messages.filter { $0.role == "tool" }
+                    c.equal("\(label): result order", results.map(\.toolCallId), ["a", "b", "c"])
+                    c.equal("\(label): result names", results.map(\.toolName), [a ? "patch" : "echo", b ? "patch" : "echo", d ? "patch" : "echo"])
+                    c.equal("\(label): result content", results.map(\.content), ["a result", "b result", "c result"])
+                } catch { c.expect("\(label): completed groups parse", false, "\(error)") }
+            }
+            do {
+                let r = try ResponsesDialect.parse(["input": [user, ca, ["role": "assistant", "content": "between"],
+                    ["type": "reasoning", "summary": [["type": "summary_text", "text": "thought"]]], cb, rb, ra]])
+                c.equal("\(label): open group roles", r.messages.map(\.role), ["user", "assistant", "tool", "tool"])
+                c.equal("\(label): open group call IDs", r.messages[1].toolCalls.map(\.id), ["a", "b"])
+                c.equal("\(label): open group content", r.messages[1].content, "between")
+                c.equal("\(label): open group reasoning", r.messages[1].reasoning, "thought")
+                c.equal("\(label): open group results", r.messages.filter { $0.role == "tool" }.map(\.toolCallId), ["a", "b"])
+            } catch { c.expect("\(label): open group parse", false, "\(error)") }
+        }
         return c.report()
     }
 

@@ -436,6 +436,11 @@ public enum ResponsesDialect {
         func openAssistant() -> ChatMessage {
             assistant ?? ChatMessage(role: "assistant", content: "")
         }
+        func requireOpenAssistant(at index: Int) throws {
+            if !pending.isEmpty && (assistant?.toolCalls.count != pending.count || !pendingResults.isEmpty) {
+                throw Failure("invalid_request", "input[\(index)] must first supply outputs for outstanding function calls")
+            }
+        }
 
         for (i, rawItem) in items.enumerated() {
             guard let itemRaw = rawItem as? [String: Any] else { throw Failure("invalid_request", "input[\(i)] must be an object") }
@@ -470,9 +475,7 @@ public enum ResponsesDialect {
                     // Continuations must belong to the turn with every pending
                     // call, before any result arrives. A later call cannot
                     // reopen a turn flushed by intervening context.
-                    if !pending.isEmpty && (assistant?.toolCalls.count != pending.count || !pendingResults.isEmpty) {
-                        throw Failure("invalid_request", "input[\(i)] must first supply outputs for outstanding function calls")
-                    }
+                    try requireOpenAssistant(at: i)
                     var a = openAssistant()
                     a.content += content.text
                     assistant = a
@@ -483,9 +486,7 @@ public enum ResponsesDialect {
                     throw Failure("unsupported_field", "input[\(i)]: encrypted reasoning from another provider cannot be replayed here")
                 }
                 started = true
-                if !pending.isEmpty && (assistant?.toolCalls.count != pending.count || !pendingResults.isEmpty) {
-                    throw Failure("invalid_request", "input[\(i)] must first supply outputs for outstanding function calls")
-                }
+                try requireOpenAssistant(at: i)
                 let text = try reasoningText(item, at: "input[\(i)]")
                 if !text.isEmpty {
                     var a = openAssistant()
@@ -493,6 +494,7 @@ public enum ResponsesDialect {
                     assistant = a
                 }
             case "function_call":
+                try requireOpenAssistant(at: i)
                 try require(item, "input[\(i)]", allowed: ["type", "id", "call_id", "name", "arguments", "status", "namespace", "internal_chat_message_metadata_passthrough"])
                 guard let bare = item["name"] as? String, !bare.isEmpty else { throw Failure("invalid_request", "input[\(i)] needs a function name") }
                 let namespace = item["namespace"] as? String ?? ""
@@ -515,6 +517,7 @@ public enum ResponsesDialect {
                 pending[id] = name
                 pendingOrder.append(id)
             case "custom_tool_call":
+                try requireOpenAssistant(at: i)
                 try require(item, "input[\(i)]", allowed: ["type", "id", "call_id", "name", "input", "status", "namespace", "internal_chat_message_metadata_passthrough"])
                 guard let name = item["name"] as? String, !name.isEmpty else { throw Failure("invalid_request", "input[\(i)] needs a tool name") }
                 guard let id = item["call_id"] as? String, !id.isEmpty else { throw Failure("invalid_request", "input[\(i)] needs a call_id") }
