@@ -332,27 +332,45 @@ public final class Server {
         }
         var contentLength = 0
         var sawContentLength = false
+        var sawTransferEncoding = false
         for l in lines.dropFirst() {
             let kv = l.split(separator: ":", maxSplits: 1)
             if kv.count == 2 {
                 let key = kv[0].trimmingCharacters(in: .whitespaces).lowercased()
                 let value = kv[1].trimmingCharacters(in: .whitespaces)
-                req.headers[key] = value
                 if key == "content-length" {
+                    if sawContentLength {
+                        return .fail(status: "400 Bad Request", message: "Content-Length appears more than once")
+                    }
                     sawContentLength = true
-                    contentLength = Int(value) ?? -1
+                    // Framing accepts one ASCII decimal field, never a signed
+                    // value or a comma-list assembled from multiple fields.
+                    guard !value.isEmpty, value.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }),
+                          let length = Int(value) else {
+                        return .fail(status: "400 Bad Request", message: "Content-Length is not a number")
+                    }
+                    contentLength = length
+                } else if key == "transfer-encoding" {
+                    if sawTransferEncoding {
+                        return .fail(status: "400 Bad Request", message: "Transfer-Encoding appears more than once")
+                    }
+                    sawTransferEncoding = true
                 }
+                req.headers[key] = value
             }
         }
-        // A chunked body carries no Content-Length, so it used to be read as
-        // zero bytes and failed further in as "messages must be an array".
-        if let te = req.headers["transfer-encoding"], te.lowercased().contains("chunked") {
-            return .fail(
-                status: "411 Length Required",
-                message: "chunked request bodies are not supported; send Content-Length")
+        if sawTransferEncoding && sawContentLength {
+            return .fail(status: "400 Bad Request", message: "Transfer-Encoding and Content-Length cannot be combined")
         }
-        if sawContentLength, contentLength < 0 {
-            return .fail(status: "400 Bad Request", message: "Content-Length is not a number")
+        if let te = req.headers["transfer-encoding"] {
+            // A chunked body carries no Content-Length, so it used to be read
+            // as zero bytes and failed further in as "messages must be an array".
+            if te.lowercased().split(separator: ",").last?.trimmingCharacters(in: .whitespaces) == "chunked" {
+                return .fail(
+                    status: "411 Length Required",
+                    message: "chunked request bodies are not supported; send Content-Length")
+            }
+            return .fail(status: "400 Bad Request", message: "Transfer-Encoding is not supported")
         }
         if contentLength > maxBodyBytes {
             return .fail(
@@ -1590,64 +1608,21 @@ public final class Server {
 
         let thinkSplitter = request.reasoning.thinking ? ThinkSplitter() : nil
         let toolSplitter = ToolCallSplitter(tools: renderTools.map { $0.schema })
-        var textOpen = false
+        let gatewayOutput = GatewayOutput(tools: renderTools, choice: request.toolChoice)
         var reasoningOpen = false
-        var sawCall = false
         var reasoningTokens = 0
         var lastKeepalive = RuntimeClock.now()
         var produced = false
 
         func flushEvents(_ events: [ToolStreamEvent]) {
-            for e in events {
-                switch e {
-                case .text(let t):
-                    guard !t.isEmpty else { continue }
-                    if !textOpen {
-                        emit(GatewayDialect.frame(["type": "text-start", "id": "t0"]))
-                        textOpen = true
-                    }
-                    emit(
-                        GatewayDialect.frame(["type": "text-delta", "id": "t0", "delta": t]))
-                case .toolInputStart(let id, let name):
-                    // A text block must close before a call opens: the parts
-                    // are ordered in the specification even though fx ignores
-                    // the text markers, and a reader that honours them would
-                    // otherwise see a text block still open across the call.
-                    if textOpen {
-                        emit(GatewayDialect.frame(["type": "text-end", "id": "t0"]))
-                        textOpen = false
-                    }
-                    emit(
-                        GatewayDialect.frame([
-                            "type": "tool-input-start", "id": id, "toolName": name,
-                        ]))
-                case .toolInputDelta(let id, let d):
-                    emit(
-                        GatewayDialect.frame(["type": "tool-input-delta", "id": id, "delta": d]))
-                case .toolInputEnd(let id):
-                    emit(GatewayDialect.frame(["type": "tool-input-end", "id": id]))
-                case .toolCall(let call):
-                    sawCall = true
-                    emit(
-                        GatewayDialect.frame([
-                            "type": "tool-call", "toolCallId": call.id, "toolName": call.name,
-                            "input": call.inputJSON,
-                        ]))
-                case .malformed(let t):
-                    // Never lost: an unterminated block is the model's output
-                    // and the user should see what it actually produced.
-                    if !textOpen {
-                        emit(GatewayDialect.frame(["type": "text-start", "id": "t0"]))
-                        textOpen = true
-                    }
-                    emit(GatewayDialect.frame(["type": "text-delta", "id": "t0", "delta": t]))
-                }
-            }
+            for part in gatewayOutput.consume(events) { emit(GatewayDialect.frame(part)) }
         }
 
         let callback: (Int, String) -> Bool = { _, delta in
             if output?.alive == false { alive = false }
-            guard alive, !delta.isEmpty else { return alive }
+            guard alive, gatewayOutput.error == nil, !delta.isEmpty else {
+                return alive && gatewayOutput.error == nil
+            }
             produced = true
             var body = delta
             if let ts = thinkSplitter {
@@ -1669,13 +1644,16 @@ public final class Server {
                 }
                 body = content
             }
-            if !body.isEmpty { flushEvents(toolSplitter.push(body)) }
-            return alive
+            if !body.isEmpty {
+                flushEvents(gatewayOutput.acceptsToolCalls ? toolSplitter.push(body) : [.text(body)])
+            }
+            return alive && gatewayOutput.error == nil
         }
 
         let (_, _, stats) = engine.generate(
             promptIds: ids, params: params, vision: vision,
             shouldContinue: {
+                guard gatewayOutput.error == nil else { return false }
                 // The one hook that runs during prefill. A multi-minute cold
                 // prompt would otherwise send no bytes at all and trip this
                 // server's own 120 s send timeout; fx skips comment lines by
@@ -1698,6 +1676,12 @@ public final class Server {
                 return alive
             })
 
+        // Selection errors already emitted exactly one terminal part. A
+        // cancelled engine request must not append another error or success.
+        if gatewayOutput.error != nil {
+            if alive { endOutput() }
+            return
+        }
         if let error = stats.runtimeError {
             if headersStarted {
                 emit(GatewayDialect.frame(["type": "error", "error": stats.requestFailure?.json
@@ -1718,25 +1702,17 @@ public final class Server {
                 emit(GatewayDialect.frame(["type": "reasoning-end", "id": "r0"]))
                 reasoningOpen = false
             }
-            if !content.isEmpty { flushEvents(toolSplitter.push(content)) }
+            if !content.isEmpty {
+                flushEvents(gatewayOutput.acceptsToolCalls ? toolSplitter.push(content) : [.text(content)])
+            }
         }
-        flushEvents(toolSplitter.flush())
-        if textOpen { emit(GatewayDialect.frame(["type": "text-end", "id": "t0"])) }
-
-        // `required` was asked for and nothing was called. This cannot be a 400:
-        // the head went out before generation. It is an in-stream error and a
-        // finish reason that is not `tool-calls`.
-        if !sawCall, request.toolChoice == .required || request.toolChoice.isNamedTool {
-            emit(
-                GatewayDialect.frame([
-                    "type": "error",
-                    "error": [
-                        "message":
-                            "tool_choice_unsatisfied: the model produced no tool call for toolChoice \(request.toolChoice.label)"
-                    ],
-                ]))
+        if gatewayOutput.acceptsToolCalls { flushEvents(toolSplitter.flush()) }
+        for part in gatewayOutput.finish() { emit(GatewayDialect.frame(part)) }
+        if gatewayOutput.error != nil {
+            if alive { endOutput() }
+            return
         }
-        let (unified, raw) = GatewayDialect.unifiedFinish(stats.finishReason, hasToolCall: sawCall)
+        let (unified, raw) = GatewayDialect.unifiedFinish(stats.finishReason, hasToolCall: gatewayOutput.hasToolCall)
         emit(
             GatewayDialect.finishFrame(
                 reason: unified, rawReason: raw, inputTokens: stats.promptTokens,

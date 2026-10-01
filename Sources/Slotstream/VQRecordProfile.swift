@@ -3,13 +3,20 @@ import CryptoKit
 
 /// Analytic byte geometry for one frozen VQ checkpoint. This does not load weights
 /// or choose an arena alignment for the runtime.
-public struct VQRecordProfile {
-    public let revision: String
-    public let recordBytesByLayer: [Int]
-    public let slotPayloadBytes: Int
-    public let slotStrideBytes: Int
-    public let codebookBytes: Int
-    public let allExpertPayloadBytes: Int
+package struct VQRecordProfile {
+    package let revision: String
+    package let recordBytesByLayer: [Int]
+    /// Early records get their own one-expert slots; remaining layers use a
+    /// smaller class. The runtime pool does not consume these profiles yet.
+    package struct SlotClass {
+        package let layers: Range<Int>
+        package let slotPayloadBytes: Int
+        package let slotStrideBytes: Int
+    }
+    package let earlyLayers: SlotClass
+    package let remainingLayers: SlotClass
+    package let codebookBytes: Int
+    package let allExpertPayloadBytes: Int
 
     private static let pinnedModel = "TheDrainFlorist/Qwen3.8-Flash-Next-VQ-2.1bpw"
     private static let pinnedRevision = "8684640a3956b01c47f5d47f9b999e2ab8b985f1"
@@ -77,7 +84,7 @@ public struct VQRecordProfile {
         guard bytes == tensor.byteCount else { throw ModelError("VQ \(tensor.name): declared byte count mismatch") }
     }
 
-    public static func load(_ data: Data, alignment: Int) throws -> VQRecordProfile {
+    package static func load(_ data: Data, alignment: Int) throws -> VQRecordProfile {
         guard alignment > 0, (alignment & (alignment - 1)) == 0 else {
             throw ModelError("VQ alignment must be a positive power of two")
         }
@@ -167,9 +174,16 @@ public struct VQRecordProfile {
         var oneExpert = 0
         for bytes in layerBytes { oneExpert = try add(oneExpert, bytes, "one-expert payload") }
         let allExperts = try multiply(oneExpert, 512, "all-expert payload")
-        guard let maximum = layerBytes.max() else { throw ModelError("VQ has no layers") }
-        let padded = try add(maximum, alignment - 1, "aligned stride")
-        let stride = padded & ~(alignment - 1)
+        func slotClass(layers: Range<Int>) throws -> SlotClass {
+            guard let maximum = layers.map({ layerBytes[$0] }).max() else {
+                throw ModelError("VQ slot class has no layers")
+            }
+            let padded = try add(maximum, alignment - 1, "aligned stride")
+            return SlotClass(layers: layers, slotPayloadBytes: maximum,
+                slotStrideBytes: padded & ~(alignment - 1))
+        }
+        let earlyLayers = try slotClass(layers: 0..<2)
+        let remainingLayers = try slotClass(layers: 2..<48)
         // The manifest is an audited, byte-for-byte fixture for one checkpoint.
         // Its source hash fields are labels inside the JSON, so structural checks
         // alone cannot bind the 144 tuples or 139 header identities to the audit.
@@ -178,26 +192,42 @@ public struct VQRecordProfile {
             throw ModelError("VQ frozen manifest fingerprint mismatch")
         }
         return VQRecordProfile(revision: manifest.revision, recordBytesByLayer: layerBytes,
-            slotPayloadBytes: maximum, slotStrideBytes: stride, codebookBytes: codebookBytes,
+            earlyLayers: earlyLayers, remainingLayers: remainingLayers, codebookBytes: codebookBytes,
             allExpertPayloadBytes: allExperts)
     }
 
-    public func ledger(slotCount: Int) throws -> VQRecordLedger {
-        guard (0...24_576).contains(slotCount) else { throw ModelError("VQ slot count must be 0...24576") }
-        let pool = try Self.multiply(slotCount, slotStrideBytes, "slot pool")
-        return VQRecordLedger(slotCount: slotCount, actualRecordBytesByLayer: recordBytesByLayer,
-            slotPayloadBytes: slotPayloadBytes, slotStrideBytes: slotStrideBytes,
-            poolAllocatedBytes: pool, allExpertPayloadBytes: allExpertPayloadBytes,
-            sharedCodebookBytes: codebookBytes)
+    /// Each expert occupies one slot within its layer class. Counts are physical
+    /// slots, not bytes; the sum below is analytic allocation, not measured RSS.
+    package func ledger(earlyLayerSlots: Int, remainingLayerSlots: Int) throws -> VQRecordLedger {
+        func pool(_ geometry: SlotClass, count: Int, label: String) throws -> VQRecordLedger.Pool {
+            let capacity = try Self.multiply(geometry.layers.count, 512, "slot capacity")
+            guard (0...capacity).contains(count) else {
+                throw ModelError("VQ \(label) slot count must be 0...\(capacity)")
+            }
+            let bytes = try Self.multiply(count, geometry.slotStrideBytes, "\(label) slot pool")
+            return VQRecordLedger.Pool(geometry: geometry, slotCount: count, poolAllocatedBytes: bytes)
+        }
+        let early = try pool(earlyLayers, count: earlyLayerSlots, label: "early-layer")
+        let remaining = try pool(remainingLayers, count: remainingLayerSlots, label: "remaining-layer")
+        return VQRecordLedger(earlyLayers: early, remainingLayers: remaining,
+            slotCount: try Self.add(early.slotCount, remaining.slotCount, "total slot count"),
+            actualRecordBytesByLayer: recordBytesByLayer,
+            poolAllocatedBytes: try Self.add(early.poolAllocatedBytes, remaining.poolAllocatedBytes, "slot pools"),
+            allExpertPayloadBytes: allExpertPayloadBytes, sharedCodebookBytes: codebookBytes)
     }
 }
 
-public struct VQRecordLedger {
-    public let slotCount: Int
-    public let actualRecordBytesByLayer: [Int]
-    public let slotPayloadBytes: Int
-    public let slotStrideBytes: Int
-    public let poolAllocatedBytes: Int
-    public let allExpertPayloadBytes: Int
-    public let sharedCodebookBytes: Int
+package struct VQRecordLedger {
+    package struct Pool {
+        package let geometry: VQRecordProfile.SlotClass
+        package let slotCount: Int
+        package let poolAllocatedBytes: Int
+    }
+    package let earlyLayers: Pool
+    package let remainingLayers: Pool
+    package let slotCount: Int
+    package let actualRecordBytesByLayer: [Int]
+    package let poolAllocatedBytes: Int
+    package let allExpertPayloadBytes: Int
+    package let sharedCodebookBytes: Int
 }

@@ -69,6 +69,32 @@ extension Diagnostics {
         ])))
         c.equal("a negative Content-Length is 400", negative?.0, "400 Bad Request")
 
+        let conflictingLengths = failure(Server.parseHead(head([
+            "POST /api/chat HTTP/1.1", "Content-Length: 4", "content-length: 5",
+        ])))
+        c.equal("conflicting Content-Length fields are 400", conflictingLengths?.0, "400 Bad Request")
+        let overwrittenTransferEncoding = failure(Server.parseHead(head([
+            "POST /api/chat HTTP/1.1", "Transfer-Encoding: chunked", "tRaNsFeR-EnCoDiNg: identity",
+        ])))
+        c.equal("a later Transfer-Encoding cannot hide chunked framing", overwrittenTransferEncoding?.0, "400 Bad Request")
+        for (name, fields) in [
+            ("identical Content-Length fields", ["Content-Length: 4", "cOnTeNt-LeNgTh: 4"]),
+            ("oversized then zero Content-Length", ["Content-Length: \(Server.maxBodyBytes + 1)", "Content-Length: 0"]),
+            ("chunked Transfer-Encoding with Content-Length", ["Transfer-Encoding: chunked", "Content-Length: 0"]),
+            ("Content-Length before Transfer-Encoding", ["Content-Length: 0", "Transfer-Encoding: chunked"]),
+            ("unsupported Transfer-Encoding", ["Transfer-Encoding: gzip"]),
+            ("identical Content-Length list", ["Content-Length: 5, 5"]),
+            ("conflicting Content-Length list", ["Content-Length: 5, 6"]),
+            ("signed Content-Length", ["Content-Length: +5"]),
+            ("non-ASCII Content-Length", ["Content-Length: ５"]),
+            ("overflowing Content-Length", ["Content-Length: 999999999999999999999999999"]),
+        ] {
+            let outcome = failure(Server.parseHead(head(["POST /api/chat HTTP/1.1"] + fields)))
+            c.equal("\(name) are 400", outcome?.0, "400 Bad Request")
+        }
+        let padded = ok(Server.parseHead(head(["POST /api/chat HTTP/1.1", "Content-Length: 0005"])))
+        c.equal("one decimal Content-Length with leading zeroes is accepted", padded?.1, 5)
+
         // No Content-Length at all is a zero-length body, which is what GET is.
         if let (_, length) = ok(Server.parseHead(head(["GET /api/tags HTTP/1.1"]))) {
             c.equal("no Content-Length means no body", length, 0)
@@ -150,6 +176,14 @@ extension Diagnostics {
                 c.expect(label + ": rejected", false)
             }
         }
+        func refusedFraming(_ label: String, _ bytes: Data, target: String) throws {
+            if case let .fail(status, _, gotTarget) = try read(bytes) {
+                c.equal(label + ": status", status, "400 Bad Request")
+                c.equal(label + ": target retained", gotTarget, target)
+            } else {
+                c.expect(label + ": rejected", false)
+            }
+        }
         let limit = 64 << 10
         // Include terminators split at each of their four bytes across the
         // read boundary, plus the exact accepted ceiling.
@@ -175,6 +209,19 @@ extension Diagnostics {
         } else {
             c.expect("coalesced body is accepted", false)
         }
+
+        // Queue the complete head and body before readRequest starts. The
+        // duplicate-length case exercises a coalesced small request, while
+        // each case must fail before any body bytes can be routed.
+        try refusedFraming("duplicate Content-Length with prequeued body", Data((
+            "POST /api/chat HTTP/1.1\r\nContent-Length: 4\r\ncOnTeNt-LeNgTh: 5\r\n\r\nhello").utf8),
+            target: "/api/chat")
+        try refusedFraming("duplicate Transfer-Encoding", Data((
+            "POST /api/chat HTTP/1.1\r\nTransfer-Encoding: chunked\r\ntRaNsFeR-EnCoDiNg: identity\r\n\r\n0\r\n\r\n").utf8),
+            target: "/api/chat")
+        try refusedFraming("Transfer-Encoding with Content-Length", Data((
+            "POST /api/chat HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 5\r\n\r\nhello").utf8),
+            target: "/api/chat")
     }
 
     public static func httpRouting() -> CheckReport {

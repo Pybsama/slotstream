@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-27T14:16:41.563128Z
+updated: 2026-09-30T19:23:29.390398Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/09/2026-09-30-release-0-2-27-published-and-installed]] — v0.2.27 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-27-release-0-2-26-published-and-installed]] — v0.2.26 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-26-prefix-turn-writes-e2e]] — Live per-turn prefix cache writes: the released 0.2.25 rewrites a continued turn's own state as a shared prefix, the fix writes it once with identical ids
 - [[sources/runs/2026/09/2026-09-24-release-0-2-25-published-and-installed]] — v0.2.25 published, publicly installed and accepted
@@ -34,6 +35,8 @@ updated: 2026-09-27T14:16:41.563128Z
 - [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit-excluded]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[sources/runs/2026/09/2026-09-22-published-prompt-speed-audit]] — Published v0.2.23 audit: 123 requests; repeated exact prefix reuse is faster, short gains are inconsistent, and long timing exclusions and default-profile limits remain explicit.
 - [[sources/runs/2026/09/2026-09-22-release-0-2-23-published-and-installed]] — v0.2.23 published from the exact CI archive, provenance verified, publicly installed and accepted: full native battery 32/32, 16K MTP 13/13, installed serving 31/31.
+- [[sources/runs/2026/09/2026-09-22-decode-opportunities-excluded]] — Decode opportunities: excluded timing, interrupted trials and original test failures
+- [[sources/runs/2026/09/2026-09-22-decode-opportunities]] — Decode opportunities: current-backend eligible timing and correctness
 - [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-phase-screen]] — MTP phase accounting versus bounded writes: one-pair screen
 - [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-v1]] — MTP phase accounting alone: larger-scope gate failure preserved
 - [[sources/runs/2026/09/2026-09-21-mtp-prefill-policy-correctness]] — Automatic MTP prefill: exactness, memory and integration
@@ -504,11 +507,8 @@ updated: 2026-09-27T14:16:41.563128Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-external-swift-consumer-pass]] — External Swift consumer preserves original APIs and passes the strict compiler gate
 - [[sources/runs/2026/09/2026-09-06-configurable-context-actual-65k-client-pass]] — Actual Hermes Ollama and published AI SDK gateway clients pass the65K contract
 - [[sources/runs/2026/09/2026-09-06-optimization-c07-source-integration]] — Bounded prefill integration and prompt-cache epoch correction — V183–184
-- [[sources/runs/2026/09/2026-09-06-configurable-context-external-consumer-deprecation-counterexample]] — External Swift consumer compiles but strict warning gate exposes deprecated stride metadata
-- [[sources/runs/2026/09/2026-09-06-configurable-context-actual-32k-client-contracts]] — Actual Ollama and AI SDK clients pass at32K; Hermes enforces its64K minimum
-- [[sources/runs/2026/09/2026-09-06-optimization-probe-review-and-pressure-recovery]] — Optimization probe preflight review and typed pressure recovery — V181–182
 
 ## More
 
-This folder has 687 files. The 500 most recent are listed above.
+This folder has 690 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

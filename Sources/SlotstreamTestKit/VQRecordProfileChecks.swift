@@ -15,25 +15,63 @@ extension Catalogue {
             + Array(repeating: 1_382_400, count: 7) + [1_280_000, 1_382_400]
             + Array(repeating: 1_280_000, count: 11) + [1_382_400]
         c.equal("48 exact ordered record sizes", profile.recordBytesByLayer, expected)
-        c.equal("maximum payload", profile.slotPayloadBytes, 2_611_200)
         c.equal("one expert across 48 layers", profile.recordBytesByLayer.reduce(0, +), 65_024_000)
         c.equal("all expert payload", profile.allExpertPayloadBytes, 33_292_288_000)
         c.equal("shared books", profile.codebookBytes, 19_535_872)
-        c.equal("unpadded stride", profile.slotStrideBytes, 2_611_200)
-        let ledger = try profile.ledger(slotCount: 640)
-        c.equal("640-slot pool", ledger.poolAllocatedBytes, 1_671_168_000)
+        c.equal("early class layers", profile.earlyLayers.layers, 0..<2)
+        c.equal("remaining class layers", profile.remainingLayers.layers, 2..<48)
+        c.equal("early class payload", profile.earlyLayers.slotPayloadBytes, 2_611_200)
+        c.equal("remaining class payload", profile.remainingLayers.slotPayloadBytes, 1_382_400)
+        c.equal("early unpadded stride", profile.earlyLayers.slotStrideBytes, 2_611_200)
+        c.equal("remaining unpadded stride", profile.remainingLayers.slotStrideBytes, 1_382_400)
+        for layer in 0..<48 {
+            let classes = [profile.earlyLayers, profile.remainingLayers].filter { $0.layers.contains(layer) }
+            c.equal("layer \(layer) belongs to exactly one class", classes.count, 1)
+            c.expect("layer \(layer) record fits its class", classes.first.map {
+                expected[layer] <= $0.slotPayloadBytes && $0.slotPayloadBytes <= $0.slotStrideBytes
+            } ?? false)
+        }
+        let ledger = try profile.ledger(earlyLayerSlots: 64, remainingLayerSlots: 640)
+        c.equal("ledger early layers", ledger.earlyLayers.geometry.layers, 0..<2)
+        c.equal("ledger remaining layers", ledger.remainingLayers.geometry.layers, 2..<48)
+        c.equal("ledger early count", ledger.earlyLayers.slotCount, 64)
+        c.equal("ledger remaining count", ledger.remainingLayers.slotCount, 640)
+        c.equal("64 early slots", ledger.earlyLayers.poolAllocatedBytes, 167_116_800)
+        c.equal("640 remaining slots", ledger.remainingLayers.poolAllocatedBytes, 884_736_000)
+        c.equal("mixed class pool sum", ledger.poolAllocatedBytes, 1_051_852_800)
+        c.equal("mixed class slot count", ledger.slotCount, 704)
+        c.equal("ledger exact record sizes", ledger.actualRecordBytesByLayer, expected)
         c.equal("layer 2 actual bytes", ledger.actualRecordBytesByLayer[2], 1_280_000)
-        c.equal("layer 2 charged stride", ledger.slotStrideBytes, 2_611_200)
+        c.equal("layer 2 charged stride", ledger.remainingLayers.geometry.slotStrideBytes, 1_382_400)
         c.equal("ledger shared books", ledger.sharedCodebookBytes, 19_535_872)
         c.equal("ledger all expert payload", ledger.allExpertPayloadBytes, 33_292_288_000)
-        c.equal("ledger requested slots", ledger.slotCount, 640)
+        let empty = try profile.ledger(earlyLayerSlots: 0, remainingLayerSlots: 0)
+        c.equal("empty early pool", empty.earlyLayers.poolAllocatedBytes, 0)
+        c.equal("empty remaining pool", empty.remainingLayers.poolAllocatedBytes, 0)
+        c.equal("empty total pool", empty.poolAllocatedBytes, 0)
+        c.equal("empty total slot count", empty.slotCount, 0)
+        let full = try profile.ledger(earlyLayerSlots: 1_024, remainingLayerSlots: 23_552)
+        c.equal("all early expert slots", full.earlyLayers.slotCount, 1_024)
+        c.equal("all remaining expert slots", full.remainingLayers.slotCount, 23_552)
+        c.equal("full slot count", full.slotCount, 24_576)
+        c.equal("full allocated pool", full.poolAllocatedBytes, 35_232_153_600)
+        c.equal("early-only pool", try profile.ledger(earlyLayerSlots: 1, remainingLayerSlots: 0).poolAllocatedBytes, 2_611_200)
+        c.equal("remaining-only pool", try profile.ledger(earlyLayerSlots: 0, remainingLayerSlots: 1).poolAllocatedBytes, 1_382_400)
         let aligned = try VQRecordProfile.load(data, alignment: 4096)
-        c.equal("4096-aligned slot stride", aligned.slotStrideBytes, 2_613_248)
-        c.equal("4096-aligned 640-slot pool", try aligned.ledger(slotCount: 640).poolAllocatedBytes, 1_672_478_720)
-        c.equal("alignment does not change payload", aligned.slotPayloadBytes, 2_611_200)
+        c.equal("4096-aligned early stride", aligned.earlyLayers.slotStrideBytes, 2_613_248)
+        c.equal("4096-aligned remaining stride", aligned.remainingLayers.slotStrideBytes, 1_384_448)
+        let alignedLedger = try aligned.ledger(earlyLayerSlots: 64, remainingLayerSlots: 640)
+        c.equal("4096-aligned remaining pool", alignedLedger.remainingLayers.poolAllocatedBytes, 886_046_720)
+        c.equal("4096-aligned mixed pool", alignedLedger.poolAllocatedBytes, 1_053_294_592)
+        c.equal("alignment preserves early payload", aligned.earlyLayers.slotPayloadBytes, 2_611_200)
+        c.equal("alignment preserves remaining payload", aligned.remainingLayers.slotPayloadBytes, 1_382_400)
+        c.equal("alignment preserves actual record sizes", aligned.recordBytesByLayer, expected)
         c.equal("legacy affine-4 record bytes", Geometry.recordBytes, 2_764_800.0)
         c.equal("legacy affine-4 640-slot GB", Geometry.gb(640), 1.769472)
         c.equal("legacy affine-4 floor slots", Geometry.slotsForPoolGB(1.769472), 640)
+        // Pure byte arithmetic, not a measured pool or speed improvement.
+        c.equal("same raw bytes hold twice as many remaining slots",
+            1_769_472_000 / profile.remainingLayers.slotStrideBytes, 1_280)
 
         func rejects(_ label: String, reason: String, _ change: (inout [String: Any]) -> Void) throws {
             var object = try JSONSerialization.jsonObject(with: data) as! [String: Any]
@@ -195,24 +233,40 @@ extension Catalogue {
             tensors[0]["shape"] = [Int.max, Int.max]
             object["tensors"] = tensors
         }
-        for count in [-1, 24_577, Int.max] {
-            do { _ = try profile.ledger(slotCount: count); c.expect("reject slot count \(count)", false) }
-            catch { c.expect("reject slot count \(count)", true) }
+        for (early, remaining, reason) in [(-1, 0, "early-layer"), (1_025, 0, "early-layer"),
+            (Int.max, 0, "early-layer"), (0, -1, "remaining-layer"),
+            (0, 23_553, "remaining-layer"), (0, Int.max, "remaining-layer")] {
+            do {
+                _ = try profile.ledger(earlyLayerSlots: early, remainingLayerSlots: remaining)
+                c.expect("reject class counts \(early)/\(remaining)", false)
+            } catch let error as ModelError {
+                c.expect("reject class counts \(early)/\(remaining)",
+                    error.description.contains("\(reason) slot count"), error.description)
+            } catch {
+                c.expect("reject class counts \(early)/\(remaining)", false, "unexpected rejection: \(error)")
+            }
         }
-        for alignment in [0, 3, Int.max] {
+        for alignment in [0, -1, 3, Int.max] {
             do { _ = try VQRecordProfile.load(data, alignment: alignment); c.expect("reject alignment \(alignment)", false) }
             catch { c.expect("reject alignment \(alignment)", true) }
         }
         let wide = try VQRecordProfile.load(data, alignment: 1 << 62)
-        c.equal("large power-of-two alignment is valid", wide.slotStrideBytes, 1 << 62)
-        do {
-            _ = try wide.ledger(slotCount: 640)
-            c.expect("large aligned pool multiplication overflows", false, "overflowing pool was accepted")
-        } catch let error as ModelError {
-            c.expect("large aligned pool multiplication overflows",
-                error.description.contains("slot pool: byte multiplication overflow"), error.description)
-        } catch {
-            c.expect("large aligned pool multiplication overflows", false, "unexpected error: \(error)")
+        c.equal("large early alignment is valid", wide.earlyLayers.slotStrideBytes, 1 << 62)
+        c.equal("large remaining alignment is valid", wide.remainingLayers.slotStrideBytes, 1 << 62)
+        c.equal("large aligned empty pool is valid",
+            try wide.ledger(earlyLayerSlots: 0, remainingLayerSlots: 0).poolAllocatedBytes, 0)
+        for (early, remaining, reason) in [(2, 0, "early-layer slot pool: byte multiplication overflow"),
+            (0, 2, "remaining-layer slot pool: byte multiplication overflow"),
+            (1, 1, "slot pools: byte addition overflow")] {
+            do {
+                _ = try wide.ledger(earlyLayerSlots: early, remainingLayerSlots: remaining)
+                c.expect("large aligned pool overflows \(early)/\(remaining)", false, "overflowing pool was accepted")
+            } catch let error as ModelError {
+                c.expect("large aligned pool overflows \(early)/\(remaining)",
+                    error.description.contains(reason), error.description)
+            } catch {
+                c.expect("large aligned pool overflows \(early)/\(remaining)", false, "unexpected error: \(error)")
+            }
         }
         return c.report()
     }

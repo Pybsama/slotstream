@@ -706,13 +706,18 @@ struct Launch: ParsableCommand {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
         let configuration = URLSessionConfiguration.ephemeral
+        // URLRequest's timeout resets on new data. Probing a server or
+        // fetching instructions also needs a deadline for the whole reply.
+        configuration.timeoutIntervalForResource = timeout
         if direct { configuration.connectionProxyDictionary = [:] }
         let session = URLSession(configuration: configuration)
         defer { session.finishTasksAndInvalidate() }
         let done = DispatchSemaphore(value: 0)
         var result: (status: Int, body: Data)?
-        session.dataTask(with: request) { data, response, _ in
-            if let http = response as? HTTPURLResponse { result = (http.statusCode, data ?? Data()) }
+        session.dataTask(with: request) { data, response, error in
+            if error == nil, let data, let http = response as? HTTPURLResponse {
+                result = (http.statusCode, data)
+            }
             done.signal()
         }.resume()
         done.wait()

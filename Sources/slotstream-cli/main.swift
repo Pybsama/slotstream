@@ -730,14 +730,14 @@ struct Serve: ParsableCommand {
             do {
                 diskTier = try engine.enablePersistentPrefixCache(persistentConfiguration)
             } catch let error as PersistentPrefixCache.InaccessibleFile {
-                // A file the system refused to read may still hold a valid
-                // state, so keep it and serve from the memory tier instead of
-                // refusing to start. Name the directory: `--clear` without
+                // A file the system refused to read or remove may still hold a
+                // valid state, so keep it and serve from the memory tier instead
+                // of refusing to start. Name the directory: `--clear` without
                 // `--dir` would clear launch's directory instead of this one.
                 let directory = persistentConfiguration.directory.path
                 let quoted = "'" + directory.replacingOccurrences(of: "'", with: "'\\''") + "'"
                 FileHandle.standardError.write(
-                    ("prefix cache disk: off, the system refused to read a file in \(directory): \(error). "
+                    ("prefix cache disk: off, the system refused to read or remove a file in \(directory): \(error). "
                         + "The files are kept: fix that file's permissions or run "
                         + "`slotstream prefix-cache --clear --dir \(quoted)`, then restart the server.\n")
                         .data(using: .utf8)!)

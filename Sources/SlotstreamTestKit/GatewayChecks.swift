@@ -12,6 +12,8 @@ extension Catalogue {
     static var gatewayChecks: [Check] {
         [
             Check("gateway-request", tier: .t0) { gatewayRequest() },
+            Check("gateway-numeric", tier: .t0) { gatewayNumeric() },
+            Check("gateway-tool-selection", tier: .t0) { gatewayToolSelection() },
             Check("gateway-prompt", tier: .t0) { gatewayPrompt() },
             Check("gateway-tool-results", tier: .t0) { gatewayToolResults() },
             Check("gateway-v4-images", tier: .t0) { gatewayV4Images() },
@@ -118,7 +120,7 @@ extension Catalogue {
 
         // toolChoice.
         func choice(_ tc: Any) -> GatewayDialect.ToolChoice? {
-            var b = fxBody(prompt: user)
+            var b = fxBody(prompt: user, tools: [readFileTool])
             b["toolChoice"] = tc
             if case .success(let r) = GatewayDialect.parse(b, modelID: "m") { return r.toolChoice }
             return nil
@@ -173,6 +175,179 @@ extension Catalogue {
         c.equal("agent temperature", agent.temperature, 0.2)
         c.equal("agent top-p", agent.topP, 0.9)
         c.equal("agent presence penalty", agent.presencePenalty, 0)
+        return c.report()
+    }
+
+    /// Wrong numeric types must not select a different sampler or budget.
+    static func gatewayNumeric() -> CheckReport {
+        var c = CheckBuilder("gateway-numeric")
+        let user: [[String: Any]] = [["role": "user", "content": [["type": "text", "text": "hi"]]]]
+        let discrete = ["seed", "topK", "maxOutputTokens"]
+        let continuous = ["temperature", "topP", "presencePenalty", "frequencyPenalty"]
+        func parse(_ key: String, _ value: Any, wire: Bool = true) -> Result<GatewayDialect.Request, GatewayDialect.Failure> {
+            let body = fxBody(prompt: user, extra: [key: value])
+            guard wire else { return GatewayDialect.parse(body, modelID: "m") }
+            do {
+                let data = try JSONSerialization.data(withJSONObject: body)
+                let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+                return GatewayDialect.parse(json, modelID: "m")
+            } catch { return .failure(.init("fixture_error", "\(error)")) }
+        }
+        for key in discrete + continuous {
+            var wrong: [(String, Any)] = [("true", true), ("false", false), ("string", "1"), ("array", [1]), ("object", ["n": 1])]
+            wrong += discrete.contains(key) ? [("fraction", 1.5), ("negative fraction", -1.5), ("huge", 1e300), ("Int overflow", 9.223372036854776e18), ("tiny fraction", 1e-300)]
+                : [("positive Float overflow", 1e300), ("negative Float overflow", -1e300)]
+            for (label, value) in wrong {
+                switch parse(key, value) {
+                case .failure(let f):
+                    c.equal("\(key) \(label): invalid type", f.code, "invalid_request")
+                    c.expect("\(key) \(label): names field", f.message.contains(key))
+                case .success: c.expect("\(key) \(label): refused", false)
+                }
+            }
+            for value in [Double.infinity, -Double.infinity, Double.nan] {
+                if case .failure(let f) = parse(key, NSNumber(value: value), wire: false) {
+                    c.equal("\(key): nonfinite refused", f.code, "invalid_request")
+                    c.expect("\(key): nonfinite names field", f.message.contains(key))
+                } else { c.expect("\(key): nonfinite refused", false) }
+            }
+            if case .success(let r) = parse(key, NSNull()) {
+                c.expect("\(key): null defaults", r.seed == nil && r.topK == nil && r.maxOutputTokens == nil
+                    && r.temperature == nil && r.topP == nil && r.presencePenalty == nil)
+            } else { c.expect("\(key): null accepted", false) }
+        }
+        for key in discrete {
+            for token in ["9223372036854775808", "9.223372036854776e18", "-9223372036854775809"] {
+                let body = "{\"prompt\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}],\"\(key)\":\(token)}"
+                let json = try! JSONSerialization.jsonObject(with: Data(body.utf8)) as! [String: Any]
+                if case .failure(let f) = GatewayDialect.parse(json, modelID: "m") {
+                    c.equal("\(key): raw boundary \(token)", f.code, "invalid_request")
+                    c.expect("\(key): raw boundary names field", f.message.contains(key))
+                } else { c.expect("\(key): raw boundary refused \(token)", false) }
+            }
+            for n in [Int.min, -1, 0, 1, 9007199254740993, Int.max] {
+                if case .success(let r) = parse(key, n) {
+                    let got = key == "seed" ? r.seed : key == "topK" ? r.topK : r.maxOutputTokens
+                    c.equal("\(key): exact integer \(n)", got, n)
+                } else { c.expect("\(key): exact integer accepted", false) }
+            }
+            if case .success(let r) = parse(key, 1.0) {
+                c.equal("\(key): integral float", key == "seed" ? r.seed : key == "topK" ? r.topK : r.maxOutputTokens, 1)
+            } else { c.expect("\(key): integral float accepted", false) }
+        }
+        for (key, value) in [("temperature", 0.2), ("topP", 0.9), ("presencePenalty", -0.1),
+                             ("temperature", 0.0), ("topP", -1.0)] {
+            if case .success(let r) = parse(key, value) {
+                c.equal("\(key): finite value preserved", key == "temperature" ? r.temperature : key == "topP" ? r.topP : r.presencePenalty, Float(value))
+            } else { c.expect("\(key): finite accepted", false) }
+        }
+        c.expect("frequency zero accepted", { if case .success = parse("frequencyPenalty", 0) { return true }; return false }())
+        if case .failure(let f) = parse("frequencyPenalty", 0.5) {
+            c.equal("finite frequency remains unsupported", f.code, "frequency_penalty_unsupported")
+        } else { c.expect("finite frequency remains unsupported", false) }
+        if case .success(let r) = GatewayDialect.parse(fxBody(prompt: user), modelID: "m") {
+            c.expect("unset fields preserve defaults", r.seed == nil && r.topK == nil && r.maxOutputTokens == nil
+                && r.temperature == nil && r.topP == nil && r.presencePenalty == nil)
+        } else { c.expect("unset fields accepted", false) }
+        return c.report()
+    }
+
+    /// Declared selection must match calls before provisional executable parts.
+    static func gatewayToolSelection() -> CheckReport {
+        var c = CheckBuilder("gateway-tool-selection")
+        let user: [[String: Any]] = [["role": "user", "content": [["type": "text", "text": "hi"]]]]
+        let other: [String: Any] = ["type": "function", "name": "write_file", "inputSchema": ["type": "object"]]
+        let hosted: [String: Any] = ["type": "provider", "name": "search", "id": "provider.search"]
+        for (label, tools, choice) in [
+            ("required without tools", [], ["type": "required"]),
+            ("required hosted only", [hosted], ["type": "required"]),
+            ("named without tools", [], ["type": "tool", "toolName": "read_file"]),
+            ("named missing", [other], ["type": "tool", "toolName": "read_file"]),
+        ] as [(String, [[String: Any]], [String: Any])] {
+            if case .failure(let f) = GatewayDialect.parse(fxBody(prompt: user, tools: tools, extra: ["toolChoice": choice]), modelID: "m") {
+                c.equal(label, f.code, "invalid_tool_choice")
+            } else { c.expect(label, false) }
+        }
+        let tools = [ToolDefinition(name: "read_file", description: "", parameters: .object([:])),
+                     ToolDefinition(name: "write_file", description: "", parameters: .object([:]))]
+        func grammar(_ name: String) -> String {
+            "<tool_call><function=\(name)><parameter=path>hi.txt</parameter></function></tool_call>"
+        }
+        func run(_ choice: GatewayDialect.ToolChoice, _ names: [ToolDefinition], _ chunks: [String]) -> (GatewayOutput, [[String: Any]]) {
+            let output = GatewayOutput(tools: names, choice: choice)
+            let splitter = ToolCallSplitter(tools: names.map(\.schema), idFactory: countingIDs())
+            var parts: [[String: Any]] = []
+            for chunk in chunks {
+                parts += output.consume(output.acceptsToolCalls ? splitter.push(chunk) : [.text(chunk)])
+            }
+            if output.acceptsToolCalls { parts += output.consume(splitter.flush()) }
+            parts += output.finish()
+            return (output, parts)
+        }
+        for (label, choice, declared, body) in [
+            ("wrong named", GatewayDialect.ToolChoice.tool("read_file"), tools, grammar("write_file")),
+            ("undeclared auto", .auto, [tools[0]], grammar("ghost")),
+            ("wrong then valid same push", .tool("read_file"), tools, grammar("write_file") + grammar("read_file")),
+        ] {
+            let (output, parts) = run(choice, declared, [body])
+            c.expect("\(label): terminal error", output.error != nil)
+            c.equal("\(label): one error", parts.filter { $0["type"] as? String == "error" }.count, 1)
+            c.expect("\(label): no executable parts", !parts.contains { ($0["type"] as? String ?? "").hasPrefix("tool-") })
+            c.expect("\(label): no completed call", !output.hasToolCall)
+            c.expect("\(label): terminal on later text", output.consume([.text("later")]).isEmpty)
+            c.expect("\(label): no repeated finish", output.finish().isEmpty)
+        }
+        let direct = GatewayOutput(tools: tools, choice: .tool("read_file"))
+        let rejected = direct.consume([.toolCall(ParsedToolCall(id: "bad", name: "write_file", arguments: [:]))])
+        c.equal("completed call independently guarded", rejected.map { $0["type"] as? String }, ["error"])
+        c.expect("rejected completed call stays absent", !direct.hasToolCall)
+        let (lateWrong, lateParts) = run(.tool("read_file"), tools, [grammar("read_file") + grammar("write_file")])
+        c.expect("later wrong call remains terminal", lateWrong.error != nil)
+        c.equal("only selected call delivered", lateParts.filter { $0["type"] as? String == "tool-call" }.map { $0["toolName"] as? String }, ["read_file"])
+        c.equal("later wrong start withheld", lateParts.filter { $0["type"] as? String == "tool-input-start" }.map { $0["toolName"] as? String }, ["read_file"])
+        for choice in [GatewayDialect.ToolChoice.required, .tool("read_file")] {
+            let (output, parts) = run(choice, tools, ["text only"])
+            c.expect("\(choice.label): text-only error", output.error != nil)
+            c.equal("\(choice.label): unsatisfied one error", parts.filter { $0["type"] as? String == "error" }.count, 1)
+            let (truncated, _) = run(choice, tools, ["<tool_call><function=read_file><parameter=path>hi"])
+            c.expect("\(choice.label): incomplete call unsatisfied", truncated.error != nil)
+        }
+        for choice in [GatewayDialect.ToolChoice.auto, .required, .tool("read_file")] {
+            let second = choice.isNamedTool ? "read_file" : "write_file"
+            let (output, parts) = run(choice, tools, ["before", grammar("read_file") + grammar(second), "after"])
+            c.expect("\(choice.label): valid calls no error", output.error == nil)
+            c.expect("\(choice.label): call observed", output.hasToolCall)
+            c.equal("\(choice.label): completed names", parts.filter { $0["type"] as? String == "tool-call" }.map { $0["toolName"] as? String }, ["read_file", second])
+            c.equal("\(choice.label): ordered parts", parts.compactMap { $0["type"] as? String },
+                ["text-start", "text-delta", "text-end", "tool-input-start", "tool-input-delta", "tool-input-delta", "tool-input-end", "tool-call",
+                 "tool-input-start", "tool-input-delta", "tool-input-delta", "tool-input-end", "tool-call", "text-start", "text-delta", "text-end"])
+        }
+        let malformed = "<tool_call><function=read_file><parameter=path>hi"
+        let (auto, autoParts) = run(.auto, tools, [malformed])
+        c.expect("auto malformed stays nonterminal", auto.error == nil && !auto.hasToolCall)
+        c.equal("auto malformed verbatim fallback", autoParts.filter { $0["type"] as? String == "text-delta" }.compactMap { $0["delta"] as? String }.joined(), malformed)
+        let (plain, plainParts) = run(.auto, tools, ["ordinary text"])
+        c.expect("auto plain text succeeds", plain.error == nil && !plain.hasToolCall)
+        c.equal("plain text parts", plainParts.compactMap { $0["type"] as? String }, ["text-start", "text-delta", "text-end"])
+        let noneText = grammar("read_file")
+        let (none, noneParts) = run(.disabled, tools, [noneText])
+        c.expect("none disables parsing", !none.acceptsToolCalls)
+        c.expect("none cannot execute grammar", none.error == nil && !none.hasToolCall)
+        c.equal("none grammar stays plain text", noneParts.compactMap { $0["type"] as? String }, ["text-start", "text-delta", "text-end"])
+        c.equal("none plain text preserved", noneParts.compactMap { $0["delta"] as? String }.joined(), noneText)
+        let history: [[String: Any]] = user + [
+            ["role": "assistant", "content": [["type": "tool-call", "toolCallId": "old", "toolName": "read_file", "input": [:]]]],
+            ["role": "tool", "content": [["type": "tool-result", "toolCallId": "old", "toolName": "read_file", "output": ["type": "text", "value": "old result"]]]],
+        ]
+        if case .success(let request) = GatewayDialect.parse(fxBody(prompt: history, tools: [readFileTool], extra: ["toolChoice": ["type": "none"]]), modelID: "m") {
+            c.equal("none retains historical roles", request.messages.map(\.role), ["user", "assistant", "tool"])
+            c.equal("none retains historical call", request.messages[1].toolCalls.map(\.id), ["old"])
+            c.equal("none retains historical result", request.messages[2].toolCallId, "old")
+        } else { c.expect("none historical replay parses", false) }
+        if case .success(let request) = GatewayDialect.parse(["prompt": user, "tools": [readFileTool, hosted]], modelID: "m") {
+            c.equal("missing choice remains auto", request.toolChoice, .auto)
+            c.equal("hosted excluded from executable functions", request.tools.map(\.name), ["read_file"])
+        } else { c.expect("missing choice auto parses", false) }
         return c.report()
     }
 

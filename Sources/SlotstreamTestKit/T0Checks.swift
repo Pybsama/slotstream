@@ -1,5 +1,5 @@
-// T0 checks use pure Swift and small bundled fixtures. They do not load model
-// weights or start Metal work, making them a gate on every push.
+// T0 checks use small fixtures and device/OS metadata without model weights.
+// Some read Metal device metadata; numerical/model gates use higher tiers.
 
 import Foundation
 import Slotstream
@@ -28,6 +28,7 @@ extension Catalogue {
             Check("persistent-prefix-policy", tier: .t0) { Diagnostics.persistentPrefixPolicy() },
             Check("persistent-prefix-clear", tier: .t0) { try persistentPrefixClear() },
             Check("persistent-conversation-ids", tier: .t0) { try Diagnostics.persistentConversationIDs() },
+            Check("persistent-prefix-removal-failures", tier: .t0) { try persistentPrefixRemovalFailures() },
             Check("persistent-prefix-read-failures", tier: .t0) { try persistentPrefixReadFailures() },
             Check("governor-check", tier: .t0) { Diagnostics.governorPolicy() },
             Check("pull-check", tier: .t0) { try Diagnostics.pullIntegrity() },

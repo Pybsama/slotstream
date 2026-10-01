@@ -13,6 +13,115 @@ import time
 import download_checks
 
 
+def in_flight_checks(binary):
+    """A terminal peer error must drain active raw requests without retrying them."""
+    data = b'fixture\n'
+    cases = [
+        ('raw-inflight-peer-failure', 404, False, False, None, True),
+        ('raw-inflight-peer-hash-failure', 206, False, True, None, True),
+        ('raw-inflight-user-cancel', 206, False, False, .3, True),
+        ('raw-inflight-success', 206, False, False, None, False),
+        ('raw-inflight-optional-failure', 404, True, False, None, False),
+    ]
+    settings = {name: (status, optional, corrupt, cancel, hold)
+                for name, status, optional, corrupt, cancel, hold in cases}
+    started = {name: threading.Event() for name in settings}
+    delivered = {name: threading.Event() for name in settings}
+    release = {name: threading.Event() for name in settings}
+    counts = collections.Counter()
+    request_lock = threading.Lock()
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = 'HTTP/1.1'
+        def log_message(self, *args): pass
+        def handle(self):
+            try: super().handle()
+            except (BrokenPipeError, ConnectionResetError): pass
+        def do_GET(self):
+            name, _, path = self.path.lstrip('/').partition('/')
+            status, _, corrupt, _, hold = settings[name]
+            with request_lock: counts[name, path] += 1
+            # Every file is eight bytes and owns exactly one production chunk.
+            assert self.headers['Range'] == 'bytes=0-7'
+            if path == 'slow.bin':
+                self.send_response(206)
+                self.send_header('Content-Length', '8')
+                self.send_header('Content-Range', 'bytes 0-7/8')
+                self.end_headers()
+                self.wfile.write(data[:1]); self.wfile.flush()
+                started[name].set()
+                if hold: release[name].wait(5)
+                else: time.sleep(.3)
+                self.wfile.write(data[1:]); self.wfile.flush()
+            else:
+                if not started[name].wait(2): return
+                payload = b'absent' if status == 404 else (b'corrupt\n' if corrupt else data)
+                self.send_response(status)
+                self.send_header('Content-Length', str(len(payload)))
+                if status == 206: self.send_header('Content-Range', 'bytes 0-7/8')
+                self.end_headers()
+                self.wfile.write(payload); self.wfile.flush()
+                delivered[name].set()
+    server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    server.daemon_threads = True
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    results = []
+    try:
+        with tempfile.TemporaryDirectory(prefix='slotpack-raw-inflight-check-') as tmp:
+            root = Path(tmp)
+            manifest = root/'manifest.json'
+            for name, status, optional, corrupt, cancel, hold in cases:
+                files = [dict(path=path, size=8, sha256=hashlib.sha256(data).hexdigest(),
+                              optional=optional and path == 'peer.bin')
+                         for path in ['slow.bin', 'peer.bin']]
+                manifest.write_text(json.dumps(dict(format='slotpack-v1', files=files, objects=[])))
+                dest = root/name
+                command = [str(binary), str(manifest), str(dest), '-',
+                           f'http://127.0.0.1:{server.server_port}/{name}']
+                if cancel is not None: command.append(str(cancel))
+                env = os.environ.copy(); env['SLOTSTREAM_TEST_RAW'] = '1'
+                env.pop('SLOTPACK_FIXTURE_START_DELAY', None)
+                start = time.monotonic()
+                proc = subprocess.Popen(command, env=env, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE, text=True)
+                timed_out = False
+                try:
+                    stdout, stderr = proc.communicate(timeout=3)
+                except subprocess.TimeoutExpired:
+                    timed_out = True
+                    proc.terminate()
+                    stdout, stderr = proc.communicate(timeout=2)
+                finally:
+                    release[name].set()
+                elapsed = time.monotonic()-start
+                with request_lock:
+                    requests = {path: counts[name, path] for path in ['slow.bin', 'peer.bin']}
+                passed = (not timed_out and started[name].is_set() and delivered[name].is_set()
+                          and requests == {'slow.bin': 1, 'peer.bin': 1})
+                if status == 404 and not optional:
+                    passed = passed and proc.returncode != 0 and 'peer.bin' in stderr and '404' in stderr
+                elif corrupt:
+                    passed = passed and proc.returncode != 0 and 'peer.bin' in stderr and 'PullIntegrityError' in stderr
+                elif cancel is not None:
+                    passed = passed and proc.returncode != 0 and 'cancel' in stderr.lower()
+                else:
+                    passed = passed and proc.returncode == 0 and (dest/'slow.bin').read_bytes() == data
+                    if optional:
+                        passed = passed and not any(dest.glob('peer.bin*'))
+                    else:
+                        passed = passed and (dest/'peer.bin').read_bytes() == data
+                if hold: passed = passed and not (dest/'slow.bin').exists()
+                row = dict(name=name, pass_=passed, seconds=round(elapsed, 3),
+                           timed_out=timed_out, request_counts=requests,
+                           returncode=proc.returncode, stdout=stdout, stderr=stderr)
+                results.append(row)
+                print(json.dumps({k: v for k, v in row.items() if k not in ('stdout', 'stderr')}), flush=True)
+    finally:
+        for event in release.values(): event.set()
+        server.shutdown()
+        server.server_close()
+    return results
+
+
 def retry_checks(binary):
     """Exercise raw HTTP cooldowns without the multi-chunk fixture's large bodies."""
     data = b'fixture\n'
@@ -158,7 +267,7 @@ def retry_checks(binary):
 
 def main():
     binary = download_checks.compile_harness()
-    results = retry_checks(binary)
+    results = in_flight_checks(binary) + retry_checks(binary)
     assert all(row['pass_'] for row in results), results
     block = bytes(range(256)) * 4096
     sources = {'weights.safetensors': block * 193, 'config.json': b'{"raw":true}\n',
