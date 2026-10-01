@@ -101,6 +101,12 @@ moment they finish.
 
 ### Ignored types
 
+### Validation log kinds
+
+One entry, from September 5, 2026, uses `change` where the standard kind is `update`.
+
+- change
+
 ## Folders
 
 - records/measurements — every MEASUREMENTS.md section as a record: what was measured, how, on which machine, and whether it still stands

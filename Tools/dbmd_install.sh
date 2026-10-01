@@ -5,12 +5,12 @@
 # no sudo, and is a no-op when that version is already there.
 set -euo pipefail
 
-VERSION=0.13.4
+VERSION=0.14.0
 case "$(uname -s)-$(uname -m)" in
-  Darwin-arm64)  target=darwin-aarch64;    sha=edccfa072babbadbbac965af3c4ad87aedb8ac33e56bc96e4cd48cf294d5708a ;;
-  Darwin-x86_64) target=darwin-x86_64;     sha=20fdd7b78fe5e1e2b6db325ac25610f82e86576d68a9ae4ee7559bc82e21b461 ;;
-  Linux-x86_64)  target=linux-x86_64-musl; sha=6d558e318703d0d6515219de13cf54c739466142e942e306fac35016782ff491 ;;
-  Linux-aarch64) target=linux-aarch64-musl; sha=9c584b80724be47ae20ebd3e5069ad5adad711a0f3ce0a01d30baa923bb581b4 ;;
+  Darwin-arm64)  target=darwin-aarch64;    sha=c990ddfa251e063d7e9c6c8d6b632c4a0124290f71a46a59315049596e16edfd ;;
+  Darwin-x86_64) target=darwin-x86_64;     sha=248ac058663711d6334a52e52a7f34732c3565b0d6ff9794b02129b3c5632074 ;;
+  Linux-x86_64)  target=linux-x86_64-musl; sha=910f4c24bac6e5dc9afaf1906114e7ce1ad8a8c69649c9c2aff37ec56d8129f1 ;;
+  Linux-aarch64) target=linux-aarch64-musl; sha=d24bf9678a925f76600391411abf9dbae825b560d00fdd1dab28d7e893dbb4fc ;;
   *) echo "dbmd_install: unsupported platform $(uname -s)-$(uname -m)" >&2; exit 1 ;;
 esac
 
