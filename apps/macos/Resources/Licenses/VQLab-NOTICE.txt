@@ -1,0 +1,1 @@
+Sevra includes bounded experimental Metal kernels from VQLab by Noah Zelezny and contributors, licensed under Apache 2.0. Slotstream changes their packaging and native integration. Upstream: https://github.com/noahzelezny/VQLab at 97b4380c60f5faf55bdc777102d042468c4644ca. This code license is separate from model weight licenses.

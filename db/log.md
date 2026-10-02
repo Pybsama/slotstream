@@ -31,3 +31,9 @@ Implemented and checked the initial bounded quantization screen, explicit legacy
 ## [2026-10-02 21:21] create | records/measurements/quantization-screen-2026-10-02.md
 Captured pinned VQ inventories, pilot baseline, native real-row/kernel evidence and full scoped verification transcripts before recording measured conclusions. The materialized VQ prototype is not a production decode path; no pack or speed profile qualified.
 
+## [2026-10-02 22:24] update | records/measurements/quantization-screen-2026-10-02.md
+Captured the complete foundation acceptance run (35 passed), fused component binding parity, both frozen cost pilots and final catalogue. Kept reference arithmetic, whole-model quality, mixed ownership and actual hardware qualification separate. Preserved the failed CI context harness evidence and pushed its verified dependency fix.
+
+## [2026-10-02 22:24] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Advanced component screening to native fused projection with private validated CPU routing. Identified bounded quantized PLE reference execution and draft batch arithmetic as explicit next dependencies. Product integration, pack selection, activation and promotion remain gated and incomplete.
+

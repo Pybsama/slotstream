@@ -5,9 +5,10 @@ import Slotstream
 extension Diagnostics {
     /// Frozen screen-v1 shapes and repetition counts. Measures dispatch plus
     /// evaluation wall time, including synchronization, with warm weights.
-    /// VQ materialize+matmul is a bounded fallback, not the upstream fused dot
-    /// arithmetic and not evidence about whole-model quality or throughput.
-    public static func quantizationBench() throws -> Data {
+    /// The default materialize+matmul path is a bounded fallback. Fused mode
+    /// requires checked reference fixtures. Neither mode establishes whole-
+    /// model quality, throughput or draft verification parity.
+    public static func quantizationBench(fusedFixtureDirectory: URL? = nil) throws -> Data {
         try ModelProcessGuard.acquire()
         guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 5_000_000_000 else {
             throw ModelError("quantization screen requires 5 GB real reclaimable memory")
@@ -44,6 +45,11 @@ extension Diagnostics {
         }
         return try withError {
             guard try quantizationKernels().passed else { throw ModelError("kernel correctness must pass before timing") }
+            if let directory = fusedFixtureDirectory {
+                guard try quantizationFixtures(directory: directory, fused: true).passed else {
+                    throw ModelError("fused binding parity must pass before timing")
+                }
+            }
             for (out, columns) in [(640, 2560), (2560, 640)] {
                 let experts = 10
                 let dense = sin(MLXArray(0..<(experts * out * columns)).asType(.float32) / 101)
@@ -98,25 +104,33 @@ extension Diagnostics {
                         .asType(.float16).reshaped([entries, dim])
                     let scales = MLXArray.full([experts * out, columns / 64], values: MLXArray(Float(0.25)), dtype: .float16)
                     eval(codes, book, scales)
+                    let fusedProjection = fusedFixtureDirectory == nil ? nil : try VQExpert(
+                        codes: codes.reshaped([experts, out, codes.dim(1)]), codebook: book,
+                        scales: scales.reshaped([experts, out, columns / 64]), layout: layout)
                     for rows in [1, 4, 32] {
                         let x = cos(MLXArray(0..<(rows * columns)).asType(.float32) / 109)
                             .reshaped([rows, 1, 1, columns]).asType(.bfloat16)
                         let indices = broadcast(MLXArray(Array(0..<experts).map(UInt32.init)), to: [rows, experts])
                         eval(x, indices)
+                        let fusedOperation = try fusedProjection?.operation(x.reshaped([rows, columns]),
+                            expertIDs: (0..<(rows * experts)).map { UInt32($0 % experts) }, topK: experts)
                         var samples = [Double]()
                         for round in 0..<23 {
                             let seconds = try trial {
+                                if let fusedOperation {
+                                    return fusedOperation()
+                                }
                                 let decoded = try VQDecode.rows(codes: codes, codebook: book, scales: scales, layout: layout)
                                     .asType(.bfloat16).reshaped([experts, out, columns]).swappedAxes(-1, -2)
                                 return gatherMM(x, decoded, rhsIndices: indices)
                             }
                             if round >= 3 { samples.append(seconds) }
                         }
-                        results.append(["format": "vq-d\(dim)-k\(entries)-\(packing.rawValue)-materialized",
+                        results.append(["format": "vq-d\(dim)-k\(entries)-\(packing.rawValue)-\(fusedProjection == nil ? "materialized" : "fused")",
                             "input_tokens": rows, "projection_shape": [out, columns], "routed_experts": experts,
                             "seconds": samples, "median_seconds": median(samples),
                             "weight_bytes": codes.nbytes + scales.nbytes + book.nbytes,
-                            "expanded_weight_bytes": experts * out * columns * 2])
+                            "expanded_weight_bytes": fusedProjection == nil ? experts * out * columns * 2 : 0])
                     }
                     MLX.Memory.clearCache()
                 }
@@ -124,9 +138,11 @@ extension Diagnostics {
             guard let afterVM = ProcessMemory.vmActivity() else { throw ModelError("cannot read final VM observations") }
             if afterVM.swapins != vm.swapins || afterVM.swapouts != vm.swapouts { ineligible.insert("global paging") }
             let machine = Machine.current()
-            let result: [String: Any] = ["schema": 1, "protocol": "screen-v1",
+            let result: [String: Any] = ["schema": 1, "protocol": fusedFixtureDirectory == nil ? "screen-v1" : "fused-v2",
                 "scope": "warm synthetic kernel screen, not full-model parity, quality or speed qualification",
-                "vq_arithmetic": "F16 row materialization then BF16 gathered matmul; not upstream fused-dot parity",
+                "vq_arithmetic": fusedFixtureDirectory == nil
+                    ? "F16 row materialization then BF16 gathered matmul; not upstream fused-dot parity"
+                    : "Pinned VQ 3.2/4.4 F16 I/O, D8 SIMD reduction and XKREP; CPU routing validated before timing",
                 "warmups": 3, "repetitions": 20, "results": results,
                 "ram_gb": machine.ramGB, "os": ProcessInfo.processInfo.operatingSystemVersionString,
                 "peak_process_bytes": ProcessMemory.peakResidentBytes(), "peak_mlx_bytes": MLX.Memory.peakMemory,

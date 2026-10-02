@@ -140,6 +140,33 @@ extension Diagnostics {
                 eval(result)
                 c.expect("affine \(bits)-bit gathered matmul finite", all(isFinite(result)).item(Bool.self))
             }
+            // A scalar-exact control covers every fused dispatch family and
+            // the SIMD boundary. Real-row Python binding parity is a separate
+            // fixture gate; these constant weights do not certify full math.
+            for columns in [640, 2560] {
+                for (dim, entries, packing) in [(2, 256, VQLayout.Packing.unpacked8),
+                    (2, 1024, .words32), (4, 256, .words32), (4, 2048, .words32), (8, 16384, .words32)] {
+                    let layout = try VQLayout(columns: columns, dimensions: dim,
+                        codebookEntries: entries, groupSize: 64, packing: packing)
+                    let dtype: DType = packing == .unpacked8 ? .uint8 : .uint32
+                    let codes = MLXArray.zeros([1, 7, layout.codeRowBytes / dtype.size], dtype: dtype)
+                    let book = MLXArray.ones([entries, dim], dtype: .float16)
+                    let scales = MLXArray.full([1, 7, columns / 64], values: MLXArray(Float(1.0 / 64)), dtype: .float16)
+                    let projection = try VQExpert(codes: codes, codebook: book, scales: scales, layout: layout)
+                    for tokens in [1, 2, 3] {
+                        let x = MLXArray.ones([tokens, columns], dtype: .bfloat16)
+                        let indices = MLXArray.zeros([tokens, 10], dtype: .uint32)
+                        let result = try projection.call(x, indices: indices)
+                        c.expect("fused d\(dim)/k\(entries) columns\(columns) pairs\(tokens * 10) exact constant dot",
+                            all(result .== Float(columns / 64)).item(Bool.self))
+                    }
+                    do {
+                        _ = try projection.call(MLXArray.ones([1, columns], dtype: .bfloat16),
+                            indices: MLXArray([UInt32(1)]).reshaped([1, 1]))
+                        c.expect("fused rejects expert out of bounds", false)
+                    } catch { c.expect("fused rejects expert out of bounds", true) }
+                }
+            }
             return c.report()
         }
     }

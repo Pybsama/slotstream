@@ -18,6 +18,7 @@ def source_files(root):
     # silently omitted CSlotpack's implementation and public header.
     candidates = [*root.joinpath("Sources").rglob("*"), root/"Package.swift",
                   root/"Package.resolved", root/"Makefile",
+                  *root.glob("THIRD_PARTY_NOTICES.md"), *root.joinpath("Licenses").rglob("*"),
                   root/"Tools/build_identity.py", root/"Tools/fetch_metallib.sh"]
     if any(p.is_symlink() for p in candidates):
         raise ValueError("build source symlinks require an explicit archived dependency")

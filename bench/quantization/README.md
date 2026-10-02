@@ -89,3 +89,35 @@ must precede frozen held-out examples, sample counts, paired confidence methods,
 noninferiority and latency margins. Complete app tasks, tool traces, exact
 native reference parity, memory/governor checks and actual hardware qualification
 remain independent gates in the canonical plan.
+## Fused expert pilot
+
+`fused-v1.json` freezes the first fused projection pilot. `fused-v2.json`
+keeps its arithmetic and shapes while preparing checked CPU routing before
+timing, removing a redundant GPU bounds-reduction synchronization. The CLI
+currently runs the second pilot; the first receipts stay unchanged. Extract only the
+reviewed Metal strings from the exact pinned runtime with
+`Tools/vq_kernel_sources.py`. The tool parses string expressions; it never
+imports or executes upstream Python. The checked-in source and Apache license
+are digest-checked by its test.
+
+After the usual single-process/headroom preflight, generate binding fixtures:
+
+```sh
+.venv/bin/python Tools/vq_fused_reference.py --runtime <pinned-model.py> \
+  --fixtures <row-fixtures> --out <new-fused-fixtures>
+.build/release/slotstream quantization-check --kernels \
+  --fused-fixture-directory <new-fused-fixtures>
+.build/release/slotstream quantization-bench \
+  --fused-fixture-directory <new-fused-fixtures>
+```
+
+Repeat `--fixtures` for the inspected row collections to cover every family.
+The Python oracle and native wrapper use the same reviewed Metal source.
+Bit equality checks input conversion, packing, routing, dispatch and binding;
+it does not independently establish the kernel arithmetic or full-model
+parity. PLE, full checkpoints, mixed caches and quality are separate gates.
+
+The pinned D8 profile switches reductions at the routed-pair boundary. A draft
+verification batch can therefore use different arithmetic from single-token
+decode. Matching this reference binding does not prove speculative row parity;
+the full draft/state gates must qualify that interaction independently.

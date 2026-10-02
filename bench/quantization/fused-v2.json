@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "protocol": "fused-v2",
+  "extends": "fused-v1.json",
+  "scope": "bounded native fused expert binding and synthetic cost pilot",
+  "runtime_sha256": "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8",
+  "runtime_profile": {
+    "VQ_DECODE_BF16IO": 0,
+    "VQ_DECODE_XKREP": 1,
+    "VQ_D2_WALK": 1,
+    "VQ_D4_WALK": 1,
+    "VQ_D8_WALK": 1,
+    "VQ_D8_DEVX": 1,
+    "VQ_D8_SS": 1,
+    "VQ_EXPERT_SIMD_MAX_N": 20
+  },
+  "correctness_before_timing": [
+    "constant-dot controls and index refusals",
+    "exact Python-MLX/native binding bits on selected real rows"
+  ],
+  "timing": "Same shapes, data, affine controls and repetitions as fused-v1. CPU routing validation and private index preparation occur before timing, matching prevalidated affine indices. Casts, dispatch, evaluation and synchronization remain timed.",
+  "limitations": [
+    "Shared reviewed Metal kernels make this a binding comparison, not an independent arithmetic oracle.",
+    "VQ 2.1 row bytes may be used as fixtures with the declared newer runtime; that is not VQ 2.1 runtime parity.",
+    "Synthetic routing, resident weights and timings cannot qualify a full model or hardware profile.",
+    "Candidate quality, whole-model parity and mixed storage remain separate gates."
+  ],
+  "change": "Remove the redundant GPU bounds-reduction synchronization. The prepared operation privately owns validated indices and retains its input array context. No arithmetic or packing change."
+}

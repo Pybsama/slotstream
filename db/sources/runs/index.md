@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-02T21:21:14.536252Z
+updated: 2026-10-02T22:22:26.813404Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-fused-vq-component-pilots]] — Fused VQ binding parity and two bounded cost pilots; scope and limitations below.
+- [[sources/runs/2026/10/2026-10-02-full-engine-quantization-foundation]] — Complete existing-engine acceptance after quantization foundations; scope and limitations below.
 - [[sources/runs/2026/10/2026-10-02-quantization-foundation-verification]] — Initial implementation checks and real memory lifecycle passed; full release and candidate quality qualification remain open.
 - [[sources/runs/2026/10/2026-10-02-quantization-native-screen]] — Raw pinned-row checks and bounded synthetic kernel timing samples; no full-model parity or candidate qualification.
 - [[sources/runs/2026/10/2026-10-02-quantization-baseline-v1]] — Three frozen 10 GB baseline runs with binary identity, emitted-token timing, process footprint and raw generation stats.
@@ -505,10 +507,8 @@ updated: 2026-10-02T21:21:14.536252Z
 - [[sources/runs/2026/09/2026-09-06-optimization-mtp-tail-sampled-counterexample]] — Shared native checks and sampled MTP-tail counterexample — V186–189
 - [[sources/runs/2026/09/2026-09-06-configurable-context-static-and-sampler-prerequisite]] — Build 19 static suite passes; sampler stops before execution on missing environment prerequisite
 - [[sources/runs/2026/09/2026-09-06-optimization-indexer-exceptions-and-child-cleanup]] — Indexer exceptional arithmetic and owned-process cleanup — V187–188
-- [[sources/runs/2026/09/2026-09-06-optimization-ngram-compile-correction]] — N-gram diagnostic compile failure and unchanged-fixture correction — V185–186
-- [[sources/runs/2026/09/2026-09-06-configurable-context-complete-prompt-epoch-pass]] — Complete prompt MTP and vision reuse passes with one arithmetic epoch
 
 ## More
 
-This folder has 693 files. The 500 most recent are listed above.
+This folder has 695 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

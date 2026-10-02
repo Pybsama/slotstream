@@ -593,6 +593,15 @@ It requires a quiet Mac. Its VQ materialization fallback has different arithmeti
 from upstream fused matrix operations; it is not a full-model parity or speed
 test. The tool reports process memory and timing eligibility separately.
 
+For the fused component pilot, `Tools/vq_fused_reference.py` produces bounded
+binding fixtures from reviewed, hash-checked Metal strings. Pass
+`--fused-fixture-directory PATH` to the check and benchmark commands. This
+uses the prepared-routing protocol in
+[`bench/quantization/fused-v2.json`](../bench/quantization/fused-v2.json).
+Shared-kernel binding equality is separate from independent full-model parity,
+quality and mixed-cache ownership. The source and binary distributions preserve
+the [third-party notices](../THIRD_PARTY_NOTICES.md).
+
 The pilot scorer `Tools/quantization_quality.py` compares baseline and candidate
 full-vocabulary logits against a separately produced reference. It requires
 matching checkpoint, tokenizer, template and exact teacher-forced contexts,

@@ -6,7 +6,7 @@ import Slotstream
 extension Diagnostics {
     /// Exact native decoding against separately extracted scalar CPU oracles.
     /// Bound both file reads and GPU output before the MLX loader sees a file.
-    public static func quantizationFixtures(directory: URL) throws -> CheckReport {
+    public static func quantizationFixtures(directory: URL, fused: Bool = false) throws -> CheckReport {
         struct Fixture: Decodable {
             let path: String
             let sha256: String
@@ -19,8 +19,9 @@ extension Diagnostics {
         }
         struct Manifest: Decodable {
             let schema: Int
-            let repo: String
-            let revision: String
+            let repo: String?
+            let revision: String?
+            let runtime_sha256: String?
             let fixtures: [Fixture]
         }
         func boundedData(_ file: URL, limit: Int) throws -> Data {
@@ -35,17 +36,24 @@ extension Diagnostics {
             return data
         }
         let manifest = try JSONDecoder().decode(Manifest.self,
-            from: boundedData(directory.appendingPathComponent("fixtures.json"), limit: 1_000_000))
-        guard manifest.schema == 1, (1...32).contains(manifest.fixtures.count),
-              manifest.revision.range(of: "^[0-9a-f]{40}$", options: .regularExpression) != nil,
+            from: boundedData(directory.appendingPathComponent(fused ? "fused.json" : "fixtures.json"), limit: 1_000_000))
+        guard manifest.schema == 1, (1...(fused ? 128 : 32)).contains(manifest.fixtures.count),
               Set(manifest.fixtures.map(\.path)).count == manifest.fixtures.count else {
             throw ModelError("unsupported or unpinned VQ fixture manifest")
         }
+        if fused {
+            guard manifest.runtime_sha256 == "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8" else {
+                throw ModelError("unsupported VQ fused reference runtime")
+            }
+        } else if manifest.revision?.range(of: "^[0-9a-f]{40}$", options: .regularExpression) == nil {
+            throw ModelError("unpinned VQ row fixture manifest")
+        }
         try ModelProcessGuard.acquire()
-        var c = CheckBuilder("quantization-fixtures")
+        var c = CheckBuilder(fused ? "quantization-fused-fixtures" : "quantization-fixtures")
         return try withError {
             for fixture in manifest.fixtures {
-                guard fixture.path.range(of: "^fixture-[0-9]+\\.safetensors$", options: .regularExpression) != nil,
+                let pattern = fused ? "^fused-[0-9]+\\.safetensors$" : "^fixture-[0-9]+\\.safetensors$"
+                guard fixture.path.range(of: pattern, options: .regularExpression) != nil,
                       fixture.bytes > 0, fixture.bytes <= 8_000_000,
                       let packing = VQLayout.Packing(rawValue: fixture.packing) else {
                     throw ModelError("unsupported fixture path or extent")
@@ -66,6 +74,21 @@ extension Diagnostics {
                 let verified = scratch.appendingPathComponent("fixture.safetensors")
                 try data.write(to: verified, options: .atomic)
                 let arrays = try loadArrays(url: verified)
+                if fused {
+                    guard Set(arrays.keys) == Set(["x", "indices", "codes", "codebook", "vq_scales", "expected"]),
+                          let x = arrays["x"], let indices = arrays["indices"], let codes = arrays["codes"],
+                          let book = arrays["codebook"], let scales = arrays["vq_scales"], let expected = arrays["expected"],
+                          expected.dtype == .bfloat16, expected.ndim == 3, expected.dim(2) == 7 else {
+                        throw ModelError("VQ fused fixture has unexpected tensors")
+                    }
+                    let projection = try VQExpert(codes: codes, codebook: book, scales: scales, layout: layout)
+                    let actual = try projection.call(x, indices: indices)
+                    guard actual.shape == expected.shape else { throw ModelError("VQ fused output shape mismatch") }
+                    c.equal("\(fixture.path) exact Python/native fused binding bits",
+                        actual.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self),
+                        expected.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self))
+                    continue
+                }
                 guard Set(arrays.keys) == Set(["codes", "codebook", "vq_scales", "expected"]),
                       let codes = arrays["codes"], let book = arrays["codebook"], let scales = arrays["vq_scales"],
                       let expected = arrays["expected"], expected.dtype == .float16,

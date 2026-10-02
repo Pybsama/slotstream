@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-02T21:03:17.058455+00:00
+updated: 2026-10-02T22:22:27.075309+00:00
 summary: Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 date: 2026-10-02
 doc: plan
@@ -12,6 +12,7 @@ level: '2'
 order: '6'
 title: Flash Next quantization and automatic memory implementation
 ---
+
 
 
 Keep Qwen3.8 Flash Next as the same underlying model across the 16 to 64 GB Mac target range. Qualify a small set of weight representations, select one automatically for the Mac and its usable memory, and let the user override that selection and the memory ceiling independently. A separate runtime governor adapts allocations as system conditions change.
@@ -25,13 +26,13 @@ Status on October 2, 2026: implementation in progress. The owner requested the f
 | Work | Implemented and checked | Still required |
 | --- | --- | --- |
 | Baseline and inventory | Frozen bounded screen, installed-pack pilot, complete pinned shard-header/config inventories for VQ 2.1, 3.2 and 4.4 | Full payload provenance, representative workload/power pilot, bounded reference execution proof and held-out protocol |
-| Candidate screening | Checked affine/VQ geometry, native Metal selected-row decoder, independent real-row scalar oracles, both projection shapes and affine width timings | Fused VQ arithmetic and performance, real model logits and complete-task quality |
-| Existing adapter | Explicit affine descriptors and rejection of malformed or inconsistent per-module overrides; pinned arithmetic unchanged | Full candidate family descriptors and complete release acceptance |
+| Candidate screening | Checked affine/VQ geometry, native Metal selected-row decoder, scalar row oracles, fused binding parity and cost pilots, both projection shapes and affine width timings | Independent full-model reference parity, real logits and complete-task quality |
+| Existing adapter | Explicit affine descriptors and rejection of malformed or inconsistent per-module overrides; pinned arithmetic unchanged | Full candidate family descriptors; the foundation binary passed the complete existing-engine battery |
 | Current Mac memory controls | Preserve out-of-range saved ceilings; distinguish saved/applied/current memory; hold queued work after failed configuration; reject delayed UI revisions; revalidate queued Incognito requests | Candidate-specific cost ranges and configuration identity spanning pack, template, features and prepared resources |
 | Quality instrument | Separate bounded full-vocabulary KL/top-1 scorer with hash/context validation and deterministic tests | Actual VQ reference/current/candidate outputs, frozen noninferiority/latency rules, held-out tasks and confidence analysis |
 | Product integration and promotion | Existing pack stays the supported path; no alternate pack is offered | Steps 4 through 10 below, including mixed-size residency, native PLE/draft integration, qualified Auto selection, transactional distribution and real-hardware rollout |
 
-The materialize-then-multiply VQ prototype is a decoding and cost instrument. The recorded one-token kernel screen is much slower than the affine controls; it must not become the production decode path. This does not reject fused VQ. The next candidate-engine work is pinned fused-dot parity, followed by mixed-record storage and a bounded full-reference runner. Its unknown quality/performance cannot justify moving product defaults early.
+The materialize-then-multiply VQ prototype is a decoding and cost instrument. The recorded one-token kernel screen is much slower than the affine controls; it must not become the production decode path. This does not reject fused VQ. The follow-up fused binding passed selected-row bit equality against Python MLX and reached costs near the affine controls after removing redundant route synchronization. This is a component result. The next work is a bounded full-reference runner with quantized PLE row streaming, independent full-model parity and mixed-record storage. Its unknown quality/performance cannot justify moving product defaults early.
 
 Reduced targets on the development Mac remain budget tests of that Mac. No other target hardware has been supplied to this implementation session. The hardware qualification rows and the 20-token target remain open; do not label this implementation checkpoint as completion of the whole plan.
 
