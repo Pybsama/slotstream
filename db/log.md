@@ -25,3 +25,9 @@ Linked the detailed same-model Mac workstream without reversing the broader main
 ## [2026-10-02 18:47] update | records/plan/8-1-next-the-ordered-queue-post-0-1-5.md
 Linked the baseline and bounded quantization screen from the current queue. Regenerated PLAN.md. Full validation reported zero errors and warnings; all 349 claim needle checks passed.
 
+## [2026-10-02 21:21] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Implemented and checked the initial bounded quantization screen, explicit legacy descriptors and current Mac memory lifecycle fixes. Candidate inference, quality, selection, activation and hardware promotion remain open; this is not completion of the program.
+
+## [2026-10-02 21:21] create | records/measurements/quantization-screen-2026-10-02.md
+Captured pinned VQ inventories, pilot baseline, native real-row/kernel evidence and full scoped verification transcripts before recording measured conclusions. The materialized VQ prototype is not a production decode path; no pack or speed profile qualified.
+

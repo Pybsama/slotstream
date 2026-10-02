@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "purpose": "Bounded feasibility screen, not release qualification",
+  "baseline_source_commit": "e0d4b1d4d98495c768b9506ff947be84e74974d8",
+  "checkpoint_family": "Qwen/Qwen3.8-Flash-Next",
+  "candidates": [
+    {"id": "vq-2.1", "repo": "TheDrainFlorist/Qwen3.8-Flash-Next-VQ-2.1bpw", "revision": "8684640a3956b01c47f5d47f9b999e2ab8b985f1"},
+    {"id": "vq-3.2", "repo": "TheDrainFlorist/Qwen3.8-Flash-Next-VQ-3.2bpw", "revision": "a4e1b44631619ba440d985e324d95dd106536a3d"},
+    {"id": "vq-4.4-reference", "repo": "TheDrainFlorist/Qwen3.8-Flash-Next-VQ-4.4bpw", "revision": "0f35dc817238bdbabdac208db731470cd30a7c0a"}
+  ],
+  "resource_budget": {
+    "metadata_download_bytes_per_candidate": 64000000,
+    "kernel_fixture_bytes": 768000000,
+    "kernel_peak_bytes": 2000000000,
+    "baseline_memory_gb": 10,
+    "baseline_required_reclaimable_gb": 13,
+    "maximum_full_artifact_disk_bytes": 350000000000,
+    "reference_logits_storage_bytes": 2000000000,
+    "paid_compute_usd": 0,
+    "baseline_maximum_run_seconds": 1800,
+    "baseline_runs": 3,
+    "kernel_warmups": 3,
+    "kernel_repetitions": 20
+  },
+  "baseline": {
+    "prompt": "Explain how RAM, SSD storage and caching work together when a computer runs a large language model. Give a clear, factual explanation in about 150 words.",
+    "max_tokens": 128,
+    "max_context": 32768,
+    "mtp": "auto",
+    "vision": "off",
+    "sampling": "greedy",
+    "cache_state": "fresh process per repetition",
+    "timing": "Primary steady committed rate: (output token count - 1) / sum(interTokenSeconds), from first to last emitted token, including draft and verification work between those emissions. Also report the unchanged legacy GenStats decodeTokens / decodeSeconds, whose clock starts before sampling the first token from prefill logits and includes final cache retention. Preserve raw stats and IDs; never mix the two rates.",
+    "eligibility": "Nominal thermal state, no Low Power Mode, no competing model/build/storage study, no global paging during measured interval. Preserve ineligible runs; do not replace them to chase a score.",
+    "aggregation": "Median across the three predeclared runs, no release confidence claim. Report TTFT/prefill, generation and process peak separately."
+  },
+  "kernel_screen": {
+    "affine_bits": [4, 3, 2],
+    "affine_group_size": 64,
+    "expert_shapes": [[640, 2560], [2560, 640]],
+    "routed_experts": 10,
+    "rows": [1, 4, 32],
+    "reference": "Deterministic independently decoded fixtures; compare decoded VQ half bit patterns exactly before timing. Affine trials use the same synthetic dense source and MLX pinned by the engine.",
+    "scope": "Geometry and operation support only. No synthetic or publisher result qualifies task quality, full-model reference parity or throughput."
+  },
+  "qualification": {
+    "status": "not_frozen",
+    "reason": "Freeze held-out sample count, paired confidence method and quality/latency margins from pilot evidence before collecting qualification data. Never promote based on this screen."
+  }
+}

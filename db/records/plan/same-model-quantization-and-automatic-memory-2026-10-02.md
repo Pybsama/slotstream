@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-02T18:46:22.223253+00:00
+updated: 2026-10-02T21:03:17.058455+00:00
 summary: Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 date: 2026-10-02
 doc: plan
@@ -13,11 +13,27 @@ order: '6'
 title: Flash Next quantization and automatic memory implementation
 ---
 
+
 Keep Qwen3.8 Flash Next as the same underlying model across the 16 to 64 GB Mac target range. Qualify a small set of weight representations, select one automatically for the Mac and its usable memory, and let the user override that selection and the memory ceiling independently. A separate runtime governor adapts allocations as system conditions change.
 
 The engineering target is at least 20 committed generation tokens per second in each supported automatic profile. This is a target, not an achieved result or a guarantee for arbitrary manual settings, prompts, context lengths, SSDs, temperatures or competing applications. If a profile fails, keep that failure visible and continue the optimization work. Do not quietly lower quality, substitute another model or declare the hardware qualified.
 
-Status on October 2, 2026: implementation plan, with three completed document review passes recorded below. The same-model direction, automatic defaults and independent overrides come from the owner's current request. Candidate winners, performance, quality margins and new operating thresholds remain subject to the experiments below. No model was loaded or benchmarked to write this plan. The immediate next action is step 1, followed by the bounded candidate screen, rather than committing to a default quantization today.
+Status on October 2, 2026: implementation in progress. The owner requested the full program after the three document review passes below. The initial bounded screen and existing-path memory fixes are implemented; full candidate inference and qualification are not complete. Candidate winners, performance, quality margins and new operating thresholds remain experimental. The original document review loaded no model; subsequent implementation measurements are recorded separately in [[records/measurements/quantization-screen-2026-10-02]].
+
+### Implementation checkpoint, October 2
+
+| Work | Implemented and checked | Still required |
+| --- | --- | --- |
+| Baseline and inventory | Frozen bounded screen, installed-pack pilot, complete pinned shard-header/config inventories for VQ 2.1, 3.2 and 4.4 | Full payload provenance, representative workload/power pilot, bounded reference execution proof and held-out protocol |
+| Candidate screening | Checked affine/VQ geometry, native Metal selected-row decoder, independent real-row scalar oracles, both projection shapes and affine width timings | Fused VQ arithmetic and performance, real model logits and complete-task quality |
+| Existing adapter | Explicit affine descriptors and rejection of malformed or inconsistent per-module overrides; pinned arithmetic unchanged | Full candidate family descriptors and complete release acceptance |
+| Current Mac memory controls | Preserve out-of-range saved ceilings; distinguish saved/applied/current memory; hold queued work after failed configuration; reject delayed UI revisions; revalidate queued Incognito requests | Candidate-specific cost ranges and configuration identity spanning pack, template, features and prepared resources |
+| Quality instrument | Separate bounded full-vocabulary KL/top-1 scorer with hash/context validation and deterministic tests | Actual VQ reference/current/candidate outputs, frozen noninferiority/latency rules, held-out tasks and confidence analysis |
+| Product integration and promotion | Existing pack stays the supported path; no alternate pack is offered | Steps 4 through 10 below, including mixed-size residency, native PLE/draft integration, qualified Auto selection, transactional distribution and real-hardware rollout |
+
+The materialize-then-multiply VQ prototype is a decoding and cost instrument. The recorded one-token kernel screen is much slower than the affine controls; it must not become the production decode path. This does not reject fused VQ. The next candidate-engine work is pinned fused-dot parity, followed by mixed-record storage and a bounded full-reference runner. Its unknown quality/performance cannot justify moving product defaults early.
+
+Reduced targets on the development Mac remain budget tests of that Mac. No other target hardware has been supplied to this implementation session. The hardware qualification rows and the 20-token target remain open; do not label this implementation checkpoint as completion of the whole plan.
 
 ### Scope and relationship to existing work
 

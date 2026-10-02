@@ -39,6 +39,9 @@ public actor SevraRuntime {
     private var sleeping = false
     private var performancePreferences: PerformancePreferences
     private var pendingPerformance = false
+    private var performanceFailure: String?
+    private var latestPreferenceRevision: UInt64?
+    private var performanceGeneration: UInt64 = 0
     private var lastWorkEnded = ProcessInfo.processInfo.systemUptime
     private var lastUserPresent: TimeInterval?
     private var performanceCache: PerformanceSnapshot?
@@ -224,6 +227,7 @@ public actor SevraRuntime {
         }
         var performance = performanceCache
         performance?.pending = pendingPerformance
+        performance?.failure = performanceFailure
         performance?.preferences = performancePreferences
         performance?.busy = driving || modelMaintenance
         var result = RuntimeSnapshot(home: snapshot, modelStatus: inference.performanceTelemetry == nil ? modelStatus : (performance?.state ?? "Model not loaded"), error: lastError ?? saves.lastFailure, simulated: inference.simulated, performance: performance, restoreReview: restoreReview, storageNeedsReview: storagePaused, thinking: live, thinkingTraces: traces.mapValues(\.steps))
@@ -450,7 +454,7 @@ public actor SevraRuntime {
         return run.id
     }
     private func startQueuedWorkIfReady() {
-        guard !driving, !modelMaintenance, !sleeping, !shuttingDown,
+        guard !driving, !modelMaintenance, !sleeping, !shuttingDown, performanceFailure == nil,
               home.threads.contains(where: { $0.run?.state == .queued }) else { return }
         driving = true; Task { await self.drive() }
     }
@@ -488,18 +492,42 @@ public actor SevraRuntime {
         startQueuedWorkIfReady()
     }
     public func setPerformancePreferences(_ value: PerformancePreferences) async throws {
-        try PerformancePolicy.validate(value, on: .current())
-        performancePreferences = value; pendingPerformance = true
+        try PerformancePolicy.validateSaved(value)
+        guard performanceGeneration < UInt64.max else { throw SevraError.refused("Reopen Sevra before changing settings again.") }
+        performanceGeneration += 1
+        if lastError == performanceFailure { lastError = nil }
+        performancePreferences = value; pendingPerformance = true; performanceFailure = nil
+        performanceCache?.ceilingGB = PerformancePolicy.ceilingGB(value, on: .current())
         if !driving && !modelMaintenance { try await applyPerformancePreferences() }
+    }
+    /// One UI owner supplies increasing revisions so actor scheduling cannot
+    /// apply a delayed older click after a newer choice. The original API is
+    /// retained for callers that already serialize their preference changes.
+    public func setPerformancePreferences(_ value: PerformancePreferences, revision: UInt64) async throws {
+        if let latestPreferenceRevision, revision <= latestPreferenceRevision { return }
+        try PerformancePolicy.validateSaved(value)
+        latestPreferenceRevision = revision
+        try await setPerformancePreferences(value)
     }
     private func applyPerformancePreferences() async throws {
         guard pendingPerformance, active == nil, !modelMaintenance, !shuttingDown else { return }
+        if let performanceFailure { throw SevraError.refused(performanceFailure) }
         modelMaintenance = true; performanceMaintenance = true
         defer { finishPerformanceMaintenance() }
         repeat {
             let value = performancePreferences
-            try await inference.configure(value)
-            pendingPerformance = value != performancePreferences
+            let generation = performanceGeneration
+            do {
+                try PerformancePolicy.validate(value, on: .current())
+                try await inference.configure(value)
+            } catch {
+                // A newer choice arriving during configure supersedes a failed
+                // attempt, but does not make that attempt an applied setting.
+                if generation != performanceGeneration { continue }
+                performanceFailure = error.localizedDescription
+                throw error
+            }
+            pendingPerformance = generation != performanceGeneration
         } while pendingPerformance && !shuttingDown
     }
     /// The caller supplies foreground presence on a slow lifecycle tick;
@@ -508,8 +536,11 @@ public actor SevraRuntime {
         guard !shuttingDown else { return }
         if userPresent { lastUserPresent = now }
         if !driving && !modelMaintenance {
+            do { try await applyPerformancePreferences() }
+            catch { lastError = error.localizedDescription }
+            // A failed requested setting stops admission, not housekeeping.
+            // A previous loaded configuration must still yield idle memory.
             do {
-                try await applyPerformancePreferences()
                 if !driving, !modelMaintenance, let telemetry = inference.performanceTelemetry, telemetry.isLoaded {
                     let conditions = ProcessMemory.operatingConditions()
                     let conserving = conditions.lowPowerModeEnabled || ["serious", "critical"].contains(conditions.thermalState)
@@ -524,6 +555,7 @@ public actor SevraRuntime {
         }
         performanceCache = inference.performanceTelemetry?.snapshot(preferences: performancePreferences,
             pending: pendingPerformance, busy: driving || modelMaintenance)
+        performanceCache?.failure = performanceFailure
     }
     public func prepareForSleep() async throws {
         sleeping = true
@@ -603,14 +635,20 @@ public actor SevraRuntime {
     private func drive() async {
         defer { driving = false }
         while !shuttingDown, !storagePaused, !sleeping, var thread = home.threads.filter({ $0.run?.state == .queued }).min(by: { ($0.run?.order ?? 0) < ($1.run?.order ?? 0) }), let run = thread.run {
+            // A failed setting is not permission to run against the previous
+            // configuration. Retry only after an explicit corrected choice.
+            do { try await applyPerformancePreferences() }
+            catch { lastError = error.localizedDescription; break }
             // A run starts only once its acceptance is on disk. If that save
             // failed, the run stays queued; sending again retries it.
             if thread.mode != .incognito {
                 do { try await durable() } catch { break }
-                guard !shuttingDown, !storagePaused, !sleeping,
-                      let current = home.threads.first(where: { $0.id == thread.id }), current.run == run else { continue }
-                thread = current
             }
+            // Both configure and durable suspend this actor. Incognito can
+            // also be stopped or closed during either boundary.
+            guard !shuttingDown, !storagePaused, !sleeping, !pendingPerformance,
+                  let current = home.threads.first(where: { $0.id == thread.id }), current.run == run else { continue }
+            thread = current
             let cancellation = Cancellation()
             let control = ThinkingControl()
             active = (thread.id, run.id, cancellation, TurnBuffer(), control)

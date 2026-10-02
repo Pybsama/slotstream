@@ -23,6 +23,34 @@ and raw runs. `PLAN.md` and `MEASUREMENTS.md` are generated from its records.
 For AI agents, [llms.txt](../llms.txt) is the index and
 [llms-full.txt](../llms-full.txt) combines the documentation.
 
+## Candidate quantization research
+
+The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)
+tracks qualification separately from format support. The installed engine still
+admits its pinned affine pack. Experimental descriptors and decoders do not
+enable a candidate model or change the automatic recommendation.
+
+`slotstream quantization-check --kernels` checks native layout decoding and
+affine operation support. `Tools/quantization_inventory.py` and
+`Tools/quantization_fixture.py` inspect pinned metadata and extract bounded real
+tensor rows without executing downloaded model code. Pass their fixture directory
+to `slotstream quantization-check --fixture-directory PATH` to compare the native
+decoder against independent scalar decoding.
+
+`slotstream quantization-bench` runs the frozen synthetic kernel screen in
+[`bench/quantization/screen-v1.json`](../bench/quantization/screen-v1.json).
+It requires a quiet Mac. Its VQ materialization fallback has different arithmetic
+from upstream fused matrix operations; it is not a full-model parity or speed
+test. The tool reports process memory and timing eligibility separately.
+
+The pilot scorer `Tools/quantization_quality.py` compares baseline and candidate
+full-vocabulary logits against a separately produced reference. It requires
+matching checkpoint, tokenizer, template and exact teacher-forced contexts,
+verifies file hashes, and keeps task cases as the aggregation units. It always
+reports qualification as unproven. The input contract and remaining gates are in
+[`bench/quantization/README.md`](../bench/quantization/README.md). Ordinary
+same-artifact regression benchmarks retain their output-equality gate.
+
 ## How it works
 
 Qwen3.8-Flash-Next is a *mixture-of-experts* model: each token uses only a

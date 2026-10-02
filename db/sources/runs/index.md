@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-30T19:23:29.390398Z
+updated: 2026-10-02T21:21:14.536252Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-quantization-foundation-verification]] — Initial implementation checks and real memory lifecycle passed; full release and candidate quality qualification remain open.
+- [[sources/runs/2026/10/2026-10-02-quantization-native-screen]] — Raw pinned-row checks and bounded synthetic kernel timing samples; no full-model parity or candidate qualification.
+- [[sources/runs/2026/10/2026-10-02-quantization-baseline-v1]] — Three frozen 10 GB baseline runs with binary identity, emitted-token timing, process footprint and raw generation stats.
 - [[sources/runs/2026/09/2026-09-30-release-0-2-27-published-and-installed]] — v0.2.27 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-27-release-0-2-26-published-and-installed]] — v0.2.26 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-26-prefix-turn-writes-e2e]] — Live per-turn prefix cache writes: the released 0.2.25 rewrites a continued turn's own state as a shared prefix, the fix writes it once with identical ids
@@ -504,11 +507,8 @@ updated: 2026-09-30T19:23:29.390398Z
 - [[sources/runs/2026/09/2026-09-06-optimization-indexer-exceptions-and-child-cleanup]] — Indexer exceptional arithmetic and owned-process cleanup — V187–188
 - [[sources/runs/2026/09/2026-09-06-optimization-ngram-compile-correction]] — N-gram diagnostic compile failure and unchanged-fixture correction — V185–186
 - [[sources/runs/2026/09/2026-09-06-configurable-context-complete-prompt-epoch-pass]] — Complete prompt MTP and vision reuse passes with one arithmetic epoch
-- [[sources/runs/2026/09/2026-09-06-configurable-context-external-swift-consumer-pass]] — External Swift consumer preserves original APIs and passes the strict compiler gate
-- [[sources/runs/2026/09/2026-09-06-configurable-context-actual-65k-client-pass]] — Actual Hermes Ollama and published AI SDK gateway clients pass the65K contract
-- [[sources/runs/2026/09/2026-09-06-optimization-c07-source-integration]] — Bounded prefill integration and prompt-cache epoch correction — V183–184
 
 ## More
 
-This folder has 690 files. The 500 most recent are listed above.
+This folder has 693 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

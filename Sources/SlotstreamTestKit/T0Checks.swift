@@ -8,6 +8,9 @@ import SlotstreamDiagnostics
 extension Catalogue {
     static var t0Checks: [Check] {
         [
+            Check("quantization-geometry", tier: .t0) { try Diagnostics.quantizationGeometry() },
+            Check("quantization-metadata", tier: .t0) { try Diagnostics.quantizationMetadata() },
+            Check("quantization-kernels", tier: .t1) { try Diagnostics.quantizationKernels() },
             Check("persistent-prefix-metadata-bounds", tier: .t0) { try persistentPrefixMetadataBounds() },
             Check("prefill-schedule", tier: .t0) { Diagnostics.prefillSchedule() },
             Check("context-policy", tier: .t0) { contextPolicy() },

@@ -890,7 +890,10 @@ struct PerformanceSettings: View {
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Budget available now").accessibilityValue("Up to " + gb(budget))
             }
-            if status?.pending == true {
+            if let failure = status?.failure {
+                Text("Settings could not be applied. \(failure)").foregroundStyle(.red).font(.callout)
+                Text("Queued work waits for a valid choice.").foregroundStyle(.secondary).font(.callout)
+            } else if status?.pending == true {
                 Label("Applies after the current response", systemImage: "clock")
                     .font(.callout).foregroundStyle(.secondary)
             }
@@ -910,6 +913,15 @@ struct PerformanceSettings: View {
                     .accessibilityLabel("Model").accessibilityValue(status.state)
                 Text(status.detail).font(.callout).foregroundStyle(.secondary)
                 DisclosureGroup("Memory details", isExpanded: $showMemoryDetails) {
+                    if let physical = status.physicalGB {
+                        LabeledContent("Physical memory", value: gb(physical)).monospacedDigit()
+                    }
+                    if let ceiling = status.ceilingGB {
+                        LabeledContent("Saved memory ceiling", value: gb(ceiling)).monospacedDigit()
+                    }
+                    if status.pending, let applied = status.appliedCeilingGB {
+                        LabeledContent("Applied memory ceiling", value: gb(applied)).monospacedDigit()
+                    }
                     if let used = status.usedGB {
                         LabeledContent("App memory", value: gb(used)).monospacedDigit()
                             .accessibilityElement(children: .ignore)

@@ -12,10 +12,22 @@ private actor PerformanceProbe: Inference {
     var held = true
     var holdConfiguration = false
     var configuring = false
+    var failConfiguration = false
+    var configurationAttempts = 0
+    var remainingConfigurationFailures = 0
     func holdSettings(_ value: Bool) { holdConfiguration = value }
-    func configure(_ value: PerformancePreferences) async {
+    func failSettings(_ value: Bool) { failConfiguration = value }
+    func failNextSettings(_ count: Int) { remainingConfigurationFailures = count }
+    func configure(_ value: PerformancePreferences) async throws {
         configuring = true
+        configurationAttempts += 1
+        defer { configuring = false }
         while holdConfiguration { try? await Task.sleep(nanoseconds: 5_000_000) }
+        if remainingConfigurationFailures > 0 {
+            remainingConfigurationFailures -= 1
+            throw SevraError.refused("Injected obsolete configuration failure")
+        }
+        if failConfiguration { throw SevraError.refused("Injected configuration failure") }
         changes.append(value); configuring = false
     }
     func unload() { releases += 1 }
@@ -80,6 +92,18 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     let returned = custom.selectingBudget(.automatic, currentGB: 20, maximumGB: 49.5)
         .selectingBudget(.custom, currentGB: 20, maximumGB: 49.5)
     try verifyPerformance(returned.customGB == 48, "returning to Custom preserves user's last limit")
+    let moved = custom.selectingBudget(.automatic, currentGB: 10, maximumGB: 12)
+        .selectingBudget(.custom, currentGB: 10, maximumGB: 12)
+    try verifyPerformance(moved.customGB == 48, "moving to a smaller range does not overwrite a saved limit")
+    let belowFloor = PerformancePreferences(budget: .custom, customGB: 7)
+    try verifyPerformance(PerformancePreferences.restore(try JSONEncoder().encode(belowFloor)) == belowFloor,
+        "a saved value below a new floor remains visible for correction")
+    let autoRetained = belowFloor.selectingBudget(.automatic, currentGB: 10, maximumGB: 33)
+    try PerformancePolicy.validate(autoRetained, on: roomy)
+    try verifyPerformance(PerformancePolicy.ceilingGB(.init(), on: .simulated(ramGB: 16, availableGB: 15)) ==
+        PerformancePolicy.ceilingGB(.init(), on: .simulated(ramGB: 16, availableGB: 3)), "busy startup does not lower the automatic ceiling")
+    try verifyPerformance(PerformancePolicy.ceilingGB(.init(), on: .simulated(ramGB: 16, availableGB: 15)) <=
+        PerformancePolicy.maximumGB(on: .simulated(ramGB: 16)), "automatic ceiling fits the stable hardware range")
     try verifyPerformance(PerformancePreferences.restore(try JSONEncoder().encode(custom)) == custom, "large limit survives restart")
     let legacy = PerformancePreferences.restore(Data("{\"budget\":\"automatic\",\"customGB\":10,\"readiness\":\"automatic\"}".utf8))
     try verifyPerformance(legacy.selectingBudget(.custom, currentGB: 24, maximumGB: 33).customGB == 24, "old unused default adopts current budget")
@@ -142,6 +166,50 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     await probe.holdSettings(false); try await changing.value
     try await eventually { await runtime.snapshot().home.threads[0].run?.state == .completed }
     try verifyPerformance(await probe.calls == 2, "queued request starts after settings handoff")
+    // An actual async configure failure must not admit the request accepted
+    // during that transition against the old settings, even on a later tick.
+    await probe.holdSettings(true); await probe.failSettings(true)
+    let failing = Task { try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9)) }
+    try await eventually { await probe.configuring }
+    _ = try await runtime.submit(threadID: "home", text: "Wait for requested settings", nonce: "perf-3")
+    await probe.holdSettings(false)
+    do { try await failing.value; throw SevraError.refused("CHECK FAILED: injected settings failure succeeded") }
+    catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "configuration failure surfaced") }
+    let failedAttempts = await probe.configurationAttempts
+    await runtime.maintainPerformance()
+    try verifyPerformance(await probe.calls == 2, "failed configuration cannot run queued work on the old settings")
+    try verifyPerformance(await probe.configurationAttempts == failedAttempts, "a failed transition is not silently retried")
+    try verifyPerformance(await runtime.snapshot().home.threads[0].run?.state == .queued, "failed activation preserves queued request")
+    await probe.failSettings(false)
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 10))
+    try await eventually { await probe.calls == 3 }
+    try await eventually { await runtime.snapshot().home.threads[0].run?.state == .completed }
+    try verifyPerformance(await probe.calls == 3, "explicit corrected settings resume queued work exactly once")
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 10), revision: 2)
+    let orderedAttempts = await probe.configurationAttempts
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9), revision: 1)
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9), revision: 2)
+    try verifyPerformance(await probe.configurationAttempts == orderedAttempts, "delayed and duplicate UI revisions cannot replace newer settings")
+    // Incognito acceptance needs no disk wait, but must still be revalidated
+    // after an asynchronous configuration handoff.
+    await probe.holdSettings(true)
+    let privateChange = Task { try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9)) }
+    try await eventually { await probe.configuring }
+    let privateID = try await runtime.newThread(mode: .incognito)
+    _ = try await runtime.submit(threadID: privateID, text: "Close before settings finish", nonce: "perf-private")
+    try await runtime.closeIncognito(threadID: privateID)
+    await probe.holdSettings(false); try await privateChange.value
+    try verifyPerformance(await probe.calls == 3, "closed Incognito request is not revived by settings completion")
+    await probe.holdSettings(true); await probe.failNextSettings(1)
+    let attemptsBeforeReturn = await probe.configurationAttempts
+    let returning = Task { try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9)) }
+    try await eventually { await probe.configuring }
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 10))
+    try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9))
+    await probe.holdSettings(false); try await returning.value
+    try verifyPerformance(await probe.configurationAttempts == attemptsBeforeReturn + 2,
+        "returning to the same value has a new generation and supersedes an obsolete failed attempt")
+    try verifyPerformance(await probe.changes.last?.customGB == 9, "latest return selection applies")
     try await runtime.shutdown()
     print("PASS: deferred budget coalescing, queued submission during handoff, active release refusal, idle release and draft preservation")
 
@@ -232,13 +300,20 @@ func realPerformanceCheckIfRequested() async throws -> Bool {
         try await request("Reply with only OK.", nonce: "reloaded")
         await runtime.maintainPerformance()
         try verifyPerformance((await runtime.snapshot().performance?.budgetGB ?? 100) <= 9.0001, "new live budget respects custom ceiling")
+        do {
+            try await runtime.setPerformancePreferences(.init(budget: .custom, customGB: 7))
+            throw SevraError.refused("CHECK FAILED: unsupported setting applied")
+        } catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "unsupported saved setting refused") }
+        try verifyPerformance(inference.performanceTelemetry?.isLoaded == true, "invalid request preserves loaded configuration until release")
         let idleStart = ProcessInfo.processInfo.systemUptime
         await runtime.maintainPerformance(now: idleStart + 3601, userPresent: true)
         try verifyPerformance(inference.performanceTelemetry?.isLoaded == true, "foreground reading retains the real model")
         await runtime.maintainPerformance(now: idleStart + 3602)
         try verifyPerformance(inference.performanceTelemetry?.isLoaded == true, "leaving foreground starts a fresh idle interval")
         await runtime.maintainPerformance(now: idleStart + 7201)
-        try verifyPerformance(inference.performanceTelemetry?.isLoaded == false, "real automatic idle release")
+        try verifyPerformance(inference.performanceTelemetry?.isLoaded == false, "failed settings do not prevent real automatic idle release")
+        try verifyPerformance(await runtime.snapshot().performance?.preferences.customGB == 7,
+            "idle release does not overwrite the failed saved choice")
         try verifyPerformance(await runtime.snapshot().home.threads[0].draft == "Resource QA draft", "draft survives real reloads")
         try await runtime.shutdown()
         try await Task.sleep(nanoseconds: 500_000_000)

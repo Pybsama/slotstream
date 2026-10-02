@@ -150,7 +150,7 @@ package enum ModelProcessGuard {
         return errno == EWOULDBLOCK
     }
 
-    static func acquire() throws {
+    package static func acquire() throws {
         stateLock.lock()
         defer { stateLock.unlock() }
         if lockFD >= 0 { return }

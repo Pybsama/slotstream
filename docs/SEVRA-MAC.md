@@ -466,8 +466,14 @@ at the current budget; returning to it restores your last chosen limit. The
 saved limit stays stable when available memory changes. Settings distinguish
 the app’s physical memory use from the budget available now. Unified
 CPU/GPU memory is counted once.
-If a saved limit exceeds the current Mac's supported range, Settings shows
-the saved value and asks you to lower it or choose Automatic.
+If a saved limit falls outside the current Mac's supported range, Settings
+retains the value and asks you to correct it or choose Automatic. Memory details
+separate physical RAM, the saved ceiling, the applied ceiling and the current
+budget. Temporary shortages reduce the budget without rewriting the ceiling.
+Changes apply after the active response. If applying a change fails, Settings
+shows the failure and queued work waits for a corrected choice. It does not
+quietly continue with the previous settings. A later choice supersedes an older
+pending selection.
 
 The model loads with the first request and verifies the pinned files. Within
 that app session, unchanged files on APFS can reuse the successful verification

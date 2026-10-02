@@ -2,13 +2,13 @@
 type: index
 scope: type-folder
 folder: records/plan
-updated: 2026-10-02T18:46:22.319119Z
+updated: 2026-10-02T21:03:17.058455Z
 ---
 
 # records/plan
 
-- [[records/plan/8-1-next-the-ordered-queue-post-0-1-5]] — 8.1 Next — the ordered queue (post-0.1.5)
 - [[records/plan/same-model-quantization-and-automatic-memory-2026-10-02]] — Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
+- [[records/plan/8-1-next-the-ordered-queue-post-0-1-5]] — 8.1 Next — the ordered queue (post-0.1.5)
 - [[records/plan/decode-forecast-taps-2026-09-14]] — A more accurate expert forecast at the same lead time: attention taps, a learned correction and three closed levers, each registered and gated; the corrected tap ships in 0.2.19
 - [[records/plan/deprioritized-decision-2026-08-29]] — Deprioritized (decision 2026-08-29)
 - [[records/plan/configurable-context-window-2026-09-06]] — Configurable context through the model limit: shared byte accounting, request guards, bounded prefill and staged qualification
