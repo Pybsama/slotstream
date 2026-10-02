@@ -10,3 +10,18 @@ Declared change, the kind of one September 5 entry, under Validation log kinds; 
 ## [2026-10-01 04:52] update | log.md
 Restored timestamp order: the September 10 commit f50bec5 had inserted its September 4 to 10 entries above main's entries from September 6 on. 173 entries changed position; every entry kept its exact text.
 
+## [2026-10-02 18:47] create | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Saved the same-checkpoint quantization and two-controller memory plan after three review passes against code, prior VQ decisions, failure transitions and evaluation/rollout dependencies. No model benchmark or default change.
+
+## [2026-10-02 18:47] create | records/decisions/same-model-automatic-quantization-with-overrides.md
+Recorded the owner-requested automatic default, supported quantization overrides and independent saved memory ceiling, with runtime allocation management separate from pack selection.
+
+## [2026-10-02 18:47] update | records/decisions/vq-weights-behind-qualification-gates.md
+Added the October 2 revision superseding only the no-user-bit-width rule; preserved prior evidence, qualification gates and explicit-upgrade requirements.
+
+## [2026-10-02 18:47] update | records/design/sevra-maintained-model-integration.md
+Linked the detailed same-model Mac workstream without reversing the broader maintained-model architecture or claiming shipped support.
+
+## [2026-10-02 18:47] update | records/plan/8-1-next-the-ordered-queue-post-0-1-5.md
+Linked the baseline and bounded quantization screen from the current queue. Regenerated PLAN.md. Full validation reported zero errors and warnings; all 349 claim needle checks passed.
+

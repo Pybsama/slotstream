@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/plan
-updated: 2026-09-16T13:38:52.268790Z
+updated: 2026-10-02T18:46:22.319119Z
 ---
 
 # records/plan
 
+- [[records/plan/8-1-next-the-ordered-queue-post-0-1-5]] — 8.1 Next — the ordered queue (post-0.1.5)
+- [[records/plan/same-model-quantization-and-automatic-memory-2026-10-02]] — Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 - [[records/plan/decode-forecast-taps-2026-09-14]] — A more accurate expert forecast at the same lead time: attention taps, a learned correction and three closed levers, each registered and gated; the corrected tap ships in 0.2.19
 - [[records/plan/deprioritized-decision-2026-08-29]] — Deprioritized (decision 2026-08-29)
 - [[records/plan/configurable-context-window-2026-09-06]] — Configurable context through the model limit: shared byte accounting, request guards, bounded prefill and staged qualification
@@ -15,7 +17,6 @@ updated: 2026-09-16T13:38:52.268790Z
 - [[records/plan/expert-lookahead-local-experiment-2026-09-10]] — Local expert lookahead: causal capture, small predictors, bounded prefetch, exactness and held-out speed gates
 - [[records/plan/whole-engine-optimization-2026-09-04]] — Completed OPT00–OPT36 program: exact qualified sources and local installation active; all final outcomes and prerequisite-dependent deferrals preserved
 - [[records/plan/0-status-tracker-living]] — 0. Status tracker (living)
-- [[records/plan/8-1-next-the-ordered-queue-post-0-1-5]] — 8.1 Next — the ordered queue (post-0.1.5)
 - [[records/plan/m1-expert-locality-study-12-d-the-cheap-de-risk]] — M1 — Expert-locality study (1–2 d, the cheap de-risk)
 - [[records/plan/n6-prefill-bound-the-pass-then-read-each-expert-once]] — Standalone N6 execution superseded; retained as the unified optimization program’s detailed prefill chapter, with every mechanism mapped to an OPT owner
 - [[records/plan/12-open-questions-answer-at-the-milestone-noted]] — 12. Open questions (answer at the milestone noted)
