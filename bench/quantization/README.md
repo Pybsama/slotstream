@@ -745,3 +745,25 @@ fixtures (only metadata is copied):
 Each case must fail at its execution or coverage boundary before a weight path
 can be opened or a result directory created. These intentionally malformed
 metadata fixtures are never usable numerical references.
+
+## Bounded allocator reuse comparison
+
+`Tools/vq_allocator_pair_pilot.py` uses the same two-binary arguments as the
+code-object comparison above. Its own frozen `allocator-pair-v1.json` permits
+only `VQModelProbe.swift` to differ and bounds total campaign time. It checks
+independent complete-logit validation before the alternating measurements.
+The resident research path retains only already bounded unused allocator
+storage across layers. Its adoption gate is separate from product qualification.
+
+## Independent draft inventory
+
+Inspect the pinned draft without loading model tensors:
+
+```sh
+python3 Tools/vq_draft_inventory.py --help
+```
+
+The inventory validates the sidecar's own recipe and tensor ledger. Use its
+explicit payload-verification option when full-file authentication is required;
+header-only output declares that the payload remains unverified. Neither mode
+establishes compatibility with the native MTP adapter or qualifies execution.

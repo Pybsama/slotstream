@@ -8,19 +8,20 @@ from pathlib import Path
 import shutil
 import statistics
 import sys
+import time
 
 from quantization_logit_run import digest, supervise
 
 PROTOCOL_SHA = 'ac0a703534577137c79e3d1de094df5d15f5e49d71e12919efa872812e578bee'
 
 
-def run(options):
+def run(options, *, protocol_file="kernel-pair-v1.json", protocol_sha=PROTOCOL_SHA):
     root = Path(__file__).resolve().parent.parent
     research, out = options.research_root.resolve(), options.out.resolve()
     binaries = {arm: getattr(options, arm).resolve() for arm in ('before', 'after')}
-    source = root / 'bench/quantization/kernel-pair-v1.json'
-    if digest(source) != PROTOCOL_SHA:
-        raise ValueError('kernel-reuse protocol differs from its frozen identity')
+    source = root / 'bench/quantization' / protocol_file
+    if digest(source) != protocol_sha:
+        raise ValueError('paired protocol differs from its frozen identity')
     protocol = json.loads(source.read_text())
     identities = {arm: json.loads((binary.parent / 'build-identity.json').read_text()) for arm, binary in binaries.items()}
     producers = {arm: {key: identity[key] for key in ('binary_sha256', 'metallib_sha256')}
@@ -28,7 +29,7 @@ def run(options):
     before, after = (identities[arm]['source'] for arm in ('before', 'after'))
     changed = sorted(path for path in set(before) | set(after) if before.get(path) != after.get(path))
     if changed != sorted(protocol['allowed_source_changes']):
-        raise ValueError('binary sources contain changes outside the frozen kernel-reuse hypothesis')
+        raise ValueError('binary sources contain changes outside the frozen paired hypothesis')
     if (producers['before']['binary_sha256'] == producers['after']['binary_sha256']
             or producers['before']['metallib_sha256'] != producers['after']['metallib_sha256']):
         raise ValueError('experiment requires different executables and the same Metal library')
@@ -45,11 +46,12 @@ def run(options):
     shutil.copy2(source, out / 'protocol.json')
     shutil.copy2(profile, out / 'profile.json')
     record = dict(schema=1, scope=protocol['scope'], qualification='unproven', complete=False,
-                  started_at=datetime.now(timezone.utc).isoformat(), protocol_sha256=PROTOCOL_SHA,
+                  started_at=datetime.now(timezone.utc).isoformat(), protocol_sha256=protocol_sha,
                   producers=producers, source_changes=changed,
                   source_archives={arm: identity['source_archive_sha256'] for arm, identity in identities.items()},
                   drivers=drivers, runs=[])
     expected_tokens = None
+    started = time.monotonic()
 
     def save():
         (out / 'run.json').write_text(json.dumps(record, indent=2) + '\n')
@@ -60,7 +62,7 @@ def run(options):
                               ('build-source.tar.gz', 'source_archive_sha256')]:
                 if digest(binary.parent / name) != identities[arm][key]:
                     raise ValueError('comparison producer changed')
-        if digest(source) != PROTOCOL_SHA or digest(out / 'protocol.json') != PROTOCOL_SHA:
+        if digest(source) != protocol_sha or digest(out / 'protocol.json') != protocol_sha:
             raise ValueError('comparison protocol changed')
         if digest(out / 'profile.json') != protocol['profile_sha256']:
             raise ValueError('native comparison profile changed')
@@ -78,7 +80,13 @@ def run(options):
                    '--profile', str(out / 'profile.json'), '--output', str(out / name)]
         if measurement:
             command += ['--measure', '--validation-receipt', str(out / ('validation-' + arm) / 'receipt.json')]
-        observed = supervise(command, out / (name + '-supervision'), protocol['resources']['run_timeout_seconds'])
+        timeout = protocol['resources']['run_timeout_seconds']
+        if 'campaign_timeout_seconds' in protocol['resources']:
+            remaining = int(protocol['resources']['campaign_timeout_seconds'] - (time.monotonic() - started))
+            if remaining <= 0:
+                raise ValueError('comparison exhausted its frozen campaign time')
+            timeout = min(timeout, remaining)
+        observed = supervise(command, out / (name + '-supervision'), timeout)
         path = out / name / 'receipt.json'
         receipt = json.loads(path.read_text())
         if (not receipt['passed'] or receipt['producer'] != producers[arm]

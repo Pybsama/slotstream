@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "profile": "vq-allocator-reuse-pair-v1",
+  "scope": "same-artifact two-binary bounded allocator-cache reuse comparison; no product qualification",
+  "pack": "3.2",
+  "profile_file": "performance-pilot-v2.json",
+  "profile_sha256": "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7",
+  "arms": [
+    "before",
+    "after"
+  ],
+  "allowed_source_changes": [
+    "Sources/Slotstream/VQModelProbe.swift"
+  ],
+  "rounds": [
+    [
+      "before",
+      "after"
+    ],
+    [
+      "after",
+      "before"
+    ],
+    [
+      "before",
+      "after"
+    ]
+  ],
+  "resources": {
+    "validation_runs": 2,
+    "timing_runs": 6,
+    "run_timeout_seconds": 1800,
+    "maximum_process_bytes": 10000000000,
+    "minimum_reclaimable_bytes": 13000000000,
+    "additional_weights_bytes": 0,
+    "paid_compute_usd": 0,
+    "campaign_timeout_seconds": 14400
+  },
+  "adoption": {
+    "minimum_median_paired_decode_ratio": 1.03,
+    "maximum_median_paired_ttft_ratio": 1.1
+  },
+  "contract": "Freeze both source-bound executables and one native profile before any run. Validate sixteen complete vocabulary arrays for each exact producer. Compare all 128 generated IDs including length and EOS behavior. Preserve every alternating measurement; no replacement or dropped slow runs. Report descriptive medians only when all observed timings are eligible. Adopt bounded allocator-cache reuse only if numerical/resource gates pass, median paired generation improves at least three percent and median paired TTFT regresses no more than ten percent. These are engineering adoption criteria, not confidence bounds, hardware certification or >=20 tokens/s qualification.",
+  "hypothesis": "Resident-text research mode can reuse the already capped 128 MB allocator cache across layers. Streamed mode and larger allocator limits still clear after every layer. Bank pins, GPU drains, arithmetic, finite checks and process bounds stay unchanged.",
+  "prerequisites": "All three packs must preserve exact greedy and sparse boundaries and their 10 GB process envelope before performance measurement. The existing public model path is unchanged."
+}

@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T10:13:36.888657Z
+updated: 2026-10-03T10:54:20.219204Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-vq-allocator-profile-and-dense-overlay-feasibility]] — VQ allocator CPU profile and dense four-bit overlay hypothesis
+- [[sources/runs/2026/10/2026-10-03-vq-independent-draft-metadata]] — Independent VQ draft identity, storage ledger and adapter review
+- [[sources/runs/2026/10/2026-10-03-native-vq-bounded-allocator-reuse]] — Bounded VQ allocator reuse with exact parity and paired throughput
 - [[sources/runs/2026/10/2026-10-03-vq-2.1-distribution-screen]] — VQ 2.1 six-context distribution screen against corrected controls
 - [[sources/runs/2026/10/2026-10-03-native-vq-2.1-three-class-parity]] — Native VQ 2.1 three-class records and complete-stack parity
 - [[sources/runs/2026/10/2026-10-03-vq-2.1-payload-and-normalization]] — Complete VQ 2.1 payload verification and normalization audit
@@ -504,11 +507,8 @@ updated: 2026-10-03T10:13:36.888657Z
 - [[sources/runs/2026/09/2026-09-07-configurable-context-v215-prepared-state-audit]] — V215 runtime source closure survives final harness review; resource campaign held
 - [[sources/runs/2026/09/2026-09-07-configurable-context-installed-gate-discovery-preparation]] — Installed acceptance reads the actual nested discovery cap; no installed run yet
 - [[sources/runs/2026/09/2026-09-07-configurable-context-v215-minimum-and-transition-protocols]] — Exact V215 minimum-target neighbors and prospective C19 capacity matrix
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-capacity-protocols]] — Prospective V215 ordinary-target cold and retained capacity protocols; unrun
-- [[sources/runs/2026/09/2026-09-06-optimization-merged-correctness-v202]] — Complete V202 shared inference correctness queue passes
-- [[sources/runs/2026/09/2026-09-07-optimization-actual-default-final-gate]] — Applied eighth actual-default final qualification gate
 
 ## More
 
-This folder has 731 files. The 500 most recent are listed above.
+This folder has 734 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

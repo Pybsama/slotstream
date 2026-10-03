@@ -77,7 +77,7 @@ Keep Qwen3.8 Flash Next as the same underlying model across the 16 to 64 GB Mac 
 
 The engineering target is at least 20 committed generation tokens per second in each supported automatic profile. This is a target, not an achieved result or a guarantee for arbitrary manual settings, prompts, context lengths, SSDs, temperatures or competing applications. If a profile fails, keep that failure visible and continue the optimization work. Do not quietly lower quality, substitute another model or declare the hardware qualified.
 
-Status on October 3, 2026: implementation in progress. The owner requested the full program after the three document review passes below. The initial bounded screen and existing-path memory fixes are implemented; bounded native complete-stack, 512-token prefill and greedy-sequence parity now pass; fixed mixed-class expert residency and complete resident text pass; the first generation-cost pilot remains below target, and bounded parallel demanded reads and code-object reuse now improve matched throughput while preserving parity. Candidate serving and qualification are not complete. Candidate winners, performance, quality margins and new operating thresholds remain experimental. The original document review loaded no model; subsequent implementation measurements are recorded separately in [[records/measurements/quantization-screen-2026-10-02]].
+Status on October 3, 2026: implementation in progress. The owner requested the full program after the three document review passes below. The initial bounded screen and existing-path memory fixes are implemented; bounded native complete-stack, 512-token prefill and greedy-sequence parity now pass; fixed mixed-class expert residency and complete resident text pass; the first generation-cost pilot remains below target, and bounded parallel demanded reads, code-object reuse and bounded allocator reuse now improve matched throughput while preserving parity. Candidate serving and qualification are not complete. Candidate winners, performance, quality margins and new operating thresholds remain experimental. The original document review loaded no model; subsequent implementation measurements are recorded separately in [[records/measurements/quantization-screen-2026-10-02]].
 
 ### Implementation checkpoint, October 3
 
@@ -100,7 +100,7 @@ Reduced targets on the development Mac remain budget tests of that Mac. No other
 
 The smaller pack now passes batched complete-stack continuation, sixteen self-fed greedy steps under compact and wide resident caches, and sparse attention through 2054 consumed tokens. Wide sparse process footprint remains below the fixed 10 GB envelope. Reference producers explicitly select the reviewed newer runtime while preserving and binding the older bundled source. Native metadata readers refuse absent or inconsistent execution identities and incomplete class coverage. Existing larger-pack fixtures still pass. No tolerance or golden changes were needed.
 
-These gates establish numerical implementation within the bounded research path. They do not enable public Engine loading, production generation, arbitrary contexts, MTP, vision, dynamic bank resizing, Auto selection or artifact activation. The next frozen screen compares VQ 2.1 on the same six owned contexts and original tokens, followed by a separately controlled native throughput pilot. Product integration still depends on the task-quality and complete-configuration gates.
+These gates establish numerical implementation within the bounded research path. They do not enable public Engine loading, production generation, arbitrary contexts, MTP, vision, dynamic bank resizing, Auto selection or artifact activation. The subsequent six-context quality screen below holds VQ 2.1 promotion and defers its throughput pilot. Product integration still depends on the task-quality and complete-configuration gates.
 
 ### Reference and tokenizer checkpoint
 
@@ -507,6 +507,26 @@ As additional regression coverage of the committed kernel-object cache, all 78 r
 [[sources/runs/2026/10/2026-10-03-vq-2.1-distribution-screen]] records all six new VQ 2.1 forwards against the identical original-tokenizer contexts and hash-verified corrected controls. Against the VQ 4.4 quantized proxy, mean case KL is 0.46529280439934456 versus 0.44401073962586735 for the installed baseline. Mean top-1 agreement is 0.6770833333333334 versus 0.7916666666666666. Coding and tool-result KL worsen; top-1 agreement worsens in five contexts and ties in one. The smaller representation therefore has an observed quality risk, despite exact native implementation parity and lower storage cost.
 
 VQ 2.1 stays out of promotion and the next speed-optimization work remains on VQ 3.2. The single-context VQ 2.1 throughput pilot is not started: screening a faster version of a candidate with this unresolved quality loss would not earn product integration. The payload, implementation and all negative evidence are preserved. Reconsider with a separately frozen held-out noninferiority result or a new, independently qualified same-checkpoint representation; do not tune these six cases into a final test. No pack is qualified by this pilot, and VQ 3.2 still requires complete-task and full-configuration gates. See [[records/decisions/vq-2.1-held-after-distribution-screen]].
+
+### Bounded allocator reuse, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-bounded-allocator-reuse]] records one native source change: resident research paths preserve an already bounded allocator cache across layers. The bound remains 128,000,000 bytes. Streamed text or a larger cache still clears every layer. Every arithmetic operation, finite check, real-headroom check, GPU drain and expert-bank lease remains intact.
+
+All three packs preserve every greedy and sparse reference boundary. All 96 native catalogue checks pass. The largest whole-model process peak is 9,499,711,224 bytes, below the unchanged 10 GB bound. The full static suite passes. Both exact performance binaries independently match the sixteen-step complete-logit reference before measurement.
+
+All three alternating pairs are eligible and preserve the same 128 generated token IDs. Median committed generation rises from 5.073901973129132 to 5.516094047564276 tokens/s; the median paired ratio is 1.0922703436950998. The median paired TTFT ratio is 0.9437188142389586. The frozen engineering adoption rule passes, so bounded reuse is retained. Separate experiments' gains must not be multiplied into a new measured result. This short-context, non-speculative, page-cache-warmed pilot remains below target and establishes neither completed-task quality nor another hardware profile.
+
+### Independent draft metadata, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-independent-draft-metadata]] authenticates the shared draft sidecar independently of all three main packs. Its own recipe is affine six-bit with group 32, covering 71 tensors and 20 quantized modules. Payload storage is 2,297,552,576 bytes, including 2,202,009,600 routed-expert bytes. This is storage geometry, not a process-memory floor or measured runtime reservation.
+
+The new CPU inventory tool binds the exact header and complete tensor extents, rejects inherited main-pack recipes and unknown overrides, and distinguishes header authentication from optional full-payload verification. Four focused tests and the static harness checks pass. The read-only source review identifies fused projection, per-stream hidden normalization and zero-centered norm conventions that differ from the existing native MTP adapter. No downloaded source was executed. A compatible independently validated draft adapter is still required; no draft acceptance, speed or product feature is qualified.
+
+### Next candidate hypothesis, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-allocator-profile-and-dense-overlay-feasibility]] preserves a separately sampled generation run. Its timings are excluded. Demanded reads, expert GPU evaluation and route evaluation remain substantial. A header-only audit identifies 498 compatible dense quantized modules whose existing same-checkpoint four-bit arrays could recover 2,424,832,000 stored bytes while retaining the VQ experts, n-gram tables, norms and unmatched tensors. The first audit's missing namespace prefix and corrected mapping are both preserved.
+
+This motivates an independently identified composite candidate, not a memory or speed claim. Authenticate every source payload used, bind the exact replacement map, prove direct-versus-streamed traversal and rerun the six-context screen before native integration. The original VQ pack's quality or parity cannot be inherited. No artifact is activated by this preparation.
 
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the

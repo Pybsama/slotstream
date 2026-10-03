@@ -83,7 +83,13 @@ package final class VQModelProbe {
                     if let value = indexer[layer]?.diagnosticValues() { try observe(layer, "indexer", value) }
                 }
             }
-            MLX.Memory.clearCache()
+            // Fixed resident-text experiments already cap unused allocator
+            // storage at 128 MB. Reuse that bounded storage between layers;
+            // retain eager release for streamed weights or a larger cache.
+            // No model tensor, bank pin or GPU completion rule changes here.
+            if residentText == nil || MLX.Memory.cacheLimit > 128_000_000 {
+                MLX.Memory.clearCache()
+            }
         }
         try autoreleasepool {
             let weights = try residentText?.weights(layer: nil) ?? checkpoint.dense(layer: nil)

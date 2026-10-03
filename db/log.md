@@ -112,3 +112,6 @@ Preserve full payload and normalization evidence; add three-class native researc
 ## [2026-10-03 10:14] update | vq-2.1-quality-screen
 Preserve six fixed candidate forwards and unfavorable distribution results; keep VQ 2.1 out of promotion and prioritize VQ 3.2 without claiming task qualification.
 
+## [2026-10-03 10:54] update | quantization-allocator-and-independent-draft
+Retain bounded allocator reuse after exact three-pack parity, six paired timings and full static gates; authenticate independent draft metadata; preserve sampled attribution and new dense-overlay hypothesis without product promotion.
+
