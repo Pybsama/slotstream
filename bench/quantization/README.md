@@ -603,3 +603,11 @@ separately from expert banks, workspace and process footprint. Both inspected
 packs preserve complete reference bits in this layout. This is a numerical
 and memory probe, not an optimized production serving path or a speed result.
 The default remains the earlier streamed-text probe and its smaller bound.
+
+
+For the fixed larger-cache experiment, add `--wide-records` with both residency
+flags. It gives the class used by most layers 512 rows and the other class 96.
+The same process ceiling applies, so this mode does not authorize extra memory.
+Per-family kernel admission and component tests cover the enlarged physical
+row offsets. Compare receipt counters and measured peaks; this experiment does
+not choose cache sizes automatically or establish generation throughput.

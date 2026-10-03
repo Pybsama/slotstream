@@ -7,11 +7,12 @@ extension Diagnostics {
     /// A fixed, genuinely autoregressive check. The native argmax, not the
     /// fixture's token, becomes the next input. Final sampled token is unconsumed.
     public static func quantizationGeneration(source: URL, inventory: URL, profileURL: URL,
-                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false) throws -> Data {
+                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false) throws -> Data {
         struct Profile: Decodable, Equatable {
             let schema: Int, profile: String, prompt: [Int], sampling: String
             let max_new_tokens: Int, minimum_steps: Int, eos_token_id: Int
         }
+        guard !wideRecords || (residentRecords && residentText) else { throw ModelError("wide VQ banks require resident text and records") }
         struct Boundary: Decodable {
             let layer: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(layer):\(name)" }
@@ -106,7 +107,7 @@ extension Diagnostics {
         guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ generation output directory must be new") }
         try manager.createDirectory(at: output, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
-        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, residentText ? 8_500_000_000 : 3_000_000_000)
+        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, residentText ? (wideRecords ? 9_000_000_000 : 8_500_000_000) : 3_000_000_000)
         defer {
             Stream.gpu.synchronize(); MLX.Memory.clearCache()
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
@@ -122,7 +123,7 @@ extension Diagnostics {
         }
         let model = VQModelProbe(checkpoint)
         if residentText { try model.enableResidentText() }
-        if residentRecords { try model.enableResidentRecords() }
+        if residentRecords { try model.enableResidentRecords(wide: wideRecords) }
         var c = CheckBuilder("quantization-generated-sequence"), observed: [String: String] = [:]
         var tokens = profile.prompt, generated: [Int] = [], traceLayer = -1, traceValues: [String: MLXArray] = [:]
         var consumedTokens = 0
@@ -185,6 +186,8 @@ extension Diagnostics {
             if residentRecords {
                 guard let stats = model.recordCacheStats else { throw ModelError("resident cache was not configured") }
                 c.equal("both allocation classes resident", stats["allocation_classes"], 2)
+                c.equal("complete reserved record capacity", stats["total_capacity"], wideRecords ? 608 : 192)
+                c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], wideRecords ? 512 : 96)
                 c.equal("all record leases released", stats["pinned_records"], 0)
                 c.expect("resident cache serves real hits", (stats["hits"] ?? 0) > 0)
                 c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)

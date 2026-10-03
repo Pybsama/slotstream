@@ -1,6 +1,16 @@
 import Foundation
 import MLX
 
+extension VQLayout {
+    /// Only the real U8/D2 and packed D4/K2048 classes enter the wide-bank
+    /// experiment. Other geometries retain the prior 96-row resource bound.
+    /// These are research limits, not recommended production cache sizes.
+    package var maximumResearchBankRows: Int {
+        (dimensions == 2 && codebookEntries == 256 && packing == .unpacked8)
+            || (dimensions == 4 && codebookEntries == 2048 && packing == .words32) ? 512 : 96
+    }
+}
+
 /// Experimental fused expert projection for the reviewed VQ 3.2/4.4 runtime.
 /// Not admitted by Engine.load. Cache ownership and whole-model qualification
 /// must be established separately before a pack can use this path.
@@ -31,10 +41,10 @@ package struct VQExpert {
     // families. This is an implementation bound, not a quality/performance cap.
     package init(codes: MLXArray, codebook: MLXArray, scales: MLXArray, layout: VQLayout, residentBank: Bool = false) throws {
         guard [640, 2560].contains(layout.columns), layout.groupSize == 64,
-              codes.ndim == 3, (1...(residentBank ? 96 : 32)).contains(codes.dim(0)), (1...2560).contains(codes.dim(1)),
+              codes.ndim == 3, (1...(residentBank ? layout.maximumResearchBankRows : 32)).contains(codes.dim(0)), (1...2560).contains(codes.dim(1)),
               codebook.dtype == .float16, codebook.shape == [layout.codebookEntries, layout.dimensions],
               scales.dtype == .float16, scales.shape == [codes.dim(0), codes.dim(1), layout.columns / 64],
-              codes.nbytes + codebook.nbytes + scales.nbytes <= 256_000_000 else {
+              codes.nbytes + codebook.nbytes + scales.nbytes <= (residentBank ? 512_000_000 : 256_000_000) else {
             throw ModelError("VQ expert exceeds the bounded inspected projection geometry")
         }
         switch (layout.dimensions, layout.codebookEntries, layout.packing) {

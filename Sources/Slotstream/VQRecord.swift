@@ -10,6 +10,7 @@ package struct VQRecordLayout: Hashable {
     package let pieceBytes: [Int]      // gate codes/scales, up codes/scales, down codes/scales
     package let recordBytes: Int
     package let codebookBytes: Int
+    package var maximumResearchBankRows: Int { projections.map(\.maximumResearchBankRows).min()! }
 
     package init(_ projections: [VQLayout]) throws {
         guard projections.count == 3 else { throw ModelError("VQ record needs all three projections") }

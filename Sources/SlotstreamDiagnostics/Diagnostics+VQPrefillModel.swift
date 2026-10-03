@@ -6,7 +6,8 @@ import Slotstream
 extension Diagnostics {
     /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
     /// Hashes cover every byte, not selected logits or a numerical tolerance.
-    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false) throws -> Data {
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false) throws -> Data {
+        guard !wideRecords || (residentRecords && residentText) else { throw ModelError("wide VQ banks require resident text and records") }
         struct Boundary: Decodable {
             let layer: Int, step: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(step):\(layer):\(name)" }
@@ -77,7 +78,7 @@ extension Diagnostics {
         guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ prefill output directory must be new") }
         try manager.createDirectory(at: output, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
-        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, residentText ? 8_500_000_000 : 3_000_000_000)
+        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, residentText ? (wideRecords ? 9_000_000_000 : 8_500_000_000) : 3_000_000_000)
         defer {
             Stream.gpu.synchronize(); MLX.Memory.clearCache()
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
@@ -93,7 +94,7 @@ extension Diagnostics {
         }
         let model = VQModelProbe(checkpoint)
         if residentText { try model.enableResidentText() }
-        if residentRecords { try model.enableResidentRecords() }
+        if residentRecords { try model.enableResidentRecords(wide: wideRecords) }
         var c = CheckBuilder("quantization-prefill-model"), observed: [String: String] = [:]
         var traceLayer = -1, traceValues: [String: MLXArray] = [:]
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -147,6 +148,8 @@ extension Diagnostics {
             if residentRecords {
                 guard let stats = model.recordCacheStats else { throw ModelError("resident cache was not configured") }
                 c.equal("both allocation classes resident", stats["allocation_classes"], 2)
+                c.equal("complete reserved record capacity", stats["total_capacity"], wideRecords ? 608 : 192)
+                c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], wideRecords ? 512 : 96)
                 c.equal("all record leases released", stats["pinned_records"], 0)
                 c.expect("resident cache serves real hits", (stats["hits"] ?? 0) > 0)
                 c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)

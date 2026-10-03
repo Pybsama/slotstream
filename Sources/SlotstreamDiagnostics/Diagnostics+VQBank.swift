@@ -117,11 +117,12 @@ extension Diagnostics {
             equal(result, expected[indices], "CLOCK replacement exact bits")
             c.equal("L\(layer) small bank releases pins", small.snapshot().pinned, 0)
         }
-        // Fill all 96 physical rows with repeated real records under distinct
+        // Fill all admitted physical rows with repeated real records under distinct
         // synthetic keys. The independent one-token fixture supplies each
         // expected row, including high bank offsets and subsequent hot access.
-        let wide = try VQRecordBank(layout: layout, capacity: 96)
-        for key in 0..<96 {
+        let capacity = layout.maximumResearchBankRows
+        let wide = try VQRecordBank(layout: layout, capacity: capacity)
+        for key in 0..<capacity {
             let fixtureRow = key % ids.count
             let position = routes.firstIndex(of: ids[fixtureRow])!
             let value = try wide.call(x[0..<1], layer: layer, routes: [UInt32(key)], dispatchPairs: routes.count, books: books) { _, emit in
@@ -129,8 +130,8 @@ extension Diagnostics {
             }
             equal(value, expected[position..<(position + 1)], "physical slot \(key) exact bits")
         }
-        c.equal("L\(layer) every physical bank row occupied", wide.snapshot().occupied, 96)
-        for key in [0, 31, 32, 63, 64, 95] {
+        c.equal("L\(layer) every physical bank row occupied", wide.snapshot().occupied, capacity)
+        for key in [0, 31, 32, 63, 64, 95, 127, 128, 255, 256, 511] where key < capacity {
             let position = routes.firstIndex(of: ids[key % ids.count])!
             let value = try wide.call(x[0..<1], layer: layer, routes: [UInt32(key)], dispatchPairs: routes.count, books: books) { _, _ in
                 throw ModelError("high-slot resident record was re-read")

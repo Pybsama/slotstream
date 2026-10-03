@@ -72,7 +72,7 @@ extension Diagnostics {
             throw ModelError("VQ record checks need \(requiredHeadroom / 1_000_000_000) GB actual reclaimable memory")
         }
         let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
-        MLX.Memory.cacheLimit = 64_000_000; MLX.Memory.memoryLimit = min(oldLimit, prefill ? 2_000_000_000 : 1_000_000_000)
+        MLX.Memory.cacheLimit = 64_000_000; MLX.Memory.memoryLimit = min(oldLimit, prefill ? 2_000_000_000 : 1_600_000_000)
         defer {
             Stream.gpu.synchronize(); MLX.Memory.clearCache()
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit

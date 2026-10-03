@@ -26,9 +26,12 @@ package final class VQRecordBank {
     private var generation: UInt64 = 0
 
     package init(layout: VQRecordLayout, capacity: Int) throws {
-        // The fixed numerical probe admits at most 96 records per class.
-        // This is an experiment bound, not a production size recommendation.
-        guard (1...96).contains(capacity) else { throw ModelError("VQ bank capacity must be between one and 96") }
+        // Capacity is qualified per projection family. The largest bank is
+        // separately bounded before any MLX storage is allocated.
+        guard (1...layout.maximumResearchBankRows).contains(capacity),
+              try QuantizationBytes.product(capacity, layout.recordBytes) <= 1_400_000_000 else {
+            throw ModelError("VQ bank exceeds its inspected row or byte bound")
+        }
         self.layout = layout; self.capacity = capacity
         owners = Array(repeating: nil, count: capacity)
         referenced = Array(repeating: false, count: capacity)

@@ -88,3 +88,6 @@ Preserve reproduced CI trig and rejected host-arithmetic failures; bind exact fi
 ## [2026-10-03 07:10] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Capture exact greedy/sparse parity with all text weights resident inside the 10 GB probe, preserve streamed regression, and correct CLI rejection coverage.
 
+## [2026-10-03 07:28] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Capture larger per-class cache parity, high physical-slot checks, real cache counters and process peaks; retain unqualified performance and production status.
+

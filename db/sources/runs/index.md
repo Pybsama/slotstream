@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T07:10:28.936685Z
+updated: 2026-10-03T07:26:15.233926Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-wide-record-cache]] — Larger VQ allocation classes preserve complete-model parity
 - [[sources/runs/2026/10/2026-10-03-native-vq-resident-text]] — Complete resident VQ text payload and exact model/cache parity
 - [[sources/runs/2026/10/2026-10-03-vq-finite-rotary-table-portability]] — Exact finite VQ rotary table after reproduced GPU trigonometry differences
 - [[sources/runs/2026/10/2026-10-03-native-vq-fixed-record-cache]] — Fixed mixed-class VQ cache with complete-model numerical parity
@@ -506,9 +507,8 @@ updated: 2026-10-03T07:10:28.936685Z
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-acceptance-profile]] — Full vision test profile and mandatory acceptance hardening
 - [[sources/runs/2026/09/2026-09-06-optimization-planner-family-refinement]] — Unapplied planner-family refinement preserves direct dispatch
 - [[sources/runs/2026/09/2026-09-06-configurable-context-vision-target-counterexample]] — V202 independent vision reference passes; full image fixture exceeds the 10 GB test target
-- [[sources/runs/2026/09/2026-09-06-configurable-context-full-resource-swap-exclusion]] — V202 full governor drill stops on global swap-ins; idle controls also observe swap-ins
 
 ## More
 
-This folder has 720 files. The 500 most recent are listed above.
+This folder has 721 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
