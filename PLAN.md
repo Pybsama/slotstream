@@ -351,6 +351,14 @@ Remaining experimental questions are explicit: which affine/VQ configuration win
 
 The frozen v7 complete static suite also passes in [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-static]], including planner, memory-override, transport and installer gates. The first attempt stopped on a source-wrapper token list interpreted as a wiki-link; the authored wrapper was corrected without changing its raw transcripts. This result applies to the authenticated short-stack checkpoint, before subsequent batched-route changes.
 
+### Partitioned fused-route checkpoint
+
+[[sources/runs/2026/10/2026-10-02-native-vq-partitioned-route-parity]] records bounded complete-record partitions with explicit original-batch arithmetic dispatch. Small local partitions cannot accidentally change the D8 reduction method. The component gates compare exact projection bits across the dispatch boundary, then exact complete SwiGLU at capacities of one, two, three and thirty-two experts, including duplicate routes and restored pair order.
+
+Both pinned packs retain exact original short-stack outputs and pass a new eight-token pass plus three-token continuation through all 320 observed hidden/state/logit boundaries. Each larger run exercises two staging partitions and at most 32 live expert records per batch. All 95 native catalogue checks pass without skips. The source, artifact and reference identities are frozen. Compilation and these numerical/ownership checks cover this increment; the preceding full static suite is not claimed as freshly rerun.
+
+This is synchronous immutable staging. It does not supply persistent residency, mutable cache pins, asynchronous generation fences, resize accounting or a production memory governor. The larger-batch upstream prefill path beyond 4,096 routed pairs remains a separate implementation/parity gate. Eleven functional tokens do not establish task quality, latency or committed generation speed.
+
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the
 design and the estimates it replaces.

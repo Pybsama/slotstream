@@ -82,7 +82,8 @@ package struct VQExpert {
     /// already know before reading experts. Validate once and keep private
     /// array contexts in the closure; repeated calls need no GPU max/readback.
     /// This owns array values, not future cache-slot pins or allocator leases.
-    package func operation(_ x: MLXArray, expertIDs: [UInt32], topK: Int) throws -> () -> MLXArray {
+    package func operation(_ x: MLXArray, expertIDs: [UInt32], topK: Int,
+                           dispatchPairs: Int? = nil) throws -> () -> MLXArray {
         guard x.ndim == 2, x.dim(1) == layout.columns, x.dim(0) > 0,
               [.float16, .bfloat16].contains(x.dtype), (1...10).contains(topK),
               x.dim(0) <= 4096 / topK, expertIDs.count == x.dim(0) * topK,
@@ -92,7 +93,13 @@ package struct VQExpert {
         let input = x.reshaped(x.shape)
         let indices = MLXArray(expertIDs)
         let n = expertIDs.count
-        let simd = layout.dimensions == 8 && n <= 20 && layout.columns / 64 >= 32
+        // A storage partition must retain the original operation's arithmetic
+        // dispatch. The kernel still sees its local rows for bounds and I/O.
+        let wholePairs = dispatchPairs ?? n
+        guard (n...4096).contains(wholePairs) else {
+            throw ModelError("VQ partition dispatch must cover its rows within the fused reference bound")
+        }
+        let simd = layout.dimensions == 8 && wholePairs <= 20 && layout.columns / 64 >= 32
         let kernel = simd ? simdKernel! : rowKernel
         let dims = MLXArray([Int32(outputRows), Int32(layout.columns), Int32(layout.dimensions), Int32(64), Int32(n), Int32(layout.codebookEntries)])
         let group = min(256, outputRows)

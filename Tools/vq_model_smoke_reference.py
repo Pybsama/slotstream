@@ -19,9 +19,11 @@ from vq_model_reference import (ARCH_SHA256, NORMALIZATION, instrument_identity,
 from vq_ple_stream import Archive
 
 PASSES = [[100, 248044, 101], [102]]
+BATCHED_PASSES = [[100, 101, 248044, 102, 103, 104, 105, 106], [107, 108, 109]]
 
 
 def run(options):
+    passes = BATCHED_PASSES if options.batched else PASSES
     instrument = instrument_identity()
     own = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     before = quiet_preflight(13)
@@ -54,7 +56,7 @@ def run(options):
         try:
             model = load_model(options.model, archive, arch, vq)
             core, caches = model.model, model.make_cache()
-            ids = [mx.array([p], dtype=mx.int64) for p in PASSES]
+            ids = [mx.array([p], dtype=mx.int64) for p in passes]
             hidden = [mx.tile(core.embed_tokens(tokens), (1, 1, core.hc)) for tokens in ids]
             for step, value in enumerate(hidden): save(-1, step, {'embedded': value})
             for layer in range(48):
@@ -92,7 +94,7 @@ def run(options):
                 raise ValueError('full-stack reference instrument changed')
             receipt = {'schema': 1, 'architecture_sha256': ARCH_SHA256, 'normalization': NORMALIZATION,
                        'artifact': provenance, 'instrument': instrument, 'producer_sha256': own,
-                       'passes': PASSES, 'files': files, 'fixture_bytes': total,
+                       'passes': passes, 'files': files, 'fixture_bytes': total,
                        'before': before, 'memory': physical(), 'mlx_peak_bytes': mx.get_peak_memory(),
                        'qualification': 'unproven', 'scope': 'complete stack arithmetic and continuation only'}
             (options.out / 'model.json').write_text(json.dumps(receipt, indent=2) + '\n')
@@ -105,4 +107,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('model', 'inventory', 'architecture', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--batched', action='store_true', help='Eight-token pass and three-token continuation, requiring multiple native record batches')
     run(parser.parse_args())

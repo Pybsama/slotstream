@@ -14,6 +14,8 @@ package final class VQModelProbe {
     private var previous: [Int64]
     private var consumed = 0
     private var failed = false
+    package private(set) var maximumRecordBatches = 0
+    package private(set) var maximumLiveExperts = 0
 
     package init(_ checkpoint: VQCheckpoint) {
         self.checkpoint = checkpoint
@@ -28,8 +30,8 @@ package final class VQModelProbe {
 
     package func forward(_ tokens: [Int], observe: (Int, String, MLXArray) throws -> Void,
                          trace: ((Int, String, MLXArray) -> Void)? = nil) throws {
-        guard !failed, (1...3).contains(tokens.count), consumed + tokens.count <= 6 else {
-            throw ModelError("VQ full-stack probe admits at most six tokens in one-to-three-row passes")
+        guard !failed, (1...8).contains(tokens.count), consumed + tokens.count <= 11 else {
+            throw ModelError("VQ full-stack probe admits at most eleven tokens in one-to-eight-row passes")
         }
         // Partial state cannot be reused after any read, numerical or observer
         // failure. This probe deliberately offers no speculative recovery.
@@ -111,8 +113,12 @@ package final class VQModelProbe {
         let indices = RouterSelection.reference(logits, k: 10)
         let probability = softmax(takeAlong(logits, indices, axis: -1), axis: -1, precise: true)
         let routes = indices.asType(.uint32).asArray(UInt32.self)
-        let records = try checkpoint.records(layer: layer, experts: Array(Set(routes)).sorted())
-        let values = try records.call(input.reshaped([-1, 2560]), routes: routes).reshaped([1, input.dim(1), 10, 2560])
+        let streamed = try VQRouteStream.call(input.reshaped([-1, 2560]), routes: routes) { ids in
+            try checkpoint.records(layer: layer, experts: ids)
+        }
+        maximumRecordBatches = max(maximumRecordBatches, streamed.batches)
+        maximumLiveExperts = max(maximumLiveExperts, streamed.maximumExperts)
+        let values = streamed.values.reshaped([1, input.dim(1), 10, 2560])
         let routed = (values * probability.expandedDimensions(axis: -1)).sum(axis: -2).asType(input.dtype)
         let shared = base + "mlp.shared_expert."
         let sharedValue = weights.linear(shared + "down_proj")(

@@ -73,17 +73,31 @@ package struct VQRecordBatch {
               routes.count == x.dim(0) * 10 else {
             throw ModelError("experimental VQ record batch admits one to three token rows")
         }
+        return try composed(x, routes: routes, topK: 10, dispatchPairs: routes.count)
+    }
+
+    /// An already gathered subset of routed pairs. Arithmetic dispatch uses
+    /// the complete operation's pair count, independent of storage partitions.
+    package func callPairs(_ x: MLXArray, routes: [UInt32], dispatchPairs: Int) throws -> MLXArray {
+        guard x.ndim == 2, (1...4096).contains(x.dim(0)), x.dim(1) == 2560,
+              routes.count == x.dim(0), (routes.count...4096).contains(dispatchPairs) else {
+            throw ModelError("VQ pair partition exceeds the complete fused operation")
+        }
+        return try composed(x, routes: routes, topK: 1, dispatchPairs: dispatchPairs).reshaped([-1, 2560])
+    }
+
+    private func composed(_ x: MLXArray, routes: [UInt32], topK: Int, dispatchPairs: Int) throws -> MLXArray {
         let lookup = Dictionary(uniqueKeysWithValues: expertIDs.enumerated().map { ($0.element, UInt32($0.offset)) })
         let slots = try routes.map { id -> UInt32 in
             guard let slot = lookup[id] else { throw ModelError("VQ routed expert is absent from its complete batch") }
             return slot
         }
-        let g = try gate.operation(x, expertIDs: slots, topK: 10)()
-        let u = try up.operation(x, expertIDs: slots, topK: 10)()
+        let g = try gate.operation(x, expertIDs: slots, topK: topK, dispatchPairs: dispatchPairs)()
+        let u = try up.operation(x, expertIDs: slots, topK: topK, dispatchPairs: dispatchPairs)()
         guard let hidden = Self.activation([g, u]).first else {
             throw ModelError("VQ SwiGLU compilation failed")
         }
-        return try down.operation(hidden.reshaped([-1, 640]), expertIDs: slots, topK: 1)()
-            .reshaped([x.dim(0), 10, 2560])
+        return try down.operation(hidden.reshaped([-1, 640]), expertIDs: slots, topK: 1, dispatchPairs: dispatchPairs)()
+            .reshaped([x.dim(0), topK, 2560])
     }
 }

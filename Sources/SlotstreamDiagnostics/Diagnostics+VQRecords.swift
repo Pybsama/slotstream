@@ -118,6 +118,19 @@ extension Diagnostics {
                     let gotHash = got.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() }
                     let wantHash = want.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() }
                     c.equal("L\(fixture.layer) T\(count) exact routed SwiGLU bits", gotHash, wantHash)
+                    for capacity in [1, 2, 3, 32] {
+                        let streamed = try VQRouteStream.call(x, routes: routes.asArray(UInt32.self), batchExperts: capacity) { ids in
+                            let positions = ids.map { Int32(fixture.expert_ids.firstIndex(of: $0)!) }
+                            let rows = MLXArray(positions)
+                            return try VQRecordBatch(layer: fixture.layer, expertIDs: ids, layout: layout,
+                                codes: codes.map { $0[rows] }, books: books, scales: scales.map { $0[rows] })
+                        }
+                        c.equal("L\(fixture.layer) T\(count) capacity \(capacity) complete-record streaming bits",
+                            streamed.values.asData(access: .copy).data, expected.asData(access: .copy).data)
+                        c.equal("L\(fixture.layer) T\(count) capacity \(capacity) required batches",
+                            streamed.batches, (fixture.expert_ids.count + capacity - 1) / capacity)
+                        c.expect("L\(fixture.layer) T\(count) capacity \(capacity) bounded live experts", streamed.maximumExperts <= capacity)
+                    }
                     if let direct {
                         let output = try direct.call(x, routes: routes.asArray(UInt32.self))
                         c.equal("L\(fixture.layer) T\(count) authenticated checkpoint exact SwiGLU bits",
@@ -141,7 +154,9 @@ extension Diagnostics {
                 for operation: () throws -> Void in [
                     { _ = try VQRecordBatch(layer: fixture.layer, expertIDs: [0, 1, 7, 7], layout: layout, codes: codes, books: books, scales: scales) },
                     { _ = try VQRecordBatch(layer: fixture.layer, expertIDs: fixture.expert_ids, layout: layout, codes: Array(codes.prefix(2)), books: books, scales: scales) },
-                    { _ = try batch.call(arrays["x1"]!, routes: Array(repeating: 512, count: 10)) }
+                    { _ = try batch.call(arrays["x1"]!, routes: Array(repeating: 512, count: 10)) },
+                    { _ = try batch.callPairs(arrays["x3"]!, routes: [0, 1, 7], dispatchPairs: 2) },
+                    { _ = try VQRouteStream.call(arrays["x1"]!, routes: arrays["routes1"]!.asArray(UInt32.self), batchExperts: 1) { _ in batch } }
                 ] {
                     do { try operation(); c.expect("invalid complete record or route refused", false) }
                     catch { c.expect("invalid complete record or route refused", true) }

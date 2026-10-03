@@ -26,7 +26,8 @@ extension Diagnostics {
         func digest(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
         let manifestBytes = try read(fixtureDirectory.appendingPathComponent("model.json"), bound: 2_000_000)
         let manifest = try JSONDecoder().decode(Manifest.self, from: manifestBytes)
-        guard manifest.schema == 1, manifest.passes == [[100, 248044, 101], [102]],
+        let batched = manifest.passes == [[100, 101, 248044, 102, 103, 104, 105, 106], [107, 108, 109]]
+        guard manifest.schema == 1, (manifest.passes == [[100, 248044, 101], [102]] || batched),
               manifest.architecture_sha256 == "d6470a2131a64ff37024dfffd2b5bc8c3f4db625f0f3b1ceec7fe346852c1a87",
               manifest.normalization == "vq-raw-zero-centered-to-pr1788-folded-bf16-v1",
               manifest.files.count == 100, Set(manifest.files.map(\.path)).count == 100,
@@ -70,6 +71,7 @@ extension Diagnostics {
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
         }
         var c = CheckBuilder("quantization-model"), observed = Set<String>()
+        let model = VQModelProbe(checkpoint)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         func receipt(_ failure: String?) throws -> Data {
             var object: [String: Any] = [
@@ -79,6 +81,8 @@ extension Diagnostics {
                 "report": try JSONSerialization.jsonObject(with: encoder.encode(c.report())),
                 "verified_files": checkpoint.verifiedFileCount, "verified_payload_bytes": checkpoint.verifiedPayloadBytes,
                 "observed_boundaries": observed.sorted(), "peak_process_bytes": ProcessMemory.peakResidentBytes(),
+                "maximum_record_batches": model.maximumRecordBatches,
+                "maximum_live_experts": model.maximumLiveExperts,
                 "peak_mlx_bytes": MLX.Memory.peakMemory, "before": try JSONSerialization.jsonObject(with: encoder.encode(before))
             ]
             if let failure { object["failure"] = failure }
@@ -88,7 +92,6 @@ extension Diagnostics {
         }
         var traceLayer = -1, traceValues: [String: MLXArray] = [:]
         do {
-            let model = VQModelProbe(checkpoint)
             try withError {
                 for (step, tokens) in manifest.passes.enumerated() {
                     var loaded: String?, arrays: [String: MLXArray] = [:]
@@ -123,6 +126,8 @@ extension Diagnostics {
                 }
             }
             c.equal("every reference boundary observed", observed.count, manifest.files.reduce(0) { $0 + $1.keys.count })
+            c.expect("complete expert staging stays within its bound", model.maximumLiveExperts <= 32)
+            if batched { c.expect("batched fixture exercised multiple record partitions", model.maximumRecordBatches > 1) }
             guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ full-stack check exceeded its 4 GB process bound") }
             try? manager.removeItem(at: output.appendingPathComponent("verified.safetensors"))
             let data = try receipt(nil)

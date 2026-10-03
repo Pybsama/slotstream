@@ -398,6 +398,15 @@ preserves the boundary and trace instead of continuing with corrupted state.
 This short probe does not exercise ordinary prefill, sparse indexer activation,
 generation, mutable caches, draft, images, quality or throughput qualification.
 
+Add `--batched` to the reference command to freeze an eight-token prompt pass
+and three-token continuation. The same native command recognizes that exact
+fixture profile and requires evidence of multiple complete-record partitions.
+`VQRouteStream` gathers bounded sets of complete experts, preserves the original
+routed-pair count for kernel selection, finishes GPU uses before releasing each
+immutable batch, and restores the original pair order. Component checks compare
+different staging capacities and exercise the D8 reduction boundary. This is
+not a mutable cache or the upstream large-prefill GEMM path.
+
 The candidate arithmetic uses a separate BF16 sigmoid with precise exponential
 and explicit intermediate rounding. `Tools/vq_sigmoid_reference.py --out <new-dir>`
 freezes the pinned Python GPU outputs for every finite BF16 input. The native

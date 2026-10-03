@@ -106,6 +106,19 @@ extension Diagnostics {
                     c.equal("\(fixture.path) exact Python/native fused binding bits",
                         actual.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self),
                         expected.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self))
+                    // Local partitions below the D8 SIMD threshold must still
+                    // select the original operation's reduction method.
+                    let routes = indices.asArray(UInt32.self), topK = indices.dim(1)
+                    var pieces: [MLXArray] = []
+                    for first in stride(from: 0, to: routes.count, by: 11) {
+                        let end = min(first + 11, routes.count)
+                        let subset = x[MLXArray((first..<end).map { Int32($0 / topK) })]
+                        pieces.append(try projection.operation(subset, expertIDs: Array(routes[first..<end]),
+                            topK: 1, dispatchPairs: routes.count)().reshaped([-1, 7]))
+                    }
+                    c.equal("\(fixture.path) split pairs preserve whole-batch dispatch bits",
+                        concatenated(pieces, axis: 0).asData(access: .copy).data,
+                        expected.reshaped([-1, 7]).asData(access: .copy).data)
                     continue
                 }
                 guard Set(arrays.keys) == Set(["codes", "codebook", "vq_scales", "expected"]),

@@ -55,3 +55,6 @@ Authenticated both pinned VQ artifacts for native expert, PLE, dense and embeddi
 ## [2026-10-03 04:02] update | records/measurements/quantization-screen-2026-10-02.md
 Completed full static acceptance of the frozen short-stack v7 checkpoint, including planner, memory overrides, transport and installer gates. Preserved the first wrapper-link validation failure and corrected only authored wrapper text. This evidence precedes batched-route changes.
 
+## [2026-10-03 04:12] update | records/measurements/quantization-screen-2026-10-02.md
+Preserved whole-batch VQ dispatch across immutable expert partitions. Exact fused fixtures, real SwiGLU with four staging capacities, original full-stack fixtures and fresh eight-plus-three-token full-stack fixtures all pass for both packs. The 95-check native catalogue passes. Larger-prefill GEMM, mutable caches, quality and speed remain open; no new static or hardware qualification claimed.
+
