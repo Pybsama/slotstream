@@ -142,3 +142,6 @@ Completed the authenticated contiguous-record layout, full native greedy/sparse 
 ## [2026-10-03 15:54] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Preserved the failed composite draft prefill and corrected harness; authenticated the original four-bit head separately and recorded exact fixed-input parity under explicit research arithmetic. Fixed standalone MTP model-lock acquisition; full speculation remains open.
 
+## [2026-10-03 16:09] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Recorded final native build and unlaunched broader acceptance under insufficient memory and an external llama-server workload. Stopped only the task-owned waiter, strengthened quiet preflight and passed twelve safety plus thirty-two static-entrypoint tests. Whole-plan qualification remains incomplete.
+

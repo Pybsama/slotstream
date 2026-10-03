@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T15:54:41.310937+00:00
+updated: 2026-10-03T16:09:12.842031+00:00
 summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -439,3 +439,11 @@ The reference main prefill matches all 160 frozen boundaries and next token 760.
 [[sources/runs/2026/10/2026-10-03-native-vq-owned-draft-component]] adds owned full-file authentication, separate metadata and explicit retained-payload/load-copy checks. Its research-only arithmetic profile uses the reference's fast grouped normalization, the existing qualified BF16 sigmoid and finite rotary coefficients. All four unchanged fixture outputs then match exactly; offsets are 43 and 44, all outputs are finite, native peak is 2,064,894,112 bytes and bounded BF16 traces occupy 5,811,200 bytes. The public arithmetic remains deployed. This is a combined-profile comparison, not attribution to any single arithmetic operation.
 
 Twelve actual CLI refusal checks pass for process-lock contention, ambient overrides and corrupt, symlinked, truncated or FIFO inputs at the relevant fixture/configuration/sidecar boundaries. The process-lock fix applies to ordinary standalone MTP loading as well. This component result provides no speculative acceptance, committed-generation speed, long-context, vision or held-out quality evidence. No candidate is installed, served, selected by Auto or promoted.
+
+### Final draft build admission status, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-draft-final-build-admission-pending]] records a successful final native build and the broader local acceptance remaining unlaunched. The head and owned-loader source hashes are unchanged from the exact component producer; the final diagnostic adds an existing-output refusal and metadata/budget checks. One admission attempt refuses insufficient real memory. A separate bounded stable-admission campaign also launches no model and is interrupted after a separate llama-server workload is identified. The unrelated process is untouched.
+
+The quiet preflight now rejects known llama.cpp inference entrypoints before launch as well as Slotstream/build contention. Twelve context-qualification tests and thirty-two static-entrypoint tests pass; a read-only invocation reproduces the external-model refusal. Final local static/catalogue, baseline draft, streamed draft, image interaction and verification-row checks remain pending until exclusive model execution and their original real-memory bounds are available. Exact component parity is not substituted for those regressions. New independent reference campaigns must bind the changed safety-helper identity and satisfy their source-bound traversal requirements again.
+
+The full implementation remains in progress. No alternate pack has earned Auto integration or promotion, no new supported hardware profile reaches the target, and no release is implied by this checkpoint.

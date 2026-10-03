@@ -625,6 +625,14 @@ The new non-speculative pilot still misses twenty tokens/s. Neither a layout imp
 
 This closes fixed-input head component parity, not draft integration. Next implement bounded main-state checkpoints, exact batched verification and rejection rollback, then EOS, cancellation and committed-sequence checks before testing acceptance and speed. Retaining a resident head must be priced with the selected expert banks and load phase; it cannot simply be added to the near-ten-GB larger-bank sparse profile. Production candidate loading, held-out quality, contexts beyond the finite table, vision, dynamic memory, Auto, distribution and real-hardware qualification remain open.
 
+### Final draft build admission status, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-draft-final-build-admission-pending]] records a successful final native build and the broader local acceptance remaining unlaunched. The head and owned-loader source hashes are unchanged from the exact component producer; the final diagnostic adds an existing-output refusal and metadata/budget checks. One admission attempt refuses insufficient real memory. A separate bounded stable-admission campaign also launches no model and is interrupted after a separate llama-server workload is identified. The unrelated process is untouched.
+
+The quiet preflight now rejects known llama.cpp inference entrypoints before launch as well as Slotstream/build contention. Twelve context-qualification tests and thirty-two static-entrypoint tests pass; a read-only invocation reproduces the external-model refusal. Final local static/catalogue, baseline draft, streamed draft, image interaction and verification-row checks remain pending until exclusive model execution and their original real-memory bounds are available. Exact component parity is not substituted for those regressions. New independent reference campaigns must bind the changed safety-helper identity and satisfy their source-bound traversal requirements again.
+
+The full implementation remains in progress. No alternate pack has earned Auto integration or promotion, no new supported hardware profile reaches the target, and no release is implied by this checkpoint.
+
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the
 design and the estimates it replaces.
