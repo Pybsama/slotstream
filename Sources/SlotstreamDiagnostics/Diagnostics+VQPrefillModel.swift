@@ -6,8 +6,11 @@ import Slotstream
 extension Diagnostics {
     /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
     /// Hashes cover every byte, not selected logits or a numerical tolerance.
-    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil, reinvestDenseSavings: Bool = false, uncachedExpertReads: Bool = false) throws -> Data {
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil, reinvestDenseSavings: Bool = false, uncachedExpertReads: Bool = false, packedRecordDirectory: URL? = nil) throws -> Data {
         guard (!wideRecords && !parallelRecords) || (residentRecords && residentText) else { throw ModelError("wide banks and parallel VQ reads require resident text and records") }
+        guard packedRecordDirectory == nil || (reinvestDenseSavings && !uncachedExpertReads) else {
+            throw ModelError("packed VQ research requires reinvested banks and buffered reads")
+        }
         guard !uncachedExpertReads || (denseOverlayBaseline != nil && reinvestDenseSavings && wideRecords && parallelRecords && residentText && residentRecords) else {
             throw ModelError("uncached expert shard research requires the fixed reinvested composite profile")
         }
@@ -104,7 +107,7 @@ extension Diagnostics {
             throw ModelError("VQ prefill model requires 13 GB actual reclaimable memory")
         }
         let checkpoint = try VQCheckpoint(directory: source, inventory: inventory,
-            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest, uncachedExpertReads: uncachedExpertReads)
+            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest, uncachedExpertReads: uncachedExpertReads, packedRecordDirectory: packedRecordDirectory)
         guard checkpoint.inventorySHA256 == parent.inventory_sha256 else { throw ModelError("VQ prefill fixture and checkpoint differ") }
         let manager = FileManager.default
         guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ prefill output directory must be new") }
@@ -144,6 +147,10 @@ extension Diagnostics {
             object["resident_text"] = model.residentTextStats ?? [:]
             object["process_bound_bytes"] = model.processByteLimit
             object["composite_sha256"] = checkpoint.compositeSHA256
+            object["record_storage"] = checkpoint.recordStorage
+            object["packed_manifest_sha256"] = checkpoint.packedManifestSHA256
+            object["packed_verified_files"] = checkpoint.packedVerifiedFiles
+            object["packed_verified_bytes"] = checkpoint.packedVerifiedBytes
             object["expert_file_read_policy"] = checkpoint.expertReadPolicy
             object["uncached_expert_files"] = checkpoint.uncachedExpertFileCount
             object["overlay_verified_files"] = checkpoint.overlayVerifiedFileCount
@@ -208,6 +215,8 @@ extension Diagnostics {
                 c.expect("resident text serves repeated forwards", (stats["dense_hits"] ?? 0) > 49 && (stats["embedding_hits"] ?? 0) > 1)
             }
             guard ProcessMemory.peakResidentBytes() <= model.processByteLimit else { throw ModelError("VQ prefill model exceeded its configured process bound") }
+            c.equal("every packed record file authenticated", checkpoint.packedVerifiedFiles, packedRecordDirectory == nil ? 0 : 48)
+            c.equal("exact packed file bytes authenticated", checkpoint.packedVerifiedBytes, packedRecordDirectory == nil ? 0 : VQPackedExperts.totalFileBytes)
             c.equal("requested expert shard read policy applied", checkpoint.uncachedExpertFileCount, uncachedExpertReads ? 9 : 0)
             let result = try receipt(nil)
             guard c.report().passed else { throw ModelError("VQ prefill model assertions failed") }

@@ -7307,3 +7307,33 @@ All three alternating timing pairs qualify, with exactly the same complete 128-t
 [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-stable-paired-cost]] records the separately frozen follow-up after the failed campaign. Every cell first passes thirty seconds of sampled nominal thermal state, low-power mode off, and the unchanged thirteen-GB floor in native and external VM observations. The bounded waiting step neither retries a failed cell nor relaxes native guards. The observer uses the timed binary's exact memory-observation source.
 
 Both full-logit validations and all six timing cells pass, with the same complete 128-token sequence. Buffered/uncached median committed decode is 5.8081/5.3094 tokens/s and request time is 24.9272/26.7625 seconds. The median paired ratios are 0.91614 for decode, 0.95239 for first-token latency and 1.07729 for request duration. Keep buffered reads as the default for this layout. The result does not establish a universal policy, a qualified new pack or the twenty-token target. The next declared storage hypothesis packs unchanged expert bytes into contiguous aligned records; no conversion or native packed-reader result is implied here.
+
+### Lossless contiguous expert export
+
+[[sources/runs/2026/10/2026-10-03-vq-contiguous-record-lossless-export]] records one bounded CPU-only export from the fully authenticated VQ 3.2 parent. All 288 reconstructed source-tensor hashes match, including the six codes/scales pieces in every layer. Per-record padding is zero. Each payload begins at byte 16,384; aligned strides are 1,851,392 or 2,621,440 bytes. The 48 files occupy 47,866,183,680 bytes, within the frozen 48-GB output and 350-GB research-staging bounds. Staging before export was 254,809,699,818 bytes.
+
+Final observations are 246,923,960 current process bytes, 258,998,968 lifetime physical-peak bytes and 272,646,144 lifetime RSS-peak bytes, all within the one-GB conversion cap. The manifest SHA-256 is `230c53d8bea76e245c8c47863db3fc0f93c549865e7393b5a493c07b0f52b834`. Source/output stamps, independent tensor reconstruction, complete output file hashes and synced atomic manifest publication bind the artifact. Synthetic source-order, padding, corruption, truncation, extent and incomplete-write checks pass. This does not establish native reader parity, a speed gain, quality qualification or deployment readiness.
+
+### Native contiguous record parity
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-parity]] binds native producer `0c435ae491263b4bae35aaec29845d0e7f6507170ce411f3c1a811b3c1f52fff` to the frozen aligned export. All 96 catalogue groups pass. Both storage paths match every one of 2560 greedy and 984 sparse-context state/output boundaries without tolerance changes. Sparse coverage reaches 2054 consumed tokens. The contiguous reader verifies all 48 derived payloads totaling 47,866,183,680 bytes.
+
+Greedy split/contiguous lifetime peaks are 7,518,705,640 and 7,535,450,112 bytes. Sparse peaks are 9,373,421,864 and 9,383,448,896 bytes. The process ceiling remains 10,000,000,000 bytes. Maximum staging is 95,558,400 for split reads and 115,015,680 bytes for complete aligned reads, both below 128,000,000. The 1824-record greedy cache reaches physical addresses 1535 and 287; both arms report 10,308 loads, 3902 hits and 8484 evictions. Sparse does not claim full physical-slot occupancy.
+
+Three CLI refusal cases leave no output directory or model allocation. Buffered read policy, model values and bank capacities stay fixed. These functional runs are not throughput measurements. Authentication reads the parent, dense overlay and then candidate-only derived files; OS file-cache history remains uncontrolled and must qualify any later interpretation. Full original affine acceptance from the earlier composite checkpoint is not reported as rerun by these research-only changes.
+
+### Paired contiguous-record generation cost
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-paired-cost]] preserves both independent lean-path full-logit validations and all six interleaved measurements. All six timing cells pass the frozen observed eligibility rules and emit the same complete 128-token sequence. Both arms use the same composite, buffered policy, 1536/288 banks, original prefill sweep and ten-GB process ceiling. No run is retried or replaced.
+
+| Metric | Split ranges median | Contiguous records median | Median paired contiguous/split ratio |
+| --- | ---: | ---: | ---: |
+| Committed decode tokens/s | 5.776163947978307 | 6.872380896608456 | 1.1897828660167846 |
+| TTFT seconds | 3.0060759580228478 | 3.007833749987185 | 0.98991835190062 |
+| Request seconds | 24.993009916011943 | 21.581774708989542 | 0.8576591458049302 |
+
+Loading medians are 59.3513325420 and 77.1266143330 seconds. Maximum timed process peaks are 7,750,785,096 and 7,782,275,240 bytes. Every measured request has 34,782 record loads and 33,188 hits in both arms, so the improvement does not come from a larger cache or different generated route sequence. Median paired ratios and ratios of arm medians are different statistics.
+
+The complete research path improves generation while increasing authentication/load time. Candidate-only record files are read after both parent filesets, changing uncontrolled OS cache conditioning; this limitation was recorded before timing. The result cannot isolate positional-call count as its cause, claim cold-SSD speed, project standalone-pack startup, qualify another budget/Mac, or meet the twenty-token target. Main-model values are unchanged, but the underlying composite's held-out task qualification remains open.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-static-acceptance]] records complete static acceptance on this same frozen producer. No public loader, Auto choice, installed pack or download activation changes. The earlier complete affine model-loaded battery is preserved as earlier evidence and is not represented as rerun here.

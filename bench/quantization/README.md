@@ -874,3 +874,47 @@ mode off and both VM observers above the existing admission floor. Each idle
 wait is bounded to ten minutes. Any bad observation resets stability; an expired
 wait fails the campaign. Native guards and in-request timing exclusions still
 apply. The observer's engine source must match the timed binary's source receipt.
+
+### Lossless contiguous expert records
+
+`Tools/vq_record_repack.py` creates a new research directory containing one
+aligned expert-record file per layer. It preserves the six original codes and
+scales pieces, verifies every reconstructed source-tensor hash and zero-padding
+region, and publishes the completion manifest only after verification and synced
+writes. Original codebooks, dense weights, PLE and draft data remain in their
+pinned parent files. This is a bounded conversion experiment, not an installer.
+
+`quantization-model-check --packed-record-directory <directory>` admits only
+the exact verified export manifest and every pinned payload hash. It requires
+the dense composite, reinvested banks, parallel records and buffered reads.
+The owned reader prices one aligned record buffer per active read lane in
+addition to the complete returned pieces. Ordinary tensor reads keep their
+existing limit. Workers drain before bank publication and retain cancellation,
+exact-range and file-mutation checks. Large immutable prefill still uses the
+original sweep storage.
+
+`contiguous-record-cost-v1.json` and `Tools/vq_contiguous_expert_pilot.py`
+compare split ranges against contiguous records with the same model values,
+1536/288 banks and process ceiling. Supply the frozen binary, parent research
+directory, baseline, composite manifest, packed-record directory, completed
+four-cell greedy/sparse gate directory and source-bound admission observer.
+Use the tool's `--help` for the required paths. Both full-logit validations
+must pass before the three alternating timing pairs; all complete generated
+sequences must match. The additional derived-file authentication is included
+in loading time. No request is described as starting from cold SSD, and this
+storage comparison cannot qualify a new model, Auto policy or download pack.
+
+Authentication order also conditions the uncontrolled OS file cache. The
+contiguous research arm reads its derived files after both parent filesets;
+the control has no final derived-file pass. A timing difference therefore
+measures these complete research load/request paths and cannot establish a
+syscall-only speedup or predict the startup and cache behavior of a future
+standalone pack. Any deployment claim requires that pack's own measurements.
+
+The first complete paired layout campaign passes both numerical validations
+and every timing eligibility gate, with identical complete sequences. It
+improves committed generation and total request time in this research profile,
+while increasing load time. Exact results and the cache-conditioning limit
+are recorded in the canonical quantization measurement. Continue controlled
+research with this representation; it remains below the performance target
+and does not change product defaults or qualify a distributable pack.

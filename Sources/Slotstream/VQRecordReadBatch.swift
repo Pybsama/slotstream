@@ -35,22 +35,24 @@ package enum VQRecordReadBatch {
         }
     }
 
-    package static func reservation(jobs: Int, pieceBytes: [Int]) throws -> Int {
+    package static func reservation(jobs: Int, pieceBytes: [Int], scratchReadBytes: Int = VQTensorFile.maximumRead) throws -> Int {
         guard (1...maximumJobs).contains(jobs), pieceBytes.count == 6,
+              (VQTensorFile.maximumRead...VQTensorFile.maximumPackedRecordRead).contains(scratchReadBytes),
               pieceBytes.allSatisfy({ (1...1_500_000).contains($0) }) else {
             throw ModelError("VQ read batch exceeds its job or piece bound")
         }
         let recordBytes = try pieceBytes.reduce(0) { try QuantizationBytes.sum($0, $1) }
         let retained = try QuantizationBytes.product(jobs, recordBytes)
-        let scratch = try QuantizationBytes.product(min(jobs, maximumLanes), VQTensorFile.maximumRead)
+        let scratch = try QuantizationBytes.product(min(jobs, maximumLanes), scratchReadBytes)
         let total = try QuantizationBytes.sum(retained, scratch)
         guard total <= maximumStagingBytes else { throw ModelError("VQ read batch exceeds its staging reservation") }
         return total
     }
 
     package static func read(experts: [Int], pieceBytes: [Int], cancellation: Cancellation = Cancellation(),
+                             scratchReadBytes: Int = VQTensorFile.maximumRead,
                              reader: @escaping Read) throws -> [[Data]] {
-        _ = try reservation(jobs: experts.count, pieceBytes: pieceBytes)
+        _ = try reservation(jobs: experts.count, pieceBytes: pieceBytes, scratchReadBytes: scratchReadBytes)
         guard Set(experts).count == experts.count, experts.allSatisfy({ (0..<512).contains($0) }) else {
             throw ModelError("VQ read batch needs unique bounded expert IDs")
         }

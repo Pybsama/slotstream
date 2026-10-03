@@ -93,12 +93,14 @@ package final class VQRecordCache {
             else { plan = try checkpoint.recordReadPlan(layer: layer); readPlans[layer] = plan }
             batchReader = { keys in
                 guard keys.allSatisfy({ $0.layer == layer }) else { throw ModelError("VQ parallel read crossed its layer plan") }
-                let reservation = try VQRecordReadBatch.reservation(jobs: keys.count, pieceBytes: plan.pieceBytes)
+                let reservation = try VQRecordReadBatch.reservation(jobs: keys.count, pieceBytes: plan.pieceBytes,
+                                                                   scratchReadBytes: plan.scratchReadBytes)
                 guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= UInt64(reservation + 3_000_000_000) else {
                     throw ModelError("VQ read staging lost its real-headroom reservation")
                 }
                 self.maximumStagingBytes = max(self.maximumStagingBytes, reservation)
-                return try VQRecordReadBatch.read(experts: keys.map(\.expert), pieceBytes: plan.pieceBytes) { expert, keepGoing in
+                return try VQRecordReadBatch.read(experts: keys.map(\.expert), pieceBytes: plan.pieceBytes,
+                                                   scratchReadBytes: plan.scratchReadBytes) { expert, keepGoing in
                     try plan.read(expert: expert, shouldContinue: keepGoing)
                 }
             }

@@ -39,6 +39,12 @@ extension Diagnostics {
         for (offset, count) in [(-1, 1), (0, 0), (0, 1_000_001), (payload.count, 1), (payload.count - 1, 2), (Int.max, 1)] {
             rejected("invalid tensor read refused") { _ = try file!.read("tensor", offset: offset, count: count) }
         }
+        for expert in [-1, 0, 511, 512, Int.max] {
+            rejected("ordinary tensor cannot admit packed row reads") { _ = try file!.readPackedRecord(expert: expert) }
+        }
+        rejected("ordinary tensor cannot form a packed plan") {
+            _ = try VQRecordReadPlan(packed: file!, pieceBytes: [Int](repeating: 2, count: 6))
+        }
         rejected("unknown tensor refused") { _ = try file!.read("absent", offset: 0, count: 1) }
         rejected("cancelled admission refused") { _ = try VQTensorFile(url: path, identity: identity, shouldContinue: { false }) }
         rejected("cancelled read refused") { _ = try file!.read("tensor", offset: 0, count: 1, shouldContinue: { false }) }

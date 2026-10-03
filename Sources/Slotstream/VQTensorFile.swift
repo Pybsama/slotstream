@@ -9,6 +9,7 @@ import Foundation
 /// for tensor reads; a header hash alone never admits model bytes.
 package final class VQTensorFile {
     package static let maximumRead = 1_000_000
+    package static let maximumPackedRecordRead = 2_621_440
     package struct Identity {
         package let fileBytes: Int
         package let headerBytes: Int
@@ -41,15 +42,18 @@ package final class VQTensorFile {
         guard fstat(fd, &value) == 0 else { throw ModelError("cannot inspect owned VQ tensor descriptor") }
         return value
     }
-    private static func raw(_ fd: Int32, offset: Int, count: Int, shouldContinue: () -> Bool = { true }) throws -> Data {
+    private static func raw(_ fd: Int32, offset: Int, count: Int, maximumSyscall: Int = maximumRead,
+                            shouldContinue: () -> Bool = { true }) throws -> Data {
         // Header reads may exceed a payload read, but are still bounded before
-        // allocation. Every syscall is at most one megabyte.
+        // allocation. Ordinary syscalls stay at one megabyte. Only an explicit
+        // authenticated packed-record read admits its complete bounded row.
         guard offset >= 0, count > 0, count <= 4_000_000,
+              (maximumRead...maximumPackedRecordRead).contains(maximumSyscall),
               !offset.addingReportingOverflow(count).overflow else { throw CheckpointReadError.invalidRange }
         var data = Data(count: count)
         try data.withUnsafeMutableBytes { buffer in
             try ExactRead.transfer(into: buffer.baseAddress!, offset: offset, count: count, shouldContinue: shouldContinue) { destination, remaining, position in
-                let got = pread(fd, destination, min(remaining, maximumRead), off_t(position))
+                let got = pread(fd, destination, min(remaining, maximumSyscall), off_t(position))
                 return .init(count: got, error: got < 0 ? errno : 0)
             }
         }
@@ -145,13 +149,31 @@ package final class VQTensorFile {
     /// cancellation or a changed file publish no Data to the caller.
     package func read(_ name: String, offset: Int, count: Int,
                       shouldContinue: () -> Bool = { true }) throws -> Data {
-        guard let ref = tensors[name], (1...Self.maximumRead).contains(count) else {
+        try readBounded(name, offset: offset, count: count, limit: Self.maximumRead, shouldContinue: shouldContinue)
+    }
+
+    /// Separate admission for the two inspected aligned complete-record rows.
+    /// No generic tensor request gains a larger payload limit.
+    package func readPackedRecord(expert: Int, shouldContinue: () -> Bool = { true }) throws -> Data {
+        guard (0..<512).contains(expert), tensors.count == 1, let ref = tensors["records"],
+              ref.dtype == "U8", ref.shape.count == 2, ref.shape[0] == 512,
+              [1_851_392, 2_621_440].contains(ref.rowBytes), ref.shape[1] == ref.rowBytes else {
+            throw CheckpointReadError.invalidRange
+        }
+        return try readBounded("records", offset: expert * ref.rowBytes, count: ref.rowBytes,
+                               limit: Self.maximumPackedRecordRead, shouldContinue: shouldContinue)
+    }
+
+    private func readBounded(_ name: String, offset: Int, count: Int, limit: Int,
+                             shouldContinue: () -> Bool) throws -> Data {
+        guard let ref = tensors[name], (1...limit).contains(count) else {
             throw CheckpointReadError.invalidRange
         }
         let absolute = try ExactRead.tensorOffset(base: ref.byteOffset, length: ref.byteCount, offset: offset, count: count)
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
         try verifyUnchanged()
-        let data = try Self.raw(descriptor, offset: absolute, count: count, shouldContinue: shouldContinue)
+        let data = try Self.raw(descriptor, offset: absolute, count: count, maximumSyscall: limit,
+                                shouldContinue: shouldContinue)
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
         try verifyUnchanged()
         return data

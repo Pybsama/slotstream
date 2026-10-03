@@ -8,7 +8,7 @@ extension Diagnostics {
     /// serving. The same lean path must first pass independent full-logit goldens.
     public static func quantizationPerformancePilot(source: URL, inventory: URL, profileURL: URL,
                                                     output: URL, validationURL: URL?,
-                                                    denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil) throws -> Data {
+                                                    denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil, packedRecordDirectory: URL? = nil) throws -> Data {
         guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
             throw ModelError("dense composite requires both baseline and manifest")
         }
@@ -18,7 +18,7 @@ extension Diagnostics {
             let pack: String, generated: [Int], logits: [Logit]
         }
         struct Profile: Decodable {
-            struct Configuration: Decodable { let parallel_read_lanes: Int?; let reinvest_dense_savings: Bool?; let uncached_expert_reads: Bool? }
+            struct Configuration: Decodable { let parallel_read_lanes: Int?; let reinvest_dense_savings: Bool?; let uncached_expert_reads: Bool?; let packed_records: Bool? }
             let configuration: Configuration
             let schema: Int, profile: String, prompt: [Int], max_new_tokens: Int
             let minimum_committed_tokens: Int, validation_steps: Int, eos_token_id: Int
@@ -43,16 +43,22 @@ extension Diagnostics {
                "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7",
                "a1b2edc29e0b1a5a3a668d9b8c26ff8533523f0045e98970e5e5efc54badaa88",
                "87468cc244dca45d46b673132ee9e05be7c09f4811d25dcb92afd21bae4782e8",
-               "f33ba9344516921a6b483db9790b9321a47603d16be826c996074419e2ba3285"].contains(profileHash) else {
+               "f33ba9344516921a6b483db9790b9321a47603d16be826c996074419e2ba3285",
+               "99aa3575ecc397b43ed25d2cd25d12d2da6842cbf7f948eecaa2aaf69099b98c"].contains(profileHash) else {
             throw ModelError("VQ pilot requires the frozen performance profile")
         }
         let profile = try JSONDecoder().decode(Profile.self, from: profileRaw)
         guard !ProcessInfo.processInfo.environment.keys.contains(where: {
             $0.hasPrefix("SLOTSTREAM_") || $0.hasPrefix("SS_DEBUG") || $0.hasPrefix("VQ_") || $0.hasPrefix("VQLAB_")
         }) else { throw ModelError("VQ pilot requires no developer overrides") }
+        guard (profile.configuration.packed_records == true) == (packedRecordDirectory != nil),
+              packedRecordDirectory == nil || (profile.configuration.reinvest_dense_savings == true &&
+                                                profile.configuration.uncached_expert_reads != true) else {
+            throw ModelError("VQ pilot packed storage differs from its frozen profile")
+        }
         let checkpoint = try VQCheckpoint(directory: source, inventory: inventory,
             denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest,
-            uncachedExpertReads: profile.configuration.uncached_expert_reads == true)
+            uncachedExpertReads: profile.configuration.uncached_expert_reads == true, packedRecordDirectory: packedRecordDirectory)
         guard let reference = profile.references[checkpoint.compositeSHA256 ?? checkpoint.inventorySHA256] else {
             throw ModelError("VQ pilot has no reference for this inventory")
         }
@@ -66,6 +72,8 @@ extension Diagnostics {
                   object["profile_sha256"] as? String == profileHash,
                   object["inventory_sha256"] as? String == checkpoint.inventorySHA256,
                   object["composite_sha256"] as? String == checkpoint.compositeSHA256,
+                  object["record_storage"] as? String == checkpoint.recordStorage,
+                  object["packed_manifest_sha256"] as? String == checkpoint.packedManifestSHA256,
                   object["producer"] as? [String: String] == producer,
                   object["generated"] as? [Int] == reference.generated,
                   object["observed_logit_hashes"] as? [String] == reference.logits.map(\.sha256),
@@ -120,6 +128,10 @@ extension Diagnostics {
                 "observed_timing_eligible": reasons.isEmpty, "timing_exclusions": reasons,
                 "stop": generated.last == profile.eos_token_id ? "eos" : "length",
                 "verified_payload_bytes": checkpoint.verifiedPayloadBytes, "verified_files": checkpoint.verifiedFileCount]
+            result["record_storage"] = checkpoint.recordStorage
+            result["packed_manifest_sha256"] = checkpoint.packedManifestSHA256
+            result["packed_verified_files"] = checkpoint.packedVerifiedFiles
+            result["packed_verified_bytes"] = checkpoint.packedVerifiedBytes
             result["expert_file_read_policy"] = checkpoint.expertReadPolicy
             result["uncached_expert_files"] = checkpoint.uncachedExpertFileCount
             result["composite_sha256"] = checkpoint.compositeSHA256
@@ -202,6 +214,10 @@ extension Diagnostics {
             }
             guard checkpoint.uncachedExpertFileCount == (profile.configuration.uncached_expert_reads == true ? 9 : 0) else {
                 throw ModelError("VQ pilot expert shard read policy differs from its frozen profile")
+            }
+            guard checkpoint.packedVerifiedFiles == (packedRecordDirectory == nil ? 0 : 48),
+                  checkpoint.packedVerifiedBytes == (packedRecordDirectory == nil ? 0 : VQPackedExperts.totalFileBytes) else {
+                throw ModelError("VQ pilot packed storage was not completely authenticated")
             }
             return try receipt(failure: nil)
         } catch {

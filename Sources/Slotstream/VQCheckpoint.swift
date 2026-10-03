@@ -62,6 +62,11 @@ package final class VQCheckpoint {
     private let ple: PLE
     private var files: [String: VQTensorFile] = [:]
     private let denseOverlay: VQDenseOverlay?
+    private let packedExperts: VQPackedExperts?
+    package var packedManifestSHA256: String? { packedExperts == nil ? nil : VQPackedExperts.manifestSHA256 }
+    package var packedVerifiedFiles: Int { packedExperts?.verifiedFileCount ?? 0 }
+    package var packedVerifiedBytes: Int { packedExperts?.verifiedFileBytes ?? 0 }
+    package var recordStorage: String { packedExperts == nil ? "split-tensor-ranges-v1" : "contiguous-records-16k-v1" }
     private let uncachedExpertReads: Bool
     private let expertShardNames: Set<String>
     package var expertReadPolicy: String { uncachedExpertReads ? "uncached-random-shards-v1" : "buffered-v1" }
@@ -88,12 +93,15 @@ package final class VQCheckpoint {
     }
 
     package init(directory: URL, inventory: URL, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil,
-                 uncachedExpertReads: Bool = false) throws {
+                 uncachedExpertReads: Bool = false, packedRecordDirectory: URL? = nil) throws {
         guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
             throw ModelError("dense composite requires both its baseline and manifest")
         }
         guard !uncachedExpertReads || denseOverlayBaseline != nil else {
             throw ModelError("uncached VQ research reads require the exact dense composite")
+        }
+        guard packedRecordDirectory == nil || (denseOverlayBaseline != nil && !uncachedExpertReads) else {
+            throw ModelError("packed VQ research requires the dense composite and buffered shard policy")
         }
         let root = directory.resolvingSymlinksInPath()
         let raw = try Self.bounded(inventory, limit: 4_000_000), hash = Self.digest(raw)
@@ -212,6 +220,7 @@ package final class VQCheckpoint {
             denseOverlay = overlay
             geometry = geometry.withAffineOverrides(overlay.recipes)
         } else { denseOverlay = nil }
+        packedExperts = try packedRecordDirectory.map { try VQPackedExperts(directory: $0, inventorySHA256: hash, layouts: layouts) }
         self.config = geometry
         revision = profile.revision; inventorySHA256 = hash
         recordClassCount = profile.classLayers.count; wideRecordLayer = profile.wideLayer
@@ -234,6 +243,7 @@ package final class VQCheckpoint {
             }
         }
         try denseOverlay?.authenticateAll(shouldContinue: shouldContinue)
+        try packedExperts?.authenticateAll(shouldContinue: shouldContinue)
     }
 
     private func file(for name: String, shouldContinue: () -> Bool) throws -> VQTensorFile {
@@ -316,6 +326,7 @@ package final class VQCheckpoint {
     /// Resolve mutable loader state on its owner before any read lane starts.
     /// Workers receive only the resulting immutable descriptor/range plan.
     package func recordReadPlan(layer: Int) throws -> VQRecordReadPlan {
+        if let packedExperts { return try packedExperts.readPlan(layer: layer) }
         let layout = try recordLayout(layer: layer)
         var pieces: [VQRecordReadPlan.Piece] = []
         for (index, name) in ["gate_proj", "up_proj", "down_proj"].enumerated() {

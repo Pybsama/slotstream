@@ -130,3 +130,12 @@ Add explicit uncached expert-containing shard research policy with exact greedy 
 ## [2026-10-03 14:14] update | same-model-quantization-and-automatic-memory
 Preserve the separately frozen stable-admission comparison. Six eligible same-sequence timings show uncached shards slower overall, so retain buffered default. Add bounded native/external admission tooling; no candidate promotion.
 
+## [2026-10-03 14:42] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Recorded the lossless bounded aligned expert export and its independent reconstruction evidence; native parity and cost remain separate gates.
+
+## [2026-10-03 14:44] update | records/measurements/quantization-screen-2026-10-02
+Captured and recorded exact native split-versus-contiguous greedy and sparse parity with explicit staging and memory bounds; performance remains unmeasured.
+
+## [2026-10-03 15:12] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Completed the authenticated contiguous-record layout, full native greedy/sparse parity, all static gates and eligible paired timing campaign. Retained cache-conditioning and slower-load limits; no Auto or product activation.
+

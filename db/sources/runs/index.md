@@ -2,11 +2,15 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T14:13:22.973772Z
+updated: 2026-10-03T15:10:46.173488Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-paired-cost]] — Paired contiguous-record pilot improves generation within its research scope
+- [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-static-acceptance]] — Complete static acceptance for the frozen contiguous-record reader
+- [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-parity]] — Authenticated contiguous VQ record reads retain exact full-model parity
+- [[sources/runs/2026/10/2026-10-03-vq-contiguous-record-lossless-export]] — Lossless aligned VQ expert export with full tensor reconstruction
 - [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-stable-paired-cost]] — Stable admitted paired VQ shard-policy comparison retains buffered reads
 - [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-timing-admission-stopped]] — VQ shard-policy timing stopped before the first measured request
 - [[sources/runs/2026/10/2026-10-03-native-vq-expert-shard-read-policy-parity]] — Exact native VQ parity with an explicit uncached shard policy
@@ -503,12 +507,8 @@ updated: 2026-10-03T14:13:22.973772Z
 - [[sources/runs/2026/09/2026-09-07-optimization-resource-readiness-and-restoration]] — Resumed optimization resource readiness and restoration
 - [[sources/runs/2026/09/2026-09-07-optimization-mandatory-sampler-and-final-handoff]] — Mandatory sampler fixture and final acceptance handoff
 - [[sources/runs/2026/09/2026-09-07-optimization-final-completion-metadata]] — Final completion metadata and exact token accounting
-- [[sources/runs/2026/09/2026-09-07-configurable-context-sampler-exit-and-binary-selection]] — Sampler exit-status false passes removed; API and sampler honor the selected binary
-- [[sources/runs/2026/09/2026-09-07-optimization-verification-selected-paths]] — Verification selected-path dispatch and bounded fixture checks
-- [[sources/runs/2026/09/2026-09-07-optimization-selected-artifacts-and-static-suites]] — Selected-artifact acceptance and mandatory optimization suites
-- [[sources/runs/2026/09/2026-09-07-configurable-context-shared-client-fixtures]] — Context consumer, Hermes and published gateway fixtures integrated into shared Tools
 
 ## More
 
-This folder has 745 files. The 500 most recent are listed above.
+This folder has 749 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

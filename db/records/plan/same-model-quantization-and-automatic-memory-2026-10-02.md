@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-03T14:14:20.650425+00:00
+updated: 2026-10-03T15:12:10.968385+00:00
 summary: Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 date: 2026-10-02
 doc: plan
@@ -535,3 +535,23 @@ The same-artifact paired pilot rejects the expected speed benefit for its frozen
 [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-stable-paired-cost]] records the separately frozen follow-up after the failed campaign. Every cell first passes thirty seconds of sampled nominal thermal state, low-power mode off, and the unchanged thirteen-GB floor in native and external VM observations. The bounded waiting step neither retries a failed cell nor relaxes native guards. The observer uses the timed binary's exact memory-observation source.
 
 Both full-logit validations and all six timing cells pass, with the same complete 128-token sequence. Buffered/uncached median committed decode is 5.8081/5.3094 tokens/s and request time is 24.9272/26.7625 seconds. The median paired ratios are 0.91614 for decode, 0.95239 for first-token latency and 1.07729 for request duration. Keep buffered reads as the default for this layout. The result does not establish a universal policy, a qualified new pack or the twenty-token target. The next declared storage hypothesis packs unchanged expert bytes into contiguous aligned records; no conversion or native packed-reader result is implied here.
+
+### Lossless expert-record export, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-contiguous-record-lossless-export]] closes the storage transformation prerequisite for a contiguous-read hypothesis. The bounded converter preserves all six codes/scales pieces per expert, matches all 288 reconstructed original tensor hashes and verifies every padding region. Forty-eight aligned output files occupy 47,866,183,680 bytes. Codebooks, dense weights, PLE and draft data remain unchanged in their parent artifacts. A pinned completion manifest appears only after verification and synced writes.
+
+This is a research export, not a distributable model installation. Its native reader must authenticate the exact manifest and complete derived payloads, price a complete aligned scratch record per active lane, and retain descriptor ownership, exact ranges, cancellation and joined publication. Keep model values, buffered read policy, 1536/288 banks and the process ceiling fixed for greedy/sparse parity and subsequent cost measurement. Extra authentication changes OS cache conditioning, so any measured gain belongs to the complete research load/request path and cannot establish a syscall-only improvement or predict a standalone pack. Product integration remains gated.
+
+### Contiguous native record parity, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-parity]] records the pinned native reader and its four completed full-model comparisons. Split and contiguous storage both match all 2560 greedy and 984 sparse-context boundaries. Greedy exercises every newly admitted physical slot; sparse state remains inside the original ten-GB process ceiling. The packed reader authenticates all 48 derived files and separately prices each active lane's aligned read buffer. Ordinary tensor read bounds and buffered defaults remain intact.
+
+All 96 native catalogue groups pass, and actual CLI checks reject a missing bank prerequisite, corrupt manifest and symlink manifest before model allocation or output publication. This closes the native parity prerequisite for the separately frozen paired cost comparison, not complete-configuration qualification. Original immutable prefill sweep storage remains in use. Production generation, larger contexts, draft/vision, held-out task quality, dynamic memory integration, Auto, distribution and other-hardware qualification remain open.
+
+### Contiguous read cost and acceptance, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-paired-cost]] closes the bounded layout experiment. Both complete-vocabulary validations pass, and all six alternating timing cells are eligible with identical 128-token outputs. Split/contiguous median committed generation is 5.7761639480 versus 6.8723808966 tokens/s; median paired decode ratio is 1.1897828660 and request-duration ratio 0.8576591458. Loading rises from a median 59.3513 to 77.1266 seconds. The prospective OS-cache/load-order caveat remains part of the result. Use the contiguous representation for continued controlled research, not as a product-default or universal speed claim.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-static-acceptance]] records the complete static suite passing on the same frozen binary. The converter and cost-receipt tests are registered in both static entrypoints; prior source commit `86a703b88cb9d92bea929ac55fd311a1609ea99a` also has successful docs, context, Mac and core CI. The full affine model-loaded battery remains the previously recorded composite checkpoint, not a newly claimed run.
+
+The new non-speculative pilot still misses twenty tokens/s. Neither a layout improvement nor exact parity qualifies held-out task quality, complete feature configurations or another Mac. Continue the separate draft-head admission and state/verification work under bounded protocols. No main-model or draft quantization may inherit the other's metadata, and no draft proposal may become committed output without the required main-model verification. Auto, dynamic candidate memory management and activation remain gated.

@@ -43,6 +43,19 @@ extension Diagnostics {
             do { _ = try VQRecordReadBatch.reservation(jobs: 32, pieceBytes: layout); c.expect("invalid staging refused", false) }
             catch { c.expect("invalid staging refused", true) }
         }
+        let largePieces = [1_310_720, 81_920, 655_360, 81_920, 409_600, 71_680]
+        c.equal("aligned read scratch is charged per active lane",
+                try VQRecordReadBatch.reservation(jobs: 32, pieceBytes: largePieces,
+                                                scratchReadBytes: 2_621_440), 115_015_680)
+        c.equal("single packed lane cannot charge twelve scratch buffers",
+                try VQRecordReadBatch.reservation(jobs: 1, pieceBytes: largePieces,
+                                                scratchReadBytes: 2_621_440), 5_232_640)
+        for scratch in [-1, 999_999, 2_621_441, Int.max] {
+            do {
+                _ = try VQRecordReadBatch.reservation(jobs: 32, pieceBytes: largePieces, scratchReadBytes: scratch)
+                c.expect("invalid scratch extent refused", false)
+            } catch { c.expect("invalid scratch extent refused", true) }
+        }
         for failure in ["throw", "partial", "oversized", "cancel"] {
             let active = Activity(), sibling = DispatchSemaphore(value: 0)
             let cancelled = VQRecordReadBatch.Cancellation()
