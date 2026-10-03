@@ -105,6 +105,28 @@ struct QuantizationModelCheck: ParsableCommand {
     }
 }
 
+struct QuantizationPerformancePilot: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "quantization-performance-pilot",
+        abstract: "Validate or time the frozen experimental VQ text profile; never qualifies a pack")
+    @Option(name: .long) var sourceDirectory: String
+    @Option(name: .long) var sourceInventory: String
+    @Option(name: .long) var profile: String
+    @Option(name: .long) var output: String
+    @Flag(name: .long, help: "Measure 128 tokens after a separate successful validation") var measure = false
+    @Option(name: .long, help: "Successful validation receipt from this exact producer and profile") var validationReceipt: String?
+    func validate() throws {
+        guard measure == (validationReceipt != nil) else {
+            throw ValidationError("--measure requires --validation-receipt; validation mode accepts neither")
+        }
+    }
+    func run() throws {
+        print(String(decoding: try Diagnostics.quantizationPerformancePilot(
+            source: URL(fileURLWithPath: sourceDirectory), inventory: URL(fileURLWithPath: sourceInventory),
+            profileURL: URL(fileURLWithPath: profile), output: URL(fileURLWithPath: output),
+            validationURL: validationReceipt.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
+    }
+}
+
 struct QuantizationBench: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "quantization-bench",
         abstract: "Run the bounded synthetic screen-v1 kernel timings; no model pack is qualified")

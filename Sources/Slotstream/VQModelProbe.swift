@@ -48,7 +48,7 @@ package final class VQModelProbe {
     }
 
     package func forward(_ tokens: [Int], observe: (Int, String, MLXArray) throws -> Void,
-                         trace: ((Int, String, MLXArray) -> Void)? = nil) throws {
+                         trace: ((Int, String, MLXArray) -> Void)? = nil, inspectState: Bool = true) throws {
         guard !failed, (1...512).contains(tokens.count), consumed + tokens.count <= 2054 else {
             throw ModelError("VQ full-stack probe admits at most 2054 tokens in passes of at most 512")
         }
@@ -57,7 +57,7 @@ package final class VQModelProbe {
         failed = true
         var hidden = tiled(try residentText?.embed(tokens) ?? checkpoint.embedding(tokens), repetitions: [1, 1, 4])
         eval(hidden)
-        try observe(-1, "embedded", hidden)
+        if inspectState { try observe(-1, "embedded", hidden) }
         let history = previous + tokens.map(Int64.init)
         for layer in 0..<48 {
             guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 3_000_000_000,
@@ -66,20 +66,22 @@ package final class VQModelProbe {
             }
             hidden = try autoreleasepool {
                 try block(layer, hidden: hidden, history: history, trace: trace) { mask in
-                    try observe(layer, "sparse_mask", mask)
+                    if inspectState { try observe(layer, "sparse_mask", mask) }
                 }
             }
             eval(hidden)
             guard all(isFinite(hidden)).item(Bool.self) else { throw ModelError("nonfinite VQ hidden state at layer \(layer)") }
-            try observe(layer, "hidden", hidden)
-            if let cache = linear[layer] {
-                if let value = cache.convState { try observe(layer, "conv", value) }
-                if let value = cache.ssmState { try observe(layer, "state", value) }
-                if let value = cache.pleConvState { try observe(layer, "ple_conv", value) }
-            } else if let cache = kv[layer] {
-                if let value = cache.keys { try observe(layer, "keys", value[0..., 0..., 0..<cache.offset, 0...]) }
-                if let value = cache.values { try observe(layer, "values", value[0..., 0..., 0..<cache.offset, 0...]) }
-                if let value = indexer[layer]?.diagnosticValues() { try observe(layer, "indexer", value) }
+            if inspectState {
+                try observe(layer, "hidden", hidden)
+                if let cache = linear[layer] {
+                    if let value = cache.convState { try observe(layer, "conv", value) }
+                    if let value = cache.ssmState { try observe(layer, "state", value) }
+                    if let value = cache.pleConvState { try observe(layer, "ple_conv", value) }
+                } else if let cache = kv[layer] {
+                    if let value = cache.keys { try observe(layer, "keys", value[0..., 0..., 0..<cache.offset, 0...]) }
+                    if let value = cache.values { try observe(layer, "values", value[0..., 0..., 0..<cache.offset, 0...]) }
+                    if let value = indexer[layer]?.diagnosticValues() { try observe(layer, "indexer", value) }
+                }
             }
             MLX.Memory.clearCache()
         }
@@ -92,7 +94,7 @@ package final class VQModelProbe {
             guard logits.shape == [1, tokens.count, 248_320], all(isFinite(logits)).item(Bool.self) else {
                 throw ModelError("VQ probe has incomplete or nonfinite full-vocabulary logits")
             }
-            try observe(48, "mixed", mixed)
+            if inspectState { try observe(48, "mixed", mixed) }
             try observe(48, "logits", logits)
         }
         previous = Array(history.suffix(2)); consumed += tokens.count; failed = false

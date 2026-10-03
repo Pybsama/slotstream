@@ -91,3 +91,6 @@ Capture exact greedy/sparse parity with all text weights resident inside the 10 
 ## [2026-10-03 07:28] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Capture larger per-class cache parity, high physical-slot checks, real cache counters and process peaks; retain unqualified performance and production status.
 
+## [2026-10-03 08:02] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Added source-bound lean generation pilot and input refusals; preserved six paired below-target results and a separately discarded CPU timing profile; parallel demanded reads are the next hypothesis. Prior finite-rotary remote CI passed.
+

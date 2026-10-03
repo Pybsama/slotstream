@@ -567,8 +567,9 @@ layer codebooks once. Large prefill retains separate immutable staging. The
 receipts include exact bank/book bytes, hit/load/eviction counts and pins.
 Both packs preserve their complete reference boundaries with real cache hits
 and CLOCK replacement. This remains a small synchronous research cache.
-Larger capacity, resident dense weights, asynchronous reads, resize, production
-byte budgeting and governor integration remain open.
+The sections below cover the larger-bank and resident-text experiments.
+Asynchronous reads, resize, production byte budgeting and governor integration
+remain open.
 
 
 The finite table is independently reproduced and embedded with:
@@ -611,3 +612,49 @@ The same process ceiling applies, so this mode does not authorize extra memory.
 Per-family kernel admission and component tests cover the enlarged physical
 row offsets. Compare receipt counters and measured peaks; this experiment does
 not choose cache sizes automatically or establish generation throughput.
+
+## Bounded generation timing pilot
+
+Freeze a source-bound binary directory before using the timing harness:
+
+```sh
+.venv/bin/python Tools/vq_performance_pilot.py \
+  --binary <frozen-build>/slotstream \
+  --research-root <research-directory> --out <new-pilot-directory>
+```
+
+`performance-pilot-v1.json` fixes one literal original-tokenizer prompt, 128
+greedy samples, two independent validation runs and three paired rounds in
+alternating order. This profile uses complete resident text, fixed 512/96
+expert banks and a 10 GB process bound. It is a cost pilot, with no draft,
+vision, completed-task or broader-context qualification.
+
+Validation disables intermediate state observers and compares sixteen complete
+vocabulary arrays plus the autoregressive tokens with the independent frozen
+reference. Measurement requires that receipt from the exact binary, Metal
+library, profile and inventory. The measured path omits logit hashing too;
+finite-value and resource guards still run. Ordinary full-state parity probes
+retain their observers by default.
+
+Each process authenticates all main-model files, loads text weights, and starts
+the request with empty expert banks. Authentication and loading are reported
+separately. This reads the files before timing, so it does not claim a cold SSD
+cache. TTFT ends at the first committed sample. Decode rate uses only the
+subsequent committed tokens and the matching inter-emission interval; EOS is
+excluded from its numerator. Full request time and every interval are retained.
+
+Nominal observed thermal state, disabled low-power mode, no request paging and
+enough completed samples determine timing eligibility. Independent supervision
+enforces process memory, OS pressure and time bounds. Review competing activity
+before running and do not build, run another model or conduct a storage study
+at the same time. Ineligible runs remain evidence and are never replaced with
+better runs. The harness reports every run and paired medians only when all
+measurement observations are eligible; it never promotes a pack or a speed
+claim.
+
+After a successful validation, exercise metadata and mode refusals with
+`Tools/vq_performance_refusals.py --binary <frozen-build>/slotstream
+--research-root <research-directory> --validation-receipt
+<pilot>/validation-3.2/receipt.json --out <new-refusal-directory>`.
+These cases require complete real metadata arguments and verify the expected
+error before any model-output directory is created.

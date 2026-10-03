@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T07:26:15.233926Z
+updated: 2026-10-03T08:01:31.974451Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-generation-cpu-profile]] — VQ prototype CPU sample identifies synchronous read waits
+- [[sources/runs/2026/10/2026-10-03-native-vq-generation-cost-pilot]] — Paired bounded VQ generation pilot remains below the speed target
 - [[sources/runs/2026/10/2026-10-03-native-vq-wide-record-cache]] — Larger VQ allocation classes preserve complete-model parity
 - [[sources/runs/2026/10/2026-10-03-native-vq-resident-text]] — Complete resident VQ text payload and exact model/cache parity
 - [[sources/runs/2026/10/2026-10-03-vq-finite-rotary-table-portability]] — Exact finite VQ rotary table after reproduced GPU trigonometry differences
@@ -505,10 +507,8 @@ updated: 2026-10-03T07:26:15.233926Z
 - [[sources/runs/2026/09/2026-09-07-configurable-context-ollama-overflow-wire-counterexample]] — Actual HTTP gate exposes stale prose matching and missing structured Ollama overflow codes
 - [[sources/runs/2026/09/2026-09-06-configurable-context-full-image-and-actual-client-pass]] — V202 full image, ordinary quality, actual Hermes and Ollama image correctness pass
 - [[sources/runs/2026/09/2026-09-06-optimization-vision-acceptance-profile]] — Full vision test profile and mandatory acceptance hardening
-- [[sources/runs/2026/09/2026-09-06-optimization-planner-family-refinement]] — Unapplied planner-family refinement preserves direct dispatch
-- [[sources/runs/2026/09/2026-09-06-configurable-context-vision-target-counterexample]] — V202 independent vision reference passes; full image fixture exceeds the 10 GB test target
 
 ## More
 
-This folder has 721 files. The 500 most recent are listed above.
+This folder has 723 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

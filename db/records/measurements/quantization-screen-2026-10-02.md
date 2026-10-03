@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T07:28:36.224859+00:00
+updated: 2026-10-03T08:02:58.525530+00:00
 summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -238,3 +238,21 @@ Useful larger expert-cache capacity, asynchronous ownership, PLE caching/read pa
 Real components match the reference through every admitted physical row and hot boundaries up to slot 511, within the existing 2 GB component bound. Both fully resident text configurations preserve all 16 generated tokens and 2,560 boundaries and all 984 sparse boundaries. Their highest process footprint is 9,433,913,080 bytes, within the existing 10 GB research bound. All pins are released, three fully specified wide-mode conflicts are refused, and all 95 native catalogue checks pass.
 
 On the same greedy fixture, VQ 3.2 cache hits rise from 311 to 2,379 and loads fall from 13,952 to 11,884. These aggregate counters include prefill and continuation; they are not a decode-only speed measurement. Hash observers and setup work remain inside the diagnostic process. Production serving, asynchronous read ownership, runtime resizing, task quality and complete-configuration throughput remain separate gates. No candidate is admitted to Auto.
+
+
+### First complete-model generation-cost pilot, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-generation-cost-pilot]] binds a new frozen 44-token prompt / 128-token generation pilot, the exact binary and both artifacts. Separate validation first proves all sixteen complete vocabulary arrays and sampled tokens against the independent greedy reference while intermediate state observation is disabled. Measurement also omits final-logit hashing. Full finite-value and resource checks remain active, and all 138 main payloads are authenticated before the request interval. The process begins with empty expert banks but an uncontrolled OS page cache after authentication; this is not cold-SSD latency.
+
+| Pack | Three committed generation rates, tokens/s | Median rate | Median TTFT, seconds | Median authentication/resident setup, seconds |
+| --- | --- | --- | --- | --- |
+| VQ 3.2 | 3.07638 / 2.98809 / 3.04660 | 3.04660 | 9.26446 | 29.18210 |
+| VQ 4.4 | 2.54737 / 2.52407 / 2.52353 | 2.52407 | 10.51741 | 39.10702 |
+
+All six measurements complete 128 non-EOS tokens and meet the predeclared observed timing criteria. Three alternating paired rounds are preserved; there are no replacement runs. The rate is 127 divided by elapsed time from first to last committed emission. Full request time, every interval, startup observations, per-token thermal/power observations, global paging and separate prefill/decode cache counts remain in the receipts. Decode hit fractions are approximately 30.82% and 30.76% in this fixed small-cache experiment. The final capped output is a reasoning continuation, not a completed-task quality evaluation. EOS termination remains unexercised.
+
+The fastest representation here remains far below the proposed target. The older installed-pack pilot uses a different instrument and context policy and lacks complete ambient-override evidence, so no baseline speedup/slowdown is inferred from their numerical difference. This result does not qualify optimized VQ, larger contexts, MTP, vision, Auto or another Mac. Sixteen actual CLI/input refusal cases, the ordinary 3.2 full-state generation regression and all 95 native catalogue checks pass on this pilot binary. The complete e56f8fc remote CI separately confirms the prior finite-rotary checkpoint; the full static suite has not been claimed as freshly rerun here.
+
+### CPU attribution follow-up, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-generation-cpu-profile]] preserves one separately budgeted sampled run. Its timing is discarded because sampling perturbs execution. Of 2,083 main-thread samples, 893 sit in the expert-piece pread subtree; GPU waits are also substantial. Process-wide leaf totals include other threads and cannot use the main-thread denominator. The profile supports testing bounded parallel demanded reads first; it does not establish a precise wall-time breakdown or a measured optimization gain.

@@ -174,6 +174,23 @@ package final class VQCheckpoint {
         revision = profile.revision; inventorySHA256 = hash
     }
 
+    /// Timing pilots pay complete payload authentication before their request
+    /// interval. Keep descriptors owned so demand reads cannot hash a new shard
+    /// inside a later token. This does not load or warm expert records.
+    package func authenticateMainPayloads(shouldContinue: () -> Bool) throws {
+        for filename in identities.keys.sorted() {
+            guard shouldContinue(), let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 3_000_000_000,
+                  ProcessMemory.peakResidentBytes() <= 10_000_000_000 else {
+                throw ModelError("VQ payload preparation lost its resource envelope")
+            }
+            if let owned = files[filename] { try owned.verifyUnchanged() }
+            else {
+                files[filename] = try VQTensorFile(url: directory.appendingPathComponent(filename),
+                    identity: identities[filename]!, shouldContinue: shouldContinue)
+            }
+        }
+    }
+
     private func file(for name: String, shouldContinue: () -> Bool) throws -> VQTensorFile {
         guard let filename = index[name], let identity = identities[filename] else { throw ModelError("missing authenticated VQ tensor: \(name)") }
         if let owned = files[filename] { try owned.verifyUnchanged(); return owned }

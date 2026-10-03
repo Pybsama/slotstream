@@ -1,0 +1,535 @@
+{
+  "checkpoint": "Qwen/Qwen3.8-Flash-Next",
+  "checkpoint_revision": "de4b8e4d43b917e7706784d8bb445c9af86a3540",
+  "tokenizer_sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+  "text": "<|im_start|>user\nExplain in two short paragraphs how a local mixture-of-experts model can use SSD streaming when its weights exceed RAM. Distinguish a saved memory ceiling from current allocation.<|im_end|>\n<|im_start|>assistant\n<think>\n",
+  "text_sha256": "2423950dce73c0bee4a35e59a45904858ccc85bce5d661610e74b6905a2f828a",
+  "prompt": [
+    248045,
+    846,
+    198,
+    814,
+    20139,
+    303,
+    1330,
+    2716,
+    41228,
+    1204,
+    264,
+    2136,
+    20340,
+    8404,
+    17830,
+    15089,
+    1558,
+    628,
+    958,
+    35160,
+    16350,
+    948,
+    1141,
+    13914,
+    12131,
+    21360,
+    13,
+    414,
+    85596,
+    264,
+    6568,
+    4779,
+    21482,
+    494,
+    1428,
+    23014,
+    13,
+    248046,
+    198,
+    248045,
+    74455,
+    198,
+    248068,
+    198
+  ],
+  "sampling": "argmax-first-index",
+  "eos_token_id": 248044,
+  "schema": 1,
+  "profile": "vq-greedy128-performance-pilot-v1",
+  "scope": "experimental single-context non-speculative pilot, not complete-configuration qualification",
+  "max_new_tokens": 128,
+  "minimum_committed_tokens": 64,
+  "validation_steps": 16,
+  "configuration": {
+    "resident_text": true,
+    "main_bank_records": 512,
+    "secondary_bank_records": 96,
+    "mtp": false,
+    "vision": false,
+    "context_limit": 2054,
+    "process_bound_bytes": 10000000000
+  },
+  "resources": {
+    "validation_runs": 2,
+    "timing_runs": 6,
+    "run_timeout_seconds": 1800,
+    "minimum_reclaimable_bytes": 13000000000,
+    "minimum_remaining_headroom_bytes": 3000000000,
+    "additional_weights_bytes": 0,
+    "paid_compute_usd": 0
+  },
+  "rounds": [
+    [
+      "3.2",
+      "4.4"
+    ],
+    [
+      "4.4",
+      "3.2"
+    ],
+    [
+      "3.2",
+      "4.4"
+    ]
+  ],
+  "protocol": {
+    "validation": "Separate process verifies all sixteen complete Float32 vocabulary arrays and autoregressive samples against the pinned independent greedy reference with state observation disabled. Required before measurement for this exact binary, metallib, profile and inventory.",
+    "cache_state": "All 138 main payloads are fully authenticated through owned descriptors before the request. New model state and empty expert banks per process; resident text loaded before request. OS page cache is uncontrolled after these reads and is not described as cold SSD. No warmup generation.",
+    "timer": "Monotonic request start immediately before first forward; emission after forward returns and sample is ready. TTFT is first committed emission minus request start. Committed decode rate is (emitted non-EOS tokens minus one) / (last committed emission minus first committed emission). Report total request and load durations separately; EOS and setup are excluded from decode numerator.",
+    "observation": "Full state/logit hashing and trace callbacks disabled in measurement. Existing finite checks, headroom checks, cache arithmetic and synchronization retained. Operating conditions observed between emissions and included in inter-emission time.",
+    "eligibility": "No paging increase during request, nominal observed thermal state, low-power mode off, at least 64 committed tokens, no development overrides, independent supervision completed and preflight excludes competing model/compiler jobs; operator reviews the task list and runs no storage study during the pilot. Preserve ineligible runs, no replacement runs or best-of selection.",
+    "comparison": "Report every run, paired medians only if all six timing runs are eligible. No baseline speedup or >=20 tokens/s qualification from this pilot. No held-out quality inference."
+  },
+  "references": {
+    "098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe": {
+      "pack": "3.2",
+      "manifest_sha256": "30708c5b7188bf76ec0548da7603672d99cf1871371a5c1366db0e4ecac03db6",
+      "generated": [
+        760,
+        1156,
+        6587,
+        264,
+        10597,
+        15673,
+        314,
+        1204,
+        264,
+        2136,
+        20340,
+        8404,
+        17830,
+        15089,
+        318,
+        24797
+      ],
+      "logits": [
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            44,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 43704320,
+          "sha256": "88a5dda18125a2db2d6ee80cce7cb639cd93c65fd2c3aefe520380f311379456"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "605444ab7ee3fda8e6b91ef9f529fde40230b72f3df8dce9ed8fb4b350d6a9e5"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "99bc1be04bbdc44892da0e741c6398e3cddc3ae9e02133141cb65f2d1a047f13"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "cb4f78ec48189e3b003c9b4ba573041f7bc17c00be2b54d8b2bb602e52062bae"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "25e3628dc501312e25dcf41de2f7ff0ef2a7b2eba5c0cabf3cb7040f2ea64fcf"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "8afa673c720d2e12935049bc68ab23bd47f36c624271f09a6e47de1d7411cee1"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "b6aada687bd352edd05e0bb931e3c368dbbdbce2f9cb0f69b2b1107b395583df"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "88c3d2503ed5cbac6b099b01f9c494d900a1faa6cf5a8d182e53bfba0ba3730a"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "e4b42eabb8b0eb7b88931deded0f9fb9f5d9ceb6898842a349c545fe203508de"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "cbdbb0987cba9adb0c3fa12134cd096b5e527fa04ebf6e8c794bf1e6a309890e"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "55d945e09227d0a0b551479752c8673f42ae9cb5c75432b78ec1d668426b638a"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "22978c1b4fc2195f60ad469761062246f897555752869e9de2e012ee26f7323c"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "a3dc7d30b80c1b7e36e4aca23ab69eca40d1a09fb1ae780c327c4a3f2f533b53"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "83b373f83d65dc593a800d87cf62f8775867c7271d8bd05f4a41f12742f61c62"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "45665722f236ed23e4e2125ab60b280e4c849f7a4d028184333aaa3ff6559cee"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "f4df8a60fdcfa89e67687c173b1a92d6bee5960c76ecd40c589728e919a569e2"
+        }
+      ]
+    },
+    "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac": {
+      "pack": "4.4",
+      "manifest_sha256": "eeac2656cad7f6219dbc3a6d6192a69c3d1f9f5c6f70522ae0fb65b4f8b63036",
+      "generated": [
+        760,
+        1156,
+        369,
+        9859,
+        883,
+        264,
+        10597,
+        8282,
+        25,
+        1204,
+        264,
+        2136,
+        20340,
+        8404,
+        17830,
+        15089
+      ],
+      "logits": [
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            44,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 43704320,
+          "sha256": "2e6b345c237073597e640c487fc06bd98f0b045e281255f0f8a97e2e2c557896"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "8363d8acc400c6f2cc2ab108322bcc460c04aebe349070ec2d024426d446e865"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "784091dcaab6504fc4bd814bcbf75a3efc30b1681395abbc9d4174d71e7aa06c"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "b9ea4f6e5aec60322a64cededd59239ad7807644d0f6b038a3c4509945bd06f9"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "d49dba44345d6f65295a5a0c69d55dd56d7a24bbef00b5a2f2b805c331346cfd"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "d4188f818e7f661dc80e3de80bb50b2944d2f5d50d236a1751291c7a22e829fc"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "982cf849b688656d524002f563206f733c142ccdda6a7829be9c7cec9374be2d"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "d10e28be9ae60331ae88162f265834fd6535ab2ad50372846ca8a72222eb1395"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "2060db74a9f9d4c35a40fd5b3eeb14484d98c6a4cd495b99740c3fd4094c1bfd"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "f4d055b09e4e9b3b45bc8ac87099be4c0043efbf45bb55db09b3fac45b818f99"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "d2b257165b941b925c15023fe9303cdc9eed28046dd8629eff0715814344b53d"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "d83e6015a9160f128be575eb8c07f7b9c7925b569d64fdeecbb966406586fceb"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "d30f6ab08ef0504b5b1702b4aa698561e8ebc0ab8f8d552a6a4531f0e873b8d1"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "5dbef9981894a2e54f9282bc2e0a8cc8b17f1ef5ffac896a4ae3f97ce2ec22a4"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "5412216db718a4b7046bdc8ea9364cf2e7cd0ddfb38ebcfdc5aea1243885281f"
+        },
+        {
+          "layer": 48,
+          "name": "logits",
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "d59b4009feeb2bc8bed679bd48e516db4d189e23ced4def0a03cfb8c75d758ed"
+        }
+      ]
+    }
+  }
+}
