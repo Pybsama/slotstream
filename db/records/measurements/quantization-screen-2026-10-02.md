@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T04:36:32.850146+00:00
+updated: 2026-10-03T05:06:45.945820+00:00
 summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -156,3 +156,15 @@ This is synchronous immutable staging. It does not supply persistent residency, 
 [[sources/runs/2026/10/2026-10-02-native-vq-segmented-prefill]] records the pinned large-prefill dispatch audit and exact native expert composition for both packs at 410 and 512 prompt rows. The actual default is fused segmented GEMM, with recorded kernel flags and executed variant names. The reference's fixed decoded-expert chunk of 32 affects only its fallback; it is not evidence that the admitted large-prefill path materializes decoded matrices. No prior measured outputs are retracted by this dispatch clarification.
 
 The native wrapper uses the exact reviewed segmented kernel and its preprocessor specialization, preserves complete expert token segments across storage partitions, and restores routing order. Sixty-four real experts with skewed routes exercise two staging batches, partial tiles and both codebook placements. Complete SwiGLU outputs match exactly in both inspected layer families and both packs. All 95 native catalogue checks and the reference/source unit checks pass. These are component results with bounded process-memory supervision, not full-model prefill or timing qualification. Full-model attention, PLE and recurrent state at these batch sizes are the next parity gate; mutable residency, native generation, quality and speed remain open.
+
+### Complete native prefill and rotary follow-up
+
+[[sources/runs/2026/10/2026-10-02-native-vq-complete-prefill]] records both packs passing the fixed prefill512-decode1-v1 profile. Each performs a 512-token pass and one continuation using retained state. All 320 boundaries match exact complete logical bytes, including full-vocabulary logits computed at the original pass shape. Every layer executes segmented prefill. Both runs reach eleven record-staging batches within a layer while retaining at most 32 expert records per batch. Native process peaks are 3,069,757,840 bytes for VQ 3.2 and 3,082,111,328 bytes for VQ 4.4, within the frozen 4 GB diagnostic bound. Global swap counters remain diagnostic; this is not a clean-timing result.
+
+The native readers independently verify 137 demanded files, totaling 73,780,799,521 and 100,494,081,991 bytes respectively. This is not a claim that unused optional files were opened. The reference producer independently verifies the complete artifact map. The low diagnostic footprint comes from releasing dense blocks and expert staging; it is not a production memory minimum. All 95 native T0/T1 checks pass with no skips.
+
+[[sources/runs/2026/10/2026-10-02-vq-prefill-rotary-arithmetic]] retains the failed native attempts. The first mismatch occurs at QSA layer three after three exact layers. Its preceding projection and normalization intermediates agree. The native inverse-frequency vector differs at 23 of 32 FP32 entries and matches a fast Metal power probe exactly. Precise power matches the pinned Python vector, and the repaired candidate's frequency vector plus all first-512-position FP32 sine/cosine bits pass their dedicated checks. A preliminary microscope script failed on an unsupported array.repeat method before its GPU experiment; its corrected successor and the failed transcript are retained. The deployed rotary path remains unchanged.
+
+This completes the bounded ordinary-prefill numerical checkpoint. It does not establish generated sequences, longer-context sparse selection, mutable expert residency, live governance, draft or vision behavior, held-out quality or committed generation speed. Those gates remain open.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-prefill-validation]] records the complete static suite passing on this frozen corrected prefill binary, including 420 memory-override cases, planner, transport and installer checks. Eight malformed full-prefill manifests are rejected before execution. Fresh original-pack verification succeeds, and its frozen complete-vocabulary memory-prose logit bits remain unchanged. This is scoped regression evidence, not candidate app/governor, quality or speed qualification.

@@ -309,8 +309,8 @@ package final class VQCheckpoint {
     }
 
     package func embedding(_ ids: [Int]) throws -> MLXArray {
-        guard (1...8).contains(ids.count), ids.allSatisfy({ (0..<config.vocabSize).contains($0) }) else {
-            throw ModelError("VQ probe embedding requires one to eight valid tokens")
+        guard (1...512).contains(ids.count), ids.allSatisfy({ (0..<config.vocabSize).contains($0) }) else {
+            throw ModelError("VQ probe embedding requires one to 512 valid tokens")
         }
         let base = "model.embed_tokens."
         let weight = try array(base + "weight", rows: ids, shouldContinue: { true })
@@ -322,7 +322,7 @@ package final class VQCheckpoint {
 
     /// No persistent row cache: keep only the bounded result of this request.
     package func pleEmbedding(history: [Int64], nNew: Int, weights: Dense) throws -> MLXArray {
-        guard (1...8).contains(nNew), history.count == nNew + 2,
+        guard (1...512).contains(nNew), history.count == nNew + 2,
               history.allSatisfy({ (0..<Int64(config.vocabSize)).contains($0) }) else {
             throw ModelError("VQ probe PLE history is outside its bounded shape")
         }

@@ -1,0 +1,135 @@
+import CryptoKit
+import Foundation
+import MLX
+import Slotstream
+
+extension Diagnostics {
+    /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
+    /// Hashes cover every byte, not selected logits or a numerical tolerance.
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL) throws -> Data {
+        struct Boundary: Decodable {
+            let layer: Int, step: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
+            var key: String { "\(step):\(layer):\(name)" }
+        }
+        struct Manifest: Decodable {
+            struct Artifact: Decodable { let inventory_sha256: String }
+            let schema: Int, profile: String, architecture_sha256: String, normalization: String
+            let passes: [[Int]], boundaries: [Boundary], artifact: Artifact
+        }
+        func digest(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
+        let file = try FileHandle(forReadingFrom: fixtureDirectory.appendingPathComponent("model.json"))
+        defer { try? file.close() }
+        guard let raw = try file.read(upToCount: 2_000_001), raw.count <= 2_000_000 else { throw ModelError("VQ prefill model manifest exceeds its bound") }
+        let manifest = try JSONDecoder().decode(Manifest.self, from: raw)
+        var prompt = (0..<512).map { 100 + ($0 * 37) % 10000 }; prompt[255] = 248044
+        guard manifest.schema == 1, manifest.profile == "prefill512-decode1-v1", manifest.passes == [prompt, [101]],
+              manifest.architecture_sha256 == "d6470a2131a64ff37024dfffd2b5bc8c3f4db625f0f3b1ceec7fe346852c1a87",
+              manifest.normalization == "vq-raw-zero-centered-to-pr1788-folded-bf16-v1",
+              manifest.boundaries.count == 320 else { throw ModelError("VQ prefill model fixture does not bind the fixed reference profile") }
+        var expectedKeys = Set<String>()
+        for layer in -1...48 {
+            let keys: [String]
+            switch layer {
+            case -1: keys = ["embedded"]
+            case 48: keys = ["mixed", "logits"]
+            case 1: keys = ["hidden", "conv", "state", "ple_conv"]
+            case let layer where (layer + 1) % 4 == 0: keys = ["hidden", "keys", "values", "indexer"]
+            default: keys = ["hidden", "conv", "state"]
+            }
+            for step in 0...1 { for key in keys { expectedKeys.insert("\(step):\(layer):\(key)") } }
+        }
+        var entries: [String: Boundary] = [:]
+        for entry in manifest.boundaries {
+            guard expectedKeys.contains(entry.key), entries[entry.key] == nil,
+                  ["F16", "BF16", "F32"].contains(entry.dtype), (1...5).contains(entry.shape.count),
+                  entry.shape.allSatisfy({ $0 > 0 }),
+                  entry.sha256.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
+                throw ModelError("invalid VQ prefill boundary identity or geometry")
+            }
+            var bytes = entry.dtype == "F32" ? 4 : 2
+            for dimension in entry.shape {
+                guard dimension <= 600_000_000 / bytes else { throw ModelError("VQ prefill boundary exceeds its byte bound") }
+                bytes *= dimension
+            }
+            guard bytes == entry.bytes else { throw ModelError("VQ prefill boundary byte count mismatch") }
+            entries[entry.key] = entry
+        }
+        guard Set(entries.keys) == expectedKeys else { throw ModelError("missing VQ prefill boundaries") }
+        guard !ProcessInfo.processInfo.environment.keys.contains(where: {
+            $0.hasPrefix("SLOTSTREAM_") || $0.hasPrefix("SS_DEBUG") || $0.hasPrefix("VQ_") || $0.hasPrefix("VQLAB_")
+        }) else { throw ModelError("VQ prefill model requires no developer overrides") }
+        try ModelProcessGuard.acquire()
+        guard let before = ProcessMemory.vmActivity(), before.reclaimableBytes >= 13_000_000_000 else {
+            throw ModelError("VQ prefill model requires 13 GB actual reclaimable memory")
+        }
+        let checkpoint = try VQCheckpoint(directory: source, inventory: inventory)
+        guard checkpoint.inventorySHA256 == manifest.artifact.inventory_sha256 else { throw ModelError("VQ prefill fixture and checkpoint differ") }
+        let manager = FileManager.default
+        guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ prefill output directory must be new") }
+        try manager.createDirectory(at: output, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
+        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, 3_000_000_000)
+        defer {
+            Stream.gpu.synchronize(); MLX.Memory.clearCache()
+            MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
+        }
+        let model = VQModelProbe(checkpoint)
+        var c = CheckBuilder("quantization-prefill-model"), observed: [String: String] = [:]
+        var traceLayer = -1, traceValues: [String: MLXArray] = [:]
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        func receipt(_ failure: String?) throws -> Data {
+            var object: [String: Any] = ["schema": 1, "profile": manifest.profile, "qualification": "unproven",
+                "scope": "complete prefill arithmetic and one continuation; no generation qualification",
+                "fixture_sha256": digest(raw), "inventory_sha256": checkpoint.inventorySHA256,
+                "report": try JSONSerialization.jsonObject(with: encoder.encode(c.report())), "observed": observed,
+                "segmented_prefill_layers": model.segmentedPrefillLayers,
+                "maximum_record_batches": model.maximumRecordBatches, "maximum_live_experts": model.maximumLiveExperts,
+                "peak_process_bytes": ProcessMemory.peakResidentBytes(), "peak_mlx_bytes": MLX.Memory.peakMemory,
+                "verified_files": checkpoint.verifiedFileCount, "verified_payload_bytes": checkpoint.verifiedPayloadBytes,
+                "before": try JSONSerialization.jsonObject(with: encoder.encode(before))]
+            if let failure { object["failure"] = failure }
+            let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: output.appendingPathComponent("receipt.json"), options: .atomic)
+            return data
+        }
+        do {
+            try withError {
+                for (step, tokens) in manifest.passes.enumerated() {
+                    try model.forward(tokens, observe: { layer, name, value in
+                        let key = "\(step):\(layer):\(name)"
+                        guard let entry = entries[key], observed[key] == nil else { throw ModelError("unexpected VQ prefill boundary") }
+                        eval(value)
+                        let dtype = value.dtype == .bfloat16 ? "BF16" : value.dtype == .float32 ? "F32" : value.dtype == .float16 ? "F16" : "unsupported"
+                        let geometry = value.shape == entry.shape && dtype == entry.dtype && value.nbytes == entry.bytes
+                        guard value.nbytes <= 600_000_000 else { throw ModelError("native VQ prefill boundary exceeds its byte bound") }
+                        let finite = all(isFinite(value)).item(Bool.self)
+                        let actual = digest(value.asData(access: .copy).data)
+                        observed[key] = actual
+                        c.expect(key + " geometry", geometry); c.expect(key + " finite", finite); c.equal(key + " complete byte hash", actual, entry.sha256)
+                        guard geometry && finite && actual == entry.sha256 else {
+                            try save(arrays: [name: value], url: output.appendingPathComponent("mismatch.safetensors"))
+                            throw ModelError("VQ prefill model mismatch at " + key)
+                        }
+                        if name == "hidden" { fputs("VQ prefill P\(step) L\(layer) exact\n", stderr) }
+                    }, trace: { layer, name, value in
+                        if traceLayer != layer { traceValues.removeAll(); traceLayer = layer }
+                        traceValues[name] = value
+                    })
+                }
+            }
+            c.equal("every full logical tensor compared", observed.count, expectedKeys.count)
+            c.equal("every layer used segmented prefill", model.segmentedPrefillLayers, 48)
+            c.expect("bounded complete staging", model.maximumLiveExperts <= 32)
+            guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ prefill model exceeded its 4 GB process bound") }
+            let result = try receipt(nil)
+            guard c.report().passed else { throw ModelError("VQ prefill model assertions failed") }
+            return result
+        } catch {
+            if !traceValues.isEmpty {
+                try save(arrays: traceValues, url: output.appendingPathComponent("trace-layer-\(traceLayer).safetensors"))
+            }
+            _ = try receipt(String(describing: error))
+            throw error
+        }
+    }
+}

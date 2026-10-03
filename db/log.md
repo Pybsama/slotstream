@@ -61,3 +61,6 @@ Preserved whole-batch VQ dispatch across immutable expert partitions. Exact fuse
 ## [2026-10-03 04:36] update | records/measurements/quantization-screen-2026-10-02.md
 Audited the pinned large-prefill default as fused segmented GEMM, not its decoded fallback. Added exact source-bound native specialization and complete-segment staging. Both packs match real expert SwiGLU at 410/512 rows with skewed routing; 95 native catalogue checks and source/reference tests pass. Full-model prefill and qualification remain open.
 
+## [2026-10-03 05:06] update | records/measurements/quantization-screen-2026-10-02.md
+Both VQ packs pass exact 512-token full-model prefill plus continuation across all 320 complete tensor boundaries. Localized the first QSA failure to fast versus precise rotary power and isolated the repair to candidate arithmetic. Preserved failures and reference identities. All 95 native checks, eight manifest refusal cases, unchanged deployed logits and the complete static suite pass. Generated sequences, sparse selection, persistent caches, quality and speed remain open.
+

@@ -16,11 +16,12 @@ package final class VQModelProbe {
     private var failed = false
     package private(set) var maximumRecordBatches = 0
     package private(set) var maximumLiveExperts = 0
+    package private(set) var segmentedPrefillLayers = 0
 
     package init(_ checkpoint: VQCheckpoint) {
         self.checkpoint = checkpoint
         let cfg = checkpoint.config
-        rope = Rope(dim: cfg.rotaryDim, base: cfg.ropeTheta)
+        rope = Rope(dim: cfg.rotaryDim, base: cfg.ropeTheta, pinnedVQReference: true)
         previous = [Int64](repeating: Int64(cfg.eosTokenId), count: 2)
         for layer in 0..<48 {
             if cfg.layerTypes[layer] == "linear_attention" { linear[layer] = LinearCache() }
@@ -30,8 +31,8 @@ package final class VQModelProbe {
 
     package func forward(_ tokens: [Int], observe: (Int, String, MLXArray) throws -> Void,
                          trace: ((Int, String, MLXArray) -> Void)? = nil) throws {
-        guard !failed, (1...8).contains(tokens.count), consumed + tokens.count <= 11 else {
-            throw ModelError("VQ full-stack probe admits at most eleven tokens in one-to-eight-row passes")
+        guard !failed, (1...512).contains(tokens.count), consumed + tokens.count <= 513 else {
+            throw ModelError("VQ full-stack probe admits at most 513 tokens in passes of at most 512")
         }
         // Partial state cannot be reused after any read, numerical or observer
         // failure. This probe deliberately offers no speculative recovery.
@@ -101,6 +102,11 @@ package final class VQModelProbe {
             let attention = QSAAttention(weights, layer: layer, arithmetic: .vqPR1788)
             var values: [String: MLXArray] = [:]
             if trace != nil { attention.debugSink = { values[$0] = $1 } }
+            if let trace {
+                let angles = rope.table(start: kv[layer]!.offset, count: x.dim(1))
+                trace(layer, "ropeInvFreq", rope.invFreq)
+                trace(layer, "ropeCos", angles.0); trace(layer, "ropeSin", angles.1)
+            }
             attended = attention(x, rope: rope, cache: kv[layer]!, idxCache: indexer[layer]!)
             for (name, value) in values { trace?(layer, name, value) }
         }
@@ -113,8 +119,16 @@ package final class VQModelProbe {
         let indices = RouterSelection.reference(logits, k: 10)
         let probability = softmax(takeAlong(logits, indices, axis: -1), axis: -1, precise: true)
         let routes = indices.asType(.uint32).asArray(UInt32.self)
-        let streamed = try VQRouteStream.call(input.reshaped([-1, 2560]), routes: routes) { ids in
-            try checkpoint.records(layer: layer, experts: ids)
+        let streamed: VQRouteStream.Result
+        if input.dim(1) > 409 {
+            streamed = try VQPrefillStream.call(input.reshaped([-1, 2560]), routes: routes) { ids in
+                try checkpoint.records(layer: layer, experts: ids)
+            }
+            segmentedPrefillLayers += 1
+        } else {
+            streamed = try VQRouteStream.call(input.reshaped([-1, 2560]), routes: routes) { ids in
+                try checkpoint.records(layer: layer, experts: ids)
+            }
         }
         maximumRecordBatches = max(maximumRecordBatches, streamed.batches)
         maximumLiveExperts = max(maximumLiveExperts, streamed.maximumExperts)

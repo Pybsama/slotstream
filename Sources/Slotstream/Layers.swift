@@ -99,9 +99,15 @@ public struct Rope {
     }
 
     public init(dim: Int, base: Float) {
+        self.init(dim: dim, base: base, pinnedVQReference: false)
+    }
+
+    package init(dim: Int, base: Float, pinnedVQReference: Bool) {
         self.dim = dim
         let exps = MLXArray(stride(from: 0, to: Int32(dim), by: 2).map { Float($0) / Float(dim) })
-        self.invFreq = pow(MLXArray(base), -exps)
+        self.invFreq = pinnedVQReference
+            ? VQArithmetic.inverseFrequencies(exps, base: base)
+            : pow(MLXArray(base), -exps)
     }
 
     /// positions (B, T) -> cos/sin (B, T, dim)

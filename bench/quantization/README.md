@@ -438,3 +438,47 @@ F16 I/O contract. `VQPrefillStream` stages complete expert segments without
 splitting their token tiles, then restores the original pair order. Passing
 this expert-composition check does not establish full-model prefill parity,
 persistent caching, task quality or speed.
+
+## Complete prefill and rotary reference
+
+The fixed `prefill512-decode1-v1` profile checks one 512-token prompt pass and
+one retained-state continuation through every layer and the complete vocabulary
+head. Hashes cover every logical tensor byte. They preserve the head's original
+batch shape and cannot be substituted with sampled rows or tolerances.
+
+```sh
+.venv/bin/python Tools/vq_model_prefill_reference.py --model <verified-vq-pack> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --out <new-prefill-model-reference>
+.build/release/slotstream quantization-model-check --prefill \
+  --source-directory <verified-vq-pack> --source-inventory <inventory.json> \
+  --fixture-directory <same-pack-prefill-model-reference> --output <new-result>
+```
+
+Run these sequentially under `quantization_logit_run.supervise`. The actual
+13 GB reclaimable preflight, shared model lock, process ceiling and pressure
+cancellation remain required. Native staging retains one dense block and at
+most 32 expert records per batch. Its process peak is not a production pack's
+resident-memory floor. The probe stops at the first mismatch and preserves its
+trace. `--save-layer 2` on a fresh reference run supplies the authenticated input
+for `Tools/vq_prefill_attention_reference.py`; that microscope independently
+checks its expanded attention against the pinned whole call.
+
+The candidate rotary constructor uses precise Metal power for inverse
+frequencies. The public constructor keeps its deployed arithmetic. The pinned
+reference, fast/precise power comparison and exact frequency/angle digests can
+be reproduced with:
+
+```sh
+.venv/bin/python Tools/vq_rope_reference.py --architecture <pinned-qwen4_exp.py> \
+  --runtime <pinned-model.py> --out <new-rotary-reference>
+.build/release/slotstream quantization-check --kernels
+python3 Tools/vq_prefill_manifest_gate.py --binary <source-bound-slotstream> \
+  --source <verified-vq-pack> --inventory <inventory.json> \
+  --fixture <same-pack-prefill-model-reference> --out <new-fault-results>
+```
+
+The complete prefill profile passes for both inspected packs. Native generation,
+sparse selection at longer context, persistent residency, draft, vision and
+complete-task speed/quality remain independent gates. These checks do not make
+an alternative pack eligible for production loading or automatic selection.

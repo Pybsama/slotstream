@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T04:36:32.014616Z
+updated: 2026-10-03T05:06:45.575031Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-prefill-validation]] — Complete VQ prefill checkpoint regression and metadata validation
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-prefill]] — Exact complete native VQ prefill and continuation boundaries
+- [[sources/runs/2026/10/2026-10-02-vq-prefill-rotary-arithmetic]] — Pinned VQ prefill rotary arithmetic diagnosis and repair
 - [[sources/runs/2026/10/2026-10-02-native-vq-segmented-prefill]] — Native VQ fused segmented prefill matches pinned expert composition
 - [[sources/runs/2026/10/2026-10-02-native-vq-partitioned-route-parity]] — Bounded VQ routed partitions preserve exact arithmetic
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-static]] — Native VQ complete-stack static acceptance
@@ -504,11 +507,8 @@ updated: 2026-10-03T04:36:32.014616Z
 - [[sources/runs/2026/09/2026-09-06-slotpack-v0211-publication-and-r2-retirement]] — Public v0.2.11 provenance, ordinary installation, installed-model acceptance and verified R2 bucket retirement complete the free Hugging Face migration.
 - [[sources/runs/2026/09/2026-09-06-optimization-activation-and-evidence-preservation]] — V199 actual-default qualification preparation and V200 exact historical evidence recovery
 - [[sources/runs/2026/09/2026-09-06-optimization-public-transport-source-alignment]] — V197 exact public transport source alignment and unrun V198 shared correctness queue
-- [[sources/runs/2026/09/2026-09-06-optimization-portable-integration-gates]] — V196 full native portable deployment path gates prepared
-- [[sources/runs/2026/09/2026-09-06-slotpack-hugging-face-full-mac-qualification]] — The native default completes an initially empty Mac installation across a network failure and resume; every original hash verifies, while timing measurements are discarded.
-- [[sources/runs/2026/09/2026-09-06-optimization-final-matrix-workload-binding]] — V195 final matrix binds workloads and controls across native paired and soak evidence
 
 ## More
 
-This folder has 709 files. The 500 most recent are listed above.
+This folder has 712 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

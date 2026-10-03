@@ -72,7 +72,14 @@ struct QuantizationModelCheck: ParsableCommand {
     @Option(name: .long) var sourceInventory: String
     @Option(name: .long) var fixtureDirectory: String
     @Option(name: .long) var output: String
+    @Flag(name: .long, help: "Use the fixed 512-row complete-prefill hash fixture") var prefill = false
     func run() throws {
+        if prefill {
+            print(String(decoding: try Diagnostics.quantizationPrefillModel(source: URL(fileURLWithPath: sourceDirectory),
+                inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
+                output: URL(fileURLWithPath: output)), as: UTF8.self))
+            return
+        }
         print(String(decoding: try Diagnostics.quantizationModel(source: URL(fileURLWithPath: sourceDirectory),
             inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
             output: URL(fileURLWithPath: output)), as: UTF8.self))
