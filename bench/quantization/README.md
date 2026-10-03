@@ -311,3 +311,28 @@ layout, not merely equal byte size. It counts shared codebooks separately.
 expert identities and preserves the full route batch's kernel dispatch.
 These component checks do not establish mutable-bank pinning, resize safety,
 full-model parity or a supported pack.
+
+## Dense-block arithmetic and continuation
+
+`Tools/vq_trunk_reference.py` verifies the complete pinned artifact, then
+exports the first linear-attention block and its hyper-connection with the
+corrected normalization convention. It records ordinary forwards and a
+subsequent continuation, including convolution and FP32 recurrence state.
+Run the producer sequentially under `quantization_logit_run.supervise`, as
+with the complete expert-record producer above:
+
+```sh
+.venv/bin/python Tools/vq_trunk_reference.py --model <verified-vq-pack> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --out <new-trunk-fixtures>
+.build/release/slotstream quantization-check \
+  --trunk-fixture-directory <new-trunk-fixtures>
+```
+
+The internal candidate profile uses the pinned reference's grouped RMS,
+query/key normalization, quantized injection, compiled decay and ordinary
+recurrence reduction. The deployed arithmetic remains the default. Native
+checks require exact output and state bits; a small drift is a failure.
+Candidate speculative recording is not implemented by this probe. Passing
+these fixtures does not establish full-model parity, PLE/QSA integration,
+mixed cache ownership, task quality or speed.

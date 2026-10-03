@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T01:35:52.907124Z
+updated: 2026-10-03T02:02:37.121349Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-native-vq-trunk-profile]] — Pinned candidate first-block arithmetic and recurrent continuation match exactly; a complete deployed-model logit case stays byte-identical.
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-records]] — Complete real VQ routed expert composition and independent caller-context ownership checks pass for both research packs.
 - [[sources/runs/2026/10/2026-10-02-corrected-vq-distribution-pilot]] — Corrected normalization, fresh traversal proofs and repeated matched VQ logit pilot; no held-out or native-model qualification.
 - [[sources/runs/2026/10/2026-10-02-vq-pilot-normalization-diagnosis]] — First complete matched logit pilot exposed missing VQ norm folding; all scores are invalid for quality inference.
@@ -506,9 +507,8 @@ updated: 2026-10-03T01:35:52.907124Z
 - [[sources/runs/2026/09/2026-09-06-optimization-scope-checkpoint-interaction]] — Preserve common-prefix checkpoints across read scopes — V193
 - [[sources/runs/2026/09/2026-09-06-configurable-context-budget-and-schedule-component-pass]] — Explicit diagnostic budgets and actual attention schedule pass component gates
 - [[sources/runs/2026/09/2026-09-06-optimization-bounded-diagnostics-and-schedule]] — Priced governor/MTP diagnostics and actual prefill schedule — V191
-- [[sources/runs/2026/09/2026-09-06-optimization-merged-runtime-correctness]] — Shared combined runtime and corrected MTP tail correctness — V189
 
 ## More
 
-This folder has 700 files. The 500 most recent are listed above.
+This folder has 701 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

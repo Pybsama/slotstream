@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-03T01:36:37.980451+00:00
+updated: 2026-10-03T02:02:37.190481+00:00
 summary: Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 date: 2026-10-02
 doc: plan
@@ -29,7 +29,7 @@ Status on October 2, 2026: implementation in progress. The owner requested the f
 | Quality instrument | Separate bounded full-vocabulary KL/top-1 scorer with hash/context validation and deterministic tests | Frozen noninferiority/latency rules, held-out tasks and confidence analysis; corrected matched outputs now favor continued VQ 3.2 engineering, without qualification |
 | Product integration and promotion | Existing pack stays the supported path; no alternate pack is offered | Steps 4 through 10 below, including mixed-size residency, native PLE/draft integration, qualified Auto selection, transactional distribution and real-hardware rollout |
 
-The materialize-then-multiply VQ prototype is a decoding and cost instrument. The recorded one-token kernel screen is much slower than the affine controls; it must not become the production decode path. This does not reject fused VQ. The follow-up fused binding passed selected-row bit equality against Python MLX and reached costs near the affine controls after removing redundant route synchronization. This is a component result. A bounded full-reference runner with quantized PLE row streaming now completes VQ 3.2 forwards. The corrected matched pilot now supports continuing VQ 3.2 engineering. Complete real expert composition and private array-context ownership now pass for both research packs. The next work is independent native trunk/full-model parity and mixed-record storage. Its unknown quality/performance cannot justify moving product defaults early.
+The materialize-then-multiply VQ prototype is a decoding and cost instrument. The recorded one-token kernel screen is much slower than the affine controls; it must not become the production decode path. This does not reject fused VQ. The follow-up fused binding passed selected-row bit equality against Python MLX and reached costs near the affine controls after removing redundant route synchronization. This is a component result. A bounded full-reference runner with quantized PLE row streaming now completes VQ 3.2 forwards. The corrected matched pilot now supports continuing VQ 3.2 engineering. Complete real expert composition and private array-context ownership now pass for both research packs. The first native dense block now passes the pinned candidate arithmetic and continuation checks. The next work is direct native candidate checkpoint loading, full-model parity and mixed-record storage. Its unknown quality/performance cannot justify moving product defaults early.
 
 Reduced targets on the development Mac remain budget tests of that Mac. No other target hardware has been supplied to this implementation session. The hardware qualification rows and the 20-token target remain open; do not label this implementation checkpoint as completion of the whole plan.
 
@@ -269,3 +269,8 @@ Remaining experimental questions are explicit: which affine/VQ configuration win
 ### Native record checkpoint
 
 [[sources/runs/2026/10/2026-10-02-native-vq-complete-records]] records exact complete expert composition for both packs and caller-context replacement regression checks. Experimental VQRecordBatch owns complete bounded records, and VQRecordLayout distinguishes geometry even when byte counts match. This is still immutable staging. Mutable banks, pins, required-read priority, cancellation/generation fences and resize overlap accounting remain open. Native dense-block arithmetic must explicitly match the pinned reference before full-model parity can be claimed; the deployed adapter's arithmetic remains the compatibility baseline.
+
+
+### Native arithmetic checkpoint
+
+[[sources/runs/2026/10/2026-10-02-native-vq-trunk-profile]] records exact first-block output/state parity for the byte-identical fixtures from both verified packs, and unchanged full-model baseline logits on one frozen pilot case. Candidate grouped normalization, query/key normalization, quantized injection and recurrence are explicit internal arithmetic choices. The deployed profile remains the default. This is an experimental block harness, not full candidate loading; QSA, PLE, draft/rollback, mixed pool ownership, held-out tasks and performance remain required before product integration.

@@ -7,6 +7,12 @@ import MLX
 import MLXFast
 import MLXNN
 
+/// Candidate arithmetic is explicit and never changes the deployed checkpoint.
+/// The PR profile is experimental until complete native model parity passes.
+enum BlockArithmeticProfile {
+    case deployed, vqPR1788
+}
+
 // MARK: - norms
 
 /// RMSNorm; with groupSize set, statistics are computed per group of `groupSize`
@@ -15,6 +21,11 @@ struct RMSNorm {
     let weight: MLXArray
     let eps: Float
     let groupSize: Int?
+    let arithmetic: BlockArithmeticProfile
+
+    init(weight: MLXArray, eps: Float, groupSize: Int?, arithmetic: BlockArithmeticProfile = .deployed) {
+        self.weight = weight; self.eps = eps; self.groupSize = groupSize; self.arithmetic = arithmetic
+    }
 
     func callAsFunction(_ x: MLXArray, compiledFinish: Bool = false) -> MLXArray {
         guard let g = groupSize else {
@@ -22,6 +33,10 @@ struct RMSNorm {
         }
         let shape = x.shape
         var v = x.reshaped(Array(shape.dropLast()) + [-1, g])
+        if arithmetic == .vqPR1788 {
+            // mlxNone is the binding's documented empty optional C array.
+            return MLXFast.rmsNorm(v, weight: .mlxNone, eps: eps).reshaped(shape) * weight
+        }
         let vf = v.asType(.float32)
         if compiledFinish, CompiledArithmetic.prepare() {
             let result = CompiledArithmetic.execute(v, meanSquare: vf.square().mean(axis: -1, keepDims: true),
@@ -1112,6 +1127,7 @@ public enum AttentionTuning {
 // MARK: - Gated DeltaNet
 
 final class GDNLayer {
+    let arithmetic: BlockArithmeticProfile
     var minimumProjectionRows = 0
     var fuseInputProjection = false
     private(set) var fusedProjectionsScheduled = 0
@@ -1133,13 +1149,14 @@ final class GDNLayer {
     let valueDim: Int
     let convDim: Int
 
-    init(_ w: ResidentWeights, layer: Int) {
+    init(_ w: TensorSource, layer: Int, arithmetic: BlockArithmeticProfile = .deployed) {
+        self.arithmetic = arithmetic
         layerIndex = layer
         cfg = w.config
         let b = "model.layers.\(layer).linear_attn"
         inQKV = w.linear(b + ".in_proj_qkv")
         inZ = w.linear(b + ".in_proj_z")
-        packedInput = w.packedGDNProjections[layer]
+        packedInput = (w as? ResidentWeights)?.packedGDNProjections[layer]
         inB = w.linear(b + ".in_proj_b")
         inA = w.linear(b + ".in_proj_a")
         convWeight = w.tensor(b + ".conv1d.weight")
@@ -1152,6 +1169,18 @@ final class GDNLayer {
         keyDim = cfg.linearNumKHeads * cfg.linearKHeadDim
         valueDim = cfg.linearNumVHeads * cfg.linearVHeadDim
         convDim = 2 * keyDim + valueDim
+    }
+
+    private func normalizeQK(_ q: MLXArray, _ k: MLXArray) -> (MLXArray, MLXArray) {
+        let inverse = Float(pow(Double(cfg.linearKHeadDim), -0.5))
+        if arithmetic == .vqPR1788 {
+            // Match the pinned Python profile's float scalar conversion and
+            // BF16 operation boundaries, including its RMS epsilon placement.
+            let square = Float(pow(Double(cfg.linearKHeadDim), -1))
+            return (square * MLXFast.rmsNorm(q, weight: .mlxNone, eps: 1e-6),
+                    inverse * MLXFast.rmsNorm(k, weight: .mlxNone, eps: 1e-6))
+        }
+        return (l2normQK(q) * inverse, l2normQK(k))
     }
 
     func callAsFunction(_ x: MLXArray, cache: LinearCache?) -> MLXArray {
@@ -1196,14 +1225,20 @@ final class GDNLayer {
         let v = convOut[.ellipsis, (2 * keyDim)...]
             .reshaped([B, S, cfg.linearNumVHeads, cfg.linearVHeadDim])
 
-        q = l2normQK(q) * Float(pow(Double(cfg.linearKHeadDim), -0.5))
-        k = l2normQK(k)
+        (q, k) = normalizeQK(q, k)
 
         if profile != nil { eval(q, k, v, z, aProj, bProj, aLog, dtBias) }
         let recurrenceStart = profile == nil ? 0 : RuntimeClock.now()
 
         let y: MLXArray
-        if let c = cache, c.record, S > 1, fusedRecording {
+        if arithmetic == .vqPR1788 {
+            // This experimental profile does not yet support speculative state
+            // recording. Its separate draft/rollback parity gate remains open.
+            precondition(cache?.record != true, "candidate recurrence recording is unqualified")
+            let (output, state) = candidateGatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj,
+                aLog: aLog, dtBias: dtBias, state: cache?.ssmState)
+            y = output; cache?.ssmState = state
+        } else if let c = cache, c.record, S > 1, fusedRecording {
             let recorded = gatedDeltaUpdateRecording(q: q, k: k, v: v, a: aProj, b: bProj,
                 aLog: aLog, dtBias: dtBias, state: c.ssmState)
             y = recorded.output
@@ -1271,10 +1306,15 @@ final class GDNLayer {
         var q = convOut[.ellipsis, 0 ..< keyDim].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
         var k = convOut[.ellipsis, keyDim ..< (2 * keyDim)].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
         let v = convOut[.ellipsis, (2 * keyDim)...].reshaped([B, S, cfg.linearNumVHeads, cfg.linearVHeadDim])
-        q = l2normQK(q) * Float(pow(Double(cfg.linearKHeadDim), -0.5))
-        k = l2normQK(k)
-        let (y, _) = gatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj, aLog: aLog, dtBias: dtBias,
-                                      state: cache?.ssmState, mask: nil)
+        (q, k) = normalizeQK(q, k)
+        let y: MLXArray
+        if arithmetic == .vqPR1788 {
+            y = candidateGatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj,
+                aLog: aLog, dtBias: dtBias, state: cache?.ssmState).0
+        } else {
+            y = gatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj, aLog: aLog, dtBias: dtBias,
+                                state: cache?.ssmState, mask: nil).0
+        }
         return outProj(norm(y, gate: z).reshaped([B, S, valueDim]), minimumRows: minimumProjectionRows)
     }
 }
@@ -1751,16 +1791,19 @@ final class GatedResidual {
     let down: QLinear
     let up: QLinear
     let inject: MLXArray?  // (hc, hcDim), bf16
+    let quantizedInject: QLinear?
     var debugName: String? = nil
 
-    init(_ w: TensorSource, base: String, useCombine: Bool) {
+    init(_ w: TensorSource, base: String, useCombine: Bool, arithmetic: BlockArithmeticProfile = .deployed) {
         cfg = w.config
         hcNorm = RMSNorm(
             weight: w.tensor(base + ".hc_norm.weight"), eps: cfg.rmsNormEps,
-            groupSize: cfg.hiddenSize)
+            groupSize: cfg.hiddenSize, arithmetic: arithmetic)
         down = w.linear(base + ".input_mix_weight_down")
         up = w.linear(base + ".input_mix_weight_up")
         inject = useCombine ? w.tensor(base + ".block_inject_weight.weight") : nil
+        quantizedInject = useCombine && arithmetic == .vqPR1788 && w.has(base + ".block_inject_weight.scales")
+            ? w.linear(base + ".block_inject_weight") : nil
     }
 
     /// The mixed input alone, without the inject weights: the router-reuse
@@ -1789,7 +1832,8 @@ final class GatedResidual {
         let shape = Array(w.shape.dropLast()) + [cfg.hcCount, cfg.hiddenSize]
         let mixed = (w.reshaped(shape) * normed.reshaped(shape)).mean(axis: -2)
         guard let injW = inject else { return (mixed, nil) }
-        let projected = QLinear.withReferenceRows(normed, minimumRows: minimumProjectionRows) { RowInvariantMatmul.rows($0, injW.transposed()) }
+        let projected = quantizedInject.map { $0(normed, minimumRows: minimumProjectionRows) }
+            ?? QLinear.withReferenceRows(normed, minimumRows: minimumProjectionRows) { RowInvariantMatmul.rows($0, injW.transposed()) }
         let injected = 2 * sigmoid(projected / Float(cfg.hcCount))
         return (mixed, injected)
     }

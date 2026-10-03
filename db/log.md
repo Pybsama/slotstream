@@ -43,3 +43,6 @@ Captured complete bounded VQ 3.2 reference forwards, corrected traversal proof, 
 ## [2026-10-03 01:37] update | records/measurements/quantization-screen-2026-10-02.md
 Preserved and invalidated the first VQ distribution pilot after an independently verified normalization convention mismatch. Bound the repair, fresh traversal proofs and corrected matched outputs. Added exact native complete expert composition and caller-context ownership checks for both packs; 93 native checks and static suite pass. No full-model candidate, quality or speed qualification.
 
+## [2026-10-03 02:03] update | records/measurements/quantization-screen-2026-10-02.md
+Captured exact native candidate first-block arithmetic and continuation parity, byte-identical fixtures from both verified VQ packs, and unchanged full 48-layer baseline logit bits on one fixed case. Preserved recurrence mismatch and producer failures. 75 trunk assertions, 93 catalogue checks and static gates pass; full candidate model and all qualification gates remain open.
+
