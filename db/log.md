@@ -100,3 +100,6 @@ Implement bounded parallel VQ demanded reads; preserve exact reference and whole
 ## [2026-10-03 08:48] update | records/measurements/quantization-screen-2026-10-02
 Preserve separately sampled parallel-path attribution with all timing discarded and record prior complete CI success.
 
+## [2026-10-03 09:08] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Retain bounded code-only VQ kernel reuse after exact model/ownership gates and a frozen paired improvement; record build-preflight correction and lossless raw evidence.
+

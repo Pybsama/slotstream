@@ -157,6 +157,14 @@ extension Diagnostics {
                     (2, 1024, .words32), (4, 256, .words32), (4, 2048, .words32), (8, 16384, .words32)] {
                     let layout = try VQLayout(columns: columns, dimensions: dim,
                         codebookEntries: entries, groupSize: 64, packing: packing)
+                    let firstKernels = try VQExpertKernels.shared(layout)
+                    let otherWidth = try VQLayout(columns: columns == 640 ? 2560 : 640, dimensions: dim,
+                        codebookEntries: entries, groupSize: 64, packing: packing)
+                    let again = try VQExpertKernels.shared(otherWidth)
+                    c.expect("code-only specialization reused across input widths",
+                        firstKernels.row === again.row && firstKernels.prefill === again.prefill)
+                    c.expect("SIMD code reuse preserves family admission",
+                        dim == 8 ? (firstKernels.simd != nil && firstKernels.simd === again.simd) : again.simd == nil)
                     let dtype: DType = packing == .unpacked8 ? .uint8 : .uint32
                     let codes = MLXArray.zeros([1, 7, layout.codeRowBytes / dtype.size], dtype: dtype)
                     let book = MLXArray.ones([entries, dim], dtype: .float16)
@@ -175,6 +183,13 @@ extension Diagnostics {
                         c.expect("fused rejects expert out of bounds", false)
                     } catch { c.expect("fused rejects expert out of bounds", true) }
                 }
+            }
+            for layout in [
+                try VQLayout(columns: 160, dimensions: 4, codebookEntries: 2048, groupSize: 32, packing: .bytes),
+                try VQLayout(columns: 640, dimensions: 2, codebookEntries: 256, groupSize: 64, packing: .words32)
+            ] {
+                do { _ = try VQExpertKernels.shared(layout); c.expect("kernel cache rejects unadmitted specialization", false) }
+                catch { c.expect("kernel cache rejects unadmitted specialization", true) }
             }
             return c.report()
         }

@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "profile": "vq-kernel-reuse-pair-v1",
+  "scope": "same-artifact two-binary bounded code-object reuse comparison; no product qualification",
+  "pack": "3.2",
+  "profile_file": "performance-pilot-v2.json",
+  "profile_sha256": "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7",
+  "arms": [
+    "before",
+    "after"
+  ],
+  "allowed_source_changes": [
+    "Sources/Slotstream/VQExpert.swift",
+    "Sources/Slotstream/VQExpertKernels.swift",
+    "Sources/SlotstreamDiagnostics/Diagnostics+Quantization.swift"
+  ],
+  "rounds": [
+    [
+      "before",
+      "after"
+    ],
+    [
+      "after",
+      "before"
+    ],
+    [
+      "before",
+      "after"
+    ]
+  ],
+  "resources": {
+    "validation_runs": 2,
+    "timing_runs": 6,
+    "run_timeout_seconds": 1800,
+    "maximum_process_bytes": 10000000000,
+    "minimum_reclaimable_bytes": 13000000000,
+    "additional_weights_bytes": 0,
+    "paid_compute_usd": 0
+  },
+  "adoption": {
+    "minimum_median_paired_decode_ratio": 1.03,
+    "maximum_median_paired_ttft_ratio": 1.1
+  },
+  "contract": "Freeze both source-bound executables and one native profile before any run. Validate sixteen complete vocabulary arrays for each exact producer. Compare all 128 generated IDs including length and EOS behavior. Preserve every alternating measurement; no replacement or dropped slow runs. Report descriptive medians only when all observed timings are eligible. Adopt code-object reuse only if numerical/resource gates pass, median paired generation improves at least three percent and median paired TTFT regresses no more than ten percent. These are engineering adoption criteria, not confidence bounds, hardware certification or >=20 tokens/s qualification."
+}

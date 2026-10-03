@@ -686,3 +686,23 @@ generated sequences, preserve every receipt and use the same eligibility rules
 as the generation pilot. The reader's lane count is one tested hypothesis,
 not an automatic hardware policy. Current results and limits are recorded in
 [the canonical measurement](../../db/records/measurements/quantization-screen-2026-10-02.md#bounded-parallel-demanded-reads-october-3).
+
+## Code-object reuse comparison
+
+The VQ projection implementation shares a bounded set of identical Metal code
+objects. It keeps tensors, array contexts, routing and bank leases independent.
+The adoption experiment uses two source-bound executables and one native profile:
+
+```sh
+.venv/bin/python Tools/vq_kernel_pair_pilot.py \
+  --before <frozen-parallel-read-build>/slotstream \
+  --after <frozen-kernel-cache-build>/slotstream \
+  --research-root <research-directory> --out <new-comparison-directory>
+```
+
+`kernel-pair-v1.json` permits only the three source changes belonging to this
+hypothesis, requires identical Metal-library bytes and binds every validation
+receipt to its actual producer. The entire generated sequence must match in
+all three interleaved pairs. Its engineering adoption threshold does not
+qualify a product pack, task quality or the target speed. See the canonical
+measurement for the result and its limits.

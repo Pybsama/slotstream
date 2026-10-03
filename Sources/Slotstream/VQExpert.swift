@@ -26,17 +26,6 @@ package struct VQExpert {
     private let simdKernel: MLXFast.MLXFastKernel?
     private let prefillKernel: MLXFast.MLXFastKernel
 
-    private static func kernel(source: String, name: String) throws -> MLXFast.MLXFastKernel {
-        let original = "const device T* xrow = x + (size_t)t * IN;"
-        guard source.components(separatedBy: original).count == 2 else {
-            throw ModelError("VQ kernel input-row contract drifted")
-        }
-        let transformed = source.replacingOccurrences(of: original,
-            with: "const device T* xrow = x + (size_t)(t / (uint)XKREP) * IN;")
-        return MLXFast.metalKernel(name: "slotstream_vq_" + name,
-            inputNames: ["x", "eidx", "codes", "codebook", "scales", "dims"], outputNames: ["y"], source: transformed)
-    }
-
     // Geometry is deliberately limited to the inspected Flash Next expert
     // families. This is an implementation bound, not a quality/performance cap.
     package init(codes: MLXArray, codebook: MLXArray, scales: MLXArray, layout: VQLayout, residentBank: Bool = false) throws {
@@ -67,28 +56,8 @@ package struct VQExpert {
         prefillCodes = codes.reshaped(codes.shape)
         self.scales = scales.reshaped(scales.shape); self.layout = layout
         expertCount = codes.dim(0); outputRows = codes.dim(1)
-        let source: String
-        switch layout.dimensions {
-        case 2: source = layout.packing == .unpacked8 ? VQKernelSources.d2u8 : VQKernelSources.d2packed
-        case 4: source = VQKernelSources.d4packed
-        default: source = VQKernelSources.d8scalar
-        }
-        rowKernel = try Self.kernel(source: source, name: "d\(layout.dimensions)_" + layout.packing.rawValue)
-        simdKernel = layout.dimensions == 8 ? try Self.kernel(source: VQKernelSources.d8simd, name: "d8simd") : nil
-        let deviceBook = layout.codebookBytes >= 16_384 || layout.codebookBytes + 12_288 > 32_768
-        // Match the pinned default specialization, including preprocessing
-        // macros. Metal template arguments cannot drive this source's #if.
-        var defines = [("BITS", layout.packing == .unpacked8 ? "0" : String(layout.bits)),
-                       ("GROUP", "64"), ("MAX_K", deviceBook ? "1" : String(layout.codebookEntries)),
-                       ("D_BAKE", String(layout.dimensions)), ("CB_DEV", deviceBook ? "1" : "0"),
-                       ("RTILE", "32"), ("XPAD", "0"), ("TIO", "half"), ("OT2", "1"),
-                       ("DSTORE", "0"), ("PIPE", "0"), ("PH2V", "1")]
-        if layout.packing == .unpacked8 { defines.append(("CT", "uchar")) }
-        let header = defines.map { "#define \($0.0) \($0.1)\n" }.joined()
-        let name = "slotstream_vq_segmented_" + defines.map { $0.1 }.joined(separator: "_")
-        prefillKernel = MLXFast.metalKernel(name: name,
-            inputNames: ["codes", "codebook", "scales", "xsrc", "srcrows", "tmeta", "dims"], outputNames: ["y"],
-            source: VQKernelSources.segmentedPrefill, header: header)
+        let kernels = try VQExpertKernels.shared(layout)
+        rowKernel = kernels.row; simdKernel = kernels.simd; prefillKernel = kernels.prefill
     }
 
     /// A complete expert segment retains all its routed rows when storage is

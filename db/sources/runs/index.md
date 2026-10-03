@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T08:47:48.999507Z
+updated: 2026-10-03T09:07:30.081651Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-kernel-object-reuse]] — Bounded VQ code-object reuse and matched generation comparison
 - [[sources/runs/2026/10/2026-10-03-native-vq-parallel-generation-cpu-profile]] — Parallel VQ CPU sample exposes repeated projection construction
 - [[sources/runs/2026/10/2026-10-03-native-vq-bounded-parallel-record-reads]] — Bounded parallel VQ demanded reads preserve full reference parity
 - [[sources/runs/2026/10/2026-10-03-native-vq-parallel-read-paired-pilot]] — Matched serial and parallel VQ read pilot improves bounded generation
@@ -506,9 +507,8 @@ updated: 2026-10-03T08:47:48.999507Z
 - [[sources/runs/2026/09/2026-09-07-configurable-context-v215-capacity-preflight-hold]] — Capacity campaign remains unrun: current real availability is below the frozen preflight
 - [[sources/runs/2026/09/2026-09-07-optimization-typed-context-correctness]] — Typed context refusal and shared affected correctness V215
 - [[sources/runs/2026/09/2026-09-07-optimization-typed-context-wire-counterexample]] — Typed context integration reveals OpenAI error.code gap
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-idle-swap-control]] — A further no-model idle control observes 16 global swap-ins; capacity held
 
 ## More
 
-This folder has 726 files. The 500 most recent are listed above.
+This folder has 727 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
