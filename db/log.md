@@ -52,3 +52,6 @@ Added complete-file verification and bounded tensor reads through one owned desc
 ## [2026-10-03 03:59] update | records/measurements/quantization-screen-2026-10-02.md
 Authenticated both pinned VQ artifacts for native expert, PLE, dense and embedding reads. Both complete short-stack probes pass all 320 hidden/state/logit boundaries exactly. Preserved QSA failures, sigmoid diagnosis and failed FP64 test inputs; repaired finite-domain gate and 95 native catalogue checks pass. Fresh baseline payload verification and identical deployed logits plus six metadata corruption refusals pass. The complete static suite remains in progress on frozen v7; no candidate quality or performance qualification.
 
+## [2026-10-03 04:02] update | records/measurements/quantization-screen-2026-10-02.md
+Completed full static acceptance of the frozen short-stack v7 checkpoint, including planner, memory overrides, transport and installer gates. Preserved the first wrapper-link validation failure and corrected only authored wrapper text. This evidence precedes batched-route changes.
+

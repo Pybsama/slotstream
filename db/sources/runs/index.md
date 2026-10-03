@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T03:52:22.663150Z
+updated: 2026-10-03T04:02:12.880949Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-static]] — Native VQ complete-stack static acceptance
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-validation]] — Native VQ arithmetic and deployed compatibility validation
 - [[sources/runs/2026/10/2026-10-02-native-vq-authenticated-checkpoint]] — Authenticated native VQ artifact expert and PLE reads
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-smoke]] — Native VQ complete short-stack and continuation parity
@@ -506,9 +507,8 @@ updated: 2026-10-03T03:52:22.663150Z
 - [[sources/runs/2026/09/2026-09-06-optimization-final-matrix-workload-binding]] — V195 final matrix binds workloads and controls across native paired and soak evidence
 - [[sources/runs/2026/09/2026-09-06-optimization-live-governor-feasibility]] — V194 live governor rejects ordinary-context advisory overcommit
 - [[sources/runs/2026/09/2026-09-06-optimization-plain-governor-feasibility-counterexample]] — V193 merged correctness and plain-governor feasibility counterexample
-- [[sources/runs/2026/09/2026-09-06-configurable-context-ordinary-governor-feasibility-counterexample]] — Shared V193 exposes ordinary-context governor acceptance after an infeasible replan
 
 ## More
 
-This folder has 706 files. The 500 most recent are listed above.
+This folder has 707 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

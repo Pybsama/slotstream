@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-03T03:53:23.079700+00:00
+updated: 2026-10-03T04:02:13.224187+00:00
 summary: Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 date: 2026-10-02
 doc: plan
@@ -287,3 +287,5 @@ Remaining experimental questions are explicit: which affine/VQ configuration win
 [[sources/runs/2026/10/2026-10-02-vq-bf16-sigmoid-arithmetic]] preserves the first QSA-layer failures and their localization to BF16 sigmoid rounding. A candidate-only precise exponential with explicit BF16 intermediates matches the pinned Python finite-domain reference. The deployed arithmetic remains unchanged. Failed diagnostic attempts are preserved with the eventual FP64 test-input diagnosis. No public pack admission or selection changes follow from these component results.
 
 [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-validation]] records the repaired exhaustive sigmoid gate, all 95 native T0/T1 checks passing with no skips, unchanged deployed full-model logit bits on the fixed memory-prose case, fresh baseline payload verification and six metadata rejection cases. The v7 inference sources are identical to the independently passing v4 complete-stack sources; only the diagnostic input/readback file differs. These checks do not replace the complete heavyweight app, governor and hardware qualification gates.
+
+The frozen v7 complete static suite also passes in [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-static]], including planner, memory-override, transport and installer gates. The first attempt stopped on a source-wrapper token list interpreted as a wiki-link; the authored wrapper was corrected without changing its raw transcripts. This result applies to the authenticated short-stack checkpoint, before subsequent batched-route changes.
