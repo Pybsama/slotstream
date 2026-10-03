@@ -10,6 +10,8 @@ struct QuantizationCheck: ParsableCommand {
     var fixtureDirectory: String?
     @Option(name: .long, help: "Pinned fused binding fixtures from Tools/vq_fused_reference.py")
     var fusedFixtureDirectory: String?
+    @Option(name: .long, help: "Complete real expert records from Tools/vq_record_reference.py")
+    var recordFixtureDirectory: String?
     @Flag(name: .long, help: "Check synthetic native VQ and affine kernels")
     var kernels = false
     func run() throws {
@@ -21,6 +23,9 @@ struct QuantizationCheck: ParsableCommand {
         }
         if let fusedFixtureDirectory {
             reports.append(try Diagnostics.quantizationFixtures(directory: URL(fileURLWithPath: fusedFixtureDirectory), fused: true))
+        }
+        if let recordFixtureDirectory {
+            reports.append(try Diagnostics.quantizationRecords(directory: URL(fileURLWithPath: recordFixtureDirectory)))
         }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         print(String(decoding: try encoder.encode(reports), as: UTF8.self))

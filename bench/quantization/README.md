@@ -276,3 +276,38 @@ It preserves full-vocabulary KL and top-1 results per case and reports
 generation quality, successful tool execution, held-out noninferiority,
 speculation, image support or throughput. The ordinary same-artifact equality
 benchmark is unchanged.
+
+The inspected VQ packs also store raw zero-centered non-gated norms under
+converted tensor names. The pinned architecture's sanitizer does not fold
+those names. `vq_model_reference.py` therefore applies one explicit BF16
+`1 + weight` conversion to the complete checked normalization family. Gated
+delta-net norms stay untouched. Receipts identify this convention and old
+receipts without it are refused. The first matched pilot omitted this fold;
+its scores and diagnosis are preserved and cannot support a quality claim.
+Traversal equality alone cannot catch an error shared by both traversals.
+
+## Complete expert record composition
+
+`Tools/vq_record_reference.py` gathers whole gate/up/down matrices for fixed
+expert IDs from each pinned pack, using checked positional reads. It executes
+the installed, identity-bound MLX-LM routed SwiGLU with the reviewed VQ runtime.
+Fixtures cover duplicate routes and batches of 10, 20 and 30 routed pairs.
+These real 3.2/4.4 records do not contain D8; the separate fused projection
+fixtures exercise the D8 dispatch boundary. Run it
+sequentially under `quantization_logit_run.supervise` so process memory, pressure
+and timeout checks cover the whole process:
+
+```sh
+.venv/bin/python Tools/vq_record_reference.py --model <verified-vq-pack> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --out <new-record-fixtures>
+.build/release/slotstream quantization-check \
+  --record-fixture-directory <new-record-fixtures>
+```
+
+The native `VQRecordLayout` defines allocation classes by every projection's
+layout, not merely equal byte size. It counts shared codebooks separately.
+`VQRecordBatch` owns immutable complete records, rejects missing/duplicate
+expert identities and preserves the full route batch's kernel dispatch.
+These component checks do not establish mutable-bank pinning, resize safety,
+full-model parity or a supported pack.

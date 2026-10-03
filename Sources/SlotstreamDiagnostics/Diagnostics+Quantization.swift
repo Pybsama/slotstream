@@ -61,6 +61,15 @@ extension Diagnostics {
         c.equal("PLE uses byte packing without expert padding", ngram.codeRowBytes, 55)
         let padded = try VQLayout(columns: 160, dimensions: 4, codebookEntries: 2048, groupSize: 32, packing: .words32)
         c.equal("expert packing retains the padded tail", padded.codeRowBytes, 88)
+        let narrow = try VQLayout(columns: 2560, dimensions: 4, codebookEntries: 2048, groupSize: 64, packing: .words32)
+        let high = try VQLayout(columns: 2560, dimensions: 2, codebookEntries: 256, groupSize: 64, packing: .unpacked8)
+        let tail = try VQLayout(columns: 640, dimensions: 4, codebookEntries: 2048, groupSize: 64, packing: .words32)
+        let regular = try VQRecordLayout([narrow, narrow, tail])
+        c.equal("complete 3.2 regular record bytes", regular.recordBytes, 1_843_200)
+        let mixed = try VQRecordLayout([narrow, high, tail])
+        let swapped = try VQRecordLayout([high, narrow, tail])
+        c.equal("swapped projections have equal byte counts", mixed.recordBytes, swapped.recordBytes)
+        c.expect("equal bytes cannot alias different allocation classes", mixed != swapped)
         for operation: () throws -> Void in [
             { _ = try AffineQuantization(bits: 7, groupSize: 64) },
             { _ = try three.packedWords(columns: 63) },

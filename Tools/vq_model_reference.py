@@ -43,6 +43,7 @@ ARTIFACTS = {
         '2cc5122dd575027f70f2b584f6352c70ad4328f54051ee878e2a72dc420d4228'),
 }
 PROCESS_LIMIT = 10_000_000_000
+NORMALIZATION = 'vq-raw-zero-centered-to-pr1788-folded-bf16-v1'
 _LIBPROC = None
 
 
@@ -210,6 +211,28 @@ def verify_files(directory, inventory_path):
             'inventory_sha256': hashlib.sha256(bounded(inventory_path, 4_000_000)).hexdigest()}
 
 
+def fold_raw_vq_norms(weights, model, arch):
+    """Adapt the inspected packs' raw norms to the pinned PR's convention.
+
+    PR 1788 folds +1 only for raw HF *names*. These packs retain the raw
+    zero-centered values under converted model.* names, so sanitize alone
+    silently drops +1. All 148 affected tensors in each pinned pack, folded
+    once in BF16, match the deployed checkpoint's norm bytes exactly. This
+    is an explicit artifact adapter, never a value-based guess. The gated
+    delta-net norm already stores its scale and must stay untouched.
+    """
+    import mlx.core as mx
+    expected = {name + '.weight' for name, module in model.named_modules()
+                if isinstance(module, arch.RMSNorm)}
+    selected = {key for key in weights if key.endswith(arch.Model._FOLD_ONE)}
+    if len(expected) != 148 or selected != expected:
+        raise ValueError('pinned VQ raw normalization family is incomplete or changed')
+    for key in sorted(expected):
+        if weights[key].dtype != mx.bfloat16:
+            raise ValueError('pinned VQ raw normalization must be BF16')
+        weights[key] = 1.0 + weights[key]
+
+
 def load_model(directory, archive, arch, vq):
     import mlx.core as mx
     import mlx.nn as nn
@@ -242,6 +265,7 @@ def load_model(directory, archive, arch, vq):
         weights.update({k: arrays[k] for k, s in selected.items() if s == shard})
         del arrays
     weights = model.sanitize(weights)
+    fold_raw_vq_norms(weights, model, arch)
     qcfg = cfg['quantization']
 
     def predicate(name, module):
@@ -379,6 +403,7 @@ def main():
         if (proof.get('architecture_sha256') != ARCH_SHA256 or proof.get('runtime_sha256') != RUNTIME_SHA256
                 or proof.get('mlx') != '0.32.2' or proof.get('mlx_lm') != '0.31.3'
                 or proof.get('prompt_chunk') != 512 or proof.get('vq_decode_chunk') != 32
+                or proof.get('normalization') != NORMALIZATION
                 or proof.get('artifact', {}).get('inventory_sha256') != inv_digest
                 or proof.get('instrument', {}).get('sha256') != instrument['sha256']
                 or proof.get('traversal_proof', {}).get('traversal_equal_bits') is not True
@@ -448,7 +473,7 @@ def main():
                 receipt = {'schema': 1, 'scope': 'pilot feasibility, not native parity or quality qualification',
                     'architecture_revision': ARCH_REVISION, 'architecture_sha256': ARCH_SHA256,
                     'runtime_sha256': RUNTIME_SHA256, 'mlx': mx.__version__, 'mlx_lm': '0.31.3',
-                    'instrument': instrument,
+                    'instrument': instrument, 'normalization': NORMALIZATION,
                     'vq_decode_chunk': 32, 'prompt_chunk': 512, 'tokens': tokens, 'positions': positions,
                     'tokens_sha256': hashlib.sha256(token_raw).hexdigest(), 'layers': options.layers,
                     'logits': result if options.layers == 48 else None,

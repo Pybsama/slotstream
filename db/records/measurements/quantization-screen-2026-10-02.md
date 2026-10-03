@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T00:24:13.314534+00:00
+updated: 2026-10-03T01:36:37.953862+00:00
 summary: Pinned VQ inventories, exact selected-row decoding and bounded synthetic kernel costs; no candidate pack or new speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -78,3 +78,35 @@ The original model's complete visible history has one unchanged non-README paylo
 
 The six-case owned raw-continuation protocol is frozen in `bench/quantization/logit-pilot-v1.json`. It includes prose, code, tool-result context, multilingual text, continuation and record retrieval; it is a distribution pilot, not a held-out agent benchmark. Native and VQ producers run sequentially with bounded memory and complete logit rows. Current performance claims, supported weight selection and defaults are unchanged. Full native VQ model parity, mixed allocation ownership, draft integration, held-out tasks, paired speed measurements and actual hardware qualification remain open.
 The bounded reference/PLE implementation additionally passed the complete static gates and all 93 native t0/t1 catalogue checks, with zero failures or skips. The first static attempt was invalidated by an in-flight edit to its test driver; the unchanged-driver rerun passed. Both attempts and the source-bound catalogue summary are retained in [[sources/runs/2026/10/2026-10-02-bounded-reference-verification]].
+
+### Reference normalization correction
+
+[[sources/runs/2026/10/2026-10-02-vq-pilot-normalization-diagnosis]] records the completed first matched pilot and its invalidation. Both VQ arms omitted the raw-norm +1 conversion required by the pinned architecture. Strict loading, finite outputs and direct-versus-streamed equality did not detect this shared semantic error. The old VQ feasibility runs and traversal proofs above establish resource feasibility only; they do not establish correctly normalized model outputs. The native affine outputs and isolated PLE/fused kernel checks are unaffected.
+
+The complete 4.4 artifact is now verified: 139 tensor files, 103,689,541,903 bytes. An independent bounded read of all 148 affected norm tensors in each VQ pack found that BF16 rounding of 1 + raw value reproduces every corresponding baseline tensor exactly. Gated delta-net normalization stays unchanged. The reference loader now makes this pinned artifact conversion explicit and records its normalization identity; the comparison adapter rejects old producer receipts. Fresh traversal proofs and VQ pilot outputs are required. None of the first pilot's apparent KL advantage is valid quality evidence.
+
+### Corrected matched distribution pilot
+
+[[sources/runs/2026/10/2026-10-02-corrected-vq-distribution-pilot]] records fresh exact traversal proofs and both repeated VQ arms. All six contexts completed in each arm with the explicit raw-norm adapter; the unchanged native baseline outputs were reused. The normalization repair changes reference meaning, so these results replace the invalid comparison rather than combine with it.
+
+| Owned pilot context | Native affine KL to VQ 4.4, nats | VQ 3.2 KL to VQ 4.4, nats | Native top-1 agreement | VQ 3.2 top-1 agreement |
+| --- | --- | --- | --- | --- |
+| memory-prose | 0.224397 | 0.047676 | 0.8125 | 0.8125 |
+| python-interval | 0.366843 | 0.172623 | 0.7500 | 0.8125 |
+| tool-result | 0.764051 | 0.440440 | 0.7500 | 0.8750 |
+| multilingual | 0.343711 | 0.171254 | 0.8750 | 0.8125 |
+| continuation | 0.715288 | 0.036532 | 0.8125 | 1.0000 |
+| record-retrieval | 0.249774 | 0.113896 | 0.7500 | 0.7500 |
+
+Equal-case mean full-vocabulary KL is 0.44401073962586735 for the deployed native baseline and 0.16373688672074593 for VQ 3.2. Mean top-1 agreement is 0.7916666666666666 and 0.84375 respectively. The candidate has lower KL in every context, better top-1 agreement in three, equal agreement in two and worse agreement in the multilingual context. This supports continuing candidate engineering, not declaring similar task quality.
+
+Each context contributes its last sixteen teacher-forced positions; these are correlated owned pilot examples. There is no held-out confidence interval, real tool execution, long-context qualification, vision or draft evaluation. The VQ 4.4 arm is a quantized proxy, and the baseline and VQ arms also differ in their complete native/reference implementations, so this does not isolate weight quantization alone. Native full-model parity and complete-task evaluation remain mandatory. No speed was measured or pack promoted.
+
+
+### Complete native expert records and ownership
+
+[[sources/runs/2026/10/2026-10-02-native-vq-complete-records]] extends selected-row kernel checks to complete real gate/up/down matrices and the pinned compiled SwiGLU composition. Both packs pass exact output-bit comparisons for layers 0 and 2, expert IDs 0, 1, 7 and 511, and one, two and three token rows with ten routes each. Duplicate routes preserve their order. These real layouts do not contain D8; its dispatch boundary remains covered by the separate fused fixtures. The fixed routes do not test the model router, shared expert or full-model behavior.
+
+The immutable staging batch admits only complete unique expert records. Its allocation-class key includes all three projection layouts; equal byte counts alone cannot make two banks interchangeable. Shared codebooks are counted separately. Review found that retaining mutable MLXArray objects did not protect admitted weights from caller-side context replacement. The v2 implementation keeps private array contexts, and independent mutation of each caller-owned codes, books and scales group preserves the expected outputs. This establishes value retention, not leases or pins for externally reused mutable cache memory.
+
+Both final native record checks pass 34 assertions, alongside the geometry, metadata and PLE storage checks. The final source-bound catalogue passes 93 checks with zero failures or skips, and the static suite passes. The recorded binaries and full outputs remain in the raw source. No full native candidate model, mixed mutable cache, draft integration, task-quality result or throughput profile is qualified by this checkpoint.

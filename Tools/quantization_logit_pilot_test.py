@@ -17,11 +17,12 @@ class PilotTests(unittest.TestCase):
         record = {'arm': 'vq', 'producer': {}, '_sha256': 'a' * 64}
         receipt = {'layers': 48, 'architecture_sha256': comparison.ARCH_SHA256,
                    'runtime_sha256': comparison.RUNTIME_SHA256, 'vq_decode_chunk': 32,
+                   'normalization': comparison.NORMALIZATION,
                    'instrument': {'sha256': 'b' * 64}, 'artifact': {'inventory_sha256': 'c' * 64}}
         good = comparison.producer_artifact(record, [receipt, copy.deepcopy(receipt)], {})
         self.assertEqual(good['runtime_sha256'], 'b' * 64)
         for field, value in [('layers', 4), ('vq_decode_chunk', 16), ('artifact', {}),
-                             ('instrument', {'sha256': 'd' * 64})]:
+                             ('instrument', {'sha256': 'd' * 64}), ('normalization', None)]:
             bad = copy.deepcopy(receipt); bad[field] = value
             with self.assertRaises(ValueError): comparison.producer_artifact(record, [receipt, bad], {})
 

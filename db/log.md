@@ -40,3 +40,6 @@ Advanced component screening to native fused projection with private validated C
 ## [2026-10-03 00:24] update | records/measurements/quantization-screen-2026-10-02.md
 Captured complete bounded VQ 3.2 reference forwards, corrected traversal proof, native baseline logits, native CPU PLE storage and exact real-row checks. Preserved failed attempts, complete static rerun and 93-check native catalogue. Recorded original-tokenizer compatibility evidence; no candidate pack or hardware profile is qualified.
 
+## [2026-10-03 01:37] update | records/measurements/quantization-screen-2026-10-02.md
+Preserved and invalidated the first VQ distribution pilot after an independently verified normalization convention mismatch. Bound the repair, fresh traversal proofs and corrected matched outputs. Added exact native complete expert composition and caller-context ownership checks for both packs; 93 native checks and static suite pass. No full-model candidate, quality or speed qualification.
+

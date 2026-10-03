@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T00:24:12.708084Z
+updated: 2026-10-03T01:35:52.907124Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-records]] — Complete real VQ routed expert composition and independent caller-context ownership checks pass for both research packs.
+- [[sources/runs/2026/10/2026-10-02-corrected-vq-distribution-pilot]] — Corrected normalization, fresh traversal proofs and repeated matched VQ logit pilot; no held-out or native-model qualification.
+- [[sources/runs/2026/10/2026-10-02-vq-pilot-normalization-diagnosis]] — First complete matched logit pilot exposed missing VQ norm folding; all scores are invalid for quality inference.
 - [[sources/runs/2026/10/2026-10-02-bounded-reference-verification]] — Complete static and native catalogue verification for the bounded reference and PLE implementation.
 - [[sources/runs/2026/10/2026-10-02-bounded-vq-reference-and-ple]] — Bounded full VQ reference traversal, native baseline logits and native PLE storage checks; experimental only.
 - [[sources/runs/2026/10/2026-10-02-fused-vq-component-pilots]] — Fused VQ binding parity and two bounded cost pilots; scope and limitations below.
@@ -504,11 +507,8 @@ updated: 2026-10-03T00:24:12.708084Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-budget-and-schedule-component-pass]] — Explicit diagnostic budgets and actual attention schedule pass component gates
 - [[sources/runs/2026/09/2026-09-06-optimization-bounded-diagnostics-and-schedule]] — Priced governor/MTP diagnostics and actual prefill schedule — V191
 - [[sources/runs/2026/09/2026-09-06-optimization-merged-runtime-correctness]] — Shared combined runtime and corrected MTP tail correctness — V189
-- [[sources/runs/2026/09/2026-09-06-configurable-context-native-regression-and-mtp-plan-counterexample]] — Existing native regression passes through MTP parity; mandatory MTP diagnostic stopped on unpriced head
-- [[sources/runs/2026/09/2026-09-06-optimization-qualification-verification-lock]] — Qualification verification owns model exclusion — V190
-- [[sources/runs/2026/09/2026-09-06-optimization-mtp-tail-sampled-counterexample]] — Shared native checks and sampled MTP-tail counterexample — V186–189
 
 ## More
 
-This folder has 697 files. The 500 most recent are listed above.
+This folder has 700 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

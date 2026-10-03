@@ -15,7 +15,7 @@ from quantization_inventory import unique_json
 from quantization_logit_run import digest, inputs
 from quantization_quality import compare
 from vq_fused_reference import bounded
-from vq_model_reference import ARTIFACTS, ARCH_SHA256, RUNTIME_SHA256
+from vq_model_reference import ARTIFACTS, ARCH_SHA256, RUNTIME_SHA256, NORMALIZATION
 
 
 def producer_artifact(run, receipts, identity):
@@ -36,6 +36,7 @@ def producer_artifact(run, receipts, identity):
     elif run['arm'] == 'vq':
         if any(r.get('layers') != 48 or r.get('architecture_sha256') != ARCH_SHA256
                or r.get('runtime_sha256') != RUNTIME_SHA256 or r.get('vq_decode_chunk') != 32
+               or r.get('normalization') != NORMALIZATION
                or r.get('instrument', {}).get('sha256') != first['instrument']['sha256']
                or r.get('artifact') != first['artifact'] for r in receipts):
             raise ValueError('VQ cases do not share the complete pinned reference configuration')
@@ -43,7 +44,8 @@ def producer_artifact(run, receipts, identity):
         # This binds the full-file verification and inventory digests, rather
         # than pretending the runtime source digest identifies the weights.
         pack = hashlib.sha256(json.dumps(first['artifact'], sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-        arithmetic = 'Pinned VQ reference, default F16 I/O, decoded-expert chunk 32, prompt chunk 512; full head; no MTP or vision'
+        arithmetic = ('Pinned VQ reference, default F16 I/O, decoded-expert chunk 32, prompt chunk 512; '
+                      'full head; no MTP or vision; normalization ' + NORMALIZATION)
     else:
         raise ValueError('unknown pilot producer')
     return {**identity, 'pack_sha256': pack, 'runtime_sha256': runtime, 'arithmetic': arithmetic,

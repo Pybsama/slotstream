@@ -45,10 +45,14 @@ package struct VQExpert {
             guard codes.dtype == .uint32, codes.dim(2) == layout.codeRowBytes / 4 else {
                 throw ModelError("VQ packed expert code shape or dtype mismatch")
             }
-            self.codes = codes
+            self.codes = codes.reshaped(codes.shape)
         default: throw ModelError("VQ expert layout is outside the inspected kernel families")
         }
-        self.codebook = codebook; self.scales = scales; self.layout = layout
+        // MLXArray is a mutable reference object. Keep private array contexts
+        // so caller-side assignment cannot retarget an admitted record. These
+        // views retain values, not leases on externally reused bank memory.
+        self.codebook = codebook.reshaped(codebook.shape)
+        self.scales = scales.reshaped(scales.shape); self.layout = layout
         expertCount = codes.dim(0); outputRows = codes.dim(1)
         let source: String
         switch layout.dimensions {
