@@ -51,6 +51,9 @@ public final class MTPWeights: TensorSource {
     /// `streamedExperts` leaves the routed experts unread; `MTPExpertStream`
     /// reads them from the same file on demand.
     public init(modelDir: URL, config: ModelConfig, streamedExperts: Bool) throws {
+        // Standalone draft diagnostics do not construct an Engine first.
+        // Take the same process reservation before any lazy weight allocation.
+        try ModelProcessGuard.acquire()
         self.config = config
         self.streamedExperts = streamedExperts
         let url = Self.fileURL(modelDir: modelDir)
@@ -68,6 +71,13 @@ public final class MTPWeights: TensorSource {
         self.arrays = all
     }
 
+    /// Only the authenticated research loader supplies materialized arrays.
+    /// Public loading keeps its existing checkpoint and arithmetic contract.
+    init(verifiedArrays: [String: MLXArray], config: ModelConfig, url: URL) throws {
+        try ModelProcessGuard.acquire()
+        self.config = config; self.url = url; arrays = verifiedArrays; streamedExperts = false
+    }
+
     public func optionalTensor(_ name: String) -> MLXArray? { arrays[name] }
 
     public var totalBytes: Int { arrays.values.reduce(0) { $0 + $1.nbytes } }
@@ -76,6 +86,7 @@ public final class MTPWeights: TensorSource {
 /// SparseMoeBlock with every expert resident — same math as MoELayer, minus
 /// the slot pool: routing indices feed gatherQuantizedMM directly.
 final class ResidentMoE {
+    let arithmetic: BlockArithmeticProfile
     var specializedRouter = false
     var routerObserver: (([Int32]) -> Void)?
     let cfg: ModelConfig
@@ -91,7 +102,8 @@ final class ResidentMoE {
     /// routing indices are translated to slots before the gathers.
     let stream: MTPExpertStream?
 
-    init(_ w: TensorSource, base b: String, stream: MTPExpertStream? = nil) {
+    init(_ w: TensorSource, base b: String, stream: MTPExpertStream? = nil, arithmetic: BlockArithmeticProfile = .deployed) {
+        self.arithmetic = arithmetic
         cfg = w.config
         routerProjection = RouterProjection(w.tensor(b + ".gate.weight"))
         sharedGate = w.linear(b + ".shared_expert_gate")
@@ -150,7 +162,7 @@ final class ResidentMoE {
         let routed = (experts * weights.expandedDimensions(axis: -1)).sum(axis: -2).asType(x.dtype)
 
         let shared = sharedDownProj(MLXNN.silu(sharedGateProj(x)) * sharedUpProj(x))
-        return routed + sigmoid(sharedGate(x)) * shared
+        return routed + arithmetic.sigmoid(sharedGate(x)) * shared
     }
 }
 
@@ -225,9 +237,16 @@ public final class MTPHead {
         self.init(w, stream: nil)
     }
 
+    /// Research-only comparison with the explicit Python-compatible unary
+    /// and grouped-normalization operations already qualified for VQ blocks.
+    /// This never changes the public head initializer's deployed arithmetic.
+    package convenience init(_ w: MTPWeights, referenceArithmetic: Bool) {
+        self.init(w, stream: nil, arithmetic: referenceArithmetic ? .vqPR1788 : .deployed)
+    }
+
     /// With `stream`, the routed experts stream through it; `w` was then
     /// loaded without them (`Qwen4ExpModel.enableMTP(modelDir:streamedExperts:)`).
-    init(_ w: MTPWeights, stream: MTPExpertStream?) {
+    init(_ w: MTPWeights, stream: MTPExpertStream?, arithmetic: BlockArithmeticProfile = .deployed) {
         precondition((stream != nil) == w.streamedExperts, "draft head weights and expert placement disagree")
         cfg = w.config
         fcEmbedding = w.linear("mtp.fc_embedding")
@@ -240,11 +259,11 @@ public final class MTPHead {
         preFcNormHidden = RMSNorm(
             weight: w.tensor("mtp.pre_fc_norm_hidden.weight"), eps: cfg.rmsNormEps,
             groupSize: nil)
-        attnHC = GatedResidual(w, base: "mtp.layers.0.attn_hyper_connection", useCombine: true)
-        mlpHC = GatedResidual(w, base: "mtp.layers.0.mlp_hyper_connection", useCombine: true)
-        attn = QSAAttention(w, base: "mtp.layers.0.self_attn")
-        moe = ResidentMoE(w, base: "mtp.layers.0.mlp", stream: stream)
-        mixer = GatedResidual(w, base: "mtp.hyper_connection_mixer", useCombine: false)
+        attnHC = GatedResidual(w, base: "mtp.layers.0.attn_hyper_connection", useCombine: true, arithmetic: arithmetic)
+        mlpHC = GatedResidual(w, base: "mtp.layers.0.mlp_hyper_connection", useCombine: true, arithmetic: arithmetic)
+        attn = QSAAttention(w, base: "mtp.layers.0.self_attn", arithmetic: arithmetic)
+        moe = ResidentMoE(w, base: "mtp.layers.0.mlp", stream: stream, arithmetic: arithmetic)
+        mixer = GatedResidual(w, base: "mtp.hyper_connection_mixer", useCombine: false, arithmetic: arithmetic)
         residentBytes = w.totalBytes + (stream?.residentBytes ?? 0)
     }
 

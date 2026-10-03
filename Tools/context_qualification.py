@@ -49,9 +49,17 @@ def observed_model(directory):
 
 
 def quiet_preflight(needed_gb):
-    active = [name.strip() for name in subprocess.check_output(['ps','-axo','comm='],text=True).splitlines()
-              if Path(name.strip()).name in ('swift-frontend','swift-driver','slotstream','slotstream-checks')]
-    if active: raise RuntimeError('competing compiler or model process; refusing capacity launch')
+    # Other inference engines do not acquire Slotstream's private lock. Known
+    # model-bearing llama.cpp entrypoints must therefore also refuse launch.
+    # Names alone cannot identify arbitrary Python model scripts; this remains
+    # an extra preflight, not a system-wide lock or a complete process census.
+    active = [Path(name.strip()).name for name in subprocess.check_output(
+        ['ps','-axo','comm='], text=True, timeout=5).splitlines()
+        if Path(name.strip()).name in ('swift-frontend','swift-driver','slotstream','slotstream-checks',
+                                      'llama-server','llama-cli')]
+    if active:
+        raise RuntimeError('competing compiler or model process (' + ', '.join(sorted(set(active)))
+                           + '); refusing capacity launch')
     pressure = subprocess.check_output(['sysctl', '-n', 'kern.memorystatus_vm_pressure_level'], text=True, timeout=5).strip()
     if pressure != '1':
         raise RuntimeError('OS pressure is not normal; refusing capacity launch')

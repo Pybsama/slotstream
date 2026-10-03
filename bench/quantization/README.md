@@ -464,9 +464,15 @@ trace. `--save-layer 2` on a fresh reference run supplies the authenticated inpu
 for `Tools/vq_prefill_attention_reference.py`; that microscope independently
 checks its expanded attention against the pinned whole call.
 
-The candidate rotary constructor uses precise Metal power for inverse
-frequencies. The public constructor keeps its deployed arithmetic. The pinned
-reference, fast/precise power comparison and exact frequency/angle digests can
+The candidate rotary constructor uses the exact FP32 coefficient words from
+the pinned reference for its fixed dimension and base. Precise Metal power
+matched the development Mac but produced different bits on CI. Pinning inverse
+frequencies exposed separate CI sine/cosine differences. The research path now
+embeds the exact finite FP32 table for its admitted positions. It reconstructs
+the repeated rotary half without rounding and refuses positions outside the
+authenticated table. Host-double trigonometry was rejected after a BF16
+boundary mismatch. The public constructor keeps its deployed arithmetic.
+The original power microscope and unchanged exact frequency/angle digests can
 be reproduced with:
 
 ```sh
@@ -511,5 +517,435 @@ references for all sixteen tokens and all 2,560 boundaries. Both stop at the
 length cap, so this fixture does not exercise a real sampled EOS termination.
 Malformed profile, predecessor, stop and boundary metadata are separate refusal
 gates. This diagnostic is not a production service, task-quality evaluation or
-throughput qualification. Sparse attention, persistent residency, draft and
-vision remain open.
+throughput qualification. Persistent residency, draft and vision remain open.
+
+## Sparse-selection threshold
+
+Use `--sparse` on both the complete-prefill producer and native diagnostic to
+run the fixed `sparse2053-decode1-v1` profile. It reads four 512-token passes,
+then five tokens, then one continuation token. The mask returned by each actual
+sparse indexer call becomes an additional complete Boolean boundary.
+
+```sh
+.venv/bin/python Tools/vq_model_prefill_reference.py --sparse \
+  --model <verified-vq-pack> --inventory <inventory.json> \
+  --architecture <pinned-qwen4_exp.py> --out <new-sparse-reference>
+.build/release/slotstream quantization-model-check --sparse \
+  --source-directory <verified-vq-pack> --source-inventory <inventory.json> \
+  --fixture-directory <same-pack-sparse-reference> --output <new-result>
+python3 Tools/vq_prefill_manifest_gate.py --sparse --binary <source-bound-slotstream> \
+  --source <verified-vq-pack> --inventory <inventory.json> \
+  --fixture <same-pack-sparse-reference> --out <new-fault-results>
+```
+
+Keep the same sequential supervision and resource bounds. Both packs pass all
+984 boundaries, including twenty-four sparse masks. This covers the threshold,
+partial block and continued state, not the full context range. Public loading
+and automatic selection still refuse these unqualified research packs.
+
+## Synchronous resident-bank component
+
+The existing `quantization-check --record-fixture-directory` command now also
+checks owned resident-bank storage using the real expert fixtures. Each bank
+holds complete records of one validated geometry, with separate codebooks.
+It validates direct backing strides and non-overlapping extents, pins all
+demanded hits before CLOCK eviction, publishes only complete records, and
+finishes GPU uses before releasing pins.
+
+Cold/hot and eviction outputs must match the independent reference bits.
+Hot reads fail if the payload reader is called. Partial, duplicate, oversized,
+wrong-index, cancelled and failed reads cannot publish a record. The tests
+cover retry, reentrant-clear refusal and retained output across destructive
+bank reuse. These are bounded synchronous component checks. Use `--allocation-classes` when generating new complete-record or segmented-
+prefill fixtures. That mode binds actual descriptor-class representatives to
+the inspected artifact. Historical VQ 4.4 fixtures used two layers from one
+class; their old per-layer results do not cover both classes.
+
+The complete-model probe supports `--resident-records` with `--greedy` or
+`--sparse`. It allocates a fixed 96-row bank per descriptor class and keeps
+layer codebooks once. Large prefill retains separate immutable staging. The
+receipts include exact bank/book bytes, hit/load/eviction counts and pins.
+Both packs preserve their complete reference boundaries with real cache hits
+and CLOCK replacement. This remains a small synchronous research cache.
+The sections below cover the larger-bank and resident-text experiments.
+Asynchronous reads, resize, production byte budgeting and governor integration
+remain open.
+
+
+The finite table is independently reproduced and embedded with:
+
+```sh
+.venv/bin/python Tools/vq_rotary_table_reference.py \
+  --architecture <pinned-qwen4_exp.py> --runtime <pinned-model.py> \
+  --out <new-rotary-table-reference>
+python3 Tools/vq_rotary_table_source.py \
+  --table <new-rotary-table-reference>/angles-f32le.bin \
+  --output <comparison-source.swift>
+```
+
+Compare the generated source against `Sources/Slotstream/VQRotaryTable.swift`.
+The generator admits only the frozen complete payload hash. The table is a
+bounded research coefficient artifact, not a qualification of longer contexts
+or a production resource policy. Full-model parity and remote checks remain
+independent of this generation step.
+
+
+## Complete resident text probe
+
+Add `--resident-text` to the greedy or sparse model check to retain all dense
+text layers, the final head/mixer and token embedding. Combine it with
+`--resident-records` to exercise the fixed expert banks too. The research
+process bound is 10 GB, with the existing 13 GB real-headroom preflight.
+Loading admits the exact text payload plus a bounded single-tensor copy,
+checks incremental headroom and never publishes a partial resident owner.
+
+Receipts expose text payload bytes, family counts and repeated-access counters
+separately from expert banks, workspace and process footprint. Both inspected
+packs preserve complete reference bits in this layout. This is a numerical
+and memory probe, not an optimized production serving path or a speed result.
+The default remains the earlier streamed-text probe and its smaller bound.
+
+
+For the fixed larger-cache experiment, add `--wide-records` with both residency
+flags. It gives the class used by most layers 512 rows and the other class 96.
+The same process ceiling applies, so this mode does not authorize extra memory.
+Per-family kernel admission and component tests cover the enlarged physical
+row offsets. Compare receipt counters and measured peaks; this experiment does
+not choose cache sizes automatically or establish generation throughput.
+
+## Bounded generation timing pilot
+
+Freeze a source-bound binary directory before using the timing harness:
+
+```sh
+.venv/bin/python Tools/vq_performance_pilot.py \
+  --binary <frozen-build>/slotstream \
+  --research-root <research-directory> --out <new-pilot-directory>
+```
+
+`performance-pilot-v1.json` fixes one literal original-tokenizer prompt, 128
+greedy samples, two independent validation runs and three paired rounds in
+alternating order. This profile uses complete resident text, fixed 512/96
+expert banks and a 10 GB process bound. It is a cost pilot, with no draft,
+vision, completed-task or broader-context qualification.
+
+Validation disables intermediate state observers and compares sixteen complete
+vocabulary arrays plus the autoregressive tokens with the independent frozen
+reference. Measurement requires that receipt from the exact binary, Metal
+library, profile and inventory. The measured path omits logit hashing too;
+finite-value and resource guards still run. Ordinary full-state parity probes
+retain their observers by default.
+
+Each process authenticates all main-model files, loads text weights, and starts
+the request with empty expert banks. Authentication and loading are reported
+separately. This reads the files before timing, so it does not claim a cold SSD
+cache. TTFT ends at the first committed sample. Decode rate uses only the
+subsequent committed tokens and the matching inter-emission interval; EOS is
+excluded from its numerator. Full request time and every interval are retained.
+
+Nominal observed thermal state, disabled low-power mode, no request paging and
+enough completed samples determine timing eligibility. Independent supervision
+enforces process memory, OS pressure and time bounds. Review competing activity
+before running and do not build, run another model or conduct a storage study
+at the same time. Ineligible runs remain evidence and are never replaced with
+better runs. The harness reports every run and paired medians only when all
+measurement observations are eligible; it never promotes a pack or a speed
+claim.
+
+After a successful validation, exercise metadata and mode refusals with
+`Tools/vq_performance_refusals.py --binary <frozen-build>/slotstream
+--research-root <research-directory> --validation-receipt
+<pilot>/validation-3.2/receipt.json --out <new-refusal-directory>`.
+These cases require complete real metadata arguments and verify the expected
+error before any model-output directory is created.
+
+## Bounded parallel demanded reads
+
+Add `--parallel-records` to `quantization-model-check` together with
+`--resident-records --resident-text`, and optionally `--wide-records`.
+This experimental option prepares immutable authenticated file plans on the
+owner thread, then reads at most 32 demanded records on up to 12 CPU lanes.
+Workers hold private data only. All workers drain before ordered publication;
+no cache address or MLX object crosses into a worker. The reservation covers
+retained records and one bounded read buffer per lane, capped at 128 MB.
+The ordinary diagnostic remains serial. This does not add service cancellation,
+prefetch, resizing or automatic memory selection.
+
+Use the frozen comparison harness to measure the concurrency change alone:
+
+```sh
+.venv/bin/python Tools/vq_read_pair_pilot.py \
+  --binary <frozen-build>/slotstream \
+  --research-root <research-directory> --out <new-comparison-directory>
+```
+
+`read-pair-v1.json` binds the serial and parallel native profiles to the same
+VQ 3.2 artifact and binary. Each mode must pass its own complete-logit prefix
+validation. Three interleaved measurement pairs then require identical entire
+generated sequences, preserve every receipt and use the same eligibility rules
+as the generation pilot. The reader's lane count is one tested hypothesis,
+not an automatic hardware policy. Current results and limits are recorded in
+[the canonical measurement](../../db/records/measurements/quantization-screen-2026-10-02.md#bounded-parallel-demanded-reads-october-3).
+
+## Code-object reuse comparison
+
+The VQ projection implementation shares a bounded set of identical Metal code
+objects. It keeps tensors, array contexts, routing and bank leases independent.
+The adoption experiment uses two source-bound executables and one native profile:
+
+```sh
+.venv/bin/python Tools/vq_kernel_pair_pilot.py \
+  --before <frozen-parallel-read-build>/slotstream \
+  --after <frozen-kernel-cache-build>/slotstream \
+  --research-root <research-directory> --out <new-comparison-directory>
+```
+
+`kernel-pair-v1.json` permits only the three source changes belonging to this
+hypothesis, requires identical Metal-library bytes and binds every validation
+receipt to its actual producer. The entire generated sequence must match in
+all three interleaved pairs. Its engineering adoption threshold does not
+qualify a product pack, task quality or the target speed. See the canonical
+measurement for the result and its limits.
+
+## Smaller-pack research profile
+
+The VQ 2.1 bundle contains a different upstream runtime. Preserve that file.
+Reference tools require an explicit `--runtime` pointing to the already
+reviewed 3.2/4.4 source bytes; arbitrary execution source is refused. Receipts
+bind both the bundled hash and the executed hash. The same identities are
+rechecked before completion and validated by the native diagnostic readers.
+Historical larger-pack goldens remain usable unchanged.
+
+The complete-record and segmented-prefill reference producers require
+`--allocation-classes` for VQ 2.1. This covers representative layers 0, 2 and
+27. Compact native banks retain 96 records per class. The fixed wide experiment
+uses 512 records for the most common inspected class and 96 for the others,
+with the same 1.8 GB bank-plus-book reservation bound. This is a research
+configuration, not a production memory range or automatic policy.
+
+The research downloader authenticates immutable original files before the
+reference can load them. The canonical measurement separately tracks payload,
+normalization, traversal, full-model parity and measured memory. Downloaded
+bytes, accepted metadata or a passing component do not qualify task quality,
+throughput, production loading or Auto selection.
+
+Exercise the actual native execution-profile refusals using existing larger-pack
+fixtures (only metadata is copied):
+
+```sh
+.venv/bin/python Tools/vq_execution_refusals.py \
+  --binary <frozen-build>/slotstream \
+  --records <three-point-two-allocation-class-fixtures> \
+  --greedy <three-point-two-greedy-fixtures> \
+  --sparse <three-point-two-sparse-fixtures> \
+  --model <three-point-two-short-model-fixtures> \
+  --profile bench/quantization/greedy-v1.json --out <new-refusal-directory>
+```
+
+Each case must fail at its execution or coverage boundary before a weight path
+can be opened or a result directory created. These intentionally malformed
+metadata fixtures are never usable numerical references.
+
+## Bounded allocator reuse comparison
+
+`Tools/vq_allocator_pair_pilot.py` uses the same two-binary arguments as the
+code-object comparison above. Its own frozen `allocator-pair-v1.json` permits
+only `VQModelProbe.swift` to differ and bounds total campaign time. It checks
+independent complete-logit validation before the alternating measurements.
+The resident research path retains only already bounded unused allocator
+storage across layers. Its adoption gate is separate from product qualification.
+
+## Independent draft inventory
+
+Inspect the pinned draft without loading model tensors:
+
+```sh
+python3 Tools/vq_draft_inventory.py --help
+```
+
+The inventory validates the sidecar's own recipe and tensor ledger. Use its
+explicit payload-verification option when full-file authentication is required;
+header-only output declares that the payload remains unverified. Neither mode
+establishes compatibility with the native MTP adapter or qualifies execution.
+
+## Dense four-bit composite pilot
+
+`Tools/vq_dense_overlay_reference.py` defines a separate research candidate:
+the pinned VQ 3.2 experts and PLE tables with selected dense tensor triples
+from the installed same-checkpoint affine pack. Its composite digest binds
+both parent identities, the exact replacement map and every header geometry.
+Each source shard used is fully authenticated before loading. Unmatched
+tensors and the explicit VQ norm adapter remain unchanged.
+
+The producer first requires a direct-versus-streamed four-layer proof over
+exactly 513 tokens. Full-model pilot forwards then require that exact proof,
+instrument and composite. Original VQ fixtures cannot serve as composite
+parity evidence. The separate comparator verifies preserved controls against
+their original producer receipts and frozen hashes, while checking its own
+output-copy storage budget. It does not weaken the ordinary pack comparator.
+
+Use each tool's `--help` for required paths. Run these tools only under a
+written local resource ledger and the process supervisor; they provide no
+download activation, automatic selection or quality verdict.
+
+
+### Native composite checks
+
+`vq_dense_overlay_generated_reference.py` produces the independent greedy
+fixture. `vq_dense_overlay_prefill_reference.py` produces either ordinary
+prefill or, with `--sparse`, sparse selection and continuation. Both require
+the verified parent, installed affine baseline and successful composite
+traversal proof. Their `vq_parent` field deliberately differs from ordinary
+VQ manifests so an old reader cannot mistake this artifact for its parent.
+
+Write the reference receipt's `composite` object with Python
+`json.dumps(value, indent=2) + "\n"` to a new manifest file. The native
+adapter requires its frozen raw SHA-256
+`4cdae0e9c26b9a0dd07659cd9d71dd025ed110b49161c152df09d5a7f75ac28b`
+and canonical composite identity. It then independently authenticates the
+source files; matching metadata alone is insufficient.
+
+Add both `--dense-overlay-baseline <installed-affine-directory>` and
+`--dense-overlay-manifest <composite.json>` to `quantization-model-check`
+with `--greedy`, `--prefill` or `--sparse`, using the corresponding composite
+fixture. Greedy still requires `--generation-profile`. Resident-text and
+record flags remain explicit research controls. Ordinary VQ commands refuse
+composite fixtures, and composite commands refuse ordinary parent fixtures.
+
+`vq_dense_overlay_cost_pilot.py` freezes one cross-artifact comparison through
+`dense-overlay-cost-v1.json`. Each arm must reproduce its own independent
+full-logit reference before timing and its own complete sequence across
+repetitions. It keeps the same bank allocation in both arms and does not
+spend the recovered memory on extra cache records. Generated routing traces
+may differ, so the result measures the candidate as a whole. Different
+quantizations are not required to produce identical answers. The
+ordinary same-artifact comparison retains its equality gate. None of these
+commands admits the composite to Engine.load, serving or Auto.
+
+### Dense savings and fixed expert capacity
+
+The explicit research flag `--reinvest-dense-savings` requires the authenticated
+composite, both residency flags, `--wide-records`, `--parallel-records`, and a
+greedy or sparse fixture. It admits 1536 main-class and 288 secondary records
+inside the same 10 GB process bound. Ordinary limits stay unchanged. Greedy
+parity proves the full physical row range; sparse parity tests the larger state
+footprint without pretending that its route set fills every slot.
+
+`dense-reinvestment-cost-v1.json` and `Tools/vq_dense_reinvestment_pilot.py`
+compare this profile against the composite's existing 512/96 profile on the
+same frozen binary. The driver requires completed greedy/sparse receipts from
+that producer, separate full-logit validations and identical complete generated
+sequences across both arms. The three-pair result was slower with the larger
+cache despite fewer record loads. This is a numerical research mode, not a new
+cache default. See the canonical quantization measurement for raw evidence and
+scope; it does not qualify automatic resizing or the 20-token target.
+
+### Expert-containing shard read policy
+
+`quantization-model-check --uncached-expert-reads` is a research option for
+`--reinvest-dense-savings` on the exact dense-four-bit composite. It applies
+checked `F_NOCACHE=1` and `F_RDAHEAD=0` calls after complete-file authentication
+and before publishing each of the nine owned descriptors that contains routed
+experts. Those shards also contain dense tensors, so the policy covers whole
+shards. Ordinary readers remain buffered. There is no OS cache purge or claim
+that a request starts from cold SSD.
+
+`uncached-expert-cost-v1.json` freezes the policy arm at the same 1536/288 bank
+capacities and ten-GB process ceiling as `dense-reinvestment-cost-v1.json`.
+`Tools/vq_uncached_expert_pilot.py` requires greedy and sparse numerical gates
+from the timed producer, validates full logits for both arms, and compares
+three alternating pairs with exactly matching complete generated sequences.
+The receipt records the policy and descriptor count. All attempts are retained;
+no retry or qualification follows automatically. A winner here would still
+need complete-task, context, feature and hardware qualification.
+
+The first read-policy cost attempt stopped before measurement, with both
+validations thermally ineligible. The separately frozen stable-admission run
+completed all six eligible timings with matching complete sequences. Buffered
+reads had better committed decode and total request time; retain that default.
+The raw attempts and exact metrics are in the canonical quantization measurement
+record. This conclusion applies to the fixed composite and larger cache profile.
+
+Build a source-bound native conditions observer with
+`python3 Tools/vq_pilot_admission.py --out <new-observer-directory>` and pass
+that directory as `--admission-observer` to the read-policy pilot. Before each
+cell it requires thirty seconds of sampled nominal thermal state, low-power
+mode off and both VM observers above the existing admission floor. Each idle
+wait is bounded to ten minutes. Any bad observation resets stability; an expired
+wait fails the campaign. Native guards and in-request timing exclusions still
+apply. The observer's engine source must match the timed binary's source receipt.
+
+### Lossless contiguous expert records
+
+`Tools/vq_record_repack.py` creates a new research directory containing one
+aligned expert-record file per layer. It preserves the six original codes and
+scales pieces, verifies every reconstructed source-tensor hash and zero-padding
+region, and publishes the completion manifest only after verification and synced
+writes. Original codebooks, dense weights, PLE and draft data remain in their
+pinned parent files. This is a bounded conversion experiment, not an installer.
+
+`quantization-model-check --packed-record-directory <directory>` admits only
+the exact verified export manifest and every pinned payload hash. It requires
+the dense composite, reinvested banks, parallel records and buffered reads.
+The owned reader prices one aligned record buffer per active read lane in
+addition to the complete returned pieces. Ordinary tensor reads keep their
+existing limit. Workers drain before bank publication and retain cancellation,
+exact-range and file-mutation checks. Large immutable prefill still uses the
+original sweep storage.
+
+`contiguous-record-cost-v1.json` and `Tools/vq_contiguous_expert_pilot.py`
+compare split ranges against contiguous records with the same model values,
+1536/288 banks and process ceiling. Supply the frozen binary, parent research
+directory, baseline, composite manifest, packed-record directory, completed
+four-cell greedy/sparse gate directory and source-bound admission observer.
+Use the tool's `--help` for the required paths. Both full-logit validations
+must pass before the three alternating timing pairs; all complete generated
+sequences must match. The additional derived-file authentication is included
+in loading time. No request is described as starting from cold SSD, and this
+storage comparison cannot qualify a new model, Auto policy or download pack.
+
+Authentication order also conditions the uncontrolled OS file cache. The
+contiguous research arm reads its derived files after both parent filesets;
+the control has no final derived-file pass. A timing difference therefore
+measures these complete research load/request paths and cannot establish a
+syscall-only speedup or predict the startup and cache behavior of a future
+standalone pack. Any deployment claim requires that pack's own measurements.
+
+The first complete paired layout campaign passes both numerical validations
+and every timing eligibility gate, with identical complete sequences. It
+improves committed generation and total request time in this research profile,
+while increasing load time. Exact results and the cache-conditioning limit
+are recorded in the canonical quantization measurement. Continue controlled
+research with this representation; it remains below the performance target
+and does not change product defaults or qualify a distributable pack.
+
+### Original four-bit draft on composite inputs
+
+`Tools/vq_composite_draft_reference.py` authenticates a complete main-model
+prefill and requires every previously frozen boundary to match before using
+its real embeddings and hidden states as independent draft inputs. It releases
+the main model before loading the original four-bit head with separate metadata.
+It preserves existing golden files and writes a new bounded BF16 fixture.
+
+`slotstream quantization-draft-check --baseline <original-model-directory>
+--fixture <comparison.safetensors> --output <new-directory>
+--reference-arithmetic` compares that fixed fixture through the authenticated
+research loader. The explicit arithmetic profile uses the already checked
+Python-compatible grouped normalization, unary operations and finite rotary
+table. Original public draft construction keeps its deployed arithmetic.
+The loader verifies the entire sidecar through owned descriptors, prices its
+payload and current load copy separately, checks real headroom and honors the
+shared model-process lock. It never inherits the VQ trunk's quantization recipe.
+
+The initial deployed-arithmetic prefill failed the unchanged parity tolerance;
+that failure and the later exact component comparison are both retained in
+the canonical measurement. Matching the head does not qualify speculation:
+main-state snapshots, batched verification, rejection rollback, EOS/cancellation,
+complete committed sequences and paired cost remain independent requirements.
+The command enables no serving, Auto selection or installed-pack replacement.
+
+`Tools/mtp_process_guard_gate.py` is a weights-free static regression that holds
+the real exclusion lock and requires both standalone and research draft
+entrypoints to refuse before loading. `Tools/vq_draft_admission_gate.py` adds
+actual pinned-fixture/configuration/sidecar refusal checks for a research build;
+it requires explicit binary, baseline, fixture and new output paths.

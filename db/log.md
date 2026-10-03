@@ -67,3 +67,81 @@ Both VQ packs pass exact 512-token full-model prefill plus continuation across a
 ## [2026-10-03 05:21] update | records/measurements/quantization-screen-2026-10-02.md
 Both native VQ packs match 16 independently sampled and fed-back greedy tokens and 2,560 complete state/output boundaries per pack. Frozen original-tokenizer profile; length cap reached with final token unconsumed. Twelve malformed-chain/profile/stop/CLI cases and 95 native checks pass. Engine sources match the fully validated prefill checkpoint. Sparse long context, persistent caches, draft, quality and speed remain open.
 
+## [2026-10-03 05:35] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Both pinned VQ packs pass sparse selection and continuation parity; retain explicit production and qualification gates.
+
+## [2026-10-03 05:50] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Capture complete-record resident-bank ownership and regression checks; keep model-wide cache and production integration unqualified.
+
+## [2026-10-03 06:05] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Replace candidate rotary power with verified checkpoint coefficients after CI mismatch; unchanged exact local gates and full static suite pass, remote qualification pending.
+
+## [2026-10-03 06:22] update | records/measurements/quantization-screen-2026-10-02.md
+Correct component coverage: legacy 4.4 layers 0 and 2 share one class; preserve valid per-layer results and full-model evidence.
+
+## [2026-10-03 06:35] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Capture exact greedy and sparse parity with fixed mixed-class resident banks, correct actual class geometry, and retain production/portability qualification gates.
+
+## [2026-10-03 06:57] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Preserve reproduced CI trig and rejected host-arithmetic failures; bind exact finite rotary coefficients and unchanged full-model/cache parity, with completed local static gates.
+
+## [2026-10-03 07:10] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Capture exact greedy/sparse parity with all text weights resident inside the 10 GB probe, preserve streamed regression, and correct CLI rejection coverage.
+
+## [2026-10-03 07:28] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Capture larger per-class cache parity, high physical-slot checks, real cache counters and process peaks; retain unqualified performance and production status.
+
+## [2026-10-03 08:02] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Added source-bound lean generation pilot and input refusals; preserved six paired below-target results and a separately discarded CPU timing profile; parallel demanded reads are the next hypothesis. Prior finite-rotary remote CI passed.
+
+## [2026-10-03 08:46] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Implement bounded parallel VQ demanded reads; preserve exact reference and whole-sequence parity, record matched speed gain and full static gates without pack promotion.
+
+## [2026-10-03 08:48] update | records/measurements/quantization-screen-2026-10-02
+Preserve separately sampled parallel-path attribution with all timing discarded and record prior complete CI success.
+
+## [2026-10-03 09:08] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Retain bounded code-only VQ kernel reuse after exact model/ownership gates and a frozen paired improvement; record build-preflight correction and lossless raw evidence.
+
+## [2026-10-03 09:27] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Bind VQ 2.1 research staging separately from reference admission; preserve distinct runtime and three-class audit plus 78 fused regression results.
+
+## [2026-10-03 10:11] update | vq-2.1-native-parity
+Preserve full payload and normalization evidence; add three-class native research support with explicit reviewed runtime identities, complete-stack parity, legacy regression and refusal gates. Product qualification remains open.
+
+## [2026-10-03 10:14] update | vq-2.1-quality-screen
+Preserve six fixed candidate forwards and unfavorable distribution results; keep VQ 2.1 out of promotion and prioritize VQ 3.2 without claiming task qualification.
+
+## [2026-10-03 10:54] update | quantization-allocator-and-independent-draft
+Retain bounded allocator reuse after exact three-pack parity, six paired timings and full static gates; authenticate independent draft metadata; preserve sampled attribution and new dense-overlay hypothesis without product promotion.
+
+## [2026-10-03 11:20] update | quantization-dense-composite-screen
+Authenticate a separate dense-four-bit/VQ3.2 composite; preserve exact traversal and mixed six-context quality evidence, full static validation and draft norm audit. Repair unquoted colon in new capture frontmatter. Native integration and product gates remain open.
+
+## [2026-10-03 12:49] update | same-model-quantization-and-automatic-memory
+Implement authenticated dense composite native adapter and own reference fixtures; record exact greedy/prefill/sparse parity, matched cost and completed existing affine compatibility, preserving the launcher failures and corrections. Larger fixed-cache experiment remains separate and unqualified.
+
+## [2026-10-03 13:29] update | same-model-quantization-and-automatic-memory
+Record exact greedy and sparse parity for larger fixed composite caches, a slower matched cost result, separate CPU diagnosis with all timings discarded, pinned draft normalization evidence, and corrected full static acceptance. Auto and throughput qualification remain open.
+
+## [2026-10-03 13:53] update | same-model-quantization-and-automatic-memory
+Add explicit uncached expert-containing shard research policy with exact greedy and sparse parity; retain two passing lean validations and the failed pre-allocation timing admission. No speed comparison, retry, default change or promotion.
+
+## [2026-10-03 14:14] update | same-model-quantization-and-automatic-memory
+Preserve the separately frozen stable-admission comparison. Six eligible same-sequence timings show uncached shards slower overall, so retain buffered default. Add bounded native/external admission tooling; no candidate promotion.
+
+## [2026-10-03 14:42] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Recorded the lossless bounded aligned expert export and its independent reconstruction evidence; native parity and cost remain separate gates.
+
+## [2026-10-03 14:44] update | records/measurements/quantization-screen-2026-10-02
+Captured and recorded exact native split-versus-contiguous greedy and sparse parity with explicit staging and memory bounds; performance remains unmeasured.
+
+## [2026-10-03 15:12] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Completed the authenticated contiguous-record layout, full native greedy/sparse parity, all static gates and eligible paired timing campaign. Retained cache-conditioning and slower-load limits; no Auto or product activation.
+
+## [2026-10-03 15:54] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Preserved the failed composite draft prefill and corrected harness; authenticated the original four-bit head separately and recorded exact fixed-input parity under explicit research arithmetic. Fixed standalone MTP model-lock acquisition; full speculation remains open.
+
+## [2026-10-03 16:09] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Recorded final native build and unlaunched broader acceptance under insufficient memory and an external llama-server workload. Stopped only the task-owned waiter, strengthened quiet preflight and passed twelve safety plus thirty-two static-entrypoint tests. Whole-plan qualification remains incomplete.
+

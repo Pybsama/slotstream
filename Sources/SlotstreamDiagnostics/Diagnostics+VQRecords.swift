@@ -5,8 +5,8 @@ import Slotstream
 
 extension Diagnostics {
     /// Full real expert matrices composed through routed SwiGLU. These
-    /// fixtures exercise immutable staging only, not cache lifecycle or a
-    /// complete model. No candidate is admitted to Engine.load here.
+    /// fixtures exercise immutable staging and synchronous bank ownership.
+    /// They do not run a complete model or admit candidates to Engine.load.
     public static func quantizationRecords(directory: URL, sourceDirectory: URL? = nil,
                                            inventory: URL? = nil, prefill: Bool = false) throws -> CheckReport {
         struct Projection: Decodable {
@@ -21,6 +21,7 @@ extension Diagnostics {
         }
         struct Manifest: Decodable {
             struct Artifact: Decodable { let inventory_sha256: String }
+            let execution_profile: VQReferenceExecution?
             struct Flags: Decodable {
                 let _FUSED_GEMM: Bool, _FUSED_GEMM_V2: Bool, _GEMMSEG_BF16IO: Bool
                 let _GEMMSEG_OT2: Bool, _GEMMSEG_PH2V: Bool, _GEMMSEG_DSTORE: Bool
@@ -37,6 +38,7 @@ extension Diagnostics {
             let fixtures: [Fixture]
             let artifact: Artifact
             let prefill_flags: Flags?
+            let layer_coverage: String?
         }
         func read(_ path: URL, limit: Int) throws -> Data {
             let file = try FileHandle(forReadingFrom: path)
@@ -48,21 +50,38 @@ extension Diagnostics {
         }
         let manifest = try JSONDecoder().decode(Manifest.self,
             from: read(directory.appendingPathComponent("records.json"), limit: 1_000_000))
-        guard manifest.schema == 1, manifest.fixtures.count == 2,
-              Set(manifest.fixtures.map(\.layer)) == Set([0, 2]),
+        let layers: Set<Int>
+        if let coverage = manifest.layer_coverage {
+            guard coverage == "allocation-classes-v1" else { throw ModelError("unknown VQ record coverage profile") }
+            switch manifest.artifact.inventory_sha256 {
+            case "098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe": layers = [0, 2]
+            case "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac": layers = [0, 3]
+            case "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037": layers = [0, 2, 27]
+            default: throw ModelError("VQ allocation-class coverage requires an inspected artifact")
+            }
+        } else {
+            guard manifest.artifact.inventory_sha256 != "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037" else {
+                throw ModelError("VQ 2.1 fixtures require all three allocation classes")
+            }
+            layers = [0, 2]
+        }
+        guard manifest.schema == 1, manifest.fixtures.count == layers.count,
+              Set(manifest.fixtures.map(\.layer)) == layers,
               manifest.runtime_sha256 == "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8" else {
-            throw ModelError("VQ record fixtures need the pinned runtime and both layer families")
+            throw ModelError("VQ record fixtures need the pinned runtime and specified layer set")
         }
         guard !prefill || (manifest.prefill_flags?.matches == true && sourceDirectory == nil && inventory == nil) else {
             throw ModelError("VQ prefill fixtures require the pinned segmented arithmetic and no direct-source mode")
         }
+        try VQReferenceExecution.validate(inventorySHA: manifest.artifact.inventory_sha256,
+            runtimeSHA: manifest.runtime_sha256, profile: manifest.execution_profile)
         try ModelProcessGuard.acquire()
         let requiredHeadroom = prefill ? 7_000_000_000 : 5_000_000_000
         guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= requiredHeadroom else {
             throw ModelError("VQ record checks need \(requiredHeadroom / 1_000_000_000) GB actual reclaimable memory")
         }
         let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
-        MLX.Memory.cacheLimit = 64_000_000; MLX.Memory.memoryLimit = min(oldLimit, prefill ? 2_000_000_000 : 1_000_000_000)
+        MLX.Memory.cacheLimit = 64_000_000; MLX.Memory.memoryLimit = min(oldLimit, prefill ? 2_000_000_000 : 1_600_000_000)
         defer {
             Stream.gpu.synchronize(); MLX.Memory.clearCache()
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
@@ -84,6 +103,7 @@ extension Diagnostics {
             c.equal("cancelled payload is not published", source.verifiedFileCount, 0)
         }
         return try withError {
+            var testedLayouts = Set<VQRecordLayout>()
             for fixture in manifest.fixtures {
                 let bound = prefill ? 320_000_000 : 64_000_000
                 let ids = prefill ? (0..<63).map { UInt32($0 * 8) } + [511] : [UInt32(0), 1, 7, 511]
@@ -102,6 +122,7 @@ extension Diagnostics {
                                         groupSize: p.group_size, packing: packing)
                 }
                 let layout = try VQRecordLayout(layouts)
+                testedLayouts.insert(layout)
                 let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("slotstream-vq-record-" + UUID().uuidString)
                 try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: false,
                     attributes: [.posixPermissions: 0o700])
@@ -185,6 +206,7 @@ extension Diagnostics {
                             output.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self), want)
                     }
                 }
+                try quantizationBankFixture(layer: fixture.layer, ids: fixture.expert_ids, layout: layout, arrays: arrays, checks: &c)
                 // Mutate each caller-owned group independently after admission,
                 // before constructing or evaluating an operation. MLXArray is
                 // a reference type; retaining the caller's object is insufficient.
@@ -212,6 +234,9 @@ extension Diagnostics {
                 guard ProcessMemory.peakResidentBytes() <= 2_000_000_000 else {
                     throw ModelError("VQ record check exceeded its 2 GB component bound")
                 }
+            }
+            if manifest.layer_coverage != nil {
+                c.equal("distinct complete-record allocation classes exercised", testedLayouts.count, layers.count)
             }
             if let source {
                 c.expect("demanded checkpoint payloads fully verified", source.verifiedFileCount > 0)

@@ -76,6 +76,7 @@ struct RMSNormGated {
 public struct Rope {
     let invFreq: MLXArray  // (dim/2) f32
     let dim: Int
+    private let pinnedVQReference: Bool
     private let tables = RopeTables()
     public var sharedTables: Bool {
         get { tables.enabled }
@@ -104,14 +105,17 @@ public struct Rope {
 
     package init(dim: Int, base: Float, pinnedVQReference: Bool) {
         self.dim = dim
+        self.pinnedVQReference = pinnedVQReference
         let exps = MLXArray(stride(from: 0, to: Int32(dim), by: 2).map { Float($0) / Float(dim) })
-        self.invFreq = pinnedVQReference
-            ? VQArithmetic.inverseFrequencies(exps, base: base)
-            : pow(MLXArray(base), -exps)
+        if pinnedVQReference {
+            precondition(dim == 64 && base == 10_000_000, "VQ rotary coefficients require the pinned geometry")
+            self.invFreq = VQArithmetic.inverseFrequencies()
+        } else { self.invFreq = pow(MLXArray(base), -exps) }
     }
 
     /// positions (B, T) -> cos/sin (B, T, dim)
     func callAsFunction(_ positions: MLXArray) -> (MLXArray, MLXArray) {
+        if pinnedVQReference { return VQRotaryTable.angles(positions) }
         let freqs = positions.asType(.float32).expandedDimensions(axis: -1) * invFreq
         let emb = concatenated([freqs, freqs], axis: -1)
         return (cos(emb), sin(emb))
@@ -731,6 +735,7 @@ final class QSAAttention {
         let splitRows = multiRow && multiRowMode == .split
         let sparse = boundedIndexer || useSelected || pruneLastQuery || exactRows
             ? nil : selection?.mask(lo: 0, hi: S, keyEnd: offset + S)
+        if let sparse { debugSink?("sparseMask", sparse) }
 
         let qg = qProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, H, 2 * D])
         var q = qg[.ellipsis, 0 ..< D]

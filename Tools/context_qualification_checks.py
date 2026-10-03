@@ -202,4 +202,30 @@ class CapacityEvidence(unittest.TestCase):
             self.assertIn('holds the lock', result['error'])
 
 
+class QuietPreflightChecks(unittest.TestCase):
+    def test_known_external_inference_refuses_even_with_apparently_free_memory(self):
+        for process in ('/opt/bin/llama-server', 'llama-cli', '/build/slotstream', '/toolchain/swift-frontend'):
+            with self.subTest(process=process), \
+                    patch.object(gate.subprocess, 'check_output', return_value=process+'\n') as observed, \
+                    patch.object(gate, 'preflight') as memory:
+                with self.assertRaisesRegex(RuntimeError, 'competing compiler or model process'):
+                    gate.quiet_preflight(13)
+                memory.assert_not_called()
+                self.assertEqual(observed.call_args.args[0], ['ps','-axo','comm='])
+                self.assertEqual(observed.call_args.kwargs['timeout'], 5)
+
+    def test_unrelated_process_names_continue_to_pressure_and_real_memory_checks(self):
+        with patch.object(gate.subprocess, 'check_output', side_effect=['/Applications/Browser\n/usr/bin/sevra\n', '1\n']), \
+                patch.object(gate, 'preflight', return_value={'reclaimable_bytes':15_000_000_000}) as memory:
+            self.assertEqual(gate.quiet_preflight(13), {'reclaimable_bytes':15_000_000_000})
+            memory.assert_called_once_with(13)
+
+    def test_process_observation_failure_never_admits_a_launch(self):
+        with patch.object(gate.subprocess, 'check_output', side_effect=RuntimeError('process observation failed')), \
+                patch.object(gate, 'preflight') as memory:
+            with self.assertRaisesRegex(RuntimeError, 'process observation failed'):
+                gate.quiet_preflight(13)
+            memory.assert_not_called()
+
+
 if __name__ == '__main__': unittest.main()

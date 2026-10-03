@@ -31,7 +31,7 @@ python3 Tools/safetensors_empty_test.py
 for suite in build_identity optimization_build optimization_serial_build optimization_readiness thermal_readiness prefill_bench expert_layout_probe \
              ngram_cache_probe indexer_score_probe vision_capacity_gate vision_qualification \
              optimization_prerequisites optimization_soak optimization_campaign optimization_results \
-             quantization_inventory quantization_baseline quantization_quality quantization_logit_pilot vq_kernel_sources vq_ple_stream vq_model_reference vq_model_fetch; do
+             quantization_inventory quantization_baseline quantization_quality quantization_logit_pilot vq_kernel_sources vq_ple_stream vq_model_reference vq_execution_profile vq_draft_inventory vq_dense_overlay vq_dense_reinvestment vq_uncached_expert vq_contiguous_expert vq_record_repack vq_pilot_admission vq_model_fetch vq_rotary_table_source; do
   python3 "Tools/${suite}_test.py"
 done
 Tools/llms_full.sh --check
@@ -47,6 +47,7 @@ if grep -En 'File\(path: .*sha256: nil\)' Sources/Slotstream/PinnedModel.swift; 
   exit 1
 fi
 
+python3 Tools/mtp_process_guard_gate.py --binary "$BIN"
 "$BIN" runtime-check
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.

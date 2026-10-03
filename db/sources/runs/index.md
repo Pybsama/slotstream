@@ -2,11 +2,50 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T05:21:48.769340Z
+updated: 2026-10-03T16:09:11.983729Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-vq-draft-final-build-admission-pending]] — Final draft build succeeds but broader local acceptance remains unlaunched under external inference contention
+- [[sources/runs/2026/10/2026-10-03-native-vq-owned-draft-component]] — Authenticated original four-bit draft matches all frozen composite-input head outputs exactly
+- [[sources/runs/2026/10/2026-10-03-vq-composite-draft-initial-parity-failure]] — Composite draft reference passes input identity but original native prefill exceeds parity tolerance
+- [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-paired-cost]] — Paired contiguous-record pilot improves generation within its research scope
+- [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-static-acceptance]] — Complete static acceptance for the frozen contiguous-record reader
+- [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-parity]] — Authenticated contiguous VQ record reads retain exact full-model parity
+- [[sources/runs/2026/10/2026-10-03-vq-contiguous-record-lossless-export]] — Lossless aligned VQ expert export with full tensor reconstruction
+- [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-stable-paired-cost]] — Stable admitted paired VQ shard-policy comparison retains buffered reads
+- [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-timing-admission-stopped]] — VQ shard-policy timing stopped before the first measured request
+- [[sources/runs/2026/10/2026-10-03-native-vq-expert-shard-read-policy-parity]] — Exact native VQ parity with an explicit uncached shard policy
+- [[sources/runs/2026/10/2026-10-03-native-vq-reinvestment-static-acceptance]] — Static acceptance of the fixed larger VQ research cache
+- [[sources/runs/2026/10/2026-10-03-native-vq-larger-cache-cpu-diagnosis]] — CPU diagnosis after the larger fixed VQ cache did not improve speed
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-savings-reinvested]] — Dense composite savings reinvested into fixed expert residency
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-affine-compatibility]] — Dense composite shared dispatch preserves existing affine acceptance
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-prefill-and-cost]] — Native dense composite prefill and fixed-cache cost comparison
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-four-bit-greedy-parity]] — Native dense four-bit composite greedy parity and parent regressions
+- [[sources/runs/2026/10/2026-10-03-vq-dense-four-bit-overlay-screen]] — Independent same-checkpoint dense four-bit composite: traversal and quality screen
+- [[sources/runs/2026/10/2026-10-03-vq-draft-raw-normalization-audit]] — Authenticated draft norms require one explicit zero-centered fold
+- [[sources/runs/2026/10/2026-10-03-vq-allocator-profile-and-dense-overlay-feasibility]] — VQ allocator CPU profile and dense four-bit overlay hypothesis
+- [[sources/runs/2026/10/2026-10-03-vq-independent-draft-metadata]] — Independent VQ draft identity, storage ledger and adapter review
+- [[sources/runs/2026/10/2026-10-03-native-vq-bounded-allocator-reuse]] — Bounded VQ allocator reuse with exact parity and paired throughput
+- [[sources/runs/2026/10/2026-10-03-vq-2.1-distribution-screen]] — VQ 2.1 six-context distribution screen against corrected controls
+- [[sources/runs/2026/10/2026-10-03-native-vq-2.1-three-class-parity]] — Native VQ 2.1 three-class records and complete-stack parity
+- [[sources/runs/2026/10/2026-10-03-vq-2.1-payload-and-normalization]] — Complete VQ 2.1 payload verification and normalization audit
+- [[sources/runs/2026/10/2026-10-03-vq-2.1-artifact-preparation]] — VQ 2.1 immutable staging pins and distinct runtime audit
+- [[sources/runs/2026/10/2026-10-03-native-vq-kernel-object-reuse]] — Bounded VQ code-object reuse and matched generation comparison
+- [[sources/runs/2026/10/2026-10-03-native-vq-parallel-generation-cpu-profile]] — Parallel VQ CPU sample exposes repeated projection construction
+- [[sources/runs/2026/10/2026-10-03-native-vq-bounded-parallel-record-reads]] — Bounded parallel VQ demanded reads preserve full reference parity
+- [[sources/runs/2026/10/2026-10-03-native-vq-parallel-read-paired-pilot]] — Matched serial and parallel VQ read pilot improves bounded generation
+- [[sources/runs/2026/10/2026-10-03-native-vq-generation-cpu-profile]] — VQ prototype CPU sample identifies synchronous read waits
+- [[sources/runs/2026/10/2026-10-03-native-vq-generation-cost-pilot]] — Paired bounded VQ generation pilot remains below the speed target
+- [[sources/runs/2026/10/2026-10-03-native-vq-wide-record-cache]] — Larger VQ allocation classes preserve complete-model parity
+- [[sources/runs/2026/10/2026-10-03-native-vq-resident-text]] — Complete resident VQ text payload and exact model/cache parity
+- [[sources/runs/2026/10/2026-10-03-vq-finite-rotary-table-portability]] — Exact finite VQ rotary table after reproduced GPU trigonometry differences
+- [[sources/runs/2026/10/2026-10-03-native-vq-fixed-record-cache]] — Fixed mixed-class VQ cache with complete-model numerical parity
+- [[sources/runs/2026/10/2026-10-03-vq-allocation-class-coverage-correction]] — Correction to VQ component allocation-class coverage
+- [[sources/runs/2026/10/2026-10-03-vq-rotary-coefficients-and-ci-portability]] — Pinned VQ rotary coefficients after cross-runner power mismatch
+- [[sources/runs/2026/10/2026-10-03-native-vq-resident-bank-component]] — Native VQ resident-bank ownership and complete expert parity
+- [[sources/runs/2026/10/2026-10-03-native-vq-sparse-selection]] — Native VQ sparse selection and retained-state parity
 - [[sources/runs/2026/10/2026-10-03-native-vq-greedy-parity]] — Exact native VQ greedy feedback and retained-state boundaries
 - [[sources/runs/2026/10/2026-10-03-native-vq-prefill-validation]] — Complete VQ prefill checkpoint regression and metadata validation
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-prefill]] — Exact complete native VQ prefill and continuation boundaries
@@ -468,47 +507,8 @@ updated: 2026-10-03T05:21:48.769340Z
 - [[sources/runs/2026/09/2026-09-07-optimization-full-cache-first-cell-refusal]] — Original full-cache first-cell resource refusal
 - [[sources/runs/2026/09/2026-09-07-optimization-serial-compiler-guard-failures]] — Serial compiler guard failures and preserved primary errors
 - [[sources/runs/2026/09/2026-09-07-optimization-typed-planner-baseline-and-isolation]] — Typed planner baseline and isolated cost-family implementation
-- [[sources/runs/2026/09/2026-09-07-optimization-resource-readiness-and-restoration]] — Resumed optimization resource readiness and restoration
-- [[sources/runs/2026/09/2026-09-07-optimization-mandatory-sampler-and-final-handoff]] — Mandatory sampler fixture and final acceptance handoff
-- [[sources/runs/2026/09/2026-09-07-optimization-final-completion-metadata]] — Final completion metadata and exact token accounting
-- [[sources/runs/2026/09/2026-09-07-configurable-context-sampler-exit-and-binary-selection]] — Sampler exit-status false passes removed; API and sampler honor the selected binary
-- [[sources/runs/2026/09/2026-09-07-optimization-verification-selected-paths]] — Verification selected-path dispatch and bounded fixture checks
-- [[sources/runs/2026/09/2026-09-07-optimization-selected-artifacts-and-static-suites]] — Selected-artifact acceptance and mandatory optimization suites
-- [[sources/runs/2026/09/2026-09-07-configurable-context-shared-client-fixtures]] — Context consumer, Hermes and published gateway fixtures integrated into shared Tools
-- [[sources/runs/2026/09/2026-09-07-configurable-context-shared-engineering-integration]] — Shared context plan, exact source closure and unreleased documentation integrated
-- [[sources/runs/2026/09/2026-09-07-configurable-context-candidate-selection-acceptance]] — Selected-candidate planner and installer fixes; fixture passes and six headroom-blocked planner checks preserved
-- [[sources/runs/2026/09/2026-09-07-optimization-paired-correctness-independent-of-timing]] — Final response correctness and resource ceilings are independent of timing exclusion
-- [[sources/runs/2026/09/2026-09-07-optimization-static-candidate-selection]] — Static acceptance uses the exact selected candidate
-- [[sources/runs/2026/09/2026-09-07-optimization-current-default-source-review]] — Current default source and complete optimization work reconciliation
-- [[sources/runs/2026/09/2026-09-07-optimization-cache-prelaunch-and-soak-harness]] — Zero-cell cache preflight refusal and pure soak harness checks
-- [[sources/runs/2026/09/2026-09-07-configurable-context-after-component-handoff-readiness]] — Readiness after the bounded component handback still misses the frozen P5 preflight
-- [[sources/runs/2026/09/2026-09-07-optimization-indexer-score-screen]] — Indexer score screen rejects general prefill fusion
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-prepared-state-audit]] — V215 runtime source closure survives final harness review; resource campaign held
-- [[sources/runs/2026/09/2026-09-07-configurable-context-installed-gate-discovery-preparation]] — Installed acceptance reads the actual nested discovery cap; no installed run yet
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-minimum-and-transition-protocols]] — Exact V215 minimum-target neighbors and prospective C19 capacity matrix
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-capacity-protocols]] — Prospective V215 ordinary-target cold and retained capacity protocols; unrun
-- [[sources/runs/2026/09/2026-09-06-optimization-merged-correctness-v202]] — Complete V202 shared inference correctness queue passes
-- [[sources/runs/2026/09/2026-09-07-optimization-actual-default-final-gate]] — Applied eighth actual-default final qualification gate
-- [[sources/runs/2026/09/2026-09-07-optimization-default-and-release-acceptance-review]] — Actual-default comparison draft and release acceptance shell correction
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-capacity-preflight-hold]] — Capacity campaign remains unrun: current real availability is below the frozen preflight
-- [[sources/runs/2026/09/2026-09-07-optimization-typed-context-correctness]] — Typed context refusal and shared affected correctness V215
-- [[sources/runs/2026/09/2026-09-07-optimization-typed-context-wire-counterexample]] — Typed context integration reveals OpenAI error.code gap
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-idle-swap-control]] — A further no-model idle control observes 16 global swap-ins; capacity held
-- [[sources/runs/2026/09/2026-09-07-configurable-context-ollama-overflow-wire-counterexample]] — Actual HTTP gate exposes stale prose matching and missing structured Ollama overflow codes
-- [[sources/runs/2026/09/2026-09-06-configurable-context-full-image-and-actual-client-pass]] — V202 full image, ordinary quality, actual Hermes and Ollama image correctness pass
-- [[sources/runs/2026/09/2026-09-06-optimization-vision-acceptance-profile]] — Full vision test profile and mandatory acceptance hardening
-- [[sources/runs/2026/09/2026-09-06-optimization-planner-family-refinement]] — Unapplied planner-family refinement preserves direct dispatch
-- [[sources/runs/2026/09/2026-09-06-configurable-context-vision-target-counterexample]] — V202 independent vision reference passes; full image fixture exceeds the 10 GB test target
-- [[sources/runs/2026/09/2026-09-06-configurable-context-full-resource-swap-exclusion]] — V202 full governor drill stops on global swap-ins; idle controls also observe swap-ins
-- [[sources/runs/2026/09/2026-09-06-optimization-indexer-input-delivery]] — Indexer V204 input delivery failure and exact V206 initializer correction
-- [[sources/runs/2026/09/2026-09-06-optimization-planner-family-preparation]] — Unapplied coherent planner-family draft and exact comparison preparation
-- [[sources/runs/2026/09/2026-09-06-optimization-governor-advisory-fixture-correction]] — Governor advisory fixture correction and shared successor
-- [[sources/runs/2026/09/2026-09-06-configurable-context-governor-advisory-fixture-counterexample]] — V198 pure governor matrix exposes physically invalid settled-fixture assumptions
-- [[sources/runs/2026/09/2026-09-06-optimization-advisory-fixture-counterexample]] — V198 shared build and T0 advisory-fixture counterexample
-- [[sources/runs/2026/09/2026-09-06-slotpack-v0211-publication-and-r2-retirement]] — Public v0.2.11 provenance, ordinary installation, installed-model acceptance and verified R2 bucket retirement complete the free Hugging Face migration.
-- [[sources/runs/2026/09/2026-09-06-optimization-activation-and-evidence-preservation]] — V199 actual-default qualification preparation and V200 exact historical evidence recovery
 
 ## More
 
-This folder has 713 files. The 500 most recent are listed above.
+This folder has 752 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

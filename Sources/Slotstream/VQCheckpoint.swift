@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import MLX
 
-/// Single-owner experimental loader for the two inspected VQ artifacts.
+/// Single-owner experimental loader for the inspected VQ artifacts.
 /// Metadata is authenticated here; each demanded payload is then independently
 /// verified through its owned descriptor. It never executes model.py, modifies
 /// an installation, or admits a pack to Engine.load. Its file cache is not an
@@ -37,17 +37,23 @@ package final class VQCheckpoint {
     private struct Config: Decodable { let vq_modules: [String: Projection], vq_ple: PLE }
     private struct Profile {
         let inventorySHA: String, fileMapSHA: String, revision: String
+        let classLayers: [Int], classLayerCounts: [Int], wideLayer: Int
     }
     private static let profiles = [
         Profile(inventorySHA: "098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe",
             fileMapSHA: "1d0a66f4382f12a3ef512b3181a6e7c01fe2d6d3c5cbd11f6ebb3d0dd6184168",
-            revision: "a4e1b44631619ba440d985e324d95dd106536a3d"),
+            revision: "a4e1b44631619ba440d985e324d95dd106536a3d", classLayers: [0, 2], classLayerCounts: [6, 42], wideLayer: 2),
         Profile(inventorySHA: "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac",
             fileMapSHA: "2cc5122dd575027f70f2b584f6352c70ad4328f54051ee878e2a72dc420d4228",
-            revision: "0f35dc817238bdbabdac208db731470cd30a7c0a")
+            revision: "0f35dc817238bdbabdac208db731470cd30a7c0a", classLayers: [0, 3], classLayerCounts: [7, 41], wideLayer: 3),
+        Profile(inventorySHA: "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037",
+            fileMapSHA: "58d59c3b849ca303cece916f930a15e8583455e1566611133597513b0245a565",
+            revision: "8684640a3956b01c47f5d47f9b999e2ab8b985f1", classLayers: [0, 2, 27], classLayerCounts: [2, 37, 9], wideLayer: 2)
     ]
     package let revision: String
     package let inventorySHA256: String
+    package let recordClassCount: Int
+    package let wideRecordLayer: Int
     package let config: ModelConfig
     private let directory: URL
     private let index: [String: String]
@@ -55,6 +61,24 @@ package final class VQCheckpoint {
     private let recordLayouts: [VQRecordLayout]
     private let ple: PLE
     private var files: [String: VQTensorFile] = [:]
+    private let denseOverlay: VQDenseOverlay?
+    private let packedExperts: VQPackedExperts?
+    package var packedManifestSHA256: String? { packedExperts == nil ? nil : VQPackedExperts.manifestSHA256 }
+    package var packedVerifiedFiles: Int { packedExperts?.verifiedFileCount ?? 0 }
+    package var packedVerifiedBytes: Int { packedExperts?.verifiedFileBytes ?? 0 }
+    package var recordStorage: String { packedExperts == nil ? "split-tensor-ranges-v1" : "contiguous-records-16k-v1" }
+    private let uncachedExpertReads: Bool
+    private let expertShardNames: Set<String>
+    package var expertReadPolicy: String { uncachedExpertReads ? "uncached-random-shards-v1" : "buffered-v1" }
+    package var uncachedExpertFileCount: Int { files.values.filter(\.uncachedRandomReads).count }
+    package var compositeSHA256: String? { denseOverlay == nil ? nil : VQDenseOverlay.identitySHA256 }
+    package var residentTextPayloadBytes: Int { denseOverlay == nil ? 5_318_309_400 : VQDenseOverlay.residentPayloadBytes }
+    package var largestDenseLoadCopyBytes: Int { denseOverlay?.largestLoadCopyBytes ?? 635_699_200 }
+    package var residentHeadPayloadBytes: Int { denseOverlay == nil ? 682_414_080 : 361_287_680 }
+    package var residentEmbeddingPayloadBytes: Int { denseOverlay == nil ? 675_430_400 : 357_580_800 }
+    package var embeddingBits: Int { denseOverlay == nil ? 8 : 4 }
+    package var overlayVerifiedFileCount: Int { denseOverlay?.verifiedFileCount ?? 0 }
+    package var overlayVerifiedPayloadBytes: Int { denseOverlay?.verifiedPayloadBytes ?? 0 }
 
     private static func digest(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -68,7 +92,17 @@ package final class VQCheckpoint {
         return data
     }
 
-    package init(directory: URL, inventory: URL) throws {
+    package init(directory: URL, inventory: URL, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil,
+                 uncachedExpertReads: Bool = false, packedRecordDirectory: URL? = nil) throws {
+        guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
+            throw ModelError("dense composite requires both its baseline and manifest")
+        }
+        guard !uncachedExpertReads || denseOverlayBaseline != nil else {
+            throw ModelError("uncached VQ research reads require the exact dense composite")
+        }
+        guard packedRecordDirectory == nil || (denseOverlayBaseline != nil && !uncachedExpertReads) else {
+            throw ModelError("packed VQ research requires the dense composite and buffered shard policy")
+        }
         let root = directory.resolvingSymlinksInPath()
         let raw = try Self.bounded(inventory, limit: 4_000_000), hash = Self.digest(raw)
         guard let profile = Self.profiles.first(where: { $0.inventorySHA == hash }) else {
@@ -157,6 +191,12 @@ package final class VQCheckpoint {
             }
             layouts.append(try VQRecordLayout(projections))
         }
+        let classCounts = layouts.reduce(into: [VQRecordLayout: Int]()) { $0[$1, default: 0] += 1 }
+        guard classCounts.count == profile.classLayers.count,
+              Set(profile.classLayers.map { layouts[$0] }).count == classCounts.count,
+              profile.classLayers.map({ classCounts[layouts[$0]]! }) == profile.classLayerCounts else {
+            throw ModelError("VQ record allocation classes differ from their inspected coverage")
+        }
         let ple = config.vq_ple
         let expectedKeys = Set((0..<128).map { "model.layers.1.ple.ple_embedding.ngram_embedding.shard_\($0)" })
         guard ple.keys.count == 128, Set(ple.keys) == expectedKeys, Set(ple.shapes.keys) == expectedKeys else {
@@ -169,15 +209,48 @@ package final class VQCheckpoint {
             throw ModelError("VQ PLE storage geometry changed")
         }
         self.directory = root; self.index = index; self.identities = identities
+        let expertShards = Set(index.filter { $0.key.contains(".mlp.switch_mlp.") }.values)
+        guard !uncachedExpertReads || (hash == VQDenseOverlay.parentInventorySHA256 && expertShards.count == 9) else {
+            throw ModelError("uncached VQ shard set differs from the inspected composite")
+        }
+        self.uncachedExpertReads = uncachedExpertReads; self.expertShardNames = expertShards
         self.recordLayouts = layouts; self.ple = ple
+        if let baseline = denseOverlayBaseline, let manifest = denseOverlayManifest {
+            let overlay = try VQDenseOverlay(baseline: baseline, manifest: manifest, inventorySHA256: hash)
+            denseOverlay = overlay
+            geometry = geometry.withAffineOverrides(overlay.recipes)
+        } else { denseOverlay = nil }
+        packedExperts = try packedRecordDirectory.map { try VQPackedExperts(directory: $0, inventorySHA256: hash, layouts: layouts) }
         self.config = geometry
         revision = profile.revision; inventorySHA256 = hash
+        recordClassCount = profile.classLayers.count; wideRecordLayer = profile.wideLayer
+    }
+
+    /// Timing pilots pay complete payload authentication before their request
+    /// interval. Keep descriptors owned so demand reads cannot hash a new shard
+    /// inside a later token. This does not load or warm expert records.
+    package func authenticateMainPayloads(shouldContinue: () -> Bool) throws {
+        for filename in identities.keys.sorted() {
+            guard shouldContinue(), let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 3_000_000_000,
+                  ProcessMemory.peakResidentBytes() <= 10_000_000_000 else {
+                throw ModelError("VQ payload preparation lost its resource envelope")
+            }
+            if let owned = files[filename] { try owned.verifyUnchanged() }
+            else {
+                files[filename] = try VQTensorFile(url: directory.appendingPathComponent(filename),
+                    identity: identities[filename]!, uncachedRandomReads: uncachedExpertReads && expertShardNames.contains(filename),
+                    shouldContinue: shouldContinue)
+            }
+        }
+        try denseOverlay?.authenticateAll(shouldContinue: shouldContinue)
+        try packedExperts?.authenticateAll(shouldContinue: shouldContinue)
     }
 
     private func file(for name: String, shouldContinue: () -> Bool) throws -> VQTensorFile {
         guard let filename = index[name], let identity = identities[filename] else { throw ModelError("missing authenticated VQ tensor: \(name)") }
         if let owned = files[filename] { try owned.verifyUnchanged(); return owned }
-        let owned = try VQTensorFile(url: directory.appendingPathComponent(filename), identity: identity, shouldContinue: shouldContinue)
+        let owned = try VQTensorFile(url: directory.appendingPathComponent(filename), identity: identity,
+            uncachedRandomReads: uncachedExpertReads && expertShardNames.contains(filename), shouldContinue: shouldContinue)
         files[filename] = owned
         return owned
     }
@@ -216,6 +289,9 @@ package final class VQCheckpoint {
 
     private func array(_ name: String, rows: [Int]? = nil, maximumBytes: Int = 64_000_000,
                        shouldContinue: () -> Bool) throws -> MLXArray {
+        if let overlay = denseOverlay, overlay.bytes(for: name) != nil {
+            return try overlay.array(name, rows: rows, maximumBytes: maximumBytes, shouldContinue: shouldContinue)
+        }
         let (bytes, shape, tag) = try raw(name, rows: rows, maximumBytes: maximumBytes, shouldContinue: shouldContinue)
         let dtype: DType
         switch tag {
@@ -231,6 +307,67 @@ package final class VQCheckpoint {
         default: throw ModelError("VQ tensor dtype is outside native MLX admission")
         }
         return MLXArray(bytes, shape, dtype: dtype)
+    }
+
+    package func recordLayout(layer: Int) throws -> VQRecordLayout {
+        guard (0..<48).contains(layer) else { throw ModelError("VQ record layer is out of range") }
+        return recordLayouts[layer]
+    }
+
+    package func recordBooks(layer: Int) throws -> [MLXArray] {
+        _ = try recordLayout(layer: layer)
+        let values = try ["gate_proj", "up_proj", "down_proj"].map { name in
+            try array("model.layers.\(layer).mlp.switch_mlp." + name + ".codebook", shouldContinue: { true })
+        }
+        eval(values)
+        return values
+    }
+
+    /// Resolve mutable loader state on its owner before any read lane starts.
+    /// Workers receive only the resulting immutable descriptor/range plan.
+    package func recordReadPlan(layer: Int) throws -> VQRecordReadPlan {
+        if let packedExperts { return try packedExperts.readPlan(layer: layer) }
+        let layout = try recordLayout(layer: layer)
+        var pieces: [VQRecordReadPlan.Piece] = []
+        for (index, name) in ["gate_proj", "up_proj", "down_proj"].enumerated() {
+            let spec = layout.projections[index], rows = index == 2 ? 2560 : 640
+            let unpacked = spec.packing == .unpacked8
+            for piece in 0...1 {
+                let key = "model.layers.\(layer).mlp.switch_mlp." + name + (piece == 0 ? ".codes" : ".vq_scales")
+                let owner = try file(for: key, shouldContinue: { true })
+                let columns = piece == 0 ? spec.codeRowBytes / (unpacked ? 1 : 4) : spec.columns / 64
+                let dtype = piece == 0 ? (unpacked ? "U8" : "U32") : "F16"
+                guard let ref = owner.tensors[key], ref.dtype == dtype, ref.shape == [512, rows, columns],
+                      ref.rowBytes == layout.pieceBytes[index * 2 + piece] else {
+                    throw ModelError("VQ read plan tensor disagrees with its complete-record layout")
+                }
+                pieces.append(.init(file: owner, name: key, bytes: layout.pieceBytes[index * 2 + piece]))
+            }
+        }
+        return try VQRecordReadPlan(pieces)
+    }
+
+    /// One checked piece at a time; the bank publishes only after all six.
+    /// This synchronous reader never owns or stores the bank's CPU pointers.
+    package func readRecord(layer: Int, expert: Int, emit: (Int, Data) throws -> Void) throws {
+        let layout = try recordLayout(layer: layer)
+        guard (0..<512).contains(expert) else { throw ModelError("VQ expert is out of range") }
+        for (index, name) in ["gate_proj", "up_proj", "down_proj"].enumerated() {
+            let base = "model.layers.\(layer).mlp.switch_mlp." + name
+            let spec = layout.projections[index], rows = index == 2 ? 2560 : 640
+            let unpacked = spec.packing == .unpacked8
+            for piece in 0...1 {
+                let position = index * 2 + piece
+                let (bytes, shape, dtype) = try raw(base + (piece == 0 ? ".codes" : ".vq_scales"),
+                    rows: [expert], maximumBytes: layout.pieceBytes[position], shouldContinue: { true })
+                let columns = piece == 0 ? spec.codeRowBytes / (unpacked ? 1 : 4) : spec.columns / 64
+                let tag = piece == 0 ? (unpacked ? "U8" : "U32") : "F16"
+                guard shape == [1, rows, columns], dtype == tag, bytes.count == layout.pieceBytes[position] else {
+                    throw ModelError("VQ record piece disagrees with the authenticated layout")
+                }
+                try emit(position, bytes)
+            }
+        }
     }
 
     package func records(layer: Int, experts: [UInt32], shouldContinue: () -> Bool = { true }) throws -> VQRecordBatch {
@@ -275,6 +412,7 @@ package final class VQCheckpoint {
             self.config = config; self.values = values
         }
         package func optionalTensor(_ name: String) -> MLXArray? { values[name] }
+        package var payloadBytes: Int { values.values.reduce(0) { $0 + $1.nbytes } }
     }
 
     /// One dense layer or the final head, explicitly bounded. Routed matrices
@@ -292,11 +430,17 @@ package final class VQCheckpoint {
         var values: [String: MLXArray] = [:], bytes = 0
         let limit = layer == nil ? 800_000_000 : 200_000_000
         for name in names {
-            let file = try file(for: name, shouldContinue: { true })
-            guard let ref = file.tensors[name], ref.byteCount <= limit - bytes else {
+            let byteCount: Int
+            if let replacementBytes = denseOverlay?.bytes(for: name) { byteCount = replacementBytes }
+            else {
+                let owner = try file(for: name, shouldContinue: { true })
+                guard let ref = owner.tensors[name] else { throw ModelError("VQ dense tensor is missing") }
+                byteCount = ref.byteCount
+            }
+            guard byteCount <= limit - bytes else {
                 throw ModelError("VQ dense family exceeds bounded allocation")
             }
-            bytes += ref.byteCount
+            bytes += byteCount
             var value = try array(name, maximumBytes: limit, shouldContinue: { true })
             if foldedSuffixes.contains(where: name.hasSuffix) {
                 guard value.dtype == .bfloat16 else { throw ModelError("VQ raw norm must be BF16") }
@@ -308,6 +452,20 @@ package final class VQCheckpoint {
         return Dense(config: config, values: values)
     }
 
+    /// Complete affine embedding weights for the explicit resident-text probe.
+    /// The public loader and ordinary row-streaming probe remain independent.
+    package func embeddingWeights() throws -> Dense {
+        var values: [String: MLXArray] = [:]
+        for suffix in ["weight", "scales", "biases"] {
+            let name = "model.embed_tokens." + suffix
+            values[name] = try array(name, maximumBytes: 800_000_000, shouldContinue: { true })
+        }
+        eval(Array(values.values))
+        let result = Dense(config: config, values: values)
+        guard result.payloadBytes == residentEmbeddingPayloadBytes else { throw ModelError("VQ resident embedding byte ledger changed") }
+        return result
+    }
+
     package func embedding(_ ids: [Int]) throws -> MLXArray {
         guard (1...512).contains(ids.count), ids.allSatisfy({ (0..<config.vocabSize).contains($0) }) else {
             throw ModelError("VQ probe embedding requires one to 512 valid tokens")
@@ -316,7 +474,7 @@ package final class VQCheckpoint {
         let weight = try array(base + "weight", rows: ids, shouldContinue: { true })
         let scales = try array(base + "scales", rows: ids, shouldContinue: { true })
         let biases = try array(base + "biases", rows: ids, shouldContinue: { true })
-        return dequantized(weight, scales: scales, biases: biases, groupSize: 64, bits: 8)
+        return dequantized(weight, scales: scales, biases: biases, groupSize: 64, bits: embeddingBits)
             .reshaped([1, ids.count, 2560])
     }
 

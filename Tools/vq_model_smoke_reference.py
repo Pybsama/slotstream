@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 
 from context_qualification import quiet_preflight, verification_lock
+from vq_execution_profile import add_runtime_argument, recheck_runtime, select_runtime
 from vq_model_reference import (ARCH_SHA256, NORMALIZATION, instrument_identity,
     load_model, physical, references, recheck_owned_headroom, verify_files)
 from vq_ple_stream import Archive
@@ -24,6 +25,7 @@ BATCHED_PASSES = [[100, 101, 248044, 102, 103, 104, 105, 106], [107, 108, 109]]
 
 def run(options):
     passes = BATCHED_PASSES if options.batched else PASSES
+    runtime_path, execution_profile = select_runtime(options.model, getattr(options, 'runtime', None))
     instrument = instrument_identity()
     own = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     before = quiet_preflight(13)
@@ -34,7 +36,7 @@ def run(options):
         import mlx.core as mx
         mx.set_memory_limit(8_000_000_000)
         mx.set_cache_limit(128_000_000)
-        arch, vq = references(options.architecture, options.model / 'model.py')
+        arch, vq = references(options.architecture, runtime_path)
         archive = Archive(options.model, options.inventory)
         files, total = [], 0
 
@@ -90,9 +92,11 @@ def run(options):
                 mixed = core.hyper_connection_mixer(value)
                 save(48, step, {'mixed': mixed, 'logits': model.lm_head(mixed).astype(mx.float32)})
             for file in archive.files.values(): file.verify_unchanged()
+            recheck_runtime(options.model, getattr(options, 'runtime', None), execution_profile)
             if instrument_identity()['sha256'] != instrument['sha256'] or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != own:
                 raise ValueError('full-stack reference instrument changed')
             receipt = {'schema': 1, 'architecture_sha256': ARCH_SHA256, 'normalization': NORMALIZATION,
+                'runtime_sha256': execution_profile['runtime_sha256'], 'execution_profile': execution_profile,
                        'artifact': provenance, 'instrument': instrument, 'producer_sha256': own,
                        'passes': passes, 'files': files, 'fixture_bytes': total,
                        'before': before, 'memory': physical(), 'mlx_peak_bytes': mx.get_peak_memory(),
@@ -108,4 +112,5 @@ if __name__ == '__main__':
     for name in ('model', 'inventory', 'architecture', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--batched', action='store_true', help='Eight-token pass and three-token continuation, requiring multiple native record batches')
+    add_runtime_argument(parser)
     run(parser.parse_args())

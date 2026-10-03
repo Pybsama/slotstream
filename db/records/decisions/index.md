@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-02T18:46:22.278918Z
+updated: 2026-10-03T10:14:02.121123Z
 ---
 
 # records/decisions
 
+- [[records/decisions/vq-2.1-held-after-distribution-screen]] — Hold VQ 2.1 out of promotion after the matched quality screen; retain evidence and focus engineering on VQ 3.2.
 - [[records/decisions/vq-weights-behind-qualification-gates]] — Support the VQ builds of the same model as a second weight format, behind qualification gates
 - [[records/decisions/same-model-automatic-quantization-with-overrides]] — Default to automatic same-model quantization selection while preserving independent user pack and memory-ceiling overrides.
 - [[records/decisions/automatic-context-window-per-machine]] — Auto picks the largest of 32,768, 65,536, 131,072 and 262,144 tokens that keeps speculative decoding, retains one conversation and adds at most 10% to a typical request

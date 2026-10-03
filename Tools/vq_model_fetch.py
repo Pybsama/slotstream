@@ -19,12 +19,19 @@ import urllib.request
 
 from quantization_inventory import unique_json
 from vq_fused_reference import bounded
-from vq_model_reference import ARTIFACTS
+from vq_model_reference import ARTIFACTS as REFERENCE_ARTIFACTS
 from vq_ple_stream import stamp
+
+# Staging is weaker than numerical or production qualification. The inspected
+# 2.1 payload and norm audit now permit reference experiments, with a separately
+# bound reviewed execution source. Keep staging admission distinct so future
+# metadata-only candidates need not be admitted to the reference harness.
+# These immutable pins authorize storage only; they do not certify arithmetic.
+STAGING_ARTIFACTS = dict(REFERENCE_ARTIFACTS)
 
 
 def file_map(hub, revision):
-    if hub.get('sha') != revision or revision not in ARTIFACTS:
+    if hub.get('sha') != revision or revision not in STAGING_ARTIFACTS:
         raise ValueError('immutable inspected Hub revision required')
     result = {}
     for item in hub['siblings']:
@@ -38,7 +45,7 @@ def file_map(hub, revision):
             raise ValueError('invalid bounded artifact file metadata')
         result[name] = {'path': name, 'bytes': item['size'], 'sha256': item['lfs']['sha256']}
     encoded = json.dumps(result, sort_keys=True, separators=(',', ':')).encode()
-    if hashlib.sha256(encoded).hexdigest() != ARTIFACTS[revision][2]:
+    if hashlib.sha256(encoded).hexdigest() != STAGING_ARTIFACTS[revision][2]:
         raise ValueError('Hub full-file map differs from the inspected artifact')
     return result
 
@@ -74,10 +81,10 @@ def atomic(path, data):
 def fetch(inventory, out):
     inv = unique_json(bounded(inventory, 4_000_000))
     revision = inv['revision']
-    if revision not in ARTIFACTS or inv['repo'] != ARTIFACTS[revision][0]:
+    if revision not in STAGING_ARTIFACTS or inv['repo'] != STAGING_ARTIFACTS[revision][0]:
         raise ValueError('candidate is not in the inspected research allowlist')
     cfg = bounded(inventory.parent / 'config.json', 1_000_000)
-    if hashlib.sha256(cfg).hexdigest() != ARTIFACTS[revision][1]:
+    if hashlib.sha256(cfg).hexdigest() != STAGING_ARTIFACTS[revision][1]:
         raise ValueError('candidate config differs from the inspected artifact')
     metadata = inventory.parent / 'hub-files.json'
     if not metadata.exists():

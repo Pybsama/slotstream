@@ -16,7 +16,7 @@ OPTIMIZATION_SUITES = [
     'ngram_cache_probe', 'indexer_score_probe', 'vision_capacity_gate', 'vision_qualification',
     'optimization_prerequisites', 'optimization_soak', 'optimization_campaign', 'optimization_results',
     'quantization_inventory', 'quantization_baseline', 'quantization_quality', 'quantization_logit_pilot', 'vq_kernel_sources',
-    'vq_ple_stream', 'vq_model_reference', 'vq_model_fetch',
+    'vq_ple_stream', 'vq_model_reference', 'vq_execution_profile', 'vq_draft_inventory', 'vq_dense_overlay', 'vq_dense_reinvestment', 'vq_uncached_expert', 'vq_contiguous_expert', 'vq_record_repack', 'vq_pilot_admission', 'vq_model_fetch', 'vq_rotary_table_source',
 ]
 
 
@@ -60,6 +60,7 @@ BIN=${BIN:-.build/release/slotstream}
         self.write('Tools/safetensors_empty_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_EMPTY_TENSORS') == '1' else 0)\n")
         self.write('Tools/pull_interrupt_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PULL_INTERRUPT') == '1' else 0)\n")
         self.write('Tools/memory_override_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MEMORY_OVERRIDES') == '1' else 0)\n")
+        self.write('Tools/mtp_process_guard_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_DRAFT_LOCK') == '1' else 0)\n")
         for suite in OPTIMIZATION_SUITES:
             self.write(f'Tools/{suite}_test.py', f'''import json, os
 with open(os.environ['SLOTSTREAM_SUITE_TRACE'], 'a') as output:
@@ -121,6 +122,17 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
     def test_failed_parity_comparison_stops_before_native_checks(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_PARITY': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
+    def test_failed_draft_lock_stops_before_native_checks(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_DRAFT_LOCK': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
+    def test_missing_draft_lock_gate_stops_acceptance(self):
+        (self.root/'Tools/mtp_process_guard_gate.py').unlink()
+        result, rows = self.run_entry({})
+        self.assertNotEqual(result.returncode, 0)
         self.assertEqual(rows, [])
 
     def test_failed_native_memory_regression_stops_acceptance(self):

@@ -44,6 +44,47 @@ extension Diagnostics {
             do { _ = try load(good, extra: [marker: [:]]); c.expect("unqualified \(marker) refused", false) }
             catch { c.expect("unqualified \(marker) refused", true) }
         }
+        let reviewed = "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8"
+        let older = "36de8d6ba21ff93ac3de2994eed4fd59e9cfab86b1908f72f5ee2673bd0aa5bb"
+        let small = "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037"
+        let larger = ["098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe",
+                      "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac"]
+        func execution(_ fields: [String: Any]) throws -> VQReferenceExecution {
+            try JSONDecoder().decode(VQReferenceExecution.self, from: JSONSerialization.data(withJSONObject: fields))
+        }
+        let explicit: [String: Any] = ["schema": 1, "mode": "explicit-reviewed-v1",
+            "bundled_runtime_sha256": older, "runtime_sha256": reviewed]
+        try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: reviewed, profile: execution(explicit))
+        c.expect("older bundle explicitly binds reviewed execution", true)
+        for artifact in larger {
+            try VQReferenceExecution.validate(inventorySHA: artifact, runtimeSHA: nil, profile: nil)
+            try VQReferenceExecution.validate(inventorySHA: artifact, runtimeSHA: reviewed, profile: nil)
+            c.expect("historical reviewed fixtures remain valid unchanged", true)
+            var bundled = explicit; bundled["mode"] = "bundled-reviewed-v1"; bundled["bundled_runtime_sha256"] = reviewed
+            try VQReferenceExecution.validate(inventorySHA: artifact, runtimeSHA: reviewed, profile: execution(bundled))
+            c.expect("fresh bundled fixture binds both identities", true)
+        }
+        var badProfiles: [[String: Any]] = []
+        for (key, value): (String, Any) in [("schema", 2), ("mode", "bundled-reviewed-v1"),
+            ("bundled_runtime_sha256", reviewed), ("runtime_sha256", older)] {
+            var fields = explicit; fields[key] = value; badProfiles.append(fields)
+        }
+        for fields in badProfiles {
+            do {
+                try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: reviewed, profile: execution(fields))
+                c.expect("changed execution identity refused", false)
+            } catch { c.expect("changed execution identity refused", true) }
+        }
+        for operation: () throws -> Void in [
+            { try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: reviewed, profile: nil) },
+            { try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: nil, profile: execution(explicit)) },
+            { try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: older, profile: execution(explicit)) },
+            { try VQReferenceExecution.validate(inventorySHA: "uninspected", runtimeSHA: reviewed, profile: execution(explicit)) },
+            { try VQReferenceExecution.validate(inventorySHA: larger[0], runtimeSHA: older, profile: nil) }
+        ] {
+            do { try operation(); c.expect("incomplete or foreign execution binding refused", false) }
+            catch { c.expect("incomplete or foreign execution binding refused", true) }
+        }
         return c.report()
     }
 
@@ -66,6 +107,17 @@ extension Diagnostics {
         let tail = try VQLayout(columns: 640, dimensions: 4, codebookEntries: 2048, groupSize: 64, packing: .words32)
         let regular = try VQRecordLayout([narrow, narrow, tail])
         c.equal("complete 3.2 regular record bytes", regular.recordBytes, 1_843_200)
+        c.equal("ordinary bank admission remains 512", try VQBankAdmission.standard.maximumRows(for: narrow), 512)
+        c.equal("explicit dense bank admission is 1536", try VQBankAdmission.denseCompositeReinvestment.maximumRows(for: narrow), 1536)
+        for operation: () throws -> Void in [
+            { _ = try VQBankAdmission.denseCompositeReinvestment.maximumRows(for: high) },
+            { _ = try VQBankAdmission.denseCompositeReinvestment.maximumRows(for: ngram) },
+            { _ = try VQRecordBank(layout: regular, capacity: 513) },
+            { _ = try VQRecordBank(layout: regular, capacity: 1537, admission: .denseCompositeReinvestment) }
+        ] {
+            do { try operation(); c.expect("unqualified bank admission refused before allocation", false) }
+            catch { c.expect("unqualified bank admission refused before allocation", true) }
+        }
         let mixed = try VQRecordLayout([narrow, high, tail])
         let swapped = try VQRecordLayout([high, narrow, tail])
         c.equal("swapped projections have equal byte counts", mixed.recordBytes, swapped.recordBytes)
@@ -149,6 +201,7 @@ extension Diagnostics {
                 eval(result)
                 c.expect("affine \(bits)-bit gathered matmul finite", all(isFinite(result)).item(Bool.self))
             }
+            try checkMixedDenseRecipes(&c)
             // A scalar-exact control covers every fused dispatch family and
             // the SIMD boundary. Real-row Python binding parity is a separate
             // fixture gate; these constant weights do not certify full math.
@@ -157,6 +210,14 @@ extension Diagnostics {
                     (2, 1024, .words32), (4, 256, .words32), (4, 2048, .words32), (8, 16384, .words32)] {
                     let layout = try VQLayout(columns: columns, dimensions: dim,
                         codebookEntries: entries, groupSize: 64, packing: packing)
+                    let firstKernels = try VQExpertKernels.shared(layout)
+                    let otherWidth = try VQLayout(columns: columns == 640 ? 2560 : 640, dimensions: dim,
+                        codebookEntries: entries, groupSize: 64, packing: packing)
+                    let again = try VQExpertKernels.shared(otherWidth)
+                    c.expect("code-only specialization reused across input widths",
+                        firstKernels.row === again.row && firstKernels.prefill === again.prefill)
+                    c.expect("SIMD code reuse preserves family admission",
+                        dim == 8 ? (firstKernels.simd != nil && firstKernels.simd === again.simd) : again.simd == nil)
                     let dtype: DType = packing == .unpacked8 ? .uint8 : .uint32
                     let codes = MLXArray.zeros([1, 7, layout.codeRowBytes / dtype.size], dtype: dtype)
                     let book = MLXArray.ones([entries, dim], dtype: .float16)
@@ -175,6 +236,13 @@ extension Diagnostics {
                         c.expect("fused rejects expert out of bounds", false)
                     } catch { c.expect("fused rejects expert out of bounds", true) }
                 }
+            }
+            for layout in [
+                try VQLayout(columns: 160, dimensions: 4, codebookEntries: 2048, groupSize: 32, packing: .bytes),
+                try VQLayout(columns: 640, dimensions: 2, codebookEntries: 256, groupSize: 64, packing: .words32)
+            ] {
+                do { _ = try VQExpertKernels.shared(layout); c.expect("kernel cache rejects unadmitted specialization", false) }
+                catch { c.expect("kernel cache rejects unadmitted specialization", true) }
             }
             return c.report()
         }

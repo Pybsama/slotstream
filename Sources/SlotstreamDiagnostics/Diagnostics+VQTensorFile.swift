@@ -26,11 +26,24 @@ extension Diagnostics {
         let header: [String: Any] = ["tensor": ["dtype": "U8", "shape": [2, 500_003], "data_offsets": [0, payload.count]]]
         let (path, identity) = try fixture("good.safetensors", header: header, payload: payload)
         var file: VQTensorFile? = try VQTensorFile(url: path, identity: identity)
+        c.equal("ordinary reader keeps buffered policy", file!.uncachedRandomReads, false)
+        let uncached = try VQTensorFile(url: path, identity: identity, uncachedRandomReads: true)
+        c.equal("uncached policy admitted only after checked OS calls", uncached.uncachedRandomReads, true)
+        c.equal("uncached bounded tail read", try uncached.read("tensor", offset: 999_998, count: 8), Data(payload.suffix(8)))
+        c.equal("uncached maximum read", try uncached.read("tensor", offset: 0, count: VQTensorFile.maximumRead), Data(payload.prefix(VQTensorFile.maximumRead)))
+        rejected("uncached range guard retained") { _ = try uncached.read("tensor", offset: payload.count - 1, count: 2) }
+        rejected("uncached cancellation retained") { _ = try uncached.read("tensor", offset: 0, count: 1, shouldContinue: { false }) }
         c.equal("verified tensor geometry", file!.tensors["tensor"]!.shape, [2, 500_003])
         c.equal("bounded tail read", try file!.read("tensor", offset: 999_998, count: 8), Data(payload.suffix(8)))
         c.equal("maximum read", try file!.read("tensor", offset: 0, count: VQTensorFile.maximumRead), Data(payload.prefix(VQTensorFile.maximumRead)))
         for (offset, count) in [(-1, 1), (0, 0), (0, 1_000_001), (payload.count, 1), (payload.count - 1, 2), (Int.max, 1)] {
             rejected("invalid tensor read refused") { _ = try file!.read("tensor", offset: offset, count: count) }
+        }
+        for expert in [-1, 0, 511, 512, Int.max] {
+            rejected("ordinary tensor cannot admit packed row reads") { _ = try file!.readPackedRecord(expert: expert) }
+        }
+        rejected("ordinary tensor cannot form a packed plan") {
+            _ = try VQRecordReadPlan(packed: file!, pieceBytes: [Int](repeating: 2, count: 6))
         }
         rejected("unknown tensor refused") { _ = try file!.read("absent", offset: 0, count: 1) }
         rejected("cancelled admission refused") { _ = try VQTensorFile(url: path, identity: identity, shouldContinue: { false }) }
@@ -53,10 +66,13 @@ extension Diagnostics {
 
         let (changed, changedIdentity) = try fixture("changed.safetensors", header: header, payload: payload)
         let immutable = try VQTensorFile(url: changed, identity: changedIdentity)
+        let uncachedImmutable = try VQTensorFile(url: changed, identity: changedIdentity, uncachedRandomReads: true)
         let writer = try FileHandle(forWritingTo: changed)
         try writer.seek(toOffset: UInt64(changedIdentity.fileBytes - 1)); try writer.write(contentsOf: Data([255])); try writer.close()
         try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: 1)], ofItemAtPath: changed.path)
         rejected("in-place mutation refused") { _ = try immutable.read("tensor", offset: 0, count: 1) }
+        rejected("uncached in-place mutation refused") { _ = try uncachedImmutable.read("tensor", offset: 0, count: 1) }
+        rejected("uncached corrupt payload refused before policy publication") { _ = try VQTensorFile(url: changed, identity: changedIdentity, uncachedRandomReads: true) }
         rejected("same-size corrupt payload fails complete hash") { _ = try VQTensorFile(url: changed, identity: changedIdentity) }
 
         let (truncated, truncatedIdentity) = try fixture("truncated.safetensors", header: header, payload: payload)
@@ -100,6 +116,20 @@ extension Diagnostics {
         rejected("overlapping tensors refused") { _ = try VQTensorFile(url: overlap, identity: overlapID) }
         let (hole, holeID) = try fixture("hole.safetensors", header: ["a": entry], payload: Data([1, 2]))
         rejected("uncovered payload refused") { _ = try VQTensorFile(url: hole, identity: holeID) }
+        // Head metadata and byte reservations are checked without loading a
+        // model or constructing MLX arrays. Config identity stays independent
+        // of the main VQ recipe.
+        let draftConfig = directory.appendingPathComponent("draft-config.json")
+        try Data(repeating: 32, count: 33_408).write(to: draftConfig)
+        rejected("same-size corrupt draft config refused") { _ = try VQDraftWeights.configuration(draftConfig) }
+        rejected("draft config symlink refused") { _ = try VQDraftWeights.configuration(link) }
+        rejected("draft config FIFO refused without waiting") { _ = try VQDraftWeights.configuration(fifo) }
+        rejected("draft payload reservation must cover every array") {
+            _ = try VQDraftWeights.load(baseline: directory, maximumPayloadBytes: VQDraftWeights.payloadBytes - 1)
+        }
+        rejected("draft current tensor needs a separate load copy") {
+            _ = try VQDraftWeights.load(baseline: directory, maximumLoadCopyBytes: VQDraftWeights.largestLoadCopyBytes - 1)
+        }
         return c.report()
     }
 }

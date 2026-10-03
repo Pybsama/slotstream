@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "profile": "vq-parallel-read-pair-v1",
+  "scope": "same-binary same-artifact bounded engineering comparison; no product qualification",
+  "pack": "3.2",
+  "profiles": {
+    "performance-pilot-v1.json": "8f2c4256f6489ae5b9ce4e801ad5e9c79263b85646a3ff91220148156da810a5",
+    "performance-pilot-v2.json": "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7"
+  },
+  "arms": {
+    "serial": "performance-pilot-v1.json",
+    "parallel": "performance-pilot-v2.json"
+  },
+  "rounds": [
+    [
+      "serial",
+      "parallel"
+    ],
+    [
+      "parallel",
+      "serial"
+    ],
+    [
+      "serial",
+      "parallel"
+    ]
+  ],
+  "resources": {
+    "validation_runs": 2,
+    "timing_runs": 6,
+    "run_timeout_seconds": 1800,
+    "maximum_process_bytes": 10000000000,
+    "minimum_reclaimable_bytes": 13000000000,
+    "additional_weights_bytes": 0,
+    "paid_compute_usd": 0
+  },
+  "contract": "Two separate exact full-logit prefix validations, followed by six interleaved measurements. Freeze one source-bound executable and Metal library for both arms. Native profiles hold prompt, sampling, cache capacities, text residency, resources and timer semantics constant; only demanded-read concurrency changes. Every measured generated sequence must exactly match the first serial sequence, including full length and EOS behavior. Preserve all per-run and supervision evidence; no retries, dropped slow runs or best-of selection. Publish medians and paired ratios only when all observed timings are eligible. Clear cache/model state per process; never claim a cold SSD after full authentication. These descriptive three-pair data do not establish a confidence bound or >=20 tokens/s qualification."
+}

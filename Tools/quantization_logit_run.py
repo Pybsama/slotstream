@@ -20,6 +20,7 @@ from context_qualification import quiet_preflight
 from prefill_bench import terminate_child_tree, vm_snapshot
 from quantization_inventory import unique_json
 from vq_fused_reference import bounded
+from vq_execution_profile import add_runtime_argument, recheck_runtime, select_runtime
 
 
 def digest(path):
@@ -101,6 +102,8 @@ def run(options):
     frozen, frozen_hash = inputs(options.inputs)
     root = Path(__file__).resolve().parent
     if options.arm == 'native':
+        if getattr(options, 'runtime', None) is not None:
+            raise ValueError('native baseline does not accept a VQ runtime override')
         if options.binary is None:
             raise ValueError('native arm requires a frozen source-bound binary')
         binary = options.binary.resolve()
@@ -111,7 +114,9 @@ def run(options):
     else:
         if any(x is None for x in (options.inventory, options.architecture, options.order_proof)):
             raise ValueError('VQ arm requires inventory, architecture and successful traversal proof')
+        runtime_path, execution_profile = select_runtime(options.model, getattr(options, 'runtime', None))
         producer = {'reference_script': digest(root / 'vq_model_reference.py'),
+                    'execution_profile': execution_profile, 'runtime_source': digest(runtime_path),
                     'architecture': digest(options.architecture), 'order_proof': digest(options.order_proof)}
     options.out.mkdir(parents=True, exist_ok=False)
     record = {'schema': 1, 'scope': 'pilot', 'arm': options.arm, 'inputs_sha256': frozen_hash,
@@ -128,8 +133,12 @@ def run(options):
                        '--tokens', str(tokens.resolve()), '--out', str(output.resolve()),
                        '--inventory', str(options.inventory.resolve()), '--architecture', str(options.architecture.resolve()),
                        '--order-proof', str(options.order_proof.resolve())]
+            if getattr(options, 'runtime', None) is not None:
+                command += ['--runtime', str(options.runtime.resolve())]
         observed = supervise(command, options.out / (case['id'] + '-supervision'), 900 if options.arm == 'native' else 14400)
         receipt = unique_json(bounded(output / 'receipt.json', 1_000_000))
+        if options.arm == 'vq' and receipt.get('execution_profile') != execution_profile:
+            raise ValueError('producer execution source differs from the selected reference profile')
         if (receipt['tokens_sha256'] != case['tokens_sha256'] or receipt['positions'] != case['positions']
                 or receipt['prompt_chunk'] != 512 or receipt['tokens'] != case['tokens']
                 or receipt['logits']['path'] != 'logits.f32'
@@ -142,6 +151,8 @@ def run(options):
         print(json.dumps({'completed': len(record['cases']), 'of': 6, 'case': case['id'], 'peak_bytes': observed['sampled_peak_bytes']}), flush=True)
     if inputs(options.inputs)[1] != frozen_hash or digest(Path(__file__)) != record['runner_sha256']:
         raise ValueError('pilot inputs or runner changed during execution')
+    if options.arm == 'vq':
+        recheck_runtime(options.model, getattr(options, 'runtime', None), execution_profile)
     record['complete'] = True
     (options.out / 'run.json').write_text(json.dumps(record, indent=2) + '\n')
 
@@ -153,4 +164,5 @@ if __name__ == '__main__':
         parser.add_argument('--' + key, type=Path, required=True)
     for key in ('binary', 'inventory', 'architecture', 'order-proof'):
         parser.add_argument('--' + key, type=Path)
+    add_runtime_argument(parser)
     run(parser.parse_args())

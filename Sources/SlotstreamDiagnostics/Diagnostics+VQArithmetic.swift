@@ -23,8 +23,7 @@ extension Diagnostics {
             let narrow = VQArithmetic.sigmoid(MLXArray([Float(-6.84375)], [1, 1, 1]).asType(.bfloat16))
             eval(narrow)
             c.equal("rounding-boundary scalar shape", narrow.asData(access: .copy).data, Data([0x8b, 0x3a]))
-            let exponents = MLXArray(stride(from: 0, to: 64, by: 2).map { Float($0) / 64 })
-            let inverse = VQArithmetic.inverseFrequencies(exponents, base: 10_000_000)
+            let inverse = VQArithmetic.inverseFrequencies()
             let angles = Rope(dim: 64, base: 10_000_000, pinnedVQReference: true).table(start: 0, count: 512)
             for (name, value, expected) in [
                 ("inverse frequencies", inverse, "2fb3c351f0a3fc12c0b204e77660cca2c1bc373dae37f5d0a2bfe2b92cef1248"),
@@ -35,6 +34,24 @@ extension Diagnostics {
                 let actual = SHA256.hash(data: value.asData(access: .copy).data).map { String(format: "%02x", $0) }.joined()
                 c.equal(name + " matches pinned Python FP32 bits", actual, expected)
             }
+            let complete = Rope(dim: 64, base: 10_000_000, pinnedVQReference: true).table(start: 0, count: VQRotaryTable.rows)
+            for (name, value, expected) in [
+                ("complete cosine", complete.0, "2ea92fc755d7142d2bedffc271951b7f2b41b6883694c4f9ce7b49208b193467"),
+                ("complete sine", complete.1, "8c8482f90c563ded98ca3880fa6838d5be4e9a1977f34721649668380ca0ce74")
+            ] {
+                eval(value)
+                c.equal("every admitted position " + name + " matches pinned FP32 bits",
+                    SHA256.hash(data: value.asData(access: .copy).data).map { String(format: "%02x", $0) }.joined(), expected)
+            }
+            let strided = Rope(dim: 64, base: 10_000_000, pinnedVQReference: true).table(start: 2049, count: 3, stride: 2)
+            let index = MLXArray([Int32(2049), 2051, 2053])
+            c.equal("strided final cosine positions", strided.0.asData(access: .copy).data,
+                    complete.0[0, index, 0...].asData(access: .copy).data)
+            c.equal("strided final sine positions", strided.1.asData(access: .copy).data,
+                    complete.1[0, index, 0...].asData(access: .copy).data)
+            c.expect("rotary table negative position refused", !VQRotaryTable.supports([-1]))
+            c.expect("rotary table next position refused", !VQRotaryTable.supports([2054]))
+            c.expect("rotary table empty request refused", !VQRotaryTable.supports([]))
             return c.report()
         }
     }

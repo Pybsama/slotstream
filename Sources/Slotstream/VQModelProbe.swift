@@ -2,9 +2,10 @@ import Foundation
 import MLX
 import MLXNN
 
-/// Experimental complete text stack with one dense layer and one immutable
-/// routed batch live at a time. It establishes arithmetic/state parity only.
-/// It has no mutable expert cache, generation service, draft or vision path.
+/// Experimental complete text stack with streamed or fixed resident weights.
+/// Routed experts use immutable staging or an optional fixed resident cache.
+/// This establishes arithmetic/state parity, not a generation service, draft
+/// execution, vision, resizing or production memory policy.
 package final class VQModelProbe {
     private let checkpoint: VQCheckpoint
     private let rope: Rope
@@ -14,9 +15,27 @@ package final class VQModelProbe {
     private var previous: [Int64]
     private var consumed = 0
     private var failed = false
+    private var recordCache: VQRecordCache?
+    private var residentText: VQResidentText?
+    package var residentTextStats: [String: Int]? { residentText?.stats }
+    package var processByteLimit: UInt64 { residentText == nil ? 4_000_000_000 : 10_000_000_000 }
+
+    package func enableResidentText() throws {
+        guard !failed, consumed == 0, residentText == nil else { throw ModelError("VQ text residency must precede the first pass") }
+        residentText = try VQResidentText(checkpoint)
+    }
+    package var recordCacheStats: [String: Int]? { recordCache?.stats }
+
+    package func enableResidentRecords(wide: Bool = false, parallelReads: Bool = false, reinvestDenseSavings: Bool = false) throws {
+        guard !failed, consumed == 0, recordCache == nil else { throw ModelError("VQ cache must be configured before the first pass") }
+        guard (!wide && !parallelReads) || residentText != nil else { throw ModelError("wide banks and parallel VQ reads require the resident-text process envelope") }
+        recordCache = try VQRecordCache(checkpoint, capacityPerClass: 96, wide: wide, parallelReads: parallelReads,
+                                        reinvestDenseSavings: reinvestDenseSavings)
+    }
     package private(set) var maximumRecordBatches = 0
     package private(set) var maximumLiveExperts = 0
     package private(set) var segmentedPrefillLayers = 0
+    package private(set) var sparseAttentionLayers = 0
 
     package init(_ checkpoint: VQCheckpoint) {
         self.checkpoint = checkpoint
@@ -30,39 +49,51 @@ package final class VQModelProbe {
     }
 
     package func forward(_ tokens: [Int], observe: (Int, String, MLXArray) throws -> Void,
-                         trace: ((Int, String, MLXArray) -> Void)? = nil) throws {
-        guard !failed, (1...512).contains(tokens.count), consumed + tokens.count <= 513 else {
-            throw ModelError("VQ full-stack probe admits at most 513 tokens in passes of at most 512")
+                         trace: ((Int, String, MLXArray) -> Void)? = nil, inspectState: Bool = true) throws {
+        guard !failed, (1...512).contains(tokens.count), consumed + tokens.count <= 2054 else {
+            throw ModelError("VQ full-stack probe admits at most 2054 tokens in passes of at most 512")
         }
         // Partial state cannot be reused after any read, numerical or observer
         // failure. This probe deliberately offers no speculative recovery.
         failed = true
-        var hidden = tiled(try checkpoint.embedding(tokens), repetitions: [1, 1, 4])
+        var hidden = tiled(try residentText?.embed(tokens) ?? checkpoint.embedding(tokens), repetitions: [1, 1, 4])
         eval(hidden)
-        try observe(-1, "embedded", hidden)
+        if inspectState { try observe(-1, "embedded", hidden) }
         let history = previous + tokens.map(Int64.init)
         for layer in 0..<48 {
             guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 3_000_000_000,
-                  ProcessMemory.peakResidentBytes() <= 4_000_000_000 else {
-                throw ModelError("VQ full-stack probe lost its 3 GB headroom or exceeded its 4 GB process bound")
+                  ProcessMemory.peakResidentBytes() <= processByteLimit else {
+                throw ModelError("VQ full-stack probe lost its 3 GB headroom or exceeded its configured process bound")
             }
-            hidden = try autoreleasepool { try block(layer, hidden: hidden, history: history, trace: trace) }
+            hidden = try autoreleasepool {
+                try block(layer, hidden: hidden, history: history, trace: trace) { mask in
+                    if inspectState { try observe(layer, "sparse_mask", mask) }
+                }
+            }
             eval(hidden)
             guard all(isFinite(hidden)).item(Bool.self) else { throw ModelError("nonfinite VQ hidden state at layer \(layer)") }
-            try observe(layer, "hidden", hidden)
-            if let cache = linear[layer] {
-                if let value = cache.convState { try observe(layer, "conv", value) }
-                if let value = cache.ssmState { try observe(layer, "state", value) }
-                if let value = cache.pleConvState { try observe(layer, "ple_conv", value) }
-            } else if let cache = kv[layer] {
-                if let value = cache.keys { try observe(layer, "keys", value[0..., 0..., 0..<cache.offset, 0...]) }
-                if let value = cache.values { try observe(layer, "values", value[0..., 0..., 0..<cache.offset, 0...]) }
-                if let value = indexer[layer]?.diagnosticValues() { try observe(layer, "indexer", value) }
+            if inspectState {
+                try observe(layer, "hidden", hidden)
+                if let cache = linear[layer] {
+                    if let value = cache.convState { try observe(layer, "conv", value) }
+                    if let value = cache.ssmState { try observe(layer, "state", value) }
+                    if let value = cache.pleConvState { try observe(layer, "ple_conv", value) }
+                } else if let cache = kv[layer] {
+                    if let value = cache.keys { try observe(layer, "keys", value[0..., 0..., 0..<cache.offset, 0...]) }
+                    if let value = cache.values { try observe(layer, "values", value[0..., 0..., 0..<cache.offset, 0...]) }
+                    if let value = indexer[layer]?.diagnosticValues() { try observe(layer, "indexer", value) }
+                }
             }
-            MLX.Memory.clearCache()
+            // Fixed resident-text experiments already cap unused allocator
+            // storage at 128 MB. Reuse that bounded storage between layers;
+            // retain eager release for streamed weights or a larger cache.
+            // No model tensor, bank pin or GPU completion rule changes here.
+            if residentText == nil || MLX.Memory.cacheLimit > 128_000_000 {
+                MLX.Memory.clearCache()
+            }
         }
         try autoreleasepool {
-            let weights = try checkpoint.dense(layer: nil)
+            let weights = try residentText?.weights(layer: nil) ?? checkpoint.dense(layer: nil)
             let mixer = GatedResidual(weights, base: "model.hyper_connection_mixer", useCombine: false, arithmetic: .vqPR1788)
             let mixed = mixer(hidden).0
             let logits = weights.linear("lm_head")(mixed).asType(.float32)
@@ -70,14 +101,15 @@ package final class VQModelProbe {
             guard logits.shape == [1, tokens.count, 248_320], all(isFinite(logits)).item(Bool.self) else {
                 throw ModelError("VQ probe has incomplete or nonfinite full-vocabulary logits")
             }
-            try observe(48, "mixed", mixed)
+            if inspectState { try observe(48, "mixed", mixed) }
             try observe(48, "logits", logits)
         }
         previous = Array(history.suffix(2)); consumed += tokens.count; failed = false
     }
 
-    private func block(_ layer: Int, hidden: MLXArray, history: [Int64], trace: ((Int, String, MLXArray) -> Void)?) throws -> MLXArray {
-        let weights = try checkpoint.dense(layer: layer), base = "model.layers.\(layer)."
+    private func block(_ layer: Int, hidden: MLXArray, history: [Int64], trace: ((Int, String, MLXArray) -> Void)?,
+                       sparse: (MLXArray) throws -> Void) throws -> MLXArray {
+        let weights = try residentText?.weights(layer: layer) ?? checkpoint.dense(layer: layer), base = "model.layers.\(layer)."
         var h = hidden
         if layer == 1 {
             let ple = PLELayer(weights, layer: layer, arithmetic: .vqPR1788,
@@ -101,13 +133,18 @@ package final class VQModelProbe {
         } else {
             let attention = QSAAttention(weights, layer: layer, arithmetic: .vqPR1788)
             var values: [String: MLXArray] = [:]
-            if trace != nil { attention.debugSink = { values[$0] = $1 } }
+            attention.debugSink = { name, value in
+                if trace != nil || name == "sparseMask" { values[name] = value }
+            }
             if let trace {
                 let angles = rope.table(start: kv[layer]!.offset, count: x.dim(1))
                 trace(layer, "ropeInvFreq", rope.invFreq)
                 trace(layer, "ropeCos", angles.0); trace(layer, "ropeSin", angles.1)
             }
             attended = attention(x, rope: rope, cache: kv[layer]!, idxCache: indexer[layer]!)
+            if let mask = values["sparseMask"] {
+                try sparse(mask); sparseAttentionLayers += 1
+            }
             for (name, value) in values { trace?(layer, name, value) }
         }
         trace?(layer, "attnOutput", attended)
@@ -125,6 +162,8 @@ package final class VQModelProbe {
                 try checkpoint.records(layer: layer, experts: ids)
             }
             segmentedPrefillLayers += 1
+        } else if let recordCache {
+            streamed = try recordCache.call(input.reshaped([-1, 2560]), layer: layer, routes: routes)
         } else {
             streamed = try VQRouteStream.call(input.reshaped([-1, 2560]), routes: routes) { ids in
                 try checkpoint.records(layer: layer, experts: ids)

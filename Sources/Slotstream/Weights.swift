@@ -85,9 +85,11 @@ extension TensorSource {
         let w = tensor(base + ".weight")
         let s = optionalTensor(base + ".scales")
         let b = optionalTensor(base + ".biases")
+        let descriptor = config.quantizationOverrides[base]
         return QLinear(
             w: w, scales: s, biases: b,
-            groupSize: groupSize ?? config.qGroup, bits: bits ?? config.qBits)
+            groupSize: groupSize ?? descriptor?.groupSize ?? config.qGroup,
+            bits: bits ?? descriptor?.bits ?? config.qBits)
     }
 }
 

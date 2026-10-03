@@ -10,6 +10,7 @@ package struct VQRecordLayout: Hashable {
     package let pieceBytes: [Int]      // gate codes/scales, up codes/scales, down codes/scales
     package let recordBytes: Int
     package let codebookBytes: Int
+    package var maximumResearchBankRows: Int { projections.map(\.maximumResearchBankRows).min()! }
 
     package init(_ projections: [VQLayout]) throws {
         guard projections.count == 3 else { throw ModelError("VQ record needs all three projections") }
@@ -35,15 +36,10 @@ package struct VQRecordLayout: Hashable {
 /// array used by its operations. It is not a mutable pool bank or a substitute
 /// for cache pins. Failed/partial records cannot construct a usable batch.
 package struct VQRecordBatch {
-    private static let activation = compile(shapeless: true) { (values: [MLXArray]) -> [MLXArray] in
-        [MLXNN.silu(values[0]) * values[1]]
-    }
     package let layer: Int
     package let expertIDs: [UInt32]
     package let layout: VQRecordLayout
-    private let gate: VQExpert
-    private let up: VQExpert
-    private let down: VQExpert
+    private let operations: VQRecordOperations
 
     package init(layer: Int, expertIDs: [UInt32], layout: VQRecordLayout,
                  codes: [MLXArray], books: [MLXArray], scales: [MLXArray]) throws {
@@ -58,9 +54,7 @@ package struct VQRecordBatch {
                 throw ModelError("VQ record staging shape mismatch")
             }
         }
-        gate = try VQExpert(codes: codes[0], codebook: books[0], scales: scales[0], layout: layout.projections[0])
-        up = try VQExpert(codes: codes[1], codebook: books[1], scales: scales[1], layout: layout.projections[1])
-        down = try VQExpert(codes: codes[2], codebook: books[2], scales: scales[2], layout: layout.projections[2])
+        operations = try VQRecordOperations(layout: layout, codes: codes, books: books, scales: scales)
         self.layer = layer; self.expertIDs = expertIDs; self.layout = layout
     }
 
@@ -93,10 +87,7 @@ package struct VQRecordBatch {
             guard let slot = lookup[id] else { throw ModelError("VQ prefill expert is absent from its complete batch") }
             return slot
         }
-        let g = try gate.prefill(x, expertIDs: slots, sourceRows: sourceRows)
-        let u = try up.prefill(x, expertIDs: slots, sourceRows: sourceRows)
-        guard let hidden = Self.activation([g, u]).first else { throw ModelError("VQ prefill activation failed") }
-        return try down.prefill(hidden, expertIDs: slots, sourceRows: (0..<slots.count).map(UInt32.init))
+        return try operations.prefill(x, slots: slots, sourceRows: sourceRows)
     }
 
     private func composed(_ x: MLXArray, routes: [UInt32], topK: Int, dispatchPairs: Int) throws -> MLXArray {
@@ -105,6 +96,39 @@ package struct VQRecordBatch {
             guard let slot = lookup[id] else { throw ModelError("VQ routed expert is absent from its complete batch") }
             return slot
         }
+        return try operations.composed(x, slots: slots, topK: topK, dispatchPairs: dispatchPairs)
+    }
+}
+
+/// A validated projection triple bound to owned array contexts. Immutable
+/// staging and a pinned resident bank use identical composition and dispatch.
+/// A bank caller owns the lease until the complete result has been evaluated.
+package struct VQRecordOperations {
+    private static let activation = compile(shapeless: true) { (values: [MLXArray]) -> [MLXArray] in
+        [MLXNN.silu(values[0]) * values[1]]
+    }
+    private let gate: VQExpert, up: VQExpert, down: VQExpert
+
+    package init(layout: VQRecordLayout, codes: [MLXArray], books: [MLXArray], scales: [MLXArray], residentBank: Bool = false,
+                 bankAdmission: VQBankAdmission = .standard) throws {
+        guard codes.count == 3, books.count == 3, scales.count == 3,
+              codes.allSatisfy({ $0.ndim == 3 && $0.dim(0) == codes[0].dim(0) }),
+              codes.enumerated().allSatisfy({ $0.element.dim(1) == ($0.offset == 2 ? 2560 : 640) }) else {
+            throw ModelError("VQ projections need one complete compatible record bank")
+        }
+        gate = try VQExpert(codes: codes[0], codebook: books[0], scales: scales[0], layout: layout.projections[0], residentBank: residentBank, bankAdmission: bankAdmission)
+        up = try VQExpert(codes: codes[1], codebook: books[1], scales: scales[1], layout: layout.projections[1], residentBank: residentBank, bankAdmission: bankAdmission)
+        down = try VQExpert(codes: codes[2], codebook: books[2], scales: scales[2], layout: layout.projections[2], residentBank: residentBank, bankAdmission: bankAdmission)
+    }
+
+    package func prefill(_ x: MLXArray, slots: [UInt32], sourceRows: [UInt32]) throws -> MLXArray {
+        let g = try gate.prefill(x, expertIDs: slots, sourceRows: sourceRows)
+        let u = try up.prefill(x, expertIDs: slots, sourceRows: sourceRows)
+        guard let hidden = Self.activation([g, u]).first else { throw ModelError("VQ prefill activation failed") }
+        return try down.prefill(hidden, expertIDs: slots, sourceRows: (0..<slots.count).map(UInt32.init))
+    }
+
+    package func composed(_ x: MLXArray, slots: [UInt32], topK: Int, dispatchPairs: Int) throws -> MLXArray {
         let g = try gate.operation(x, expertIDs: slots, topK: topK, dispatchPairs: dispatchPairs)()
         let u = try up.operation(x, expertIDs: slots, topK: topK, dispatchPairs: dispatchPairs)()
         guard let hidden = Self.activation([g, u]).first else {

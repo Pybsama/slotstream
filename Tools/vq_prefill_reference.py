@@ -13,6 +13,7 @@ from pathlib import Path
 import struct
 
 from context_qualification import quiet_preflight, verification_lock
+from vq_execution_profile import add_runtime_argument, allocation_layers, recheck_runtime, select_runtime
 from quantization_inventory import unique_json
 from vq_fused_reference import bounded
 from vq_model_reference import instrument_identity, physical, references, recheck_owned_headroom, verify_files
@@ -20,6 +21,7 @@ from vq_ple_stream import TensorFile
 
 
 def run(options):
+    runtime_path, execution_profile = select_runtime(options.model, getattr(options, 'runtime', None))
     instrument = instrument_identity()
     own_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     before = quiet_preflight(13)
@@ -32,7 +34,7 @@ def run(options):
         from mlx_lm.models.switch_layers import SwitchGLU
         mx.set_memory_limit(2_000_000_000)
         mx.set_cache_limit(64_000_000)
-        _, runtime = references(options.architecture, options.model / 'model.py')
+        _, runtime = references(options.architecture, runtime_path)
         expected_flags = {'_FUSED_GEMM': True, '_FUSED_GEMM_V2': True, '_GEMMSEG_RTILE': 32,
                           '_GEMMSEG_BF16IO': False, '_GEMMSEG_OT2': True, '_GEMMSEG_PH2V': True,
                           '_GEMMSEG_DSTORE': False, '_GEMMSEG_PIPE': False, '_GEMMSEG_XT_PAD': False,
@@ -61,9 +63,12 @@ def run(options):
                                for r in selected for off in range(0, stride, 1_000_000))
             return mx.array(np.frombuffer(payload, dtype=dtype).copy().reshape([len(selected)] + shape[1:]))
 
+        if inv['revision'] == '8684640a3956b01c47f5d47f9b999e2ab8b985f1' and not options.allocation_classes:
+            raise ValueError('VQ 2.1 requires all three allocation classes')
+        layers = allocation_layers(config, inv['revision']) if options.allocation_classes else [0, 2]
         fixtures = []
         try:
-            for layer in (0, 2):
+            for layer in layers:
                 ids = [i * 8 for i in range(63)] + [511]
                 module = SwitchGLU(2560, 640, len(ids))
                 arrays = {}; layouts = []
@@ -101,6 +106,7 @@ def run(options):
                 if max(physical().values()) > 4_000_000_000:
                     raise ValueError('record reference exceeded its 4 GB prefill component bound')
             for file in files.values(): file.verify_unchanged()
+            recheck_runtime(options.model, getattr(options, 'runtime', None), execution_profile)
             if instrument_identity()['sha256'] != instrument['sha256'] or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != own_hash:
                 raise ValueError('record reference instrument changed')
             kernel_names = sorted(runtime['_KERNELS'])
@@ -108,10 +114,11 @@ def run(options):
                 raise ValueError('reference did not execute the fused segmented prefill')
             result = {'schema': 1, 'scope': 'segmented prefill component; not model qualification',
                       'prefill_flags': expected_flags, 'kernel_names': kernel_names,
-                      'runtime_sha256': inv['files']['model.py']['sha256'], 'artifact': {k:v for k,v in provenance.items() if k!='stamps'},
+                      'runtime_sha256': execution_profile['runtime_sha256'], 'execution_profile': execution_profile, 'artifact': {k:v for k,v in provenance.items() if k!='stamps'},
                       'instrument': instrument, 'record_script_sha256': own_hash, 'fixtures': fixtures,
                       'before': before, 'process_memory': physical(), 'peak_mlx_bytes': mx.get_peak_memory(),
                       'ranges': {name: {'bytes_read': f.bytes_read, 'range_sha256': f.range_hash.hexdigest()} for name,f in files.items()}}
+            if options.allocation_classes: result['layer_coverage'] = 'allocation-classes-v1'
             (options.out / 'records.json').write_text(json.dumps(result, indent=2) + '\n')
             print(json.dumps({'fixtures': len(fixtures), 'cases': len(fixtures) * 2, 'memory': physical()}))
         finally:
@@ -122,4 +129,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('model', 'inventory', 'architecture', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--allocation-classes', action='store_true', help='One real layer per complete-record allocation class; preserves legacy fixtures by default')
+    add_runtime_argument(parser)
     run(parser.parse_args())

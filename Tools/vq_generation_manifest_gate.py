@@ -30,7 +30,7 @@ def run(options):
              ('duplicate-boundary', 'invalid VQ generated boundary identity or geometry'),
              ('overflow', 'VQ generated boundary exceeds its byte bound'),
              ('artifact', 'VQ generated fixture and checkpoint differ'),
-             ('conflicting-modes', '--prefill and --greedy are exclusive')]
+             ('conflicting-modes', '--prefill, --sparse and --greedy are exclusive')]
     results = []
     for name, expected in cases:
         root = options.out / name; root.mkdir()

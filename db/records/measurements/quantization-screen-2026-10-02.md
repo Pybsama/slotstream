@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T05:21:49.577518+00:00
+updated: 2026-10-03T16:09:12.842031+00:00
 summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -176,3 +176,274 @@ This completes the bounded ordinary-prefill numerical checkpoint. It does not es
 Native process peaks are 1,881,000,024 bytes for VQ 3.2 and 1,849,722,944 bytes for VQ 4.4. Each uses up to seven staging batches in a layer and at most 32 live immutable expert records per batch. These are streamed diagnostic peaks, not production resident-memory floors or speed measurements. The corresponding Python process peaks are 2,783,791,960 and 2,943,159,272 bytes. Every run remains within its declared 4 GB bound.
 
 Twelve metadata/chain/stop/CLI rejection cases and all 95 native T0/T1 checks pass without skips. The build comparison binds unchanged engine inference sources to the prior fully validated prefill build; only the diagnostic and CLI dispatch change. Compilation, exact generation, refusal checks and the native catalogue cover this increment. No new full static, app, governor, vision or hardware qualification is claimed. Persistent caches, sparse long-context selection, draft, held-out quality and complete-configuration performance remain required.
+
+
+### Sparse-selection checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-sparse-selection]] records both packs passing the fixed 2053-token prefill plus one-token continuation. All 984 complete output/state boundaries agree with the independent reference, including the 24 actual Boolean sparse masks. Four large passes exercise segmented expert staging, and the final short pass and decode cross the selection threshold and partial block. This does not qualify the entire supported context range.
+
+The native peaks are 3,136,752,112 bytes for VQ 3.2 and 3,130,771,904 bytes for VQ 4.4, within the 4 GB diagnostic process bound. All eight malformed-fixture cases and 95 native checks pass, alongside the five reference unit tests. Global swap counters are retained as diagnostics, with no clean timing claim. These bounds describe the one-layer-at-a-time probe, not a production resident-memory floor. Mutable caching, production generation, draft, vision, held-out task quality and complete-configuration speed remain required.
+
+
+### Resident-bank component checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-resident-bank-component]] records synchronous mutable bank ownership for one complete-record allocation class. Separate contiguous backing allocations are validated before direct writes. Complete demanded sets are pinned before CLOCK replacement, publication follows all six checked pieces, and GPU completion precedes pin release. The inspected layers match the independent expert-output fixtures across cold/hot access and eviction. Coverage correction: the old 4.4 fixtures selected two layers from the same allocation class; see the audit below. Partial reads, cancellation, malformed pieces and reentrant clearing are refused, with retries and retained-output independence checked.
+
+Both packs pass all 244 complete-record checks, including the earlier composition/partition cases. Both segmented-prefill component fixtures and both full-model 16-step greedy regressions pass after sharing the projection composition. Those model runs still use immutable staging: this is not model-wide cache qualification. The bounded bank admits one to thirty-two records and has no asynchronous prefetch, resize or governor integration. Twelve malformed greedy manifests and all 95 native catalogue checks pass. Larger mixed-class residency, byte budgeting, complete-model cache wiring, draft, vision, quality and speed remain open.
+
+
+### Rotary coefficient portability correction, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-rotary-coefficients-and-ci-portability]] records main CI run 37098784524 failing the rotary digest checks in ordinary and instrumented catalogues. The M5 Pro measurements remain valid on their recorded machine; Metal precise power did not reproduce their inverse-frequency bits on the CI runner. The other 94 catalogue checks and public-library job passed. This is a reproduced portability failure, not a waived check.
+
+The candidate now stores the 32 FP32 inverse-frequency words extracted byte-for-byte from the verified independent Python fixture. The table is restricted to the pinned dimension 64 and base 10,000,000. The deployed public rotary constructor is unchanged. All expected hashes remain unchanged: this removes GPU power from coefficient construction without relaxing comparison or claiming correctly rounded mathematical power.
+
+On the corrected local binary, the frequency/angle digests, both 984-boundary sparse model profiles, all 95 native catalogue checks and the complete static suite pass. Static validation includes 420 memory-override cases, 97 planner checks, transport and installer gates. Bank/projection sources are unchanged from the preceding component and greedy validation binary. Remote requalification is pending at this capture; local success does not establish universal GPU arithmetic or declare the original CI failure remotely resolved.
+
+
+### Component coverage correction, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-allocation-class-coverage-correction]] withdraws the claim that the earlier real expert components exercised both allocation classes in each pack. Layers 0 and 2 span both VQ 3.2 classes, but share one VQ 4.4 class. VQ 4.4 requires layer 3 as the second representative. The earlier complete-record, segmented-prefill and resident-bank component results remain valid for their actual recorded layers. Full-model runs independently covered all 48 layers and remain valid.
+
+The artifact-bound geometry audit records the layer assignments and complete record sizes. The new allocation-classes-v1 fixture mode selects one real representative of each descriptor triple and requires the native checker to confirm two distinct classes. New fixture outcomes are separate evidence; the audit itself is not new numerical or performance qualification.
+
+### Fixed mixed-class cache checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-fixed-record-cache]] records both packs passing complete-model numerical checks with synchronous resident expert banks. Each validated allocation class has 96 physical rows and layer codebooks are retained once. Both 16-step greedy profiles match all 2,560 boundaries; both sparse profiles match all 984 boundaries. Hits and CLOCK evictions occur, and every pin is released. All runs remain within the 4 GB diagnostic process bound. The dense trunk remains streamed one layer at a time and large prefill uses separate immutable sweep staging, so these peaks are not production resident floors.
+
+New artifact-bound component fixtures cover both actual descriptor classes in each pack, including the corrected VQ 4.4 representative layer 3. Real-output checks exercise every physical bank row, with hot boundary-slot reads forbidden. Nine malformed coverage/identity/layer or cache-mode cases are refused, and all 95 local native catalogue checks pass. This does not resolve the separately observed remote rotary arithmetic issue. Larger effective caches, asynchronous ownership, resident trunk, draft, vision, held-out quality and complete-configuration speed remain open. No candidate is admitted to production or Auto.
+
+### Exact finite rotary table checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-finite-rotary-table-portability]] records a second remote arithmetic failure: CI run 37101921994 agrees on the pinned inverse frequencies but differs on sine/cosine FP32 values. Host-double trigonometry was investigated and rejected because one unique admitted sine coefficient crosses a BF16 rounding boundary. Neither numerical tolerance nor existing golden changed.
+
+The candidate now embeds the complete 525,824-byte FP32 angle table from the pinned independent reference for positions 0 through 2053. Duplicate halves are reconstructed exactly. Both the generator and native reader bind its frozen digest, and requests outside that bounded research horizon are refused. This is a finite coefficient artifact, not a production context policy or universal transcendental function. The public rotary path is unchanged.
+
+All original inverse-frequency and 512-row FP32 digests pass, along with new whole-horizon and final-stride checks. Both packs preserve all 16 greedy tokens and 2,560 boundaries and all 984 sparse boundaries with resident expert caching. All 95 local native catalogue checks pass. The complete static suite passes after correcting its synthetic tool registry to include the new table-source suite; the initial harness failure is preserved. Remote requalification remains pending at this capture. The table does not establish full-model portability on other GPUs or admit a candidate to production, Auto, quality or speed qualification.
+
+### Resident text checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-resident-text]] records both packs retaining all 50 text-weight families, a 5,318,309,400-byte payload, alongside the fixed expert banks. Loading separately prices the largest 635,699,200-byte copy, checks real incremental headroom and refuses an undersized budget before payload reads. No partial owner is published.
+
+Both packs match all 16 greedy tokens and 2,560 full boundaries, and all 984 sparse boundaries. Physical peaks are 6,922,458,728 and 8,193,513,112 bytes for the VQ 3.2 greedy and sparse profiles, and 7,055,021,720 and 8,347,375,328 bytes for VQ 4.4. All fit the explicit 10 GB diagnostic process bound. These are measured configurations with small fixed banks, not an automatic production ceiling or speed qualification. The default streamed-text regression remains exact within its original bound, and all 95 native catalogue checks pass.
+
+The new eight-case CLI test supplies every required argument and matches the actual mode-validation error. It corrects a coverage gap in the earlier cache test: three cases omitted required arguments and therefore did not reach the intended mode guard. The old six coverage/identity/layer metadata refusals remain valid. Twelve malformed greedy manifests also pass their refusal checks. The preceding full static run is preserved as prior evidence, not claimed as newly rerun for this increment.
+
+Useful larger expert-cache capacity, asynchronous ownership, PLE caching/read parallelism, production generation and governor integration, draft, vision, held-out quality and speed remain open. No candidate is activated or admitted to Auto.
+
+### Larger fixed-cache checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-wide-record-cache]] records a second fixed research layout: 512 rows for the class used by forty-one/forty-two layers and 96 for the smaller class. The whole cache/book reservation is bounded by 1.8 GB before allocation. Only inspected U8/D2 and packed D4/K2048 families admit the enlarged banks; other families retain their earlier limit. This is not an automatic allocation policy.
+
+Real components match the reference through every admitted physical row and hot boundaries up to slot 511, within the existing 2 GB component bound. Both fully resident text configurations preserve all 16 generated tokens and 2,560 boundaries and all 984 sparse boundaries. Their highest process footprint is 9,433,913,080 bytes, within the existing 10 GB research bound. All pins are released, three fully specified wide-mode conflicts are refused, and all 95 native catalogue checks pass.
+
+On the same greedy fixture, VQ 3.2 cache hits rise from 311 to 2,379 and loads fall from 13,952 to 11,884. These aggregate counters include prefill and continuation; they are not a decode-only speed measurement. Hash observers and setup work remain inside the diagnostic process. Production serving, asynchronous read ownership, runtime resizing, task quality and complete-configuration throughput remain separate gates. No candidate is admitted to Auto.
+
+
+### First complete-model generation-cost pilot, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-generation-cost-pilot]] binds a new frozen 44-token prompt / 128-token generation pilot, the exact binary and both artifacts. Separate validation first proves all sixteen complete vocabulary arrays and sampled tokens against the independent greedy reference while intermediate state observation is disabled. Measurement also omits final-logit hashing. Full finite-value and resource checks remain active, and all 138 main payloads are authenticated before the request interval. The process begins with empty expert banks but an uncontrolled OS page cache after authentication; this is not cold-SSD latency.
+
+| Pack | Three committed generation rates, tokens/s | Median rate | Median TTFT, seconds | Median authentication/resident setup, seconds |
+| --- | --- | --- | --- | --- |
+| VQ 3.2 | 3.07638 / 2.98809 / 3.04660 | 3.04660 | 9.26446 | 29.18210 |
+| VQ 4.4 | 2.54737 / 2.52407 / 2.52353 | 2.52407 | 10.51741 | 39.10702 |
+
+All six measurements complete 128 non-EOS tokens and meet the predeclared observed timing criteria. Three alternating paired rounds are preserved; there are no replacement runs. The rate is 127 divided by elapsed time from first to last committed emission. Full request time, every interval, startup observations, per-token thermal/power observations, global paging and separate prefill/decode cache counts remain in the receipts. Decode hit fractions are approximately 30.82% and 30.76% in this fixed small-cache experiment. The final capped output is a reasoning continuation, not a completed-task quality evaluation. EOS termination remains unexercised.
+
+The fastest representation here remains far below the proposed target. The older installed-pack pilot uses a different instrument and context policy and lacks complete ambient-override evidence, so no baseline speedup/slowdown is inferred from their numerical difference. This result does not qualify optimized VQ, larger contexts, MTP, vision, Auto or another Mac. Sixteen actual CLI/input refusal cases, the ordinary 3.2 full-state generation regression and all 95 native catalogue checks pass on this pilot binary. The complete e56f8fc remote CI separately confirms the prior finite-rotary checkpoint; the full static suite has not been claimed as freshly rerun here.
+
+### CPU attribution follow-up, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-generation-cpu-profile]] preserves one separately budgeted sampled run. Its timing is discarded because sampling perturbs execution. Of 2,083 main-thread samples, 893 sit in the expert-piece pread subtree; GPU waits are also substantial. Process-wide leaf totals include other threads and cannot use the main-thread denominator. The profile supports testing bounded parallel demanded reads first; it does not establish a precise wall-time breakdown or a measured optimization gain.
+
+
+### Bounded parallel demanded reads, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-bounded-parallel-record-reads]] records immutable authenticated read plans and bounded CPU workers. Each batch reserves all retained records plus per-lane syscall storage before it starts. Workers receive no MLX objects, mutable checkpoint map or bank addresses. All workers join before ordered owner-thread publication, including failure and cancellation. The entire demanded set stays pinned through evaluation and GPU completion. The initial twelve-lane choice is a measured comparison point, not a universal optimum.
+
+Both packs retain exact greedy and sparse reference results, within the unchanged 10 GB process bound. Maximum whole-model footprint is 9,435,043,552 bytes; reserved staging reaches 95,558,400 bytes for VQ 3.2 and 115,219,200 for VQ 4.4, under its 128,000,000-byte admission limit. Actual parallel overlap, malformed requests, cancellation with active siblings, drain-before-return, failed publication, retries, destructive reuse and pin release are exercised. The first build owns these full-model results. The second build changes only one Sendable annotation, refusal messages and diagnostic assertions; both pass all 96 native checks. The second also passes six actual mode conflicts and the complete static suite, including 420 memory-override cases and 97 planner checks. Source identities bind the distinction.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-parallel-read-paired-pilot]] compares serial and parallel demanded reads for VQ 3.2 using that same final binary, prompt, resident text, 512/96 banks and 128-token workload. Both modes pass separate complete-logit prefix validation. Every measured 128-token sequence is identical. All three paired rounds meet the frozen observed timing conditions; no replacement runs occur.
+
+| Mode | Three committed generation rates, tokens/s | Median rate | Median TTFT, seconds | Median full request, seconds |
+| --- | --- | --- | --- | --- |
+| Serial | 2.99876 / 3.06689 / 3.08361 | 3.06689 | 9.25776 | 50.66785 |
+| Parallel | 4.27871 / 4.27802 / 4.28506 | 4.27871 | 3.41699 | 33.10364 |
+
+The median of paired throughput ratios is 1.3949069410128767, approximately 39.49% improvement. This remains below the target. Setup authenticates all main payloads before timing, so no cold-SSD claim is made. This short, capped reasoning continuation is not held-out completed-task quality. Sixteen input/validation refusals and both serial/parallel receipt-cross-binding refusals pass before output allocation. No default changes or hardware promotion follow from this pilot.
+
+Demanded-read workers now have bounded ownership. Predictive prefetch, service cancellation integration, dynamic byte budgeting/resizing, persistent PLE rows, production generation, longer contexts, draft, vision, held-out task quality and qualified Auto selection remain separate work. The experimental default remains serial and public model loading still rejects VQ.
+
+
+### Parallel-path attribution, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-parallel-generation-cpu-profile]] preserves a separately budgeted five-second CPU sample whose timing is discarded. The main-thread tree has 2,088 samples: 471 in demanded-read work/join, 453 in bank output evaluation and 240 across the three repeated expert constructors. PLE row work appears in a smaller 28-sample block. The next test is a bounded code-only cache of identical kernel closures, preserving fresh array contexts and every bank lifetime rule, followed by exact reference checks and a new matched comparison. Attribution is not a measured gain. The same source separately records complete CI success for the earlier 9d5639a checkpoint.
+
+
+### Kernel-object reuse checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-kernel-object-reuse]] records a bounded cache of five exact Metal source/header specializations. It retains code only. Model tensors, array contexts, routing metadata, templates and bank leases remain independently owned. All five families execute at both input widths; both packs preserve every greedy and sparse reference boundary and pass the real bank ownership components. All 96 native checks pass, with maximum whole-model footprint 9,448,642,320 bytes inside the 10 GB bound.
+
+The frozen two-binary pilot permits exactly the kernel implementation, its extracted cache and diagnostic changes, with identical Metal-library bytes and one native profile. Both executables pass separate complete-logit validation. All six observed timing runs are eligible and every 128-token sequence is identical. Median committed generation rises from 4.27597 to 5.10865 tokens/s. The median paired ratio is 1.1913453519006945, about 19.13% improvement; median TTFT falls from 3.56642 to 3.20329 seconds. The predeclared engineering adoption rule passes, so code reuse is retained. This does not qualify task quality, the speed target, another hardware class or an alternative production pack.
+
+The build's intended preflight failed because its wrapper imported the helper from the wrong module, and the shell incorrectly continued to make. The source preserves the correction and the immediate during-build observation of over 22 GB reclaimable with normal pressure. That observation is not called a pre-build pass. Subsequent launches use a failing-command guard and the correct helper. All model runs separately pass their headroom checks. This increment repeats native numerical and ownership gates, not the complete static or app suites.
+
+Large transcripts in this new source are losslessly compressed as base64 text, with original/normalized byte counts and hashes and a round-trip decoder check. Older source captures remain byte-for-byte unchanged.
+
+### Smaller-pack preparation, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-2.1-artifact-preparation]] binds the VQ 2.1 research download to its exact revision, config and complete file map. The 139 tensor files total 51,426,593,465 bytes. Payload verification is in progress at this checkpoint. Staging admission is separate from numerical and product admission; reference and native allowlists still refuse this pack.
+
+Its three complete-record classes use 1,280,000, 1,382,400 and 2,611,200 bytes, with representative layers 2, 27 and 0 respectively. Compact 96-row banks total 506,265,600 bytes; shared books add 19,535,872 bytes. These are inspected storage geometries, not measured process floors or speed estimates. The bundled runtime differs from the reviewed newer runtime. An AST-only audit preserves the changed decoding and segmented-prefill expressions without executing the downloaded code. Qualification must explicitly bind a reviewed execution source and independently establish normalization, traversal and numerical agreement.
+
+As additional regression coverage of the committed kernel-object cache, all 78 real selected-row fused fixtures pass, including D8 and D4/K256 families absent from the complete larger-pack runs. The separate research download was active, so this is functional evidence only. Complete 2.1 parity, quality, memory ranges and throughput remain open. No alternative pack is offered or selected automatically.
+
+### Complete smaller-pack parity, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-2.1-payload-and-normalization]] supersedes the preceding in-progress staging state: all 139 tensor files passed full hashes. An independent CPU tensor audit found exact agreement for 148 RMS norms after one BF16 +1 fold and 36 unchanged gated norms. This authenticates storage and normalization; draft and vision execution remain unqualified.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-2.1-three-class-parity]] captures the source-bound native implementation and all twelve sequential functional runs. All three expert record classes and physical research bank rows pass independent parity. Complete batched continuation checks 320 boundaries; compact and wide greedy each check 2560 boundaries over sixteen self-fed steps; sparse attention through 2054 consumed tokens checks 984 boundaries. Every check matches exactly. Compact greedy peaks at 7,018,174,080 process bytes, wide greedy at 7,694,063,712 and wide sparse at 8,814,728,856. These are bounded probe observations on the development Mac, not production memory floors or speed results.
+
+The wide banks hold 512 records in the dominant class and 96 in each other class, costing 1,038,745,600 bytes plus 19,535,872 shared-book bytes. Explicit profile metadata binds all three classes and their layer counts; no heuristic infers the dominant class. Reference execution explicitly binds the reviewed newer runtime and separately identifies the distinct older bundle. Missing or inconsistent identities and missing class coverage fail before model allocation.
+
+Both larger packs retain exact real-record, greedy and sparse parity. All 96 native catalogue checks, 22 native metadata refusals and six Python producer source refusals pass. Full static checks passed for the frozen native binary, including 97 planner and 420 memory-control checks. Final Python traversal/fetch admission changes followed that run's Python portion; nineteen focused tests cover those final sources. No timing is inferred from these functional runs. Public VQ loading, complete-task quality, feature qualification, Auto integration and the 20-token target remain open.
+
+### Smaller-pack quality screen, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-2.1-distribution-screen]] records all six new VQ 2.1 forwards against the identical original-tokenizer contexts and hash-verified corrected controls. Against the VQ 4.4 quantized proxy, mean case KL is 0.46529280439934456 versus 0.44401073962586735 for the installed baseline. Mean top-1 agreement is 0.6770833333333334 versus 0.7916666666666666. Coding and tool-result KL worsen; top-1 agreement worsens in five contexts and ties in one. The smaller representation therefore has an observed quality risk, despite exact native implementation parity and lower storage cost.
+
+VQ 2.1 stays out of promotion and the next speed-optimization work remains on VQ 3.2. The single-context VQ 2.1 throughput pilot is not started: screening a faster version of a candidate with this unresolved quality loss would not earn product integration. The payload, implementation and all negative evidence are preserved. Reconsider with a separately frozen held-out noninferiority result or a new, independently qualified same-checkpoint representation; do not tune these six cases into a final test. No pack is qualified by this pilot, and VQ 3.2 still requires complete-task and full-configuration gates. See [[records/decisions/vq-2.1-held-after-distribution-screen]].
+
+### Bounded allocator reuse, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-bounded-allocator-reuse]] records one native source change: resident research paths preserve an already bounded allocator cache across layers. The bound remains 128,000,000 bytes. Streamed text or a larger cache still clears every layer. Every arithmetic operation, finite check, real-headroom check, GPU drain and expert-bank lease remains intact.
+
+All three packs preserve every greedy and sparse reference boundary. All 96 native catalogue checks pass. The largest whole-model process peak is 9,499,711,224 bytes, below the unchanged 10 GB bound. The full static suite passes. Both exact performance binaries independently match the sixteen-step complete-logit reference before measurement.
+
+All three alternating pairs are eligible and preserve the same 128 generated token IDs. Median committed generation rises from 5.073901973129132 to 5.516094047564276 tokens/s; the median paired ratio is 1.0922703436950998. The median paired TTFT ratio is 0.9437188142389586. The frozen engineering adoption rule passes, so bounded reuse is retained. Separate experiments' gains must not be multiplied into a new measured result. This short-context, non-speculative, page-cache-warmed pilot remains below target and establishes neither completed-task quality nor another hardware profile.
+
+### Independent draft metadata, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-independent-draft-metadata]] authenticates the shared draft sidecar independently of all three main packs. Its own recipe is affine six-bit with group 32, covering 71 tensors and 20 quantized modules. Payload storage is 2,297,552,576 bytes, including 2,202,009,600 routed-expert bytes. This is storage geometry, not a process-memory floor or measured runtime reservation.
+
+The new CPU inventory tool binds the exact header and complete tensor extents, rejects inherited main-pack recipes and unknown overrides, and distinguishes header authentication from optional full-payload verification. Four focused tests and the static harness checks pass. The read-only source review identifies fused projection, per-stream hidden normalization and zero-centered norm conventions that differ from the existing native MTP adapter. No downloaded source was executed. A compatible independently validated draft adapter is still required; no draft acceptance, speed or product feature is qualified.
+
+### Next candidate hypothesis, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-allocator-profile-and-dense-overlay-feasibility]] preserves a separately sampled generation run. Its timings are excluded. Demanded reads, expert GPU evaluation and route evaluation remain substantial. A header-only audit identifies 498 compatible dense quantized modules whose existing same-checkpoint four-bit arrays could recover 2,424,832,000 stored bytes while retaining the VQ experts, n-gram tables, norms and unmatched tensors. The first audit's missing namespace prefix and corrected mapping are both preserved.
+
+This motivates an independently identified composite candidate, not a memory or speed claim. Authenticate every source payload used, bind the exact replacement map, prove direct-versus-streamed traversal and rerun the six-context screen before native integration. The original VQ pack's quality or parity cannot be inherited. No artifact is activated by this preparation.
+
+### Dense four-bit composite screen, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-dense-four-bit-overlay-screen]] identifies a separate same-checkpoint composite. It replaces 498 dense tensor triples with the installed affine four-bit arrays while preserving VQ 3.2 experts, PLE, norms and unmatched tensors. Both parent payload sets are freshly authenticated on every run. The complete replacement map and geometry have their own immutable digest; ordinary VQ parity and quality do not transfer.
+
+All seven frozen runs complete without retries. The four-layer traversal proof matches exactly across the 512-token boundary with 513 tokens, at a 5,927,277,560-byte process peak. The six complete forwards peak at 2,628,520,312 bytes. These are streamed reference observations, not native resident floors. Header-derived dense payload falls by 2,424,832,000 bytes; no speed or cache benefit has yet been measured.
+
+Against the VQ 4.4 proxy, mean case KL is 0.3936587962920319 versus 0.44401073962586735 for the installed baseline. Mean top-1 agreement is 0.8229166666666666 versus 0.7916666666666666. Top-1 improves in three cases and ties in three. KL improves in three and worsens in three, particularly retrieval; continuation dominates the favorable mean. Full VQ 3.2 retains the stronger prior distribution result. Keep this as a low-memory hypothesis for bounded native feasibility, not an established quality improvement or product candidate ready for promotion. Completed-task and held-out gates remain open.
+
+The comparator reuses control logits only after binding their manifests to original receipts and pre-candidate hashes. Changed artifact and unfrozen-source refusals pass. Copy admission keeps total raw logits below the frozen 2 GB cap. Four CPU tests, thirty static-harness tests and the full static suite pass on the unchanged allocator binary. No native composite execution, MTP, vision, dynamic memory range, Auto behavior or hardware speed profile is qualified.
+
+### Draft normalization storage resolved, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-draft-raw-normalization-audit]] authenticates both complete draft files and compares all nine normalization tensors using bounded CPU reads. All raw sidecar values, including those stored as F32, are exactly BF16-representable. None matches the installed folded tensors directly; adding one and rounding to BF16 matches every tensor exactly. This establishes the storage convention. Multiplication dtype, per-stream versus full-width normalization, fused projections and speculative acceptance still need explicit numerical qualification. Existing draft execution remains unchanged.
+
+### Native dense-four-bit composite, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-four-bit-greedy-parity]] preserves the independent reference, source-bound executable, compiler repairs, six refusal cases and all native outputs. Both the streamed and fixed-resident composite match all 2,560 complete logical boundaries across sixteen autoregressive steps. The fixed banks, codebooks, parallel demanded reads and allocator policy are unchanged from the parent profile. Streamed process peak is 1,181,058,704 bytes; resident peak is 5,136,863,552. The resident ledger observes all fifty families and exactly 2,893,477,400 payload bytes with a 317,849,600-byte largest load copy. These are this fixture's observations, not general admission floors.
+
+The same binary passes original 3.2, 4.4 and 2.1 greedy and sparse-continuation goldens. Their resident greedy/sparse process peaks respectively are 7,901,403,424 / 9,054,377,744; 8,410,127,008 / 9,534,019,368; and 7,768,873,128 / 8,884,131,600 bytes. All are below the declared 10 GB research envelope. The native T0/T1 catalogue also passes. No original golden or arithmetic tolerance changed.
+
+The map is a separate artifact, not a relabeling of full VQ 3.2. Its nine source shards are authenticated as whole pinned files, accounting for 83,770,065,126 bytes read for authentication rather than resident memory. Cross-artifact, partial-option, changed-map, wrong-parent and linked-manifest calls fail before result publication. Full affine acceptance, composite sparse continuation and timing are still pending at this checkpoint; no alternate pack is installed or offered by Auto.
+
+### Dense composite prefill and fixed-cache cost, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-prefill-and-cost]] records new independent composite prefill and sparse references. The native ordinary-prefill check matches 320 boundaries with a 2,866,039,472-byte process peak. Both sparse paths match all 984 boundaries through 2054 consumed tokens; streamed peak is 3,123,775,912 bytes and fixed-resident peak is 6,973,444,416. This is finite-horizon correctness and measured process ownership, not a general minimum or longer-context qualification.
+
+After separate full-logit validation, the same executable completes three alternating full-VQ/composite timing pairs. All six requests satisfy the frozen thermal, power and paging eligibility checks, and each artifact reproduces its own full 128-token sequence. Cross-artifact output equality is not required. Median committed rates are 5.520602046506764 and 5.947090433995678 tokens/s; the median paired ratio is 1.0800631461693295. Median TTFT values are 3.1590660829970147 and 2.5441643340163864 seconds, with paired ratio 0.81918281617562. Median request durations are 26.25571970801684 and 23.914144957991084 seconds, with paired ratio 0.9132518003180788. These engineering observations do not qualify the 20-token target or provide a confidence bound.
+
+Both arms own the same 1,194,393,600-byte, 608-record bank allocation, 2,082,816 shared-book bytes and 95,558,400 maximum read staging bytes. Full VQ records 49,233 loads and 18,790 hits; the composite's different generated route sequence records 49,865 loads and 18,105 hits. The recovered dense memory was not used for larger banks. Every request's global paging counters stay at 20 swap-ins and 2908 swap-outs. Complete raw observations, including earlier paging, are retained.
+
+Authenticated load medians are 29.497434666001936 and 59.31279829199775 seconds. The research overlay additionally authenticates nine full baseline shards, totaling 83,770,065,126 bytes; this is startup I/O, not resident memory. A published composite pack and its load path have not been built. OS page cache is uncontrolled, and these are neither cold-SSD results nor complete-task latency or quality evidence.
+
+### Shared dense dispatch affine acceptance, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-affine-compatibility]] preserves the full static suite and existing affine battery on frozen-dense-overlay-v2. The full battery reports 31 passes and four reference-related failures caused by the temporary driver resolving the venv interpreter symlink. The targeted repair uses the unchanged executable and the intact MLX 0.32.2 virtual environment: both independent reference producers and both native comparisons pass. This closes the existing affine compatibility requirement without changing the reference bytes, arithmetic or tolerances. The behavioral probe passes all 15 items and vision serving passes all 25 checks. These existing-pack results do not qualify composite task quality, features or throughput.
+
+### Dense savings reinvested into fixed expert banks, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-savings-reinvested]] compares the same composite and frozen binary with 512/96 versus 1536/288 record banks. The additional 2,388,787,200 bank bytes fit within the established dense payload saving; the process bound stays 10 GB. Both profiles match every greedy and sparse reference boundary. The larger greedy process peaks at 7,521,441,744 bytes and sparse at 9,328,595,360 bytes. Physical slots 1535 and 287 are actually executed in greedy generation. Sparse occupies only 1370 records and has no eviction, so its proof is kept distinct from the full-range greedy check.
+
+All three alternating timing pairs qualify, with exactly the same complete 128-token output across both arms. Control/enlarged arm medians are 6.0164231060/5.6931276441 committed tokens/s, 2.5375323750/2.8505367500 seconds TTFT and 23.6464410420/25.2083016250 seconds total request. Median paired ratios are 0.9462645070, 1.1265224763 and 1.0661911433 respectively. Each control request loads 49,865 records and hits 18,105; each enlarged request loads 34,782 and hits 33,188. Reduced reads did not create a speed win. This is one fixed-work non-speculative context with uncontrolled OS file cache, not a conclusion about cold SSD, larger budgets or the complete production stack. No automatic cache growth or candidate promotion is justified by it.
+
+### Larger-cache CPU diagnosis, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-larger-cache-cpu-diagnosis]] records a separate ten-second CPU sample whose timings are discarded. Demanded reads and MLX evaluation dominate the observed main-thread stacks; the victim search barely appears. This is diagnostic evidence, not an isolated GPU cost model. The next bounded hypothesis is to compare the VQ reader's current buffered mode with the existing affine reader's uncached/random policy, retaining exact bytes, descriptor ownership and the same process envelope. It is not yet implemented or measured.
+
+
+### Fixed-cache acceptance checkpoint
+
+[[sources/runs/2026/10/2026-10-03-native-vq-reinvestment-static-acceptance]] preserves the first static harness failure and its repaired full pass against the unchanged frozen reinvestment binary. The new test script required registration in the mocked suite inventory. No native numerical gate, reference or tolerance was relaxed. All four CI workflows for the preceding dense-composite commit passed. The larger cache remains an explicit research option and a losing cost result on the fixed workload; product Auto and the 20-token target remain open.
+
+
+### Expert-containing shard read policy, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-expert-shard-read-policy-parity]] records an explicit research comparison of buffered descriptors versus checked uncached random-read hints on the nine authenticated shards containing experts. The same fixed dense composite and 1536/288 banks pass all 2560 greedy and 984 sparse boundaries under each policy, including exact generated tokens and cache state. The larger sparse peak is 9,388,167,512 bytes, within the unchanged ten-GB process bound. Ordinary readers remain buffered, and the policy covers entire shards, including their dense members. Integrity, descriptor ownership, cancellation and range guards are retained.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-timing-admission-stopped]] preserves the separate failed timing campaign. Both lean validation runs pass, but their thermal state is fair and their timings are discarded. The first measured process fails its native initial headroom observation before model allocation; external snapshots do not identify the exact cause. There is no paired speed result or automatic retry. A later comparison needs a separately frozen stable-admission protocol without relaxing memory or timing requirements. Full production generation, larger contexts, task-quality, MTP/vision, dynamic allocation, Auto and real-hardware qualification remain open.
+
+
+### Stable-admission shard-policy result, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-stable-paired-cost]] records the separately frozen follow-up after the failed campaign. Every cell first passes thirty seconds of sampled nominal thermal state, low-power mode off, and the unchanged thirteen-GB floor in native and external VM observations. The bounded waiting step neither retries a failed cell nor relaxes native guards. The observer uses the timed binary's exact memory-observation source.
+
+Both full-logit validations and all six timing cells pass, with the same complete 128-token sequence. Buffered/uncached median committed decode is 5.8081/5.3094 tokens/s and request time is 24.9272/26.7625 seconds. The median paired ratios are 0.91614 for decode, 0.95239 for first-token latency and 1.07729 for request duration. Keep buffered reads as the default for this layout. The result does not establish a universal policy, a qualified new pack or the twenty-token target. The next declared storage hypothesis packs unchanged expert bytes into contiguous aligned records; no conversion or native packed-reader result is implied here.
+
+### Lossless contiguous expert export
+
+[[sources/runs/2026/10/2026-10-03-vq-contiguous-record-lossless-export]] records one bounded CPU-only export from the fully authenticated VQ 3.2 parent. All 288 reconstructed source-tensor hashes match, including the six codes/scales pieces in every layer. Per-record padding is zero. Each payload begins at byte 16,384; aligned strides are 1,851,392 or 2,621,440 bytes. The 48 files occupy 47,866,183,680 bytes, within the frozen 48-GB output and 350-GB research-staging bounds. Staging before export was 254,809,699,818 bytes.
+
+Final observations are 246,923,960 current process bytes, 258,998,968 lifetime physical-peak bytes and 272,646,144 lifetime RSS-peak bytes, all within the one-GB conversion cap. The manifest SHA-256 is `230c53d8bea76e245c8c47863db3fc0f93c549865e7393b5a493c07b0f52b834`. Source/output stamps, independent tensor reconstruction, complete output file hashes and synced atomic manifest publication bind the artifact. Synthetic source-order, padding, corruption, truncation, extent and incomplete-write checks pass. This does not establish native reader parity, a speed gain, quality qualification or deployment readiness.
+
+### Native contiguous record parity
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-parity]] binds native producer `0c435ae491263b4bae35aaec29845d0e7f6507170ce411f3c1a811b3c1f52fff` to the frozen aligned export. All 96 catalogue groups pass. Both storage paths match every one of 2560 greedy and 984 sparse-context state/output boundaries without tolerance changes. Sparse coverage reaches 2054 consumed tokens. The contiguous reader verifies all 48 derived payloads totaling 47,866,183,680 bytes.
+
+Greedy split/contiguous lifetime peaks are 7,518,705,640 and 7,535,450,112 bytes. Sparse peaks are 9,373,421,864 and 9,383,448,896 bytes. The process ceiling remains 10,000,000,000 bytes. Maximum staging is 95,558,400 for split reads and 115,015,680 bytes for complete aligned reads, both below 128,000,000. The 1824-record greedy cache reaches physical addresses 1535 and 287; both arms report 10,308 loads, 3902 hits and 8484 evictions. Sparse does not claim full physical-slot occupancy.
+
+Three CLI refusal cases leave no output directory or model allocation. Buffered read policy, model values and bank capacities stay fixed. These functional runs are not throughput measurements. Authentication reads the parent, dense overlay and then candidate-only derived files; OS file-cache history remains uncontrolled and must qualify any later interpretation. Full original affine acceptance from the earlier composite checkpoint is not reported as rerun by these research-only changes.
+
+### Paired contiguous-record generation cost
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-paired-cost]] preserves both independent lean-path full-logit validations and all six interleaved measurements. All six timing cells pass the frozen observed eligibility rules and emit the same complete 128-token sequence. Both arms use the same composite, buffered policy, 1536/288 banks, original prefill sweep and ten-GB process ceiling. No run is retried or replaced.
+
+| Metric | Split ranges median | Contiguous records median | Median paired contiguous/split ratio |
+| --- | ---: | ---: | ---: |
+| Committed decode tokens/s | 5.776163947978307 | 6.872380896608456 | 1.1897828660167846 |
+| TTFT seconds | 3.0060759580228478 | 3.007833749987185 | 0.98991835190062 |
+| Request seconds | 24.993009916011943 | 21.581774708989542 | 0.8576591458049302 |
+
+Loading medians are 59.3513325420 and 77.1266143330 seconds. Maximum timed process peaks are 7,750,785,096 and 7,782,275,240 bytes. Every measured request has 34,782 record loads and 33,188 hits in both arms, so the improvement does not come from a larger cache or different generated route sequence. Median paired ratios and ratios of arm medians are different statistics.
+
+The complete research path improves generation while increasing authentication/load time. Candidate-only record files are read after both parent filesets, changing uncontrolled OS cache conditioning; this limitation was recorded before timing. The result cannot isolate positional-call count as its cause, claim cold-SSD speed, project standalone-pack startup, qualify another budget/Mac, or meet the twenty-token target. Main-model values are unchanged, but the underlying composite's held-out task qualification remains open.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-static-acceptance]] records complete static acceptance on this same frozen producer. No public loader, Auto choice, installed pack or download activation changes. The earlier complete affine model-loaded battery is preserved as earlier evidence and is not represented as rerun here.
+
+### Separate original draft on real composite inputs
+
+[[sources/runs/2026/10/2026-10-03-vq-composite-draft-initial-parity-failure]] binds the CPU inventory, independent reference and preserved failed native comparison. The original head contains 68 tensors and 18 affine modules, with a 1,470,955,171-byte file, 1,470,946,816-byte payload and 419,430,400-byte largest tensor. Its own recipe is four-bit group-64. The complete-file and header hashes plus original-checkpoint conversion provenance are captured separately from the VQ trunk.
+
+The reference main prefill matches all 160 frozen boundaries and next token 760. The process releases the main stack before head computation, peaks at 2,424,162,872 bytes, and writes a 2,253,521-byte BF16 fixture from 43 composite-input head entries plus one cached step. The first native orchestration stops before launch because it repeats a lock preflight inside its own reservation. A separately recorded native-only correction executes under a parent-held lock and fails unchanged prefill parity at relative maxima 0.02927 and 0.02970; its cached outputs are exact. This also reproduces the standalone head loader's absent exclusion check without running a second model.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-owned-draft-component]] adds owned full-file authentication, separate metadata and explicit retained-payload/load-copy checks. Its research-only arithmetic profile uses the reference's fast grouped normalization, the existing qualified BF16 sigmoid and finite rotary coefficients. All four unchanged fixture outputs then match exactly; offsets are 43 and 44, all outputs are finite, native peak is 2,064,894,112 bytes and bounded BF16 traces occupy 5,811,200 bytes. The public arithmetic remains deployed. This is a combined-profile comparison, not attribution to any single arithmetic operation.
+
+Twelve actual CLI refusal checks pass for process-lock contention, ambient overrides and corrupt, symlinked, truncated or FIFO inputs at the relevant fixture/configuration/sidecar boundaries. The process-lock fix applies to ordinary standalone MTP loading as well. This component result provides no speculative acceptance, committed-generation speed, long-context, vision or held-out quality evidence. No candidate is installed, served, selected by Auto or promoted.
+
+### Final draft build admission status, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-draft-final-build-admission-pending]] records a successful final native build and the broader local acceptance remaining unlaunched. The head and owned-loader source hashes are unchanged from the exact component producer; the final diagnostic adds an existing-output refusal and metadata/budget checks. One admission attempt refuses insufficient real memory. A separate bounded stable-admission campaign also launches no model and is interrupted after a separate llama-server workload is identified. The unrelated process is untouched.
+
+The quiet preflight now rejects known llama.cpp inference entrypoints before launch as well as Slotstream/build contention. Twelve context-qualification tests and thirty-two static-entrypoint tests pass; a read-only invocation reproduces the external-model refusal. Final local static/catalogue, baseline draft, streamed draft, image interaction and verification-row checks remain pending until exclusive model execution and their original real-memory bounds are available. Exact component parity is not substituted for those regressions. New independent reference campaigns must bind the changed safety-helper identity and satisfy their source-bound traversal requirements again.
+
+The full implementation remains in progress. No alternate pack has earned Auto integration or promotion, no new supported hardware profile reaches the target, and no release is implied by this checkpoint.

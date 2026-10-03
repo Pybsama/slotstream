@@ -29,6 +29,7 @@ from quantization_quality import VOCABULARY
 from vq_fused_reference import bounded
 from vq_kernel_sources import RUNTIME_SHA256
 from vq_ple_stream import Archive, streaming_module, stamp
+from vq_execution_profile import add_runtime_argument, recheck_runtime, select_runtime
 
 ARCH_SHA256 = 'd6470a2131a64ff37024dfffd2b5bc8c3f4db625f0f3b1ceec7fe346852c1a87'
 ARCH_REVISION = '2097324ed04ff76078366c77148b88b9db612ba2'
@@ -41,6 +42,10 @@ ARTIFACTS = {
         'TheDrainFlorist/Qwen3.8-Flash-Next-VQ-4.4bpw',
         '9ca97027fc253eb6ad14a2db0d0df5aec729403c8af8b4d59194c9e6a3dff458',
         '2cc5122dd575027f70f2b584f6352c70ad4328f54051ee878e2a72dc420d4228'),
+    '8684640a3956b01c47f5d47f9b999e2ab8b985f1': (
+        'TheDrainFlorist/Qwen3.8-Flash-Next-VQ-2.1bpw',
+        '4299e87dc3b2d11e53c683d4f17f1196ccf95b75399ddd77d470e148aae1d929',
+        '58d59c3b849ca303cece916f930a15e8583455e1566611133597513b0245a565'),
 }
 PROCESS_LIMIT = 10_000_000_000
 NORMALIZATION = 'vq-raw-zero-centered-to-pr1788-folded-bf16-v1'
@@ -57,7 +62,7 @@ def instrument_identity():
         return result.hexdigest()
 
     root = Path(__file__).resolve().parent
-    scripts = ('vq_model_reference.py', 'vq_ple_stream.py', 'vq_fused_reference.py',
+    scripts = ('vq_model_reference.py', 'vq_execution_profile.py', 'vq_ple_stream.py', 'vq_fused_reference.py',
                'vq_kernel_sources.py', 'quantization_inventory.py', 'quantization_quality.py',
                'context_qualification.py', 'prefill_bench.py', 'memory_gate.py')
     sources = {name: digest(root / name) for name in scripts}
@@ -384,6 +389,7 @@ def main():
     parser.add_argument('--layers', type=int, choices=(2, 4, 48), default=48)
     parser.add_argument('--prove-order', action='store_true', help='exact direct-vs-streamed first-four-layer gate')
     parser.add_argument('--order-proof', type=Path, help='successful same-candidate first-four-layer receipt, required for 48 layers')
+    add_runtime_argument(parser)
     options = parser.parse_args()
     token_raw = bounded(options.tokens, 32_000)
     tokens = unique_json(token_raw)
@@ -392,6 +398,7 @@ def main():
         raise ValueError('bounded, frozen public pilot tokens required')
     if options.prove_order and (options.layers != 4 or not 512 < len(tokens) <= 1024):
         raise ValueError('traversal proof requires four layers and a boundary-crossing 513..1024-token input')
+    runtime_path, execution_profile = select_runtime(options.model, options.runtime)
     instrument = instrument_identity()
     proof_hash = None
     if options.layers == 48:
@@ -401,6 +408,7 @@ def main():
         proof = unique_json(proof_raw)
         inv_digest = hashlib.sha256(bounded(options.inventory, 4_000_000)).hexdigest()
         if (proof.get('architecture_sha256') != ARCH_SHA256 or proof.get('runtime_sha256') != RUNTIME_SHA256
+                or proof.get('execution_profile') != execution_profile
                 or proof.get('mlx') != '0.32.2' or proof.get('mlx_lm') != '0.31.3'
                 or proof.get('prompt_chunk') != 512 or proof.get('vq_decode_chunk') != 32
                 or proof.get('normalization') != NORMALIZATION
@@ -449,7 +457,7 @@ def main():
 
         thread = threading.Thread(target=monitor, daemon=True); thread.start()
         try:
-            arch, vq = references(options.architecture, options.model / 'model.py')
+            arch, vq = references(options.architecture, runtime_path)
             with Archive(options.model, options.inventory) as archive:
                 model = load_model(options.model, archive, arch, vq)
                 print('strict model loading complete', flush=True)
@@ -473,6 +481,7 @@ def main():
                 receipt = {'schema': 1, 'scope': 'pilot feasibility, not native parity or quality qualification',
                     'architecture_revision': ARCH_REVISION, 'architecture_sha256': ARCH_SHA256,
                     'runtime_sha256': RUNTIME_SHA256, 'mlx': mx.__version__, 'mlx_lm': '0.31.3',
+                    'execution_profile': execution_profile,
                     'instrument': instrument, 'normalization': NORMALIZATION,
                     'vq_decode_chunk': 32, 'prompt_chunk': 512, 'tokens': tokens, 'positions': positions,
                     'tokens_sha256': hashlib.sha256(token_raw).hexdigest(), 'layers': options.layers,
@@ -484,6 +493,7 @@ def main():
                     'artifact': {k: v for k, v in provenance.items() if k != 'stamps'}, 'ple': archive.receipt()}
                 if max(receipt['process_memory'].values()) > PROCESS_LIMIT:
                     raise ValueError('reference process footprint exceeded its bound')
+                recheck_runtime(options.model, options.runtime, execution_profile)
                 if instrument_identity()['sha256'] != instrument['sha256']:
                     raise ValueError('reference sources or runtime bytes changed during the run')
                 (options.out / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
