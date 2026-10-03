@@ -1,0 +1,300 @@
+{
+  "checkpoint": "Qwen/Qwen3.8-Flash-Next",
+  "checkpoint_revision": "de4b8e4d43b917e7706784d8bb445c9af86a3540",
+  "tokenizer_sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+  "text": "<|im_start|>user\nExplain in two short paragraphs how a local mixture-of-experts model can use SSD streaming when its weights exceed RAM. Distinguish a saved memory ceiling from current allocation.<|im_end|>\n<|im_start|>assistant\n<think>\n",
+  "text_sha256": "2423950dce73c0bee4a35e59a45904858ccc85bce5d661610e74b6905a2f828a",
+  "prompt": [
+    248045,
+    846,
+    198,
+    814,
+    20139,
+    303,
+    1330,
+    2716,
+    41228,
+    1204,
+    264,
+    2136,
+    20340,
+    8404,
+    17830,
+    15089,
+    1558,
+    628,
+    958,
+    35160,
+    16350,
+    948,
+    1141,
+    13914,
+    12131,
+    21360,
+    13,
+    414,
+    85596,
+    264,
+    6568,
+    4779,
+    21482,
+    494,
+    1428,
+    23014,
+    13,
+    248046,
+    198,
+    248045,
+    74455,
+    198,
+    248068,
+    198
+  ],
+  "sampling": "argmax-first-index",
+  "eos_token_id": 248044,
+  "schema": 1,
+  "profile": "vq32-uncached-expert-shards-cost-pilot-v1",
+  "scope": "Same composite and fixed reinvested cache; compare buffered versus checked uncached random shard reads with exact complete generated sequences",
+  "max_new_tokens": 128,
+  "minimum_committed_tokens": 64,
+  "validation_steps": 16,
+  "configuration": {
+    "resident_text": true,
+    "main_bank_records": 1536,
+    "secondary_bank_records": 288,
+    "mtp": false,
+    "vision": false,
+    "context_limit": 2054,
+    "process_bound_bytes": 10000000000,
+    "parallel_read_lanes": 12,
+    "maximum_read_staging_bytes": 128000000,
+    "reinvest_dense_savings": true,
+    "uncached_expert_reads": true
+  },
+  "resources": {
+    "validation_runs": 2,
+    "timing_runs": 6,
+    "run_timeout_seconds": 1800,
+    "minimum_reclaimable_bytes": 13000000000,
+    "minimum_remaining_headroom_bytes": 3000000000,
+    "additional_weights_bytes": 0,
+    "paid_compute_usd": 0
+  },
+  "rounds": [
+    [
+      "buffered",
+      "uncached"
+    ],
+    [
+      "uncached",
+      "buffered"
+    ],
+    [
+      "buffered",
+      "uncached"
+    ]
+  ],
+  "protocol": {
+    "validation": "Separate process verifies all sixteen complete Float32 vocabulary arrays and autoregressive samples against the pinned independent greedy reference with state observation disabled. Required before measurement for this exact binary, metallib, profile and inventory.",
+    "cache_state": "All 138 main payloads are fully authenticated through owned descriptors before the request. New model state and empty expert banks per process; resident text loaded before request. OS page cache is uncontrolled after these reads and is not described as cold SSD. No warmup generation. The uncached arm applies checked F_NOCACHE=1 and F_RDAHEAD=0 after full authentication to the nine entire descriptors containing routed experts, including their dense members. Existing cached pages are not purged; this is an OS hint comparison, not a cold-storage study.",
+    "timer": "Monotonic request start immediately before first forward; emission after forward returns and sample is ready. TTFT is first committed emission minus request start. Committed decode rate is (emitted non-EOS tokens minus one) / (last committed emission minus first committed emission). Report total request and load durations separately; EOS and setup are excluded from decode numerator.",
+    "observation": "Full state/logit hashing and trace callbacks disabled in measurement. Existing finite checks, headroom checks, cache arithmetic and synchronization retained. Operating conditions observed between emissions and included in inter-emission time. Demanded cache-miss reads use at most twelve CPU lanes, complete within the fixed staging reservation and join before serialized cache publication. Large immutable prefill is unchanged.",
+    "eligibility": "No paging increase during request, nominal observed thermal state, low-power mode off, at least 64 committed tokens, no development overrides, independent supervision completed and preflight excludes competing model/compiler jobs; operator reviews the task list and runs no storage study during the pilot. Preserve ineligible runs, no replacement runs or best-of selection.",
+    "comparison": "Same composite, prompt, binary, process ceiling and reference for both arms. Require identical complete generated sequences across all six timings. Report every run and paired medians only if all six are eligible. No product or 20 tokens/s qualification."
+  },
+  "references": {
+    "f31f100d47f062c415251d92a4c14956b2328e393294a9680eb2ba9c1664f645": {
+      "pack": "3.2-dense-affine4",
+      "generated": [
+        760,
+        1156,
+        369,
+        9859,
+        883,
+        1204,
+        264,
+        2136,
+        380,
+        12370,
+        8404,
+        12,
+        83167,
+        318,
+        24797,
+        36
+      ],
+      "logits": [
+        {
+          "shape": [
+            1,
+            44,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 43704320,
+          "sha256": "b9b6d6b68a127c9332acd50b6775b9139ba38781e87fa2f20abc0ddcc2311213"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "f595a7c1f7e431bb42f76a81b05d9d0b39147775cd7cbde24b6a34687289a135"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "1980728aacdaab38f9ad707dc9bd00da8efe4e754a0ecae5c325dc263ca75b2e"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "b2c1a66f36cdbb37f562f19f78647d149f6d446ff4a09fe5a10593851dd57244"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "1836cab6617d6e1514aeee53c411a3a383128b51ecf953310c6977df1ac6c6d3"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "ddf90e28ce313f5cb87bfa15e1f863d197b134053dced7208214a7e6b151672d"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "07b910ef6f36a24bbf9f73de8df0530c3ceea51aef574ada3ff48c31d7bc8913"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "bff4ded7b410f4ee57dab02296ba32b7b557eed95531ca5cafbfa02e8f58e28c"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "3a217d5ac63612addd51ec04490d94b3736cded603f196f4a463fdba9e876f74"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "79c3ba8397db461129f32e86cbe613afb3fdcd6f9c981ef1627649a2dac3fc8c"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "5abce2984079fa5ae52337b69e8f36d1160fcd515b52c8c71ce0252a65526f64"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "c6cd56cad6c7ec11114d55a2a5870c81fe64e919d934db7c5c66cd1a348f434e"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "5edff1c86257005485a4ed84f26a5d7ade358fd2a2abe22f1100ebeaa5ed23b9"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "5a87cddfcab3c7e13235b0b4fe2addcc8fce91e7fb06e8f852ec9b38f19590db"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "80e7d09b6eb40985515d49faeb968c30df11220570e32f7bf935780e7522eafe"
+        },
+        {
+          "shape": [
+            1,
+            1,
+            248320
+          ],
+          "dtype": "F32",
+          "bytes": 993280,
+          "sha256": "702a8118a41efe6d74eed9d029570eef782ef4f47d720b1d82f1ac8934cd1bfe"
+        }
+      ]
+    }
+  },
+  "reference_provenance": {
+    "parent_profile_sha256": "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7",
+    "composite_fixture_sha256": "10003d625b179bdddfb6bd03d7544f1becf27f5beec2551cb71467af7639b68d",
+    "composite_sha256": "f31f100d47f062c415251d92a4c14956b2328e393294a9680eb2ba9c1664f645"
+  },
+  "adoption": {
+    "complete_configuration_qualification": false,
+    "purpose": "Measure shard read policy at unchanged 1536/288 bank geometry after greedy and sparse parity. No product default change."
+  },
+  "control_profile_sha256": "87468cc244dca45d46b673132ee9e05be7c09f4811d25dcb92afd21bae4782e8"
+}

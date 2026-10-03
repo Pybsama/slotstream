@@ -31,6 +31,7 @@ package final class VQTensorFile {
     private let descriptor: Int32
     private let stamp: Stamp
     package let tensors: [String: TensorRef]
+    package let uncachedRandomReads: Bool
 
     private static func hash(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -55,7 +56,7 @@ package final class VQTensorFile {
         return data
     }
 
-    package init(url: URL, identity: Identity, shouldContinue: () -> Bool = { true }) throws {
+    package init(url: URL, identity: Identity, uncachedRandomReads: Bool = false, shouldContinue: () -> Bool = { true }) throws {
         func validSHA(_ value: String) -> Bool {
             value.utf8.count == 64 && value.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
         }
@@ -118,6 +119,15 @@ package final class VQTensorFile {
                   Stamp(try Self.status(fd)) == Stamp(initial) else {
                 throw ModelError("VQ tensor payload changed or failed its complete-file digest")
             }
+            // Research opt-in, frozen before the owner is published to read
+            // lanes. Authentication is unchanged and does not imply cold SSD.
+            // These hints cover this entire shard, including its dense tensors.
+            if uncachedRandomReads {
+                guard fcntl(fd, F_NOCACHE, 1) == 0, fcntl(fd, F_RDAHEAD, 0) == 0 else {
+                    throw ModelError("cannot configure uncached random VQ shard reads")
+                }
+            }
+            self.uncachedRandomReads = uncachedRandomReads
             descriptor = fd; stamp = Stamp(initial); tensors = parsed
         } catch {
             close(fd)

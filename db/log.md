@@ -124,3 +124,9 @@ Implement authenticated dense composite native adapter and own reference fixture
 ## [2026-10-03 13:29] update | same-model-quantization-and-automatic-memory
 Record exact greedy and sparse parity for larger fixed composite caches, a slower matched cost result, separate CPU diagnosis with all timings discarded, pinned draft normalization evidence, and corrected full static acceptance. Auto and throughput qualification remain open.
 
+## [2026-10-03 13:53] update | same-model-quantization-and-automatic-memory
+Add explicit uncached expert-containing shard research policy with exact greedy and sparse parity; retain two passing lean validations and the failed pre-allocation timing admission. No speed comparison, retry, default change or promotion.
+
+## [2026-10-03 14:14] update | same-model-quantization-and-automatic-memory
+Preserve the separately frozen stable-admission comparison. Six eligible same-sequence timings show uncached shards slower overall, so retain buffered default. Add bounded native/external admission tooling; no candidate promotion.
+

@@ -8,12 +8,15 @@ extension Diagnostics {
     /// fixture's token, becomes the next input. Final sampled token is unconsumed.
     public static func quantizationGeneration(source: URL, inventory: URL, profileURL: URL,
                                               fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false,
-                                              denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil, reinvestDenseSavings: Bool = false) throws -> Data {
+                                              denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil, reinvestDenseSavings: Bool = false, uncachedExpertReads: Bool = false) throws -> Data {
         struct Profile: Decodable, Equatable {
             let schema: Int, profile: String, prompt: [Int], sampling: String
             let max_new_tokens: Int, minimum_steps: Int, eos_token_id: Int
         }
         guard (!wideRecords && !parallelRecords) || (residentRecords && residentText) else { throw ModelError("wide banks and parallel VQ reads require resident text and records") }
+        guard !uncachedExpertReads || (denseOverlayBaseline != nil && reinvestDenseSavings && wideRecords && parallelRecords && residentText && residentRecords) else {
+            throw ModelError("uncached expert shard research requires the fixed reinvested composite profile")
+        }
         guard !reinvestDenseSavings || (denseOverlayBaseline != nil && wideRecords && parallelRecords && residentText && residentRecords) else {
             throw ModelError("dense reinvestment requires the composite and wide parallel residency")
         }
@@ -131,7 +134,7 @@ extension Diagnostics {
             throw ModelError("VQ generation check requires 13 GB actual reclaimable memory")
         }
         let checkpoint = try VQCheckpoint(directory: source, inventory: inventory,
-            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest)
+            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest, uncachedExpertReads: uncachedExpertReads)
         guard checkpoint.inventorySHA256 == parent.inventory_sha256 else { throw ModelError("VQ generated fixture and checkpoint differ") }
         let manager = FileManager.default
         guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ generation output directory must be new") }
@@ -172,6 +175,8 @@ extension Diagnostics {
             object["resident_text"] = model.residentTextStats ?? [:]
             object["process_bound_bytes"] = model.processByteLimit
             object["composite_sha256"] = checkpoint.compositeSHA256
+            object["expert_file_read_policy"] = checkpoint.expertReadPolicy
+            object["uncached_expert_files"] = checkpoint.uncachedExpertFileCount
             object["overlay_verified_files"] = checkpoint.overlayVerifiedFileCount
             object["overlay_verified_payload_bytes"] = checkpoint.overlayVerifiedPayloadBytes
             if let failure { object["failure"] = failure }
@@ -244,6 +249,7 @@ extension Diagnostics {
                 c.expect("resident text serves repeated forwards", (stats["dense_hits"] ?? 0) > 49 && (stats["embedding_hits"] ?? 0) > 1)
             }
             guard ProcessMemory.peakResidentBytes() <= model.processByteLimit else { throw ModelError("VQ generation exceeded its configured process bound") }
+            c.equal("requested expert shard read policy applied", checkpoint.uncachedExpertFileCount, uncachedExpertReads ? 9 : 0)
             let data = try receipt(nil)
             guard c.report().passed else { throw ModelError("VQ generated sequence assertions failed") }
             return data

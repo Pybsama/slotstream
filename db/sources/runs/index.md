@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T13:29:35.869243Z
+updated: 2026-10-03T14:13:22.973772Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-stable-paired-cost]] — Stable admitted paired VQ shard-policy comparison retains buffered reads
+- [[sources/runs/2026/10/2026-10-03-native-vq-shard-policy-timing-admission-stopped]] — VQ shard-policy timing stopped before the first measured request
+- [[sources/runs/2026/10/2026-10-03-native-vq-expert-shard-read-policy-parity]] — Exact native VQ parity with an explicit uncached shard policy
 - [[sources/runs/2026/10/2026-10-03-native-vq-reinvestment-static-acceptance]] — Static acceptance of the fixed larger VQ research cache
 - [[sources/runs/2026/10/2026-10-03-native-vq-larger-cache-cpu-diagnosis]] — CPU diagnosis after the larger fixed VQ cache did not improve speed
 - [[sources/runs/2026/10/2026-10-03-native-vq-dense-savings-reinvested]] — Dense composite savings reinvested into fixed expert residency
@@ -504,11 +507,8 @@ updated: 2026-10-03T13:29:35.869243Z
 - [[sources/runs/2026/09/2026-09-07-optimization-verification-selected-paths]] — Verification selected-path dispatch and bounded fixture checks
 - [[sources/runs/2026/09/2026-09-07-optimization-selected-artifacts-and-static-suites]] — Selected-artifact acceptance and mandatory optimization suites
 - [[sources/runs/2026/09/2026-09-07-configurable-context-shared-client-fixtures]] — Context consumer, Hermes and published gateway fixtures integrated into shared Tools
-- [[sources/runs/2026/09/2026-09-07-configurable-context-shared-engineering-integration]] — Shared context plan, exact source closure and unreleased documentation integrated
-- [[sources/runs/2026/09/2026-09-07-configurable-context-candidate-selection-acceptance]] — Selected-candidate planner and installer fixes; fixture passes and six headroom-blocked planner checks preserved
-- [[sources/runs/2026/09/2026-09-07-optimization-paired-correctness-independent-of-timing]] — Final response correctness and resource ceilings are independent of timing exclusion
 
 ## More
 
-This folder has 742 files. The 500 most recent are listed above.
+This folder has 745 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

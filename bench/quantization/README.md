@@ -839,3 +839,38 @@ sequences across both arms. The three-pair result was slower with the larger
 cache despite fewer record loads. This is a numerical research mode, not a new
 cache default. See the canonical quantization measurement for raw evidence and
 scope; it does not qualify automatic resizing or the 20-token target.
+
+### Expert-containing shard read policy
+
+`quantization-model-check --uncached-expert-reads` is a research option for
+`--reinvest-dense-savings` on the exact dense-four-bit composite. It applies
+checked `F_NOCACHE=1` and `F_RDAHEAD=0` calls after complete-file authentication
+and before publishing each of the nine owned descriptors that contains routed
+experts. Those shards also contain dense tensors, so the policy covers whole
+shards. Ordinary readers remain buffered. There is no OS cache purge or claim
+that a request starts from cold SSD.
+
+`uncached-expert-cost-v1.json` freezes the policy arm at the same 1536/288 bank
+capacities and ten-GB process ceiling as `dense-reinvestment-cost-v1.json`.
+`Tools/vq_uncached_expert_pilot.py` requires greedy and sparse numerical gates
+from the timed producer, validates full logits for both arms, and compares
+three alternating pairs with exactly matching complete generated sequences.
+The receipt records the policy and descriptor count. All attempts are retained;
+no retry or qualification follows automatically. A winner here would still
+need complete-task, context, feature and hardware qualification.
+
+The first read-policy cost attempt stopped before measurement, with both
+validations thermally ineligible. The separately frozen stable-admission run
+completed all six eligible timings with matching complete sequences. Buffered
+reads had better committed decode and total request time; retain that default.
+The raw attempts and exact metrics are in the canonical quantization measurement
+record. This conclusion applies to the fixed composite and larger cache profile.
+
+Build a source-bound native conditions observer with
+`python3 Tools/vq_pilot_admission.py --out <new-observer-directory>` and pass
+that directory as `--admission-observer` to the read-policy pilot. Before each
+cell it requires thirty seconds of sampled nominal thermal state, low-power
+mode off and both VM observers above the existing admission floor. Each idle
+wait is bounded to ten minutes. Any bad observation resets stability; an expired
+wait fails the campaign. Native guards and in-request timing exclusions still
+apply. The observer's engine source must match the timed binary's source receipt.

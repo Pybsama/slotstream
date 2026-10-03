@@ -62,6 +62,10 @@ package final class VQCheckpoint {
     private let ple: PLE
     private var files: [String: VQTensorFile] = [:]
     private let denseOverlay: VQDenseOverlay?
+    private let uncachedExpertReads: Bool
+    private let expertShardNames: Set<String>
+    package var expertReadPolicy: String { uncachedExpertReads ? "uncached-random-shards-v1" : "buffered-v1" }
+    package var uncachedExpertFileCount: Int { files.values.filter(\.uncachedRandomReads).count }
     package var compositeSHA256: String? { denseOverlay == nil ? nil : VQDenseOverlay.identitySHA256 }
     package var residentTextPayloadBytes: Int { denseOverlay == nil ? 5_318_309_400 : VQDenseOverlay.residentPayloadBytes }
     package var largestDenseLoadCopyBytes: Int { denseOverlay?.largestLoadCopyBytes ?? 635_699_200 }
@@ -83,9 +87,13 @@ package final class VQCheckpoint {
         return data
     }
 
-    package init(directory: URL, inventory: URL, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil) throws {
+    package init(directory: URL, inventory: URL, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil,
+                 uncachedExpertReads: Bool = false) throws {
         guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
             throw ModelError("dense composite requires both its baseline and manifest")
+        }
+        guard !uncachedExpertReads || denseOverlayBaseline != nil else {
+            throw ModelError("uncached VQ research reads require the exact dense composite")
         }
         let root = directory.resolvingSymlinksInPath()
         let raw = try Self.bounded(inventory, limit: 4_000_000), hash = Self.digest(raw)
@@ -193,6 +201,11 @@ package final class VQCheckpoint {
             throw ModelError("VQ PLE storage geometry changed")
         }
         self.directory = root; self.index = index; self.identities = identities
+        let expertShards = Set(index.filter { $0.key.contains(".mlp.switch_mlp.") }.values)
+        guard !uncachedExpertReads || (hash == VQDenseOverlay.parentInventorySHA256 && expertShards.count == 9) else {
+            throw ModelError("uncached VQ shard set differs from the inspected composite")
+        }
+        self.uncachedExpertReads = uncachedExpertReads; self.expertShardNames = expertShards
         self.recordLayouts = layouts; self.ple = ple
         if let baseline = denseOverlayBaseline, let manifest = denseOverlayManifest {
             let overlay = try VQDenseOverlay(baseline: baseline, manifest: manifest, inventorySHA256: hash)
@@ -216,7 +229,8 @@ package final class VQCheckpoint {
             if let owned = files[filename] { try owned.verifyUnchanged() }
             else {
                 files[filename] = try VQTensorFile(url: directory.appendingPathComponent(filename),
-                    identity: identities[filename]!, shouldContinue: shouldContinue)
+                    identity: identities[filename]!, uncachedRandomReads: uncachedExpertReads && expertShardNames.contains(filename),
+                    shouldContinue: shouldContinue)
             }
         }
         try denseOverlay?.authenticateAll(shouldContinue: shouldContinue)
@@ -225,7 +239,8 @@ package final class VQCheckpoint {
     private func file(for name: String, shouldContinue: () -> Bool) throws -> VQTensorFile {
         guard let filename = index[name], let identity = identities[filename] else { throw ModelError("missing authenticated VQ tensor: \(name)") }
         if let owned = files[filename] { try owned.verifyUnchanged(); return owned }
-        let owned = try VQTensorFile(url: directory.appendingPathComponent(filename), identity: identity, shouldContinue: shouldContinue)
+        let owned = try VQTensorFile(url: directory.appendingPathComponent(filename), identity: identity,
+            uncachedRandomReads: uncachedExpertReads && expertShardNames.contains(filename), shouldContinue: shouldContinue)
         files[filename] = owned
         return owned
     }

@@ -18,7 +18,7 @@ extension Diagnostics {
             let pack: String, generated: [Int], logits: [Logit]
         }
         struct Profile: Decodable {
-            struct Configuration: Decodable { let parallel_read_lanes: Int?; let reinvest_dense_savings: Bool? }
+            struct Configuration: Decodable { let parallel_read_lanes: Int?; let reinvest_dense_savings: Bool?; let uncached_expert_reads: Bool? }
             let configuration: Configuration
             let schema: Int, profile: String, prompt: [Int], max_new_tokens: Int
             let minimum_committed_tokens: Int, validation_steps: Int, eos_token_id: Int
@@ -42,7 +42,8 @@ extension Diagnostics {
         guard ["8f2c4256f6489ae5b9ce4e801ad5e9c79263b85646a3ff91220148156da810a5",
                "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7",
                "a1b2edc29e0b1a5a3a668d9b8c26ff8533523f0045e98970e5e5efc54badaa88",
-               "87468cc244dca45d46b673132ee9e05be7c09f4811d25dcb92afd21bae4782e8"].contains(profileHash) else {
+               "87468cc244dca45d46b673132ee9e05be7c09f4811d25dcb92afd21bae4782e8",
+               "f33ba9344516921a6b483db9790b9321a47603d16be826c996074419e2ba3285"].contains(profileHash) else {
             throw ModelError("VQ pilot requires the frozen performance profile")
         }
         let profile = try JSONDecoder().decode(Profile.self, from: profileRaw)
@@ -50,7 +51,8 @@ extension Diagnostics {
             $0.hasPrefix("SLOTSTREAM_") || $0.hasPrefix("SS_DEBUG") || $0.hasPrefix("VQ_") || $0.hasPrefix("VQLAB_")
         }) else { throw ModelError("VQ pilot requires no developer overrides") }
         let checkpoint = try VQCheckpoint(directory: source, inventory: inventory,
-            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest)
+            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest,
+            uncachedExpertReads: profile.configuration.uncached_expert_reads == true)
         guard let reference = profile.references[checkpoint.compositeSHA256 ?? checkpoint.inventorySHA256] else {
             throw ModelError("VQ pilot has no reference for this inventory")
         }
@@ -118,6 +120,8 @@ extension Diagnostics {
                 "observed_timing_eligible": reasons.isEmpty, "timing_exclusions": reasons,
                 "stop": generated.last == profile.eos_token_id ? "eos" : "length",
                 "verified_payload_bytes": checkpoint.verifiedPayloadBytes, "verified_files": checkpoint.verifiedFileCount]
+            result["expert_file_read_policy"] = checkpoint.expertReadPolicy
+            result["uncached_expert_files"] = checkpoint.uncachedExpertFileCount
             result["composite_sha256"] = checkpoint.compositeSHA256
             result["overlay_verified_files"] = checkpoint.overlayVerifiedFileCount
             result["overlay_verified_payload_bytes"] = checkpoint.overlayVerifiedPayloadBytes
@@ -195,6 +199,9 @@ extension Diagnostics {
                       stats["maximum_executed_slot"] == 1535, stats["minimum_class_maximum_executed_slot"] == 287 else {
                     throw ModelError("VQ pilot did not exercise its exact reinvested record range")
                 }
+            }
+            guard checkpoint.uncachedExpertFileCount == (profile.configuration.uncached_expert_reads == true ? 9 : 0) else {
+                throw ModelError("VQ pilot expert shard read policy differs from its frozen profile")
             }
             return try receipt(failure: nil)
         } catch {
