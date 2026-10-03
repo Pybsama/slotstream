@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-03T02:02:37.190481+00:00
+updated: 2026-10-03T02:19:59.797953+00:00
 summary: Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 date: 2026-10-02
 doc: plan
@@ -274,3 +274,8 @@ Remaining experimental questions are explicit: which affine/VQ configuration win
 ### Native arithmetic checkpoint
 
 [[sources/runs/2026/10/2026-10-02-native-vq-trunk-profile]] records exact first-block output/state parity for the byte-identical fixtures from both verified packs, and unchanged full-model baseline logits on one frozen pilot case. Candidate grouped normalization, query/key normalization, quantized injection and recurrence are explicit internal arithmetic choices. The deployed profile remains the default. This is an experimental block harness, not full candidate loading; QSA, PLE, draft/rollback, mixed pool ownership, held-out tasks and performance remain required before product integration.
+
+
+### Direct-read foundation
+
+[[sources/runs/2026/10/2026-10-02-native-vq-owned-file-reader]] establishes the native owned-descriptor primitive on bounded synthetic files. Complete payload verification, extent checks and cancellation precede publication of bytes. Authentication against the pinned pack inventory and wiring real routed expert/PLE reads are the next dependencies; the primitive alone does not complete native checkpoint loading or pool-generation fences.

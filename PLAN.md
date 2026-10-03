@@ -336,6 +336,11 @@ Remaining experimental questions are explicit: which affine/VQ configuration win
 
 [[sources/runs/2026/10/2026-10-02-native-vq-trunk-profile]] records exact first-block output/state parity for the byte-identical fixtures from both verified packs, and unchanged full-model baseline logits on one frozen pilot case. Candidate grouped normalization, query/key normalization, quantized injection and recurrence are explicit internal arithmetic choices. The deployed profile remains the default. This is an experimental block harness, not full candidate loading; QSA, PLE, draft/rollback, mixed pool ownership, held-out tasks and performance remain required before product integration.
 
+
+### Direct-read foundation
+
+[[sources/runs/2026/10/2026-10-02-native-vq-owned-file-reader]] establishes the native owned-descriptor primitive on bounded synthetic files. Complete payload verification, extent checks and cancellation precede publication of bytes. Authentication against the pinned pack inventory and wiring real routed expert/PLE reads are the next dependencies; the primitive alone does not complete native checkpoint loading or pool-generation fences.
+
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the
 design and the estimates it replaces.

@@ -12,7 +12,7 @@ import SlotstreamDiagnostics
 /// What a check needs from the machine. The runner refuses to run a tier the
 /// machine cannot honour, rather than letting it fail confusingly.
 public enum Tier: String, Sendable, Codable, CaseIterable, Comparable {
-    /// Pure Swift: no MLX, no GPU, no files, no weights.
+    /// No MLX, GPU or model weights. May use bounded temporary file fixtures.
     case t0
     /// MLX kernels on random tensors. No weights. Needs the metallib.
     case t1

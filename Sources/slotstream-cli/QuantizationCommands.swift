@@ -18,7 +18,7 @@ struct QuantizationCheck: ParsableCommand {
     var kernels = false
     func run() throws {
         var reports = [try Diagnostics.quantizationGeometry(), try Diagnostics.quantizationMetadata(),
-                       try Diagnostics.quantizationPLEStorage()]
+                       try Diagnostics.quantizationPLEStorage(), try Diagnostics.quantizationTensorFile()]
         if kernels { reports.append(try Diagnostics.quantizationKernels()) }
         if let fixtureDirectory {
             reports.append(try Diagnostics.quantizationFixtures(directory: URL(fileURLWithPath: fixtureDirectory)))

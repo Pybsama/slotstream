@@ -336,3 +336,21 @@ checks require exact output and state bits; a small drift is a failure.
 Candidate speculative recording is not implemented by this probe. Passing
 these fixtures does not establish full-model parity, PLE/QSA integration,
 mixed cache ownership, task quality or speed.
+
+## Owned checkpoint reads
+
+`VQTensorFile` is the experimental direct-read primitive. Its caller must
+authenticate its complete-file and header identities against a pinned pack
+manifest. It verifies the complete payload through an owned descriptor and
+uses that descriptor for subsequent bounded tensor reads, refusing changed
+files or incomplete operations. It is not a pack registry or a mutable cache.
+
+The synthetic storage gate runs without model weights or GPU allocations:
+
+```sh
+.build/release/slotstream-checks --tier t0 --filter quantization-tensor-file
+```
+
+This gate checks corruption, cancellation, truncation, descriptor retention,
+path replacement and malformed files. Passing it does not prove that a real
+candidate has been bound to the reader or loaded by the engine.

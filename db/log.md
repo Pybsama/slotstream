@@ -46,3 +46,6 @@ Preserved and invalidated the first VQ distribution pilot after an independently
 ## [2026-10-03 02:03] update | records/measurements/quantization-screen-2026-10-02.md
 Captured exact native candidate first-block arithmetic and continuation parity, byte-identical fixtures from both verified VQ packs, and unchanged full 48-layer baseline logit bits on one fixed case. Preserved recurrence mismatch and producer failures. 75 trunk assertions, 93 catalogue checks and static gates pass; full candidate model and all qualification gates remain open.
 
+## [2026-10-03 02:20] update | records/measurements/quantization-screen-2026-10-02.md
+Added complete-file verification and bounded tensor reads through one owned descriptor. Captured 34 synthetic storage assertions and the 94-check native catalogue, including corruption, cancellation, path reuse and lifetime coverage. Real pack identity binding and routed/PLE integration remain open; no candidate qualification or fresh full static result is claimed.
+

@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T02:02:37.165495+00:00
+updated: 2026-10-03T02:19:59.776387+00:00
 summary: Pinned VQ inventories, exact selected-row decoding and bounded synthetic kernel costs; no candidate pack or new speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -119,3 +119,10 @@ Both final native record checks pass 34 assertions, alongside the geometry, meta
 The first native attempt matched the hyper-connection outputs but failed recurrence-state bits and longer outputs. The final candidate profile matches the pinned reference's ordinary reduction, compiled decay and BF16 beta; the deployed kernel retains its compensated reduction and existing arithmetic. Grouped RMS and recurrent query/key normalization also follow the explicit candidate profile, and the candidate hyper-connection supports its quantized injection projection. The Swift binding's documented mlxNone context maps to the exact absent RMS weight in the C API. The failed attempts remain in the source, including a pre-allocation concurrency refusal and a repaired reference tuple-unpacking error.
 
 The final native binary is `4d07c1c6c8e629365b7415225dc45dc6ec83f7c1ac1e216fe177be90b5f8cd59`. A complete 48-layer forward on the unchanged memory-prose pilot IDs reproduces the previous deployed native logit SHA exactly: `7c2b5b7b78e507d28d3ca85b2e10a32519f0ebd7d67adb20b489bf6479e92f32`. This checks compatibility on that one case; it does not replace the complete existing-engine release battery or establish candidate quality. The catalogue passes 93 checks, with zero failures or skips, and the static suite passes. Candidate full-model checkpoint loading, mixed mutable caching, PLE/draft integration and all release qualification gates remain open.
+
+
+### Native owned tensor-file primitive
+
+[[sources/runs/2026/10/2026-10-02-native-vq-owned-file-reader]] records the bounded native file reader needed by direct candidate loading. Its constructor verifies the complete payload through the descriptor it retains for later reads; its caller must separately authenticate the supplied file/header identities against a pinned pack manifest. Reads check tensor extents, cancellation and unchanged file metadata, with bounded allocations and syscalls. The tests preserve the distinction between owning a verified descriptor and following a replaceable filesystem path.
+
+All 34 storage assertions pass, covering cancellation, complete-file corruption, truncation, path reuse, lifetime retention, malformed extents, non-regular files and tensor coverage. The final catalogue passes 94 checks with zero failures or skips. This is a synthetic storage gate, not actual VQ artifact integration, model parity, asynchronous pool ownership or performance. The preceding trunk-profile static result is not presented as a fresh static run for this storage addition.
