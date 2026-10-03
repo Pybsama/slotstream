@@ -2,12 +2,13 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-09-30T17:23:38.982736Z
+updated: 2026-10-02T18:46:22.278918Z
 ---
 
 # records/decisions
 
 - [[records/decisions/vq-weights-behind-qualification-gates]] — Support the VQ builds of the same model as a second weight format, behind qualification gates
+- [[records/decisions/same-model-automatic-quantization-with-overrides]] — Default to automatic same-model quantization selection while preserving independent user pack and memory-ceiling overrides.
 - [[records/decisions/automatic-context-window-per-machine]] — Auto picks the largest of 32,768, 65,536, 131,072 and 262,144 tokens that keeps speculative decoding, retains one conversation and adds at most 10% to a typical request
 - [[records/decisions/decode-lookahead-default-with-the-draft-head]] — Router-reuse prefetch, FP32 router weights and a four-layer GPU barrier run wherever the draft head does, charged 373 MiB; held out at 1.114 with identical output
 - [[records/decisions/draft-head-auto-floor-76-per-layer]] — Auto enables the draft head when the cache keeps 76 experts per layer after its charge, a 21 GB target, so 32 GB Macs and up; the former floor was 120

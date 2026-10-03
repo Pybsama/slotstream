@@ -26,7 +26,8 @@ class ReleaseCandidateTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(); self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
         for name in ['Sources/Example.swift', 'Package.swift', 'Package.resolved', 'Makefile',
-                     'Tools/build_identity.py', 'Tools/fetch_metallib.sh']:
+                     'Tools/build_identity.py', 'Tools/fetch_metallib.sh',
+                     'THIRD_PARTY_NOTICES.md', 'Licenses/Example.txt']:
             path = self.root / name; path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('fixture: ' + name)
         source = {str(p.relative_to(self.root)): sha(p) for p in source_files(self.root)}
@@ -60,6 +61,11 @@ class ReleaseCandidateTests(unittest.TestCase):
 
     def test_stale_source_is_not_released(self):
         self.write_archive(); (self.root/'Sources/Example.swift').write_text('new code'); self.check_failure()
+
+    def test_changed_or_missing_license_is_not_released(self):
+        self.write_archive()
+        (self.root/'Licenses/Example.txt').unlink()
+        self.check_failure()
 
     def test_forged_source_archive_is_rejected(self):
         source = {name:(self.root/name).read_bytes() for name in self.identity['source']}

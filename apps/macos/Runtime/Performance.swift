@@ -15,7 +15,7 @@ public struct PerformancePreferences: Codable, Equatable, Sendable {
     }
     public static func restore(_ data: Data?) -> Self {
         guard let data, var value = try? JSONDecoder().decode(Self.self, from: data),
-              value.customGB.isFinite, value.customGB >= PerformancePolicy.minimumGB else { return .init() }
+              value.customGB.isFinite, value.customGB > 0 else { return .init() }
         // The old automatic default stored 10 even before Custom was used.
         if value.hasCustomLimit == nil { value.hasCustomLimit = value.budget == .custom || value.customGB != 10 }
         return value
@@ -25,8 +25,12 @@ public struct PerformancePreferences: Codable, Equatable, Sendable {
         var next = self
         next.budget = choice
         if choice == .custom {
-            let initial = hasCustomLimit == true ? customGB : (currentGB ?? Planner.usefulCeilingGB)
-            next.customGB = min(maximumGB, max(PerformancePolicy.minimumGB, initial))
+            // A saved choice survives a different hardware/pack range. Load
+            // validation explains an invalid choice instead of changing it.
+            if hasCustomLimit != true {
+                let initial = currentGB ?? Planner.usefulCeilingGB
+                next.customGB = min(maximumGB, max(PerformancePolicy.minimumGB, initial))
+            }
             next.hasCustomLimit = true
         }
         return next
@@ -61,12 +65,24 @@ public enum PerformancePolicy {
             workingSetGB: machine.workingSetGB) * 2) / 2
     }
     public static func validate(_ preferences: PerformancePreferences, on machine: Machine) throws {
-        guard preferences.customGB.isFinite, preferences.customGB >= minimumGB else {
+        try validateSaved(preferences)
+        guard preferences.budget == .custom else { return }
+        guard preferences.customGB >= minimumGB else {
             throw SevraError.refused("Choose a memory limit within the supported range.")
         }
         if preferences.budget == .custom, preferences.customGB > maximumGB(on: machine) {
             throw SevraError.refused("This memory limit exceeds the supported budget on this Mac. Choose Automatic or a lower limit.")
         }
+    }
+    /// A preference can be saved even when a new pack or another Mac cannot
+    /// apply it. Feasibility belongs to activation, never silent migration.
+    public static func validateSaved(_ preferences: PerformancePreferences) throws {
+        guard preferences.customGB.isFinite, preferences.customGB > 0 else {
+            throw SevraError.refused("Choose a positive, finite memory limit.")
+        }
+    }
+    public static func ceilingGB(_ preferences: PerformancePreferences, on machine: Machine) -> Double {
+        preferences.budget == .custom ? preferences.customGB : min(Planner.usefulCeilingGB, maximumGB(on: machine))
     }
     public static func plan(_ preferences: PerformancePreferences, on machine: Machine) throws -> MemoryPlan {
         try plan(preferences, on: machine, mtpAvailable: MTPWeights.present(modelDir: WeightStore.default.modelDirectory))
@@ -83,7 +99,7 @@ public enum PerformancePolicy {
         // Desktop's displayed ceiling includes the draft head. The independent
         // CLI may lift its automatic model ceiling by MTP's resident cost; an
         // explicit adaptive ceiling keeps this app's total budget unchanged.
-        let ceiling = preferences.budget == .custom ? preferences.customGB : Planner.usefulCeilingGB
+        let ceiling = ceilingGB(preferences, on: machine)
         let plan: MemoryPlan
         do {
             // Use the engine's qualified automatic MTP and lookahead policy.
@@ -95,7 +111,7 @@ public enum PerformancePolicy {
         } catch {
             throw SevraError.refused("There isn’t enough memory available for this model. Close a large app and try again. Your conversation is preserved.")
         }
-        let limit = preferences.budget == .custom ? preferences.customGB : Planner.usefulCeilingGB
+        let limit = ceiling
         let feasible = min(limit, machine.workingSetGB - 2,
                            available - Planner.availabilitySlackGB(ramGB: machine.ramGB))
         // The CLI's historical advisory floor is not permission for Desktop
@@ -136,6 +152,10 @@ public struct PerformanceSnapshot: Sendable, Equatable {
     public var maximumGB: Double
     public var detail: String
     public var idleMinutes: Int
+    public var physicalGB: Double? = nil
+    public var ceilingGB: Double? = nil
+    public var appliedCeilingGB: Double? = nil
+    public var failure: String? = nil
 }
 
 /// Metadata has its own lock and never waits for the inference actor or the
@@ -184,7 +204,9 @@ public final class PerformanceTelemetry: @unchecked Sendable {
             budgetGB: plan?.targetGB, recommendationGB: recommendation?.targetGB,
             maximumGB: PerformancePolicy.maximumGB(on: machine),
             detail: pressure ? "Giving memory back to your Mac." : detail,
-            idleMinutes: Int(ceil(PerformancePolicy.idleDelay(preparationSeconds: seconds, conservingPower: conserving) / 60)))
+            idleMinutes: Int(ceil(PerformancePolicy.idleDelay(preparationSeconds: seconds, conservingPower: conserving) / 60)),
+            physicalGB: machine.ramGB, ceilingGB: PerformancePolicy.ceilingGB(preferences, on: machine),
+            appliedCeilingGB: plan?.memoryLimitGB)
     }
 }
 

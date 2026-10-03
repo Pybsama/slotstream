@@ -2,7 +2,7 @@
 type: decision
 id: 01m3mx4yz4cfmdh8fj253p1n9z
 created: 2026-09-28T21:01:20.740899+00:00
-updated: 2026-09-30T17:23:38.982736+00:00
+updated: 2026-10-02T18:46:22.278918+00:00
 summary: Support the VQ builds of the same model as a second weight format, behind qualification gates
 decided_on: 2026-09-28
 evidence: '[[records/decisions/decode-host-time-is-waiting-not-graph-construction]], [[records/decisions/target-range-macs-that-cannot-hold-the-model]], [[records/measurements/behavioural-quality-probe-2026-08-30-and-what-it-is-not]], [[records/decisions/a-continued-conversation-computes-what-a-cold-one-computes]]'
@@ -11,7 +11,7 @@ title: Support the VQ builds of the same model as a second weight format, behind
 status: standing
 ---
 *Revised on 2026-09-30: the speed reasoning, the slot size and the gates below are
-corrected in the revision at the end. Where they differ, the revision is current.*
+corrected in the September 30 revision below. The October 2 revision supersedes only the no-user-bit-width rule. Read the latest applicable revision as current.*
 
 Slotstream will support the vector-quantized (VQ) builds of the model it
 already runs, as a second weight format beside the pinned 4-bit checkpoint,
@@ -104,3 +104,9 @@ layers, and pins, reservations and the planner still count slots.
 - Where a VQ build wins, it becomes the default for that hardware class, and
   4-bit stays supported for existing installs and library users. A build that
   wins nowhere is removed rather than kept as a second format.
+
+## Revision, 2026-10-02
+
+The owner's current direction restores user control over the supported quantization while keeping automatic selection as the default. This supersedes the September 30 sentence that users do not choose a bit width. A user may pin a supported pack and set an independent memory ceiling. Runtime pressure changes allocations within that choice, not the model or saved ceiling.
+
+The exact control contract is [[records/decisions/same-model-automatic-quantization-with-overrides]]; the implementation and evaluation sequence is [[records/plan/same-model-quantization-and-automatic-memory-2026-10-02]]. All other qualification, compatibility and explicit-upgrade requirements above stand. No candidate has been qualified by writing this revision.

@@ -15,6 +15,8 @@ OPTIMIZATION_SUITES = [
     'thermal_readiness', 'prefill_bench', 'expert_layout_probe',
     'ngram_cache_probe', 'indexer_score_probe', 'vision_capacity_gate', 'vision_qualification',
     'optimization_prerequisites', 'optimization_soak', 'optimization_campaign', 'optimization_results',
+    'quantization_inventory', 'quantization_baseline', 'quantization_quality', 'quantization_logit_pilot', 'vq_kernel_sources',
+    'vq_ple_stream', 'vq_model_reference', 'vq_model_fetch',
 ]
 
 

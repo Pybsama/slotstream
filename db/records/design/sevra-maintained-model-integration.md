@@ -2,7 +2,7 @@
 type: design
 id: 01m21xw595ac9n303q61m8kvtq
 created: 2026-09-09T01:52:44.837037+00:00
-updated: 2026-09-13T16:46:13.392450+00:00
+updated: 2026-10-02T18:46:22.299521+00:00
 summary: 'Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.'
 date: 2026-09-08
 doc: plan
@@ -62,3 +62,7 @@ support is coming soon. README.md, the hardware guide and llms.txt now carry
 that roadmap status while retaining the current model limitation. The present
 8 GB plan still does not fit; no runtime support, selected future model,
 release date or performance result is established by this wording change.
+
+## Same model quantization workstream October 2 2026
+
+[[records/plan/same-model-quantization-and-automatic-memory-2026-10-02]] details the current Mac workstream: keep Flash Next, qualify a few representations, default to automatic selection and retain independent supported-pack and memory-ceiling overrides. A separate live governor adapts allocations without changing the chosen pack. This narrows the current optimization program without reversing the broader maintained-model architecture. The control decision is [[records/decisions/same-model-automatic-quantization-with-overrides]]. The plan is not implementation or new hardware-performance evidence.

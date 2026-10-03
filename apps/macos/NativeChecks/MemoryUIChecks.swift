@@ -15,8 +15,8 @@ import Vision
             styleMask: [.borderless], backing: .buffered, defer: false)
         window.setFrameOrigin(NSPoint(x: -30000, y: -30000))
         defer { window.orderOut(nil) }
-        for dark in [false, true] {
-            for mode in ["automatic", "custom", "saved-above-range"] {
+        for appearance in ["light", "dark", "system"] {
+            for mode in ["automatic", "custom", "saved-above-range", "failed-settings"] {
                 let custom = mode != "automatic"
                 let overRange = mode == "saved-above-range"
                 let preferences = custom ? PerformancePreferences(budget: .custom, customGB: 48) : .init()
@@ -25,8 +25,10 @@ import Vision
                 model.performanceState.snapshot = PerformanceSnapshot(preferences: preferences,
                     pending: custom, state: "In use", loaded: true, busy: true, usedGB: 13,
                     budgetGB: 14.5, recommendationGB: 14.5, maximumGB: overRange ? 37 : 49.5,
-                    detail: "Responding on your Mac.", idleMinutes: 10)
-                window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+                    detail: "Responding on your Mac.", idleMinutes: 10,
+                    physicalGB: 64 * 1.073741824, ceilingGB: custom ? 48 : 33, appliedCeilingGB: 33,
+                    failure: mode == "failed-settings" ? "Choose a supported memory limit." : nil)
+                window.appearance = appearance == "system" ? nil : NSAppearance(named: appearance == "dark" ? .darkAqua : .aqua)
                 let host = NSHostingView(rootView: Form { PerformanceSettings(model: model, performance: model.performanceState) }
                     .formStyle(.grouped).frame(width: 620, height: 700))
                 window.contentView = host
@@ -40,13 +42,14 @@ import Vision
                     colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
                 rep.size = host.bounds.size
                 host.cacheDisplay(in: host.bounds, to: rep)
-                let name = "\(dark ? "dark" : "light")-\(mode)"
+                let name = "\(appearance)-\(mode)"
                 try rep.representation(using: .png, properties: [:])!.write(to: out.appendingPathComponent(name + ".png"))
                 let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate
                 try VNImageRequestHandler(cgImage: rep.cgImage!, options: [:]).perform([request])
                 let text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
                 let labels = ["Memory budget", "Budget available now", "14.5 GB", "Keep model ready"]
-                    + (custom ? ["Custom limit", "48", overRange ? "37 GB" : "49.5 GB", "Your limit stays saved", "Applies after"] : ["Automatic", "Recommended now"])
+                    + (custom ? ["Custom limit", "48", overRange ? "37 GB" : "49.5 GB", "Your limit stays saved"] : ["Automatic", "Recommended now"])
+                    + (mode == "failed-settings" ? ["Settings could not be applied", "Queued work waits"] : custom ? ["Applies after"] : [])
                     + (overRange ? ["Choose between"] : [])
                 for label in labels where !text.localizedCaseInsensitiveContains(label) {
                     throw NSError(domain: "MemoryUI", code: 2, userInfo: [NSLocalizedDescriptionKey: "\(name) missing rendered label: \(label)\n\(text)"])
@@ -69,7 +72,7 @@ import Vision
             for _ in 0..<30 { details.layoutSubtreeIfNeeded(); try await Task.sleep(nanoseconds: 20_000_000) }
             let rep = details.bitmapImageRepForCachingDisplay(in: details.bounds)!
             details.cacheDisplay(in: details.bounds, to: rep)
-            let name = "\(dark ? "dark" : "light")-response-budget"
+            let name = "\(appearance)-response-budget"
             try rep.representation(using: .png, properties: [:])!.write(to: out.appendingPathComponent(name + ".png"))
             let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate
             try VNImageRequestHandler(cgImage: rep.cgImage!, options: [:]).perform([request])

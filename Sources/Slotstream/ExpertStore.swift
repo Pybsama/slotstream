@@ -191,14 +191,17 @@ public final class ExpertStore {
         let h = cfg.hiddenSize
         let ff = cfg.moeIntermediate
         let g = cfg.qGroup
+        let affine = try cfg.affineQuantization(for: "model.layers.0.mlp.switch_mlp.gate_proj")
+        let hiddenWords = try affine.packedWords(columns: h)
+        let intermediateWords = try affine.packedWords(columns: ff)
         let expected: [(shape: [Int], dtype: String)] = [
-            ([cfg.numExperts, ff, h / 8], "U32"),
+            ([cfg.numExperts, ff, hiddenWords], "U32"),
             ([cfg.numExperts, ff, h / g], "BF16"),
             ([cfg.numExperts, ff, h / g], "BF16"),
-            ([cfg.numExperts, ff, h / 8], "U32"),
+            ([cfg.numExperts, ff, hiddenWords], "U32"),
             ([cfg.numExperts, ff, h / g], "BF16"),
             ([cfg.numExperts, ff, h / g], "BF16"),
-            ([cfg.numExperts, h, ff / 8], "U32"),
+            ([cfg.numExperts, h, intermediateWords], "U32"),
             ([cfg.numExperts, h, ff / g], "BF16"),
             ([cfg.numExperts, h, ff / g], "BF16"),
         ]

@@ -2,11 +2,34 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-09-30T19:23:29.390398Z
+updated: 2026-10-03T05:21:48.769340Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-greedy-parity]] — Exact native VQ greedy feedback and retained-state boundaries
+- [[sources/runs/2026/10/2026-10-03-native-vq-prefill-validation]] — Complete VQ prefill checkpoint regression and metadata validation
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-prefill]] — Exact complete native VQ prefill and continuation boundaries
+- [[sources/runs/2026/10/2026-10-02-vq-prefill-rotary-arithmetic]] — Pinned VQ prefill rotary arithmetic diagnosis and repair
+- [[sources/runs/2026/10/2026-10-02-native-vq-segmented-prefill]] — Native VQ fused segmented prefill matches pinned expert composition
+- [[sources/runs/2026/10/2026-10-02-native-vq-partitioned-route-parity]] — Bounded VQ routed partitions preserve exact arithmetic
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-static]] — Native VQ complete-stack static acceptance
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-validation]] — Native VQ arithmetic and deployed compatibility validation
+- [[sources/runs/2026/10/2026-10-02-native-vq-authenticated-checkpoint]] — Authenticated native VQ artifact expert and PLE reads
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-smoke]] — Native VQ complete short-stack and continuation parity
+- [[sources/runs/2026/10/2026-10-02-vq-bf16-sigmoid-arithmetic]] — Candidate BF16 sigmoid rounding and diagnostic failures
+- [[sources/runs/2026/10/2026-10-02-native-vq-owned-file-reader]] — Bounded owned-descriptor VQ tensor reads pass 34 storage checks and the 94-check native catalogue; real pack binding is pending.
+- [[sources/runs/2026/10/2026-10-02-native-vq-trunk-profile]] — Pinned candidate first-block arithmetic and recurrent continuation match exactly; a complete deployed-model logit case stays byte-identical.
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-records]] — Complete real VQ routed expert composition and independent caller-context ownership checks pass for both research packs.
+- [[sources/runs/2026/10/2026-10-02-corrected-vq-distribution-pilot]] — Corrected normalization, fresh traversal proofs and repeated matched VQ logit pilot; no held-out or native-model qualification.
+- [[sources/runs/2026/10/2026-10-02-vq-pilot-normalization-diagnosis]] — First complete matched logit pilot exposed missing VQ norm folding; all scores are invalid for quality inference.
+- [[sources/runs/2026/10/2026-10-02-bounded-reference-verification]] — Complete static and native catalogue verification for the bounded reference and PLE implementation.
+- [[sources/runs/2026/10/2026-10-02-bounded-vq-reference-and-ple]] — Bounded full VQ reference traversal, native baseline logits and native PLE storage checks; experimental only.
+- [[sources/runs/2026/10/2026-10-02-fused-vq-component-pilots]] — Fused VQ binding parity and two bounded cost pilots; scope and limitations below.
+- [[sources/runs/2026/10/2026-10-02-full-engine-quantization-foundation]] — Complete existing-engine acceptance after quantization foundations; scope and limitations below.
+- [[sources/runs/2026/10/2026-10-02-quantization-foundation-verification]] — Initial implementation checks and real memory lifecycle passed; full release and candidate quality qualification remain open.
+- [[sources/runs/2026/10/2026-10-02-quantization-native-screen]] — Raw pinned-row checks and bounded synthetic kernel timing samples; no full-model parity or candidate qualification.
+- [[sources/runs/2026/10/2026-10-02-quantization-baseline-v1]] — Three frozen 10 GB baseline runs with binary identity, emitted-token timing, process footprint and raw generation stats.
 - [[sources/runs/2026/09/2026-09-30-release-0-2-27-published-and-installed]] — v0.2.27 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-27-release-0-2-26-published-and-installed]] — v0.2.26 published, publicly installed and accepted
 - [[sources/runs/2026/09/2026-09-26-prefix-turn-writes-e2e]] — Live per-turn prefix cache writes: the released 0.2.25 rewrites a continued turn's own state as a shared prefix, the fix writes it once with identical ids
@@ -484,31 +507,8 @@ updated: 2026-09-30T19:23:29.390398Z
 - [[sources/runs/2026/09/2026-09-06-optimization-advisory-fixture-counterexample]] — V198 shared build and T0 advisory-fixture counterexample
 - [[sources/runs/2026/09/2026-09-06-slotpack-v0211-publication-and-r2-retirement]] — Public v0.2.11 provenance, ordinary installation, installed-model acceptance and verified R2 bucket retirement complete the free Hugging Face migration.
 - [[sources/runs/2026/09/2026-09-06-optimization-activation-and-evidence-preservation]] — V199 actual-default qualification preparation and V200 exact historical evidence recovery
-- [[sources/runs/2026/09/2026-09-06-optimization-public-transport-source-alignment]] — V197 exact public transport source alignment and unrun V198 shared correctness queue
-- [[sources/runs/2026/09/2026-09-06-optimization-portable-integration-gates]] — V196 full native portable deployment path gates prepared
-- [[sources/runs/2026/09/2026-09-06-slotpack-hugging-face-full-mac-qualification]] — The native default completes an initially empty Mac installation across a network failure and resume; every original hash verifies, while timing measurements are discarded.
-- [[sources/runs/2026/09/2026-09-06-optimization-final-matrix-workload-binding]] — V195 final matrix binds workloads and controls across native paired and soak evidence
-- [[sources/runs/2026/09/2026-09-06-optimization-live-governor-feasibility]] — V194 live governor rejects ordinary-context advisory overcommit
-- [[sources/runs/2026/09/2026-09-06-optimization-plain-governor-feasibility-counterexample]] — V193 merged correctness and plain-governor feasibility counterexample
-- [[sources/runs/2026/09/2026-09-06-configurable-context-ordinary-governor-feasibility-counterexample]] — Shared V193 exposes ordinary-context governor acceptance after an infeasible replan
-- [[sources/runs/2026/09/2026-09-06-configurable-context-actual-hermes-compression-pass]] — Actual Hermes compression finishes normally and preserves the exact diagnostic fact
-- [[sources/runs/2026/09/2026-09-06-configurable-context-actual-hermes-cli-pass]] — Actual Hermes CLI passes its configured 65K window and reply budget
-- [[sources/runs/2026/09/2026-09-06-optimization-scope-checkpoint-interaction]] — Preserve common-prefix checkpoints across read scopes — V193
-- [[sources/runs/2026/09/2026-09-06-configurable-context-budget-and-schedule-component-pass]] — Explicit diagnostic budgets and actual attention schedule pass component gates
-- [[sources/runs/2026/09/2026-09-06-optimization-bounded-diagnostics-and-schedule]] — Priced governor/MTP diagnostics and actual prefill schedule — V191
-- [[sources/runs/2026/09/2026-09-06-optimization-merged-runtime-correctness]] — Shared combined runtime and corrected MTP tail correctness — V189
-- [[sources/runs/2026/09/2026-09-06-configurable-context-native-regression-and-mtp-plan-counterexample]] — Existing native regression passes through MTP parity; mandatory MTP diagnostic stopped on unpriced head
-- [[sources/runs/2026/09/2026-09-06-optimization-qualification-verification-lock]] — Qualification verification owns model exclusion — V190
-- [[sources/runs/2026/09/2026-09-06-optimization-mtp-tail-sampled-counterexample]] — Shared native checks and sampled MTP-tail counterexample — V186–189
-- [[sources/runs/2026/09/2026-09-06-configurable-context-static-and-sampler-prerequisite]] — Build 19 static suite passes; sampler stops before execution on missing environment prerequisite
-- [[sources/runs/2026/09/2026-09-06-optimization-indexer-exceptions-and-child-cleanup]] — Indexer exceptional arithmetic and owned-process cleanup — V187–188
-- [[sources/runs/2026/09/2026-09-06-optimization-ngram-compile-correction]] — N-gram diagnostic compile failure and unchanged-fixture correction — V185–186
-- [[sources/runs/2026/09/2026-09-06-configurable-context-complete-prompt-epoch-pass]] — Complete prompt MTP and vision reuse passes with one arithmetic epoch
-- [[sources/runs/2026/09/2026-09-06-configurable-context-external-swift-consumer-pass]] — External Swift consumer preserves original APIs and passes the strict compiler gate
-- [[sources/runs/2026/09/2026-09-06-configurable-context-actual-65k-client-pass]] — Actual Hermes Ollama and published AI SDK gateway clients pass the65K contract
-- [[sources/runs/2026/09/2026-09-06-optimization-c07-source-integration]] — Bounded prefill integration and prompt-cache epoch correction — V183–184
 
 ## More
 
-This folder has 690 files. The 500 most recent are listed above.
+This folder has 713 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/design
-updated: 2026-09-27T05:04:11.869651Z
+updated: 2026-10-02T18:46:22.299521Z
 ---
 
 # records/design
 
+- [[records/design/sevra-maintained-model-integration]] — Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.
 - [[records/design/measured-operating-policies]] — Measured operating policies and revision criteria
 - [[records/design/sevra-spec/ui-contract]] — Mac UI geometry, native text, appearance and review requirements
 - [[records/design/sevra-spec/mac-platform]] — Mac native implementation baseline and dependency qualification
@@ -18,7 +19,6 @@ updated: 2026-09-27T05:04:11.869651Z
 - [[records/design/slotstream-qwen3-8-flash-next-on-every-apple-silicon-mac]] — slotstream — Qwen3.8-Flash-Next on every Apple Silicon Mac
 - [[records/design/1-goal]] — 1. Goal
 - [[records/design/sevra-spec/home-template]] — Versioned Sevra Home configuration template
-- [[records/design/sevra-maintained-model-integration]] — Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.
 - [[records/design/m9-addendum-built-and-measured-2026-09-01]] — M9 addendum — built and measured (2026-09-01)
 - [[records/design/vision-how-a-picture-becomes-tokens]] — The vision path: one placeholder becomes a run, Rust-free splicing by contiguous spans, inline bytes only, and a conditional memory charge.
 - [[records/design/13-references]] — 13. References

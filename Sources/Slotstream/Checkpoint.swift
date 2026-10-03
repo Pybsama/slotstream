@@ -69,6 +69,15 @@ public struct ModelConfig {
     public var qBits = 4
     public var qGroup = 64
     public var ngramQGroup = 32
+    /// Validated module overrides. The deployed adapter still admits only its
+    /// qualified affine layout; descriptors do not grant pack eligibility.
+    public private(set) var quantizationOverrides: [String: AffineQuantization] = [:]
+
+    public func affineQuantization(for module: String) throws -> AffineQuantization {
+        if let descriptor = quantizationOverrides[module] { return descriptor }
+        return try AffineQuantization(bits: qBits,
+            groupSize: module.contains("ngram_embedding") ? ngramQGroup : qGroup)
+    }
 
     public var rotaryDim: Int { Int(Float(headDim) * partialRotaryFactor) }
     public var pleLayerIndices: [Int] { pleLayerIds.map { $0 - 1 } }
@@ -76,12 +85,20 @@ public struct ModelConfig {
     public static func load(from dir: URL) throws -> ModelConfig {
         let path = dir.appendingPathComponent("config.json")
         let data = try Data(contentsOf: path)
+        return try parse(data, label: path.path)
+    }
+
+    /// Shared geometry parser. Experimental artifact adapters may pass only
+    /// their authenticated text configuration, then apply their own explicit
+    /// quantization profile. The public checkpoint loader retains every pack
+    /// admission check below.
+    package static func parse(_ data: Data, label: String) throws -> ModelConfig {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw ModelError("\(path.path) is not valid JSON — re-run `slotstream pull`")
+            throw ModelError("\(label) is not valid JSON — re-run `slotstream pull`")
         }
         guard let t = root["text_config"] as? [String: Any] else {
             throw ModelError(
-                "\(path.path) has no `text_config` section, so it is not a "
+                "\(label) has no `text_config` section, so it is not a "
                     + "\(PinnedModelName.display) checkpoint — check --model")
         }
         var c = ModelConfig()
@@ -148,18 +165,49 @@ public struct ModelConfig {
                 ($0 + 1) % c.fullAttentionInterval == 0 ? "full_attention" : "linear_attention"
             }
         }
+        guard root["quantization"] == nil || root["quantization"] is [String: Any] else {
+            throw ModelError("quantization must be a descriptor object")
+        }
         if let q = root["quantization"] as? [String: Any] {
-            c.qBits = (q["bits"] as? Int) ?? c.qBits
-            c.qGroup = (q["group_size"] as? Int) ?? c.qGroup
-            // ngram shard override (all identical per M0)
-            for (k, v) in q {
-                if k.contains("ngram_embedding"), let d = v as? [String: Any],
-                    let g = d["group_size"] as? Int
-                {
-                    c.ngramQGroup = g
-                    break
-                }
+            guard q["mode"] == nil || q["mode"] as? String == "affine" else {
+                throw ModelError("the installed engine does not support this quantization mode")
             }
+            func integer(_ value: Any?, fallback: Int? = nil) throws -> Int {
+                guard let value else {
+                    if let fallback { return fallback }
+                    throw ModelError("quantization descriptor lacks an integer")
+                }
+                guard let number = value as? NSNumber,
+                      CFGetTypeID(number) != CFBooleanGetTypeID(),
+                      let result = value as? Int else {
+                    throw ModelError("quantization descriptor requires integral numeric fields")
+                }
+                return result
+            }
+            c.qBits = try integer(q["bits"], fallback: c.qBits)
+            c.qGroup = try integer(q["group_size"], fallback: c.qGroup)
+            // Validate every override, not the first n-gram shard found in an
+            // unordered dictionary. A mixed/corrupt file must not inherit an
+            // unrelated module's packing and reach a GPU matrix operation.
+            for (k, v) in q {
+                if ["bits", "group_size", "mode"].contains(k) { continue }
+                guard let d = v as? [String: Any],
+                      d["mode"] == nil || d["mode"] as? String == "affine" else {
+                    throw ModelError("invalid quantization descriptor for \(k)")
+                }
+                let bits = try integer(d["bits"]), group = try integer(d["group_size"])
+                let name = k.hasPrefix("language_model.") ? String(k.dropFirst("language_model.".count)) : k
+                guard c.quantizationOverrides[name] == nil else { throw ModelError("duplicate quantization descriptor for \(name)") }
+                let descriptor = try AffineQuantization(bits: bits, groupSize: group)
+                let expectedGroup = name.contains("ngram_embedding") ? 32 : 64
+                guard bits == 4, group == expectedGroup else {
+                    throw ModelError("unqualified quantization layout for \(name); the installed adapter requires affine 4-bit")
+                }
+                c.quantizationOverrides[name] = descriptor
+            }
+        }
+        guard root["vq_modules"] == nil, root["vq_ple"] == nil else {
+            throw ModelError("VQ candidate decoding is experimental; this pack has not qualified for Engine.load")
         }
         try c.validate()
         return c

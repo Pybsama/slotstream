@@ -18,7 +18,7 @@ func computeGatedDeltaG(_ aLog: MLXArray, _ a: MLXArray, _ dtBias: MLXArray) -> 
 
 // MARK: - Metal Kernel
 
-private func makeGatedDeltaKernel(hasMask: Bool, recordCount: Int = 0) -> MLXFast.MLXFastKernel? {
+private func makeGatedDeltaKernel(hasMask: Bool, recordCount: Int = 0, referenceReduction: Bool = false) -> MLXFast.MLXFastKernel? {
     let maskSource = hasMask ? "mask[b_idx * T + t]" : "true"
 
     let recordSource = (0 ..< recordCount).map { t in
@@ -38,6 +38,29 @@ private func makeGatedDeltaKernel(hasMask: Bool, recordCount: Int = 0) -> MLXFas
           o_state[s_idx] = static_cast<StT>(state[i]);
         }
         """ : ""
+    let reduction = referenceReduction ? """
+                for (int i = 0; i < n_per_t; ++i) {
+                  auto s_idx = n_per_t * dk_idx + i;
+                  state[i] = state[i] * g_[hv_idx];
+                  kv_mem += state[i] * k_[s_idx];
+                }
+        """ : """
+                {
+                  // Preserve Kahan summation under Metal's default fast math.
+                  #pragma clang fp reassociate(off)
+                  #pragma clang fp contract(off)
+                  float kv_compensation = 0.0f;
+                  for (int i = 0; i < n_per_t; ++i) {
+                    auto s_idx = n_per_t * dk_idx + i;
+                    state[i] = state[i] * g_[hv_idx];
+                    auto product = state[i] * k_[s_idx];
+                    auto corrected = product - kv_compensation;
+                    auto next_sum = kv_mem + corrected;
+                    kv_compensation = (next_sum - kv_mem) - corrected;
+                    kv_mem = next_sum;
+                  }
+                }
+        """
     let source = """
             auto n = thread_position_in_grid.z;
             auto b_idx = n / Hv;
@@ -73,21 +96,7 @@ private func makeGatedDeltaKernel(hasMask: Bool, recordCount: Int = 0) -> MLXFas
             for (int t = 0; t < T; ++t) {
               if (\(maskSource)) {
                 float kv_mem = 0.0f;
-                {
-                  // Preserve Kahan summation under Metal's default fast math.
-                  #pragma clang fp reassociate(off)
-                  #pragma clang fp contract(off)
-                  float kv_compensation = 0.0f;
-                  for (int i = 0; i < n_per_t; ++i) {
-                    auto s_idx = n_per_t * dk_idx + i;
-                    state[i] = state[i] * g_[hv_idx];
-                    auto product = state[i] * k_[s_idx];
-                    auto corrected = product - kv_compensation;
-                    auto next_sum = kv_mem + corrected;
-                    kv_compensation = (next_sum - kv_mem) - corrected;
-                    kv_mem = next_sum;
-                  }
-                }
+                \(reduction)
                 kv_mem = simd_sum(kv_mem);
 
                 auto delta = (v_[dv_idx] - kv_mem) * beta_[hv_idx];
@@ -123,6 +132,7 @@ private func makeGatedDeltaKernel(hasMask: Bool, recordCount: Int = 0) -> MLXFas
     }
 
     let suffix = (hasMask ? "_mask" : "") + (recordCount > 0 ? "_record_\(recordCount)" : "")
+        + (referenceReduction ? "_pr1788" : "")
 
     return MLXFast.metalKernel(
         name: "gated_delta_step\(suffix)",
@@ -152,6 +162,24 @@ private final class GatedDeltaRecordingManager: Sendable {
     let recordingMasked = (1 ... 17).map { makeGatedDeltaKernel(hasMask: true, recordCount: $0) }
 }
 
+/// Deliberately separate from the deployed recurrence. The candidate reference
+/// uses an ordinary reduction and compiled decay, and keeps beta in BF16.
+private final class CandidateGatedDeltaManager: Sendable {
+    static let shared = CandidateGatedDeltaManager()
+    let kernel = makeGatedDeltaKernel(hasMask: false, referenceReduction: true)
+    static let decay = compile(shapeless: true) { (values: [MLXArray]) -> [MLXArray] in
+        [computeGatedDeltaG(values[0], values[1], values[2])]
+    }
+}
+
+func candidateGatedDeltaUpdate(q: MLXArray, k: MLXArray, v: MLXArray, a: MLXArray,
+                              b: MLXArray, aLog: MLXArray, dtBias: MLXArray,
+                              state: MLXArray?) -> (MLXArray, MLXArray) {
+    let g = CandidateGatedDeltaManager.decay([aLog, a, dtBias])[0]
+    let state = state ?? MLXArray.zeros([q.dim(0), v.dim(2), v.dim(3), q.dim(3)], dtype: .float32)
+    return gatedDeltaKernel(q: q, k: k, v: v, g: g, beta: VQArithmetic.sigmoid(b), state: state, candidate: true)
+}
+
 // MARK: - Kernel Dispatch
 
 func gatedDeltaKernel(
@@ -161,7 +189,8 @@ func gatedDeltaKernel(
     g: MLXArray,
     beta: MLXArray,
     state: MLXArray,
-    mask: MLXArray? = nil
+    mask: MLXArray? = nil,
+    candidate: Bool = false
 ) -> (MLXArray, MLXArray) {
     let B = k.dim(0)
     let T = k.dim(1)
@@ -178,7 +207,7 @@ func gatedDeltaKernel(
         selectedKernel = GatedDeltaKernelManager.shared.kernelMasked
         inputs.append(mask)
     } else {
-        selectedKernel = GatedDeltaKernelManager.shared.kernel
+        selectedKernel = candidate ? CandidateGatedDeltaManager.shared.kernel : GatedDeltaKernelManager.shared.kernel
     }
 
     guard let kernel = selectedKernel else {

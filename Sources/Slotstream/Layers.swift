@@ -7,6 +7,16 @@ import MLX
 import MLXFast
 import MLXNN
 
+/// Candidate arithmetic is explicit and never changes the deployed checkpoint.
+/// The PR profile is experimental until complete native model parity passes.
+enum BlockArithmeticProfile {
+    case deployed, vqPR1788
+
+    func sigmoid(_ x: MLXArray) -> MLXArray {
+        self == .vqPR1788 ? VQArithmetic.sigmoid(x) : MLX.sigmoid(x)
+    }
+}
+
 // MARK: - norms
 
 /// RMSNorm; with groupSize set, statistics are computed per group of `groupSize`
@@ -15,6 +25,11 @@ struct RMSNorm {
     let weight: MLXArray
     let eps: Float
     let groupSize: Int?
+    let arithmetic: BlockArithmeticProfile
+
+    init(weight: MLXArray, eps: Float, groupSize: Int?, arithmetic: BlockArithmeticProfile = .deployed) {
+        self.weight = weight; self.eps = eps; self.groupSize = groupSize; self.arithmetic = arithmetic
+    }
 
     func callAsFunction(_ x: MLXArray, compiledFinish: Bool = false) -> MLXArray {
         guard let g = groupSize else {
@@ -22,6 +37,10 @@ struct RMSNorm {
         }
         let shape = x.shape
         var v = x.reshaped(Array(shape.dropLast()) + [-1, g])
+        if arithmetic == .vqPR1788 {
+            // mlxNone is the binding's documented empty optional C array.
+            return MLXFast.rmsNorm(v, weight: .mlxNone, eps: eps).reshaped(shape) * weight
+        }
         let vf = v.asType(.float32)
         if compiledFinish, CompiledArithmetic.prepare() {
             let result = CompiledArithmetic.execute(v, meanSquare: vf.square().mean(axis: -1, keepDims: true),
@@ -80,9 +99,15 @@ public struct Rope {
     }
 
     public init(dim: Int, base: Float) {
+        self.init(dim: dim, base: base, pinnedVQReference: false)
+    }
+
+    package init(dim: Int, base: Float, pinnedVQReference: Bool) {
         self.dim = dim
         let exps = MLXArray(stride(from: 0, to: Int32(dim), by: 2).map { Float($0) / Float(dim) })
-        self.invFreq = pow(MLXArray(base), -exps)
+        self.invFreq = pinnedVQReference
+            ? VQArithmetic.inverseFrequencies(exps, base: base)
+            : pow(MLXArray(base), -exps)
     }
 
     /// positions (B, T) -> cos/sin (B, T, dim)
@@ -628,6 +653,7 @@ package struct QSASelection {
 }
 
 final class QSAAttention {
+    let arithmetic: BlockArithmeticProfile
     var minimumProjectionRows = 0
     var stableSmallKeyDomain = false
     var smallReferenceStart = 0
@@ -656,11 +682,12 @@ final class QSAAttention {
     let indexer: QSAIndexer
     let scale: Float
 
-    convenience init(_ w: TensorSource, layer: Int) {
-        self.init(w, base: "model.layers.\(layer).self_attn")
+    convenience init(_ w: TensorSource, layer: Int, arithmetic: BlockArithmeticProfile = .deployed) {
+        self.init(w, base: "model.layers.\(layer).self_attn", arithmetic: arithmetic)
     }
 
-    init(_ w: TensorSource, base b: String) {
+    init(_ w: TensorSource, base b: String, arithmetic: BlockArithmeticProfile = .deployed) {
+        self.arithmetic = arithmetic
         cfg = w.config
         qProj = w.linear(b + ".q_proj")
         kProj = w.linear(b + ".k_proj")
@@ -736,7 +763,7 @@ final class QSAAttention {
             let attended = Self.attend(q: queries, k: k, v: v, sparse: mask,
                 base: offset + first, scale: scale, block: rows)
             let flattened = attended.transposed(0, 2, 1, 3).reshaped([B, rows, H * D])
-            return oProj(flattened * sigmoid(gate[0..., first..., 0...]), minimumRows: minimumProjectionRows)
+            return oProj(flattened * arithmetic.sigmoid(gate[0..., first..., 0...]), minimumRows: minimumProjectionRows)
         }
 
         debugSink?("qRoped", q)
@@ -775,7 +802,7 @@ final class QSAAttention {
                     base: offset, scale: scale, block: queryRows)[0..., 0..., 0 ..< S, 0...]
                 if extent > actual { paddedSmallKeyDomains += 1 }
                 let flattened = attended.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
-                return oProj(flattened * sigmoid(gate), minimumRows: minimumProjectionRows)
+                return oProj(flattened * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
             }
         }
         if exactRows {
@@ -787,7 +814,7 @@ final class QSAAttention {
             multiRowSplits += 1
             debugSink?("sdpaOut", out)
             out = out.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
-            return oProj(out * sigmoid(gate), minimumRows: minimumProjectionRows)
+            return oProj(out * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
         }
         var out = Self.attend(
             q: q, k: k, v: v, sparse: sparse, base: offset, scale: scale,
@@ -803,7 +830,7 @@ final class QSAAttention {
             onSplit: { [weak self] in self?.multiRowSplits += 1 })
         debugSink?("sdpaOut", out)
         out = out.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
-        return oProj(out * sigmoid(gate), minimumRows: minimumProjectionRows)
+        return oProj(out * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
     }
 
     /// Attention for `x` over the cached keys and values without appending
@@ -831,7 +858,7 @@ final class QSAAttention {
         }
         let out = Self.attend(q: q, k: k, v: v, sparse: nil, base: offset, scale: scale,
                               block: AttentionTuning.queryBlock(pass: S, context: k.dim(2)))
-        return oProj(out.transposed(0, 2, 1, 3).reshaped([B, S, H * D]) * sigmoid(gate), minimumRows: minimumProjectionRows)
+        return oProj(out.transposed(0, 2, 1, 3).reshaped([B, S, H * D]) * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
     }
 
     /// Attention over a pass, in blocks of queries.
@@ -1112,6 +1139,7 @@ public enum AttentionTuning {
 // MARK: - Gated DeltaNet
 
 final class GDNLayer {
+    let arithmetic: BlockArithmeticProfile
     var minimumProjectionRows = 0
     var fuseInputProjection = false
     private(set) var fusedProjectionsScheduled = 0
@@ -1133,13 +1161,14 @@ final class GDNLayer {
     let valueDim: Int
     let convDim: Int
 
-    init(_ w: ResidentWeights, layer: Int) {
+    init(_ w: TensorSource, layer: Int, arithmetic: BlockArithmeticProfile = .deployed) {
+        self.arithmetic = arithmetic
         layerIndex = layer
         cfg = w.config
         let b = "model.layers.\(layer).linear_attn"
         inQKV = w.linear(b + ".in_proj_qkv")
         inZ = w.linear(b + ".in_proj_z")
-        packedInput = w.packedGDNProjections[layer]
+        packedInput = (w as? ResidentWeights)?.packedGDNProjections[layer]
         inB = w.linear(b + ".in_proj_b")
         inA = w.linear(b + ".in_proj_a")
         convWeight = w.tensor(b + ".conv1d.weight")
@@ -1152,6 +1181,18 @@ final class GDNLayer {
         keyDim = cfg.linearNumKHeads * cfg.linearKHeadDim
         valueDim = cfg.linearNumVHeads * cfg.linearVHeadDim
         convDim = 2 * keyDim + valueDim
+    }
+
+    private func normalizeQK(_ q: MLXArray, _ k: MLXArray) -> (MLXArray, MLXArray) {
+        let inverse = Float(pow(Double(cfg.linearKHeadDim), -0.5))
+        if arithmetic == .vqPR1788 {
+            // Match the pinned Python profile's float scalar conversion and
+            // BF16 operation boundaries, including its RMS epsilon placement.
+            let square = Float(pow(Double(cfg.linearKHeadDim), -1))
+            return (square * MLXFast.rmsNorm(q, weight: .mlxNone, eps: 1e-6),
+                    inverse * MLXFast.rmsNorm(k, weight: .mlxNone, eps: 1e-6))
+        }
+        return (l2normQK(q) * inverse, l2normQK(k))
     }
 
     func callAsFunction(_ x: MLXArray, cache: LinearCache?) -> MLXArray {
@@ -1196,14 +1237,20 @@ final class GDNLayer {
         let v = convOut[.ellipsis, (2 * keyDim)...]
             .reshaped([B, S, cfg.linearNumVHeads, cfg.linearVHeadDim])
 
-        q = l2normQK(q) * Float(pow(Double(cfg.linearKHeadDim), -0.5))
-        k = l2normQK(k)
+        (q, k) = normalizeQK(q, k)
 
         if profile != nil { eval(q, k, v, z, aProj, bProj, aLog, dtBias) }
         let recurrenceStart = profile == nil ? 0 : RuntimeClock.now()
 
         let y: MLXArray
-        if let c = cache, c.record, S > 1, fusedRecording {
+        if arithmetic == .vqPR1788 {
+            // This experimental profile does not yet support speculative state
+            // recording. Its separate draft/rollback parity gate remains open.
+            precondition(cache?.record != true, "candidate recurrence recording is unqualified")
+            let (output, state) = candidateGatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj,
+                aLog: aLog, dtBias: dtBias, state: cache?.ssmState)
+            y = output; cache?.ssmState = state
+        } else if let c = cache, c.record, S > 1, fusedRecording {
             let recorded = gatedDeltaUpdateRecording(q: q, k: k, v: v, a: aProj, b: bProj,
                 aLog: aLog, dtBias: dtBias, state: c.ssmState)
             y = recorded.output
@@ -1271,10 +1318,15 @@ final class GDNLayer {
         var q = convOut[.ellipsis, 0 ..< keyDim].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
         var k = convOut[.ellipsis, keyDim ..< (2 * keyDim)].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
         let v = convOut[.ellipsis, (2 * keyDim)...].reshaped([B, S, cfg.linearNumVHeads, cfg.linearVHeadDim])
-        q = l2normQK(q) * Float(pow(Double(cfg.linearKHeadDim), -0.5))
-        k = l2normQK(k)
-        let (y, _) = gatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj, aLog: aLog, dtBias: dtBias,
-                                      state: cache?.ssmState, mask: nil)
+        (q, k) = normalizeQK(q, k)
+        let y: MLXArray
+        if arithmetic == .vqPR1788 {
+            y = candidateGatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj,
+                aLog: aLog, dtBias: dtBias, state: cache?.ssmState).0
+        } else {
+            y = gatedDeltaUpdate(q: q, k: k, v: v, a: aProj, b: bProj, aLog: aLog, dtBias: dtBias,
+                                state: cache?.ssmState, mask: nil).0
+        }
         return outProj(norm(y, gate: z).reshaped([B, S, valueDim]), minimumRows: minimumProjectionRows)
     }
 }
@@ -1751,16 +1803,19 @@ final class GatedResidual {
     let down: QLinear
     let up: QLinear
     let inject: MLXArray?  // (hc, hcDim), bf16
+    let quantizedInject: QLinear?
     var debugName: String? = nil
 
-    init(_ w: TensorSource, base: String, useCombine: Bool) {
+    init(_ w: TensorSource, base: String, useCombine: Bool, arithmetic: BlockArithmeticProfile = .deployed) {
         cfg = w.config
         hcNorm = RMSNorm(
             weight: w.tensor(base + ".hc_norm.weight"), eps: cfg.rmsNormEps,
-            groupSize: cfg.hiddenSize)
+            groupSize: cfg.hiddenSize, arithmetic: arithmetic)
         down = w.linear(base + ".input_mix_weight_down")
         up = w.linear(base + ".input_mix_weight_up")
         inject = useCombine ? w.tensor(base + ".block_inject_weight.weight") : nil
+        quantizedInject = useCombine && arithmetic == .vqPR1788 && w.has(base + ".block_inject_weight.scales")
+            ? w.linear(base + ".block_inject_weight") : nil
     }
 
     /// The mixed input alone, without the inject weights: the router-reuse
@@ -1770,7 +1825,7 @@ final class GatedResidual {
         let normed = hcNorm(hyper, compiledFinish: false)
         let downOut = down(normed, minimumRows: minimumProjectionRows)
         var w = MLXNN.silu(downOut / Float(cfg.hcCount))
-        w = sigmoid(up(w, minimumRows: minimumProjectionRows))
+        w = hcNorm.arithmetic.sigmoid(up(w, minimumRows: minimumProjectionRows))
         let shape = Array(w.shape.dropLast()) + [cfg.hcCount, cfg.hiddenSize]
         return (w.reshaped(shape) * normed.reshaped(shape)).mean(axis: -2)
     }
@@ -1784,13 +1839,14 @@ final class GatedResidual {
         let downOut = down(normed, minimumRows: minimumProjectionRows)
         if let n = debugName { Qwen4ExpModel.debugDump(n + "_down", downOut) }
         var w = MLXNN.silu(downOut / Float(cfg.hcCount))
-        w = sigmoid(up(w, minimumRows: minimumProjectionRows))
+        w = hcNorm.arithmetic.sigmoid(up(w, minimumRows: minimumProjectionRows))
         if let n = debugName { Qwen4ExpModel.debugDump(n + "_wup", w) }
         let shape = Array(w.shape.dropLast()) + [cfg.hcCount, cfg.hiddenSize]
         let mixed = (w.reshaped(shape) * normed.reshaped(shape)).mean(axis: -2)
         guard let injW = inject else { return (mixed, nil) }
-        let projected = QLinear.withReferenceRows(normed, minimumRows: minimumProjectionRows) { RowInvariantMatmul.rows($0, injW.transposed()) }
-        let injected = 2 * sigmoid(projected / Float(cfg.hcCount))
+        let projected = quantizedInject.map { $0(normed, minimumRows: minimumProjectionRows) }
+            ?? QLinear.withReferenceRows(normed, minimumRows: minimumProjectionRows) { RowInvariantMatmul.rows($0, injW.transposed()) }
+        let injected = 2 * hcNorm.arithmetic.sigmoid(projected / Float(cfg.hcCount))
         return (mixed, injected)
     }
 }
@@ -1801,7 +1857,7 @@ final class PLELayer {
     var minimumProjectionRows = 0
     var boundedTokens = false
     let cfg: ModelConfig
-    let store: NgramStore
+    private let embedding: ([Int64], Int) throws -> MLXArray
     let keyProj: QLinear
     let valueProj: QLinear
     let normKey: RMSNorm
@@ -1811,17 +1867,22 @@ final class PLELayer {
     let dilation: Int
     let stateLen: Int
 
-    init(_ w: ResidentWeights, layer: Int, store: NgramStore) {
+    convenience init(_ w: ResidentWeights, layer: Int, store: NgramStore) {
+        self.init(w, layer: layer, embedding: { try store.embeddingChecked(history: $0, nNew: $1) })
+    }
+
+    init(_ w: TensorSource, layer: Int, arithmetic: BlockArithmeticProfile = .deployed,
+         embedding: @escaping ([Int64], Int) throws -> MLXArray) {
         cfg = w.config
-        self.store = store
+        self.embedding = embedding
         let b = "model.layers.\(layer).ple"
         keyProj = w.linear(b + ".key_proj")
         valueProj = w.linear(b + ".value_proj")
         let hcDim = cfg.hcCount * cfg.hiddenSize
         _ = hcDim
-        normKey = RMSNorm(weight: w.tensor(b + ".norm_key.weight"), eps: cfg.rmsNormEps, groupSize: cfg.hiddenSize)
-        normQuery = RMSNorm(weight: w.tensor(b + ".norm_query.weight"), eps: cfg.rmsNormEps, groupSize: cfg.hiddenSize)
-        normConv = RMSNorm(weight: w.tensor(b + ".norm_conv.weight"), eps: cfg.rmsNormEps, groupSize: cfg.hiddenSize)
+        normKey = RMSNorm(weight: w.tensor(b + ".norm_key.weight"), eps: cfg.rmsNormEps, groupSize: cfg.hiddenSize, arithmetic: arithmetic)
+        normQuery = RMSNorm(weight: w.tensor(b + ".norm_query.weight"), eps: cfg.rmsNormEps, groupSize: cfg.hiddenSize, arithmetic: arithmetic)
+        normConv = RMSNorm(weight: w.tensor(b + ".norm_conv.weight"), eps: cfg.rmsNormEps, groupSize: cfg.hiddenSize, arithmetic: arithmetic)
         convWeight = w.tensor(b + ".conv1d.weight")
         dilation = cfg.ngramSize
         stateLen = (cfg.pleConvKernel - 1) * dilation
@@ -1864,7 +1925,7 @@ final class PLELayer {
     }
 
     private func transform(_ hidden: MLXArray, history: [Int64], nNew: Int, cache: LinearCache?) throws -> MLXArray {
-        let emb = try store.embeddingChecked(history: history, nNew: nNew).asType(hidden.dtype)
+        let emb = try embedding(history, nNew).asType(hidden.dtype)
         var key = normKey(keyProj(emb, minimumRows: minimumProjectionRows))
         let keyShape = Array(key.shape.dropLast()) + [cfg.hcCount, cfg.hiddenSize]
         key = key.reshaped(keyShape)
@@ -1874,7 +1935,7 @@ final class PLELayer {
 
         var gate = (key * query).sum(axis: -1, keepDims: true) / sqrt(Float(cfg.hiddenSize))
         gate = sqrt(maximum(abs(gate), 1e-6)) * sign(gate)
-        var gated = sigmoid(gate) * value.expandedDimensions(axis: -2)
+        var gated = normKey.arithmetic.sigmoid(gate) * value.expandedDimensions(axis: -2)
         gated = gated.reshaped(Array(gated.shape.dropLast(2)) + [cfg.hcCount * cfg.hiddenSize])
         return gated + shortConv(normConv(gated), cache: cache)
     }

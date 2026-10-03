@@ -201,46 +201,14 @@ public final class NgramStore {
     /// Right-shift by `shift` without crossing EOS boundaries; positions with
     /// insufficient in-segment history yield EOS. Mirrors reference `_shift_right`.
     func shiftRight(_ ids: [Int64], _ shift: Int) -> [Int64] {
-        if shift == 0 { return ids }
-        let t = ids.count
-        var out = Array(repeating: eos, count: t)
-        var prevEos = -1
-        for p in 0 ..< t {
-            // prev = index of last EOS at position strictly before p
-            // (inclusive-cummax of eos positions, shifted by one)
-            let inSegment = p - (prevEos + 1)
-            let src = p - shift
-            if inSegment >= shift && src >= 0 {
-                out[p] = ids[src]
-            }
-            if ids[p] == eos { prevEos = p }
-        }
-        return out
+        NgramHash.shiftRight(ids, shift, eos: eos)
     }
 
-    /// Global row ids for the last `nNew` positions of `history` (prevCtx + new ids).
+    /// Global row IDs for the last new positions, using the shared exact hash.
     public func rowIds(history: [Int64], nNew: Int) -> [[Int64]] {
-        let shifted = (0 ..< cfg.ngramSize).map { shiftRight(history, $0) }
-        let t = history.count
-        var out: [[Int64]] = Array(repeating: Array(repeating: 0, count: nHeads), count: nNew)
-        for (oi, p) in ((t - nNew) ..< t).enumerated() {
-            var col = 0
-            for ngram in 2 ... cfg.ngramSize {
-                let lo = (ngram - 2) * cfg.headsPerNgram
-                var mixed = shifted[0][p] &* multipliers[0]
-                for q in 1 ..< ngram {
-                    mixed ^= shifted[q][p] &* multipliers[q]
-                }
-                for h in lo ..< (lo + cfg.headsPerNgram) {
-                    let m = headSizes[h]
-                    var r = mixed % m
-                    if r < 0 { r += m }
-                    out[oi][col] = r + headOffsets[h]
-                    col += 1
-                }
-            }
-        }
-        return out
+        NgramHash.rowIds(history: history, nNew: nNew, ngramSize: cfg.ngramSize,
+            headsPerNgram: cfg.headsPerNgram, multipliers: multipliers,
+            headSizes: headSizes, headOffsets: headOffsets, eos: eos)
     }
 
     // MARK: row fetch + dequant

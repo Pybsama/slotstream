@@ -9,6 +9,7 @@ import Combine
     @Published var snapshot: RuntimeSnapshot? { didSet { snapshotVersion &+= 1 } }
     /// Counts snapshot changes, so views can reuse what they derive from one.
     private var snapshotVersion = 0
+    private var performancePreferenceRevision: UInt64 = 0
     var selectedID: String { composer.threadID }
     var draft: String { composer.text }
     /// Parts of the window with their own observation: the sidebar and the
@@ -629,17 +630,22 @@ import Combine
         guard let runtime else { return }
         guard value != performancePreferences else { return }
         do {
-            try PerformancePolicy.validate(value, on: .current())
+            try PerformancePolicy.validateSaved(value)
             UserDefaults.standard.set(try JSONEncoder().encode(value), forKey: "performance.preferences.v1")
             performancePreferences = value
         } catch { self.error = error.localizedDescription; return }
         // The view commits a slider on release or a number on Return/focus
         // loss. Preference writes never happen on every dragging frame.
+        performancePreferenceRevision += 1
+        let revision = performancePreferenceRevision
         Task {
             do {
-                try await runtime.setPerformancePreferences(performancePreferences)
+                try await runtime.setPerformancePreferences(value, revision: revision)
                 await runtime.maintainPerformance(userPresent: hasForegroundWindow); await refresh()
-            } catch { self.error = error.localizedDescription }
+            } catch {
+                if revision == performancePreferenceRevision { self.error = error.localizedDescription }
+                await refresh()
+            }
         }
     }
     private var hasForegroundWindow: Bool {
