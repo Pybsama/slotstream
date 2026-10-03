@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 
 from context_qualification import quiet_preflight, verification_lock
+from vq_execution_profile import add_runtime_argument, recheck_runtime, select_runtime
 from vq_fused_reference import bounded
 from vq_model_reference import (ARCH_SHA256, NORMALIZATION, instrument_identity,
     load_model, physical, references, recheck_owned_headroom, verify_files)
@@ -29,6 +30,7 @@ def run(options):
         raise ValueError('fixed generated sequence profile required')
     if any(type(t) is not int or not 0 <= t < 248320 for t in profile['prompt']):
         raise ValueError('invalid fixed prompt token')
+    runtime_path, execution_profile = select_runtime(options.model, getattr(options, 'runtime', None))
     instrument = instrument_identity(); own = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     before = quiet_preflight(13)
     with verification_lock():
@@ -37,7 +39,7 @@ def run(options):
         import mlx.core as mx
         import numpy as np
         mx.set_memory_limit(8_000_000_000); mx.set_cache_limit(128_000_000)
-        arch, vq = references(options.architecture, options.model / 'model.py')
+        arch, vq = references(options.architecture, runtime_path)
         archive = Archive(options.model, options.inventory)
         caches = None; history = mx.full((1, 2), 248044, mx.int64)
         ids = list(profile['prompt']); generated = []; steps = []
@@ -97,11 +99,13 @@ def run(options):
                 if sampled == profile['eos_token_id']: break
                 ids = [sampled]
             for file in archive.files.values(): file.verify_unchanged()
+            recheck_runtime(options.model, getattr(options, 'runtime', None), execution_profile)
             if instrument_identity()['sha256'] != instrument['sha256'] or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != own:
                 raise ValueError('generated reference producer changed')
             if options.profile.read_bytes() != profile_raw: raise ValueError('generated profile changed')
             result = {'schema': 1, 'profile': profile, 'profile_sha256': hashlib.sha256(profile_raw).hexdigest(),
                 'architecture_sha256': ARCH_SHA256, 'normalization': NORMALIZATION,
+                'runtime_sha256': execution_profile['runtime_sha256'], 'execution_profile': execution_profile,
                 'artifact': provenance, 'instrument': instrument, 'producer_sha256': own, 'before': before,
                 'generated': generated, 'steps': steps, 'consumed_tokens': len(profile['prompt']) + len(generated) - 1,
                 'stop': 'eos' if generated[-1] == profile['eos_token_id'] else 'length',
@@ -117,4 +121,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('model', 'inventory', 'architecture', 'profile', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
+    add_runtime_argument(parser)
     run(parser.parse_args())

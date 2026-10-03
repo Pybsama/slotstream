@@ -22,9 +22,13 @@ class PilotTests(unittest.TestCase):
         good = comparison.producer_artifact(record, [receipt, copy.deepcopy(receipt)], {})
         self.assertEqual(good['runtime_sha256'], 'b' * 64)
         for field, value in [('layers', 4), ('vq_decode_chunk', 16), ('artifact', {}),
-                             ('instrument', {'sha256': 'd' * 64}), ('normalization', None)]:
+                             ('instrument', {'sha256': 'd' * 64}), ('normalization', None),
+                             ('execution_profile', {'runtime_sha256': 'e' * 64})]:
             bad = copy.deepcopy(receipt); bad[field] = value
             with self.assertRaises(ValueError): comparison.producer_artifact(record, [receipt, bad], {})
+        changed_run = copy.deepcopy(record); changed_run['producer']['execution_profile'] = {'runtime_sha256': 'e' * 64}
+        with self.assertRaisesRegex(ValueError, 'execution identities differ'):
+            comparison.producer_artifact(changed_run, [receipt], {})
 
     def test_owned_corpus_bounds_and_retrieval_answer(self):
         protocol = json.loads((Path(__file__).resolve().parents[1] / 'bench/quantization/logit-pilot-v1.json').read_text())

@@ -22,17 +22,12 @@ from vq_fused_reference import bounded
 from vq_model_reference import ARTIFACTS as REFERENCE_ARTIFACTS
 from vq_ple_stream import stamp
 
-# Download admission is weaker than reference or production admission. The
-# 2.1-bit payload must still pass the independent norm, traversal and numerical
-# audits before vq_model_reference accepts it. These immutable hashes authorize
-# staging bytes only; they do not activate a model or certify its arithmetic.
-STAGING_ARTIFACTS = {
-    **REFERENCE_ARTIFACTS,
-    '8684640a3956b01c47f5d47f9b999e2ab8b985f1': (
-        'TheDrainFlorist/Qwen3.8-Flash-Next-VQ-2.1bpw',
-        '4299e87dc3b2d11e53c683d4f17f1196ccf95b75399ddd77d470e148aae1d929',
-        '58d59c3b849ca303cece916f930a15e8583455e1566611133597513b0245a565'),
-}
+# Staging is weaker than numerical or production qualification. The inspected
+# 2.1 payload and norm audit now permit reference experiments, with a separately
+# bound reviewed execution source. Keep staging admission distinct so future
+# metadata-only candidates need not be admitted to the reference harness.
+# These immutable pins authorize storage only; they do not certify arithmetic.
+STAGING_ARTIFACTS = dict(REFERENCE_ARTIFACTS)
 
 
 def file_map(hub, revision):

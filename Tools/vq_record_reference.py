@@ -14,6 +14,7 @@ from pathlib import Path
 import struct
 
 from context_qualification import quiet_preflight, verification_lock
+from vq_execution_profile import add_runtime_argument, allocation_layers, recheck_runtime, select_runtime
 from quantization_inventory import unique_json
 from vq_fused_reference import bounded
 from vq_model_reference import instrument_identity, physical, references, recheck_owned_headroom, verify_files
@@ -21,6 +22,7 @@ from vq_ple_stream import TensorFile
 
 
 def run(options):
+    runtime_path, execution_profile = select_runtime(options.model, getattr(options, 'runtime', None))
     instrument = instrument_identity()
     own_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     before = quiet_preflight(13)
@@ -33,7 +35,7 @@ def run(options):
         from mlx_lm.models.switch_layers import SwitchGLU
         mx.set_memory_limit(1_000_000_000)
         mx.set_cache_limit(64_000_000)
-        _, runtime = references(options.architecture, options.model / 'model.py')
+        _, runtime = references(options.architecture, runtime_path)
         config = unique_json(bounded(options.model / 'config.json', 1_000_000))
         inv = unique_json(bounded(options.inventory, 4_000_000))
         index = unique_json(bounded(options.model / 'model.safetensors.index.json', 4_000_000))['weight_map']
@@ -56,17 +58,9 @@ def run(options):
                                for r in selected for off in range(0, stride, 1_000_000))
             return mx.array(np.frombuffer(payload, dtype=dtype).copy().reshape([len(selected)] + shape[1:]))
 
-        layers = [0, 2]
-        if options.allocation_classes:
-            signatures = set(); layers = []
-            for layer in range(48):
-                descriptors = [config['vq_modules'][f'model.layers.{layer}.mlp.switch_mlp.{name}']
-                               for name in ('gate_proj', 'up_proj', 'down_proj')]
-                signature = json.dumps(descriptors, sort_keys=True, separators=(',', ':'))
-                if signature not in signatures:
-                    signatures.add(signature); layers.append(layer)
-            if len(layers) != 2:
-                raise ValueError('inspected artifacts require exactly two complete-record allocation classes')
+        if inv['revision'] == '8684640a3956b01c47f5d47f9b999e2ab8b985f1' and not options.allocation_classes:
+            raise ValueError('VQ 2.1 requires all three allocation classes')
+        layers = allocation_layers(config, inv['revision']) if options.allocation_classes else [0, 2]
         fixtures = []
         try:
             for layer in layers:
@@ -107,10 +101,11 @@ def run(options):
                 if max(physical().values()) > 2_000_000_000:
                     raise ValueError('record reference exceeded its tighter 2 GB component bound')
             for file in files.values(): file.verify_unchanged()
+            recheck_runtime(options.model, getattr(options, 'runtime', None), execution_profile)
             if instrument_identity()['sha256'] != instrument['sha256'] or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != own_hash:
                 raise ValueError('record reference instrument changed')
             result = {'schema': 1, 'scope': 'complete routed-expert component; not model qualification',
-                      'runtime_sha256': inv['files']['model.py']['sha256'], 'artifact': {k:v for k,v in provenance.items() if k!='stamps'},
+                      'runtime_sha256': execution_profile['runtime_sha256'], 'execution_profile': execution_profile, 'artifact': {k:v for k,v in provenance.items() if k!='stamps'},
                       'instrument': instrument, 'record_script_sha256': own_hash, 'fixtures': fixtures,
                       'before': before, 'process_memory': physical(), 'peak_mlx_bytes': mx.get_peak_memory(),
                       'ranges': {name: {'bytes_read': f.bytes_read, 'range_sha256': f.range_hash.hexdigest()} for name,f in files.items()}}
@@ -126,4 +121,5 @@ if __name__ == '__main__':
     for name in ('model', 'inventory', 'architecture', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--allocation-classes', action='store_true', help='One real layer per complete-record allocation class; preserves legacy fixtures by default')
+    add_runtime_argument(parser)
     run(parser.parse_args())

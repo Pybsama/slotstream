@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T09:23:36.036859Z
+updated: 2026-10-03T10:13:36.888657Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-vq-2.1-distribution-screen]] — VQ 2.1 six-context distribution screen against corrected controls
+- [[sources/runs/2026/10/2026-10-03-native-vq-2.1-three-class-parity]] — Native VQ 2.1 three-class records and complete-stack parity
+- [[sources/runs/2026/10/2026-10-03-vq-2.1-payload-and-normalization]] — Complete VQ 2.1 payload verification and normalization audit
 - [[sources/runs/2026/10/2026-10-03-vq-2.1-artifact-preparation]] — VQ 2.1 immutable staging pins and distinct runtime audit
 - [[sources/runs/2026/10/2026-10-03-native-vq-kernel-object-reuse]] — Bounded VQ code-object reuse and matched generation comparison
 - [[sources/runs/2026/10/2026-10-03-native-vq-parallel-generation-cpu-profile]] — Parallel VQ CPU sample exposes repeated projection construction
@@ -504,11 +507,8 @@ updated: 2026-10-03T09:23:36.036859Z
 - [[sources/runs/2026/09/2026-09-07-configurable-context-v215-capacity-protocols]] — Prospective V215 ordinary-target cold and retained capacity protocols; unrun
 - [[sources/runs/2026/09/2026-09-06-optimization-merged-correctness-v202]] — Complete V202 shared inference correctness queue passes
 - [[sources/runs/2026/09/2026-09-07-optimization-actual-default-final-gate]] — Applied eighth actual-default final qualification gate
-- [[sources/runs/2026/09/2026-09-07-optimization-default-and-release-acceptance-review]] — Actual-default comparison draft and release acceptance shell correction
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-capacity-preflight-hold]] — Capacity campaign remains unrun: current real availability is below the frozen preflight
-- [[sources/runs/2026/09/2026-09-07-optimization-typed-context-correctness]] — Typed context refusal and shared affected correctness V215
 
 ## More
 
-This folder has 728 files. The 500 most recent are listed above.
+This folder has 731 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

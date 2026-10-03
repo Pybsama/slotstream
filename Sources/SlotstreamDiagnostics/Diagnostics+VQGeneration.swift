@@ -22,6 +22,8 @@ extension Diagnostics {
         }
         struct Manifest: Decodable {
             struct Artifact: Decodable { let inventory_sha256: String }
+            let execution_profile: VQReferenceExecution?
+            let runtime_sha256: String?
             let schema: Int, profile: Profile, profile_sha256: String, architecture_sha256: String, normalization: String
             let generated: [Int], steps: [Step], consumed_tokens: Int, stop: String, artifact: Artifact
         }
@@ -97,6 +99,8 @@ extension Diagnostics {
         guard !ProcessInfo.processInfo.environment.keys.contains(where: {
             $0.hasPrefix("SLOTSTREAM_") || $0.hasPrefix("SS_DEBUG") || $0.hasPrefix("VQ_") || $0.hasPrefix("VQLAB_")
         }) else { throw ModelError("VQ generation check requires no developer overrides") }
+        try VQReferenceExecution.validate(inventorySHA: manifest.artifact.inventory_sha256,
+            runtimeSHA: manifest.runtime_sha256, profile: manifest.execution_profile)
         try ModelProcessGuard.acquire()
         guard let before = ProcessMemory.vmActivity(), before.reclaimableBytes >= 13_000_000_000 else {
             throw ModelError("VQ generation check requires 13 GB actual reclaimable memory")
@@ -185,8 +189,8 @@ extension Diagnostics {
             c.expect("bounded complete expert staging", model.maximumLiveExperts <= 32)
             if residentRecords {
                 guard let stats = model.recordCacheStats else { throw ModelError("resident cache was not configured") }
-                c.equal("both allocation classes resident", stats["allocation_classes"], 2)
-                c.equal("complete reserved record capacity", stats["total_capacity"], wideRecords ? 608 : 192)
+                c.equal("all inspected allocation classes resident", stats["allocation_classes"], checkpoint.recordClassCount)
+                c.equal("complete reserved record capacity", stats["total_capacity"], (wideRecords ? 512 + (checkpoint.recordClassCount - 1) * 96 : checkpoint.recordClassCount * 96))
                 c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], wideRecords ? 512 : 96)
                 c.equal("all record leases released", stats["pinned_records"], 0)
                 c.equal("requested read mode applied", stats["parallel_read_lanes"], parallelRecords ? 12 : 0)

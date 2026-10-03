@@ -44,6 +44,47 @@ extension Diagnostics {
             do { _ = try load(good, extra: [marker: [:]]); c.expect("unqualified \(marker) refused", false) }
             catch { c.expect("unqualified \(marker) refused", true) }
         }
+        let reviewed = "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8"
+        let older = "36de8d6ba21ff93ac3de2994eed4fd59e9cfab86b1908f72f5ee2673bd0aa5bb"
+        let small = "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037"
+        let larger = ["098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe",
+                      "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac"]
+        func execution(_ fields: [String: Any]) throws -> VQReferenceExecution {
+            try JSONDecoder().decode(VQReferenceExecution.self, from: JSONSerialization.data(withJSONObject: fields))
+        }
+        let explicit: [String: Any] = ["schema": 1, "mode": "explicit-reviewed-v1",
+            "bundled_runtime_sha256": older, "runtime_sha256": reviewed]
+        try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: reviewed, profile: execution(explicit))
+        c.expect("older bundle explicitly binds reviewed execution", true)
+        for artifact in larger {
+            try VQReferenceExecution.validate(inventorySHA: artifact, runtimeSHA: nil, profile: nil)
+            try VQReferenceExecution.validate(inventorySHA: artifact, runtimeSHA: reviewed, profile: nil)
+            c.expect("historical reviewed fixtures remain valid unchanged", true)
+            var bundled = explicit; bundled["mode"] = "bundled-reviewed-v1"; bundled["bundled_runtime_sha256"] = reviewed
+            try VQReferenceExecution.validate(inventorySHA: artifact, runtimeSHA: reviewed, profile: execution(bundled))
+            c.expect("fresh bundled fixture binds both identities", true)
+        }
+        var badProfiles: [[String: Any]] = []
+        for (key, value): (String, Any) in [("schema", 2), ("mode", "bundled-reviewed-v1"),
+            ("bundled_runtime_sha256", reviewed), ("runtime_sha256", older)] {
+            var fields = explicit; fields[key] = value; badProfiles.append(fields)
+        }
+        for fields in badProfiles {
+            do {
+                try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: reviewed, profile: execution(fields))
+                c.expect("changed execution identity refused", false)
+            } catch { c.expect("changed execution identity refused", true) }
+        }
+        for operation: () throws -> Void in [
+            { try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: reviewed, profile: nil) },
+            { try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: nil, profile: execution(explicit)) },
+            { try VQReferenceExecution.validate(inventorySHA: small, runtimeSHA: older, profile: execution(explicit)) },
+            { try VQReferenceExecution.validate(inventorySHA: "uninspected", runtimeSHA: reviewed, profile: execution(explicit)) },
+            { try VQReferenceExecution.validate(inventorySHA: larger[0], runtimeSHA: older, profile: nil) }
+        ] {
+            do { try operation(); c.expect("incomplete or foreign execution binding refused", false) }
+            catch { c.expect("incomplete or foreign execution binding refused", true) }
+        }
         return c.report()
     }
 

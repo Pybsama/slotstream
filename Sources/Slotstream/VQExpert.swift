@@ -2,12 +2,13 @@ import Foundation
 import MLX
 
 extension VQLayout {
-    /// Only the real U8/D2 and packed D4/K2048 classes enter the wide-bank
-    /// experiment. Other geometries retain the prior 96-row resource bound.
+    /// The real U8/D2, packed D4 and packed D8 classes enter the wide-bank
+    /// experiment. D2/K1024 retains the prior 96-row resource bound.
     /// These are research limits, not recommended production cache sizes.
     package var maximumResearchBankRows: Int {
         (dimensions == 2 && codebookEntries == 256 && packing == .unpacked8)
-            || (dimensions == 4 && codebookEntries == 2048 && packing == .words32) ? 512 : 96
+            || (dimensions == 4 && [256, 2048].contains(codebookEntries) && packing == .words32)
+            || (dimensions == 8 && codebookEntries == 16384 && packing == .words32) ? 512 : 96
     }
 }
 

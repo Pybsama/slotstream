@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import MLX
 
-/// Single-owner experimental loader for the two inspected VQ artifacts.
+/// Single-owner experimental loader for the inspected VQ artifacts.
 /// Metadata is authenticated here; each demanded payload is then independently
 /// verified through its owned descriptor. It never executes model.py, modifies
 /// an installation, or admits a pack to Engine.load. Its file cache is not an
@@ -37,17 +37,23 @@ package final class VQCheckpoint {
     private struct Config: Decodable { let vq_modules: [String: Projection], vq_ple: PLE }
     private struct Profile {
         let inventorySHA: String, fileMapSHA: String, revision: String
+        let classLayers: [Int], classLayerCounts: [Int], wideLayer: Int
     }
     private static let profiles = [
         Profile(inventorySHA: "098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe",
             fileMapSHA: "1d0a66f4382f12a3ef512b3181a6e7c01fe2d6d3c5cbd11f6ebb3d0dd6184168",
-            revision: "a4e1b44631619ba440d985e324d95dd106536a3d"),
+            revision: "a4e1b44631619ba440d985e324d95dd106536a3d", classLayers: [0, 2], classLayerCounts: [6, 42], wideLayer: 2),
         Profile(inventorySHA: "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac",
             fileMapSHA: "2cc5122dd575027f70f2b584f6352c70ad4328f54051ee878e2a72dc420d4228",
-            revision: "0f35dc817238bdbabdac208db731470cd30a7c0a")
+            revision: "0f35dc817238bdbabdac208db731470cd30a7c0a", classLayers: [0, 3], classLayerCounts: [7, 41], wideLayer: 3),
+        Profile(inventorySHA: "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037",
+            fileMapSHA: "58d59c3b849ca303cece916f930a15e8583455e1566611133597513b0245a565",
+            revision: "8684640a3956b01c47f5d47f9b999e2ab8b985f1", classLayers: [0, 2, 27], classLayerCounts: [2, 37, 9], wideLayer: 2)
     ]
     package let revision: String
     package let inventorySHA256: String
+    package let recordClassCount: Int
+    package let wideRecordLayer: Int
     package let config: ModelConfig
     private let directory: URL
     private let index: [String: String]
@@ -157,6 +163,12 @@ package final class VQCheckpoint {
             }
             layouts.append(try VQRecordLayout(projections))
         }
+        let classCounts = layouts.reduce(into: [VQRecordLayout: Int]()) { $0[$1, default: 0] += 1 }
+        guard classCounts.count == profile.classLayers.count,
+              Set(profile.classLayers.map { layouts[$0] }).count == classCounts.count,
+              profile.classLayers.map({ classCounts[layouts[$0]]! }) == profile.classLayerCounts else {
+            throw ModelError("VQ record allocation classes differ from their inspected coverage")
+        }
         let ple = config.vq_ple
         let expectedKeys = Set((0..<128).map { "model.layers.1.ple.ple_embedding.ngram_embedding.shard_\($0)" })
         guard ple.keys.count == 128, Set(ple.keys) == expectedKeys, Set(ple.shapes.keys) == expectedKeys else {
@@ -172,6 +184,7 @@ package final class VQCheckpoint {
         self.recordLayouts = layouts; self.ple = ple
         self.config = geometry
         revision = profile.revision; inventorySHA256 = hash
+        recordClassCount = profile.classLayers.count; wideRecordLayer = profile.wideLayer
     }
 
     /// Timing pilots pay complete payload authentication before their request

@@ -21,20 +21,22 @@ package final class VQRecordCache {
         self.parallelReads = parallelReads
         layouts = try (0..<48).map { try checkpoint.recordLayout(layer: $0) }
         let counts = layouts.reduce(into: [VQRecordLayout: Int]()) { $0[$1, default: 0] += 1 }
-        // The inspected packs have one six/seven-layer class and one
-        // forty-one/forty-two-layer class. Equal small banks cannot retain
-        // even one decode traversal of the latter; this fixed experiment
-        // enlarges that class only. It is not an automatic sizing policy.
+        // The pinned research profile identifies its most common descriptor
+        // class explicitly. In 2.1 it spans 37 layers and there are three
+        // classes; the larger packs span 41/42 layers across two classes.
+        // This fixed experiment is not an automatic sizing policy.
+        let wideLayout = layouts[checkpoint.wideRecordLayer]
         var capacities: [VQRecordLayout: Int] = [:]
         var bytes = 0, bookBytes = 0
-        for (layout, count) in counts {
-            let capacity = wide && count >= 40 ? 512 : capacityPerClass
+        for layout in counts.keys {
+            let capacity = wide && layout == wideLayout ? 512 : capacityPerClass
             guard capacity <= layout.maximumResearchBankRows else { throw ModelError("wide VQ cache class is unqualified") }
             capacities[layout] = capacity
             bytes = try QuantizationBytes.sum(bytes, QuantizationBytes.product(capacity, layout.recordBytes))
         }
         for layout in layouts { bookBytes = try QuantizationBytes.sum(bookBytes, layout.codebookBytes) }
-        guard (32...96).contains(capacityPerClass), !wide || (capacityPerClass == 96 && counts.count == 2),
+        guard (32...96).contains(capacityPerClass), counts.count == checkpoint.recordClassCount,
+              !wide || capacityPerClass == 96,
               bytes + bookBytes <= (wide ? 1_800_000_000 : 650_000_000),
               let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= UInt64(bytes + bookBytes + 3_000_000_000) else {
             throw ModelError("VQ research cache exceeds its allocation or real-headroom bound")

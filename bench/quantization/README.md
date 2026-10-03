@@ -707,12 +707,41 @@ all three interleaved pairs. Its engineering adoption threshold does not
 qualify a product pack, task quality or the target speed. See the canonical
 measurement for the result and its limits.
 
-## Smaller-pack staging
+## Smaller-pack research profile
 
-The research downloader also admits the pinned VQ 2.1 file map for bounded,
-hash-verified staging. Staging does not admit it to the reference runner, native
-loader or product. Its bundled execution source differs from the reviewed
-3.2/4.4 runtime, and its three allocation classes require separate fixtures.
-The canonical measurement tracks payload, normalization, traversal and
-numerical proof as separate gates. Never infer a memory floor or throughput
-from the advertised bit count alone.
+The VQ 2.1 bundle contains a different upstream runtime. Preserve that file.
+Reference tools require an explicit `--runtime` pointing to the already
+reviewed 3.2/4.4 source bytes; arbitrary execution source is refused. Receipts
+bind both the bundled hash and the executed hash. The same identities are
+rechecked before completion and validated by the native diagnostic readers.
+Historical larger-pack goldens remain usable unchanged.
+
+The complete-record and segmented-prefill reference producers require
+`--allocation-classes` for VQ 2.1. This covers representative layers 0, 2 and
+27. Compact native banks retain 96 records per class. The fixed wide experiment
+uses 512 records for the most common inspected class and 96 for the others,
+with the same 1.8 GB bank-plus-book reservation bound. This is a research
+configuration, not a production memory range or automatic policy.
+
+The research downloader authenticates immutable original files before the
+reference can load them. The canonical measurement separately tracks payload,
+normalization, traversal, full-model parity and measured memory. Downloaded
+bytes, accepted metadata or a passing component do not qualify task quality,
+throughput, production loading or Auto selection.
+
+Exercise the actual native execution-profile refusals using existing larger-pack
+fixtures (only metadata is copied):
+
+```sh
+.venv/bin/python Tools/vq_execution_refusals.py \
+  --binary <frozen-build>/slotstream \
+  --records <three-point-two-allocation-class-fixtures> \
+  --greedy <three-point-two-greedy-fixtures> \
+  --sparse <three-point-two-sparse-fixtures> \
+  --model <three-point-two-short-model-fixtures> \
+  --profile bench/quantization/greedy-v1.json --out <new-refusal-directory>
+```
+
+Each case must fail at its execution or coverage boundary before a weight path
+can be opened or a result directory created. These intentionally malformed
+metadata fixtures are never usable numerical references.

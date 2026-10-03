@@ -21,6 +21,7 @@ extension Diagnostics {
         }
         struct Manifest: Decodable {
             struct Artifact: Decodable { let inventory_sha256: String }
+            let execution_profile: VQReferenceExecution?
             struct Flags: Decodable {
                 let _FUSED_GEMM: Bool, _FUSED_GEMM_V2: Bool, _GEMMSEG_BF16IO: Bool
                 let _GEMMSEG_OT2: Bool, _GEMMSEG_PH2V: Bool, _GEMMSEG_DSTORE: Bool
@@ -55,10 +56,16 @@ extension Diagnostics {
             switch manifest.artifact.inventory_sha256 {
             case "098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe": layers = [0, 2]
             case "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac": layers = [0, 3]
+            case "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037": layers = [0, 2, 27]
             default: throw ModelError("VQ allocation-class coverage requires an inspected artifact")
             }
-        } else { layers = [0, 2] }
-        guard manifest.schema == 1, manifest.fixtures.count == 2,
+        } else {
+            guard manifest.artifact.inventory_sha256 != "4f63194dec2e4c3bec31289d6503cc7c886685e16e7c4aac58116d4cf0c7f037" else {
+                throw ModelError("VQ 2.1 fixtures require all three allocation classes")
+            }
+            layers = [0, 2]
+        }
+        guard manifest.schema == 1, manifest.fixtures.count == layers.count,
               Set(manifest.fixtures.map(\.layer)) == layers,
               manifest.runtime_sha256 == "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8" else {
             throw ModelError("VQ record fixtures need the pinned runtime and specified layer set")
@@ -66,6 +73,8 @@ extension Diagnostics {
         guard !prefill || (manifest.prefill_flags?.matches == true && sourceDirectory == nil && inventory == nil) else {
             throw ModelError("VQ prefill fixtures require the pinned segmented arithmetic and no direct-source mode")
         }
+        try VQReferenceExecution.validate(inventorySHA: manifest.artifact.inventory_sha256,
+            runtimeSHA: manifest.runtime_sha256, profile: manifest.execution_profile)
         try ModelProcessGuard.acquire()
         let requiredHeadroom = prefill ? 7_000_000_000 : 5_000_000_000
         guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= requiredHeadroom else {
@@ -227,7 +236,7 @@ extension Diagnostics {
                 }
             }
             if manifest.layer_coverage != nil {
-                c.equal("distinct complete-record allocation classes exercised", testedLayouts.count, 2)
+                c.equal("distinct complete-record allocation classes exercised", testedLayouts.count, layers.count)
             }
             if let source {
                 c.expect("demanded checkpoint payloads fully verified", source.verifiedFileCount > 0)

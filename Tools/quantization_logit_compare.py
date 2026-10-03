@@ -16,6 +16,7 @@ from quantization_logit_run import digest, inputs
 from quantization_quality import compare
 from vq_fused_reference import bounded
 from vq_model_reference import ARTIFACTS, ARCH_SHA256, RUNTIME_SHA256, NORMALIZATION
+from vq_execution_profile import OLDER_BUNDLE_SHA256
 
 
 def producer_artifact(run, receipts, identity):
@@ -37,9 +38,13 @@ def producer_artifact(run, receipts, identity):
         if any(r.get('layers') != 48 or r.get('architecture_sha256') != ARCH_SHA256
                or r.get('runtime_sha256') != RUNTIME_SHA256 or r.get('vq_decode_chunk') != 32
                or r.get('normalization') != NORMALIZATION
+               or r.get('execution_profile') != first.get('execution_profile')
                or r.get('instrument', {}).get('sha256') != first['instrument']['sha256']
                or r.get('artifact') != first['artifact'] for r in receipts):
             raise ValueError('VQ cases do not share the complete pinned reference configuration')
+        selected_profile = run.get('producer', {}).get('execution_profile')
+        if selected_profile is not None and selected_profile != first.get('execution_profile'):
+            raise ValueError('VQ producer and case execution identities differ')
         runtime = first['instrument']['sha256']
         # This binds the full-file verification and inventory digests, rather
         # than pretending the runtime source digest identifies the weights.
@@ -48,9 +53,12 @@ def producer_artifact(run, receipts, identity):
                       'full head; no MTP or vision; normalization ' + NORMALIZATION)
     else:
         raise ValueError('unknown pilot producer')
-    return {**identity, 'pack_sha256': pack, 'runtime_sha256': runtime, 'arithmetic': arithmetic,
+    result = {**identity, 'pack_sha256': pack, 'runtime_sha256': runtime, 'arithmetic': arithmetic,
             'preprocessing_choice': 'Original tokenizer, frozen literal token contexts; derivative tokenizer unused',
             'producer_run_sha256': run['_sha256']}
+    if first.get('execution_profile') is not None:
+        result['execution_profile'] = first['execution_profile']
+    return result
 
 
 def manifest(directory, frozen_path, output, role, inventory=None):
@@ -71,10 +79,12 @@ def manifest(directory, frozen_path, output, role, inventory=None):
             raise ValueError('VQ comparison arms require their pinned inventory')
         inventory_raw = bounded(inventory, 4_000_000)
         inv = unique_json(inventory_raw)
-        expected = {'reference': '0f35dc817238bdbabdac208db731470cd30a7c0a',
-                    'candidate': 'a4e1b44631619ba440d985e324d95dd106536a3d'}[role]
-        if inv.get('revision') != expected or inv.get('repo') != ARTIFACTS[expected][0]:
-            raise ValueError('pilot reference must be VQ 4.4 and candidate must be VQ 3.2')
+        allowed = {'reference': ('0f35dc817238bdbabdac208db731470cd30a7c0a',),
+                   'candidate': ('a4e1b44631619ba440d985e324d95dd106536a3d',
+                                 '8684640a3956b01c47f5d47f9b999e2ab8b985f1')}[role]
+        revision = inv.get('revision')
+        if revision not in allowed or revision not in ARTIFACTS or inv.get('repo') != ARTIFACTS[revision][0]:
+            raise ValueError('pilot reference must be VQ 4.4 and candidate must be inspected VQ 3.2 or 2.1')
     receipts, cases = [], []
     for case, completed in zip(frozen['cases'], run['cases']):
         parent = directory / case['id']
@@ -98,6 +108,15 @@ def manifest(directory, frozen_path, output, role, inventory=None):
     if inventory_raw is not None:
         if receipts[0]['artifact']['inventory_sha256'] != hashlib.sha256(inventory_raw).hexdigest():
             raise ValueError('VQ producer does not belong to the required comparison artifact')
+        execution = receipts[0].get('execution_profile')
+        smaller = inv['revision'] == '8684640a3956b01c47f5d47f9b999e2ab8b985f1'
+        if execution is not None or smaller:
+            expected = {'schema': 1, 'mode': execution.get('mode') if isinstance(execution, dict) else None,
+                        'bundled_runtime_sha256': OLDER_BUNDLE_SHA256 if smaller else RUNTIME_SHA256,
+                        'runtime_sha256': RUNTIME_SHA256}
+            modes = ('explicit-reviewed-v1',) if smaller else ('explicit-reviewed-v1', 'bundled-reviewed-v1')
+            if execution != expected or expected['mode'] not in modes:
+                raise ValueError('VQ distribution receipts do not bind the reviewed execution profile')
         artifact.update(pack_repo=inv['repo'], pack_revision=inv['revision'],
                         full_file_map_sha256=ARTIFACTS[inv['revision']][2])
     output.mkdir(parents=True, exist_ok=False)
@@ -116,7 +135,7 @@ def main(options):
                            getattr(options, role + '_inventory', None))
              for role in ('reference', 'baseline', 'candidate')}
     result = compare(paths['reference'], paths['baseline'], paths['candidate'])
-    result['limitation'] = 'Six owned teacher-forced contexts, last sixteen positions each. Native candidate parity, generation, complete tasks, held-out confidence, MTP/vision and speed are unproven.'
+    result['limitation'] = 'Six owned teacher-forced contexts, last sixteen positions each. This score does not establish native correctness, complete-task quality, held-out confidence, MTP/vision or speed.'
     (options.out / 'comparison.json').write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
     print(json.dumps({'qualification': result['qualification'], 'mean_case_delta_kl': result['mean_case_delta_kl'],
                      'cases': [{k: c[k] for k in ('id', 'baseline', 'candidate', 'mean_delta_kl')} for c in result['cases']]}))

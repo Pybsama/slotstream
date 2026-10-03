@@ -12,6 +12,8 @@ extension Diagnostics {
         }
         struct Manifest: Decodable {
             struct Artifact: Decodable { let inventory_sha256: String }
+            let execution_profile: VQReferenceExecution?
+            let runtime_sha256: String?
             let schema: Int, architecture_sha256: String, normalization: String
             let passes: [[Int]], files: [Entry], artifact: Artifact, fixture_bytes: Int
         }
@@ -55,6 +57,8 @@ extension Diagnostics {
             $0.hasPrefix("SLOTSTREAM_") || $0.hasPrefix("SS_DEBUG") || $0.hasPrefix("VQ_") || $0.hasPrefix("VQLAB_")
         }
         guard forbidden.isEmpty else { throw ModelError("VQ model probe requires no developer overrides") }
+        try VQReferenceExecution.validate(inventorySHA: manifest.artifact.inventory_sha256,
+            runtimeSHA: manifest.runtime_sha256, profile: manifest.execution_profile)
         try ModelProcessGuard.acquire()
         guard let before = ProcessMemory.vmActivity(), before.reclaimableBytes >= 13_000_000_000 else {
             throw ModelError("VQ model probe requires 13 GB actual reclaimable memory")

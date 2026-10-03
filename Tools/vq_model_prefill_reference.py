@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 from context_qualification import quiet_preflight, verification_lock
+from vq_execution_profile import add_runtime_argument, recheck_runtime, select_runtime
 from vq_model_reference import (ARCH_SHA256, NORMALIZATION, instrument_identity,
     load_model, physical, references, recheck_owned_headroom, verify_files)
 from vq_ple_stream import Archive
@@ -31,6 +32,7 @@ def run(options):
         prompt[255] = 248044
         passes = [prompt[i:i+512] for i in range(0, 2053, 512)] + [[101]]
         profile = 'sparse2053-decode1-v1'
+    runtime_path, execution_profile = select_runtime(options.model, getattr(options, 'runtime', None))
     instrument = instrument_identity()
     own = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     before = quiet_preflight(13)
@@ -42,7 +44,7 @@ def run(options):
         import numpy as np
         mx.set_memory_limit(8_000_000_000)
         mx.set_cache_limit(128_000_000)
-        arch, vq = references(options.architecture, options.model / 'model.py')
+        arch, vq = references(options.architecture, runtime_path)
         archive = Archive(options.model, options.inventory)
         boundaries = []
         tags = {mx.bfloat16: 'BF16', mx.float32: 'F32', mx.float16: 'F16', mx.bool_: 'BOOL'}
@@ -110,12 +112,14 @@ def run(options):
             for file in archive.files.values(): file.verify_unchanged()
             if max(physical().values()) > 4_000_000_000:
                 raise ValueError('reference head exceeded its 4 GB process bound')
+            recheck_runtime(options.model, getattr(options, 'runtime', None), execution_profile)
             if instrument_identity()['sha256'] != instrument['sha256'] or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != own:
                 raise ValueError('full-model reference instrument changed')
             expected_sparse = 24 if options.sparse else 0
             if len(boundaries) != len(passes) * 160 + expected_sparse or len(sparse_calls) != expected_sparse:
                 raise ValueError('incomplete reference boundary set')
             receipt = {'schema': 1, 'profile': profile, 'architecture_sha256': ARCH_SHA256,
+                       'runtime_sha256': execution_profile['runtime_sha256'], 'execution_profile': execution_profile,
                        'normalization': NORMALIZATION, 'artifact': provenance, 'instrument': instrument,
                        'producer_sha256': own, 'passes': passes, 'boundaries': boundaries, 'sparse_calls': sparse_calls,
                        'before': before, 'memory': physical(), 'mlx_peak_bytes': mx.get_peak_memory(),
@@ -134,4 +138,5 @@ if __name__ == '__main__':
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--save-layer', type=int, choices=range(-1, 49))
     parser.add_argument('--sparse', action='store_true', help='Fixed 2053-token prefill plus continuation; includes sparse masks')
+    add_runtime_argument(parser)
     run(parser.parse_args())

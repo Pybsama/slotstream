@@ -106,3 +106,9 @@ Retain bounded code-only VQ kernel reuse after exact model/ownership gates and a
 ## [2026-10-03 09:27] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Bind VQ 2.1 research staging separately from reference admission; preserve distinct runtime and three-class audit plus 78 fused regression results.
 
+## [2026-10-03 10:11] update | vq-2.1-native-parity
+Preserve full payload and normalization evidence; add three-class native research support with explicit reviewed runtime identities, complete-stack parity, legacy regression and refusal gates. Product qualification remains open.
+
+## [2026-10-03 10:14] update | vq-2.1-quality-screen
+Preserve six fixed candidate forwards and unfavorable distribution results; keep VQ 2.1 out of promotion and prioritize VQ 3.2 without claiming task qualification.
+
