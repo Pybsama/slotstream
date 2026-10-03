@@ -29,12 +29,15 @@ package struct VQExpert {
 
     // Geometry is deliberately limited to the inspected Flash Next expert
     // families. This is an implementation bound, not a quality/performance cap.
-    package init(codes: MLXArray, codebook: MLXArray, scales: MLXArray, layout: VQLayout, residentBank: Bool = false) throws {
+    package init(codes: MLXArray, codebook: MLXArray, scales: MLXArray, layout: VQLayout, residentBank: Bool = false,
+                 bankAdmission: VQBankAdmission = .standard) throws {
+        guard residentBank || bankAdmission == .standard else { throw ModelError("larger admission requires an owned VQ bank") }
+        let maximumRows = residentBank ? try bankAdmission.maximumRows(for: layout) : 32
         guard [640, 2560].contains(layout.columns), layout.groupSize == 64,
-              codes.ndim == 3, (1...(residentBank ? layout.maximumResearchBankRows : 32)).contains(codes.dim(0)), (1...2560).contains(codes.dim(1)),
+              codes.ndim == 3, (1...maximumRows).contains(codes.dim(0)), (1...2560).contains(codes.dim(1)),
               codebook.dtype == .float16, codebook.shape == [layout.codebookEntries, layout.dimensions],
               scales.dtype == .float16, scales.shape == [codes.dim(0), codes.dim(1), layout.columns / 64],
-              codes.nbytes + codebook.nbytes + scales.nbytes <= (residentBank ? 512_000_000 : 256_000_000) else {
+              codes.nbytes + codebook.nbytes + scales.nbytes <= (residentBank ? bankAdmission.maximumProjectionBytes : 256_000_000) else {
             throw ModelError("VQ expert exceeds the bounded inspected projection geometry")
         }
         switch (layout.dimensions, layout.codebookEntries, layout.packing) {

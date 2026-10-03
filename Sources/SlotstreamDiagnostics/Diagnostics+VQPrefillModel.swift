@@ -6,8 +6,11 @@ import Slotstream
 extension Diagnostics {
     /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
     /// Hashes cover every byte, not selected logits or a numerical tolerance.
-    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil) throws -> Data {
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil, reinvestDenseSavings: Bool = false) throws -> Data {
         guard (!wideRecords && !parallelRecords) || (residentRecords && residentText) else { throw ModelError("wide banks and parallel VQ reads require resident text and records") }
+        guard !reinvestDenseSavings || (denseOverlayBaseline != nil && wideRecords && parallelRecords && residentText && residentRecords) else {
+            throw ModelError("dense reinvestment requires the composite and wide parallel residency")
+        }
         guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
             throw ModelError("dense composite requires both baseline and manifest")
         }
@@ -120,7 +123,7 @@ extension Diagnostics {
         }
         let model = VQModelProbe(checkpoint)
         if residentText { try model.enableResidentText() }
-        if residentRecords { try model.enableResidentRecords(wide: wideRecords, parallelReads: parallelRecords) }
+        if residentRecords { try model.enableResidentRecords(wide: wideRecords, parallelReads: parallelRecords, reinvestDenseSavings: reinvestDenseSavings) }
         var c = CheckBuilder("quantization-prefill-model"), observed: [String: String] = [:]
         var traceLayer = -1, traceValues: [String: MLXArray] = [:]
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -177,14 +180,20 @@ extension Diagnostics {
             if residentRecords {
                 guard let stats = model.recordCacheStats else { throw ModelError("resident cache was not configured") }
                 c.equal("all inspected allocation classes resident", stats["allocation_classes"], checkpoint.recordClassCount)
-                c.equal("complete reserved record capacity", stats["total_capacity"], (wideRecords ? 512 + (checkpoint.recordClassCount - 1) * 96 : checkpoint.recordClassCount * 96))
-                c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], wideRecords ? 512 : 96)
+                c.equal("complete reserved record capacity", stats["total_capacity"], (reinvestDenseSavings ? 1824 : (wideRecords ? 512 + (checkpoint.recordClassCount - 1) * 96 : checkpoint.recordClassCount * 96)))
+                c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], reinvestDenseSavings ? 1536 : (wideRecords ? 512 : 96))
+                c.equal("requested reinvestment applied", stats["dense_savings_reinvested"], reinvestDenseSavings ? 1 : 0)
+                if reinvestDenseSavings {
+                    c.equal("exact reinvested bank bytes", stats["reserved_bank_bytes"], 3_583_180_800)
+                    c.equal("reinvested secondary capacity", stats["minimum_bank_capacity"], 288)
+                }
                 c.equal("all record leases released", stats["pinned_records"], 0)
                 c.equal("requested read mode applied", stats["parallel_read_lanes"], parallelRecords ? 12 : 0)
                 c.expect("parallel staging remains bounded", (stats["maximum_read_staging_bytes"] ?? Int.max) <= VQRecordReadBatch.maximumStagingBytes)
                 c.expect("parallel mode exercises demanded staging", !parallelRecords || (stats["maximum_read_staging_bytes"] ?? 0) > 0)
                 c.expect("resident cache serves real hits", (stats["hits"] ?? 0) > 0)
-                c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)
+                c.expect("resident cache loads demanded records", (stats["loads"] ?? 0) > 0)
+                c.expect("ordinary cache exercises eviction", reinvestDenseSavings || (stats["evictions"] ?? 0) > 0)
                 c.expect("resident books fit reserved bytes", (stats["resident_book_bytes"] ?? Int.max) <= (stats["maximum_book_bytes"] ?? 0))
             }
             if residentText {

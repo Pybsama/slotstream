@@ -8,12 +8,15 @@ extension Diagnostics {
     /// fixture's token, becomes the next input. Final sampled token is unconsumed.
     public static func quantizationGeneration(source: URL, inventory: URL, profileURL: URL,
                                               fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false,
-                                              denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil) throws -> Data {
+                                              denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil, reinvestDenseSavings: Bool = false) throws -> Data {
         struct Profile: Decodable, Equatable {
             let schema: Int, profile: String, prompt: [Int], sampling: String
             let max_new_tokens: Int, minimum_steps: Int, eos_token_id: Int
         }
         guard (!wideRecords && !parallelRecords) || (residentRecords && residentText) else { throw ModelError("wide banks and parallel VQ reads require resident text and records") }
+        guard !reinvestDenseSavings || (denseOverlayBaseline != nil && wideRecords && parallelRecords && residentText && residentRecords) else {
+            throw ModelError("dense reinvestment requires the composite and wide parallel residency")
+        }
         guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
             throw ModelError("dense composite requires both baseline and manifest")
         }
@@ -150,7 +153,7 @@ extension Diagnostics {
         }
         let model = VQModelProbe(checkpoint)
         if residentText { try model.enableResidentText() }
-        if residentRecords { try model.enableResidentRecords(wide: wideRecords, parallelReads: parallelRecords) }
+        if residentRecords { try model.enableResidentRecords(wide: wideRecords, parallelReads: parallelRecords, reinvestDenseSavings: reinvestDenseSavings) }
         var c = CheckBuilder("quantization-generated-sequence"), observed: [String: String] = [:]
         var tokens = profile.prompt, generated: [Int] = [], traceLayer = -1, traceValues: [String: MLXArray] = [:]
         var consumedTokens = 0
@@ -216,8 +219,16 @@ extension Diagnostics {
             if residentRecords {
                 guard let stats = model.recordCacheStats else { throw ModelError("resident cache was not configured") }
                 c.equal("all inspected allocation classes resident", stats["allocation_classes"], checkpoint.recordClassCount)
-                c.equal("complete reserved record capacity", stats["total_capacity"], (wideRecords ? 512 + (checkpoint.recordClassCount - 1) * 96 : checkpoint.recordClassCount * 96))
-                c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], wideRecords ? 512 : 96)
+                c.equal("complete reserved record capacity", stats["total_capacity"], (reinvestDenseSavings ? 1824 : (wideRecords ? 512 + (checkpoint.recordClassCount - 1) * 96 : checkpoint.recordClassCount * 96)))
+                c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], reinvestDenseSavings ? 1536 : (wideRecords ? 512 : 96))
+                c.equal("requested reinvestment applied", stats["dense_savings_reinvested"], reinvestDenseSavings ? 1 : 0)
+                if reinvestDenseSavings {
+                    c.equal("exact reinvested bank bytes", stats["reserved_bank_bytes"], 3_583_180_800)
+                    c.equal("reinvested secondary capacity", stats["minimum_bank_capacity"], 288)
+                    c.equal("every enlarged record is occupied", stats["occupied_records"], 1824)
+                    c.equal("largest physical slot executed", stats["maximum_executed_slot"], 1535)
+                    c.equal("secondary final physical slot executed", stats["minimum_class_maximum_executed_slot"], 287)
+                }
                 c.equal("all record leases released", stats["pinned_records"], 0)
                 c.equal("requested read mode applied", stats["parallel_read_lanes"], parallelRecords ? 12 : 0)
                 c.expect("parallel staging remains bounded", (stats["maximum_read_staging_bytes"] ?? Int.max) <= VQRecordReadBatch.maximumStagingBytes)

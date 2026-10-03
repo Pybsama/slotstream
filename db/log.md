@@ -121,3 +121,6 @@ Authenticate a separate dense-four-bit/VQ3.2 composite; preserve exact traversal
 ## [2026-10-03 12:49] update | same-model-quantization-and-automatic-memory
 Implement authenticated dense composite native adapter and own reference fixtures; record exact greedy/prefill/sparse parity, matched cost and completed existing affine compatibility, preserving the launcher failures and corrections. Larger fixed-cache experiment remains separate and unqualified.
 
+## [2026-10-03 13:29] update | same-model-quantization-and-automatic-memory
+Record exact greedy and sparse parity for larger fixed composite caches, a slower matched cost result, separate CPU diagnosis with all timings discarded, pinned draft normalization evidence, and corrected full static acceptance. Auto and throughput qualification remain open.
+

@@ -821,3 +821,21 @@ may differ, so the result measures the candidate as a whole. Different
 quantizations are not required to produce identical answers. The
 ordinary same-artifact comparison retains its equality gate. None of these
 commands admits the composite to Engine.load, serving or Auto.
+
+### Dense savings and fixed expert capacity
+
+The explicit research flag `--reinvest-dense-savings` requires the authenticated
+composite, both residency flags, `--wide-records`, `--parallel-records`, and a
+greedy or sparse fixture. It admits 1536 main-class and 288 secondary records
+inside the same 10 GB process bound. Ordinary limits stay unchanged. Greedy
+parity proves the full physical row range; sparse parity tests the larger state
+footprint without pretending that its route set fills every slot.
+
+`dense-reinvestment-cost-v1.json` and `Tools/vq_dense_reinvestment_pilot.py`
+compare this profile against the composite's existing 512/96 profile on the
+same frozen binary. The driver requires completed greedy/sparse receipts from
+that producer, separate full-logit validations and identical complete generated
+sequences across both arms. The three-pair result was slower with the larger
+cache despite fewer record loads. This is a numerical research mode, not a new
+cache default. See the canonical quantization measurement for raw evidence and
+scope; it does not qualify automatic resizing or the 20-token target.

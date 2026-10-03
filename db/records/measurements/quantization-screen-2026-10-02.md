@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T12:49:57.189068+00:00
+updated: 2026-10-03T13:29:35.951214+00:00
 summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -370,3 +370,18 @@ Authenticated load medians are 29.497434666001936 and 59.31279829199775 seconds.
 ### Shared dense dispatch affine acceptance, October 3
 
 [[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-affine-compatibility]] preserves the full static suite and existing affine battery on frozen-dense-overlay-v2. The full battery reports 31 passes and four reference-related failures caused by the temporary driver resolving the venv interpreter symlink. The targeted repair uses the unchanged executable and the intact MLX 0.32.2 virtual environment: both independent reference producers and both native comparisons pass. This closes the existing affine compatibility requirement without changing the reference bytes, arithmetic or tolerances. The behavioral probe passes all 15 items and vision serving passes all 25 checks. These existing-pack results do not qualify composite task quality, features or throughput.
+
+### Dense savings reinvested into fixed expert banks, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-savings-reinvested]] compares the same composite and frozen binary with 512/96 versus 1536/288 record banks. The additional 2,388,787,200 bank bytes fit within the established dense payload saving; the process bound stays 10 GB. Both profiles match every greedy and sparse reference boundary. The larger greedy process peaks at 7,521,441,744 bytes and sparse at 9,328,595,360 bytes. Physical slots 1535 and 287 are actually executed in greedy generation. Sparse occupies only 1370 records and has no eviction, so its proof is kept distinct from the full-range greedy check.
+
+All three alternating timing pairs qualify, with exactly the same complete 128-token output across both arms. Control/enlarged arm medians are 6.0164231060/5.6931276441 committed tokens/s, 2.5375323750/2.8505367500 seconds TTFT and 23.6464410420/25.2083016250 seconds total request. Median paired ratios are 0.9462645070, 1.1265224763 and 1.0661911433 respectively. Each control request loads 49,865 records and hits 18,105; each enlarged request loads 34,782 and hits 33,188. Reduced reads did not create a speed win. This is one fixed-work non-speculative context with uncontrolled OS file cache, not a conclusion about cold SSD, larger budgets or the complete production stack. No automatic cache growth or candidate promotion is justified by it.
+
+### Larger-cache CPU diagnosis, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-larger-cache-cpu-diagnosis]] records a separate ten-second CPU sample whose timings are discarded. Demanded reads and MLX evaluation dominate the observed main-thread stacks; the victim search barely appears. This is diagnostic evidence, not an isolated GPU cost model. The next bounded hypothesis is to compare the VQ reader's current buffered mode with the existing affine reader's uncached/random policy, retaining exact bytes, descriptor ownership and the same process envelope. It is not yet implemented or measured.
+
+
+### Fixed-cache acceptance checkpoint
+
+[[sources/runs/2026/10/2026-10-03-native-vq-reinvestment-static-acceptance]] preserves the first static harness failure and its repaired full pass against the unchanged frozen reinvestment binary. The new test script required registration in the mocked suite inventory. No native numerical gate, reference or tolerance was relaxed. All four CI workflows for the preceding dense-composite commit passed. The larger cache remains an explicit research option and a losing cost result on the fixed workload; product Auto and the 20-token target remain open.

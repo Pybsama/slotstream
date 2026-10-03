@@ -107,6 +107,17 @@ extension Diagnostics {
         let tail = try VQLayout(columns: 640, dimensions: 4, codebookEntries: 2048, groupSize: 64, packing: .words32)
         let regular = try VQRecordLayout([narrow, narrow, tail])
         c.equal("complete 3.2 regular record bytes", regular.recordBytes, 1_843_200)
+        c.equal("ordinary bank admission remains 512", try VQBankAdmission.standard.maximumRows(for: narrow), 512)
+        c.equal("explicit dense bank admission is 1536", try VQBankAdmission.denseCompositeReinvestment.maximumRows(for: narrow), 1536)
+        for operation: () throws -> Void in [
+            { _ = try VQBankAdmission.denseCompositeReinvestment.maximumRows(for: high) },
+            { _ = try VQBankAdmission.denseCompositeReinvestment.maximumRows(for: ngram) },
+            { _ = try VQRecordBank(layout: regular, capacity: 513) },
+            { _ = try VQRecordBank(layout: regular, capacity: 1537, admission: .denseCompositeReinvestment) }
+        ] {
+            do { try operation(); c.expect("unqualified bank admission refused before allocation", false) }
+            catch { c.expect("unqualified bank admission refused before allocation", true) }
+        }
         let mixed = try VQRecordLayout([narrow, high, tail])
         let swapped = try VQRecordLayout([high, narrow, tail])
         c.equal("swapped projections have equal byte counts", mixed.recordBytes, swapped.recordBytes)

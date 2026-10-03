@@ -13,9 +13,11 @@ package final class VQRecordBank {
     package struct Snapshot {
         package let capacity: Int, occupied: Int, pinned: Int, bytes: Int
         package let hits: Int, loads: Int, evictions: Int, generation: UInt64
+        package let maximumExecutedSlot: Int
     }
     package let layout: VQRecordLayout
     private let capacity: Int
+    private let admission: VQBankAdmission
     private let pieces: [MLXArray]
     private let buffers: [MLXArray.MLXArrayData]
     private let lock = NSRecursiveLock()
@@ -27,15 +29,17 @@ package final class VQRecordBank {
     private var hand = 0
     private var hits = 0, loads = 0, evictions = 0
     private var generation: UInt64 = 0
+    private var maximumExecutedSlot = -1
 
-    package init(layout: VQRecordLayout, capacity: Int) throws {
+    package init(layout: VQRecordLayout, capacity: Int, admission: VQBankAdmission = .standard) throws {
         // Capacity is qualified per projection family. The largest bank is
         // separately bounded before any MLX storage is allocated.
-        guard (1...layout.maximumResearchBankRows).contains(capacity),
-              try QuantizationBytes.product(capacity, layout.recordBytes) <= 1_400_000_000 else {
+        let maximumRows = try layout.projections.map { try admission.maximumRows(for: $0) }.min()!
+        guard (1...maximumRows).contains(capacity),
+              try QuantizationBytes.product(capacity, layout.recordBytes) <= admission.maximumRecordBytes else {
             throw ModelError("VQ bank exceeds its inspected row or byte bound")
         }
-        self.layout = layout; self.capacity = capacity
+        self.layout = layout; self.capacity = capacity; self.admission = admission
         owners = Array(repeating: nil, count: capacity)
         referenced = Array(repeating: false, count: capacity)
         var arrays: [MLXArray] = []
@@ -74,7 +78,7 @@ package final class VQRecordBank {
         lock.lock(); defer { lock.unlock() }
         return Snapshot(capacity: capacity, occupied: map.count, pinned: pins.count,
                         bytes: layout.recordBytes * capacity, hits: hits, loads: loads,
-                        evictions: evictions, generation: generation)
+                        evictions: evictions, generation: generation, maximumExecutedSlot: maximumExecutedSlot)
     }
 
     /// Discard all residency only at an idle boundary. Allocation remains owned.
@@ -119,7 +123,7 @@ package final class VQRecordBank {
         // resident slot. All values retain this bank's owned allocation.
         let operations = try VQRecordOperations(layout: layout,
             codes: [pieces[0], pieces[2], pieces[4]], books: books,
-            scales: [pieces[1], pieces[3], pieces[5]], residentBank: true)
+            scales: [pieces[1], pieces[3], pieces[5]], residentBank: true, bankAdmission: admission)
         generation += 1; busy = true
         defer {
             // No future lazy evaluation may read storage after its lease ends.
@@ -184,6 +188,7 @@ package final class VQRecordBank {
         guard busy, generation == epoch, shouldContinue() else { throw CheckpointReadError.cancelled }
         let output = try operations.composed(x, slots: slots, topK: 1, dispatchPairs: dispatchPairs).reshaped([-1, 2560])
         eval(output)
+        maximumExecutedSlot = max(maximumExecutedSlot, Int(slots.max()!))
         return output
     }
 }

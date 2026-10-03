@@ -26,10 +26,11 @@ package final class VQModelProbe {
     }
     package var recordCacheStats: [String: Int]? { recordCache?.stats }
 
-    package func enableResidentRecords(wide: Bool = false, parallelReads: Bool = false) throws {
+    package func enableResidentRecords(wide: Bool = false, parallelReads: Bool = false, reinvestDenseSavings: Bool = false) throws {
         guard !failed, consumed == 0, recordCache == nil else { throw ModelError("VQ cache must be configured before the first pass") }
         guard (!wide && !parallelReads) || residentText != nil else { throw ModelError("wide banks and parallel VQ reads require the resident-text process envelope") }
-        recordCache = try VQRecordCache(checkpoint, capacityPerClass: 96, wide: wide, parallelReads: parallelReads)
+        recordCache = try VQRecordCache(checkpoint, capacityPerClass: 96, wide: wide, parallelReads: parallelReads,
+                                        reinvestDenseSavings: reinvestDenseSavings)
     }
     package private(set) var maximumRecordBatches = 0
     package private(set) var maximumLiveExperts = 0

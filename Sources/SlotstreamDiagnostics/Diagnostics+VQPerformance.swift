@@ -18,7 +18,7 @@ extension Diagnostics {
             let pack: String, generated: [Int], logits: [Logit]
         }
         struct Profile: Decodable {
-            struct Configuration: Decodable { let parallel_read_lanes: Int? }
+            struct Configuration: Decodable { let parallel_read_lanes: Int?; let reinvest_dense_savings: Bool? }
             let configuration: Configuration
             let schema: Int, profile: String, prompt: [Int], max_new_tokens: Int
             let minimum_committed_tokens: Int, validation_steps: Int, eos_token_id: Int
@@ -41,7 +41,8 @@ extension Diagnostics {
         let profileRaw = try read(profileURL), profileHash = hash(profileRaw)
         guard ["8f2c4256f6489ae5b9ce4e801ad5e9c79263b85646a3ff91220148156da810a5",
                "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7",
-               "a1b2edc29e0b1a5a3a668d9b8c26ff8533523f0045e98970e5e5efc54badaa88"].contains(profileHash) else {
+               "a1b2edc29e0b1a5a3a668d9b8c26ff8533523f0045e98970e5e5efc54badaa88",
+               "87468cc244dca45d46b673132ee9e05be7c09f4811d25dcb92afd21bae4782e8"].contains(profileHash) else {
             throw ModelError("VQ pilot requires the frozen performance profile")
         }
         let profile = try JSONDecoder().decode(Profile.self, from: profileRaw)
@@ -136,7 +137,8 @@ extension Diagnostics {
         do {
             try withError {
                 try checkpoint.authenticateMainPayloads { now() - loadStart <= 1_800 }
-                try model.enableResidentText(); try model.enableResidentRecords(wide: true, parallelReads: profile.configuration.parallel_read_lanes == 12)
+                try model.enableResidentText(); try model.enableResidentRecords(wide: true, parallelReads: profile.configuration.parallel_read_lanes == 12,
+                    reinvestDenseSavings: profile.configuration.reinvest_dense_savings == true)
                 guard checkpoint.verifiedFileCount == 138 else { throw ModelError("VQ timing requires every main payload authenticated") }
                 Stream.gpu.synchronize()
                 loadSeconds = now() - loadStart
@@ -184,6 +186,14 @@ extension Diagnostics {
                       let staging = model.recordCacheStats?["maximum_read_staging_bytes"],
                       (1...VQRecordReadBatch.maximumStagingBytes).contains(staging) else {
                     throw ModelError("VQ pilot did not exercise its bounded parallel-read mode")
+                }
+            }
+            if profile.configuration.reinvest_dense_savings == true {
+                guard let stats = model.recordCacheStats,
+                      stats["dense_savings_reinvested"] == 1, stats["total_capacity"] == 1824,
+                      stats["reserved_bank_bytes"] == 3_583_180_800, stats["occupied_records"] == 1824,
+                      stats["maximum_executed_slot"] == 1535, stats["minimum_class_maximum_executed_slot"] == 287 else {
+                    throw ModelError("VQ pilot did not exercise its exact reinvested record range")
                 }
             }
             return try receipt(failure: nil)

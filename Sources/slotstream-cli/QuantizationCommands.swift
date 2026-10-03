@@ -79,6 +79,7 @@ struct QuantizationModelCheck: ParsableCommand {
     @Flag(name: .long, help: "Retain the authenticated text weights in the 10 GB research probe") var residentText = false
     @Flag(name: .long, help: "Research with 512 rows for the main expert class; requires both residency flags") var wideRecords = false
     @Flag(name: .long, help: "Overlap bounded demanded reads; requires resident records and text") var parallelRecords = false
+    @Flag(name: .long, help: "Research only: reinvest composite dense savings in 1536/288 expert banks inside the same process bound") var reinvestDenseSavings = false
     @Flag(name: .long, help: "Compare actual greedy generation and every retained state boundary") var greedy = false
     @Option(name: .long, help: "Frozen bench/quantization/greedy-v1.json, required with --greedy") var generationProfile: String?
     @Option(name: .long, help: "Research composite only: pinned installed affine baseline; requires a prefill, sparse or greedy profile and --dense-overlay-manifest") var denseOverlayBaseline: String?
@@ -86,6 +87,9 @@ struct QuantizationModelCheck: ParsableCommand {
     func validate() throws {
         guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil), denseOverlayBaseline == nil || prefill || sparse || greedy else {
             throw ValidationError("--dense-overlay-baseline and --dense-overlay-manifest require each other and --prefill, --sparse or --greedy")
+        }
+        guard !reinvestDenseSavings || (denseOverlayBaseline != nil && wideRecords && parallelRecords && residentRecords && residentText && (greedy || sparse)) else {
+            throw ValidationError("--reinvest-dense-savings requires the composite, wide parallel residency, and --greedy or --sparse")
         }
         guard [prefill, sparse, greedy].filter({ $0 }).count <= 1, greedy == (generationProfile != nil),
               (!residentRecords && !residentText) || sparse || greedy,
@@ -99,7 +103,7 @@ struct QuantizationModelCheck: ParsableCommand {
                 inventory: URL(fileURLWithPath: sourceInventory), profileURL: URL(fileURLWithPath: generationProfile),
                 fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output), residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords,
                 denseOverlayBaseline: denseOverlayBaseline.map { URL(fileURLWithPath: $0) },
-                denseOverlayManifest: denseOverlayManifest.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
+                denseOverlayManifest: denseOverlayManifest.map { URL(fileURLWithPath: $0) }, reinvestDenseSavings: reinvestDenseSavings), as: UTF8.self))
             return
         }
         if prefill || sparse {
@@ -107,7 +111,7 @@ struct QuantizationModelCheck: ParsableCommand {
                 inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
                 output: URL(fileURLWithPath: output), sparse: sparse, residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords,
                 denseOverlayBaseline: denseOverlayBaseline.map { URL(fileURLWithPath: $0) },
-                denseOverlayManifest: denseOverlayManifest.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
+                denseOverlayManifest: denseOverlayManifest.map { URL(fileURLWithPath: $0) }, reinvestDenseSavings: reinvestDenseSavings), as: UTF8.self))
             return
         }
         print(String(decoding: try Diagnostics.quantizationModel(source: URL(fileURLWithPath: sourceDirectory),

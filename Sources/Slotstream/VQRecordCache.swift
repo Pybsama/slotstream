@@ -11,14 +11,20 @@ package final class VQRecordCache {
     private var books: [Int: [MLXArray]] = [:]
     private var readPlans: [Int: VQRecordReadPlan] = [:]
     private let parallelReads: Bool
+    private let reinvestDenseSavings: Bool
     private var maximumStagingBytes = 0
     package let reservedBankBytes: Int
     package let maximumBookBytes: Int
     package private(set) var residentBookBytes = 0
 
-    package init(_ checkpoint: VQCheckpoint, capacityPerClass: Int, wide: Bool = false, parallelReads: Bool = false) throws {
+    package init(_ checkpoint: VQCheckpoint, capacityPerClass: Int, wide: Bool = false, parallelReads: Bool = false,
+                 reinvestDenseSavings: Bool = false) throws {
+        guard !reinvestDenseSavings || (checkpoint.compositeSHA256 == VQDenseOverlay.identitySHA256 && wide && parallelReads && capacityPerClass == 96) else {
+            throw ModelError("dense reinvestment requires the exact composite and wide parallel residency")
+        }
         self.checkpoint = checkpoint
         self.parallelReads = parallelReads
+        self.reinvestDenseSavings = reinvestDenseSavings
         layouts = try (0..<48).map { try checkpoint.recordLayout(layer: $0) }
         let counts = layouts.reduce(into: [VQRecordLayout: Int]()) { $0[$1, default: 0] += 1 }
         // The pinned research profile identifies its most common descriptor
@@ -27,22 +33,26 @@ package final class VQRecordCache {
         // This fixed experiment is not an automatic sizing policy.
         let wideLayout = layouts[checkpoint.wideRecordLayer]
         var capacities: [VQRecordLayout: Int] = [:]
+        var admissions: [VQRecordLayout: VQBankAdmission] = [:]
         var bytes = 0, bookBytes = 0
         for layout in counts.keys {
-            let capacity = wide && layout == wideLayout ? 512 : capacityPerClass
-            guard capacity <= layout.maximumResearchBankRows else { throw ModelError("wide VQ cache class is unqualified") }
+            let admission: VQBankAdmission = reinvestDenseSavings && layout == wideLayout ? .denseCompositeReinvestment : .standard
+            let capacity = (wide && layout == wideLayout ? 512 : capacityPerClass) * (reinvestDenseSavings ? 3 : 1)
+            let maximumRows = try layout.projections.map { try admission.maximumRows(for: $0) }.min()!
+            guard capacity <= maximumRows else { throw ModelError("wide VQ cache class is unqualified") }
             capacities[layout] = capacity
+            admissions[layout] = admission
             bytes = try QuantizationBytes.sum(bytes, QuantizationBytes.product(capacity, layout.recordBytes))
         }
         for layout in layouts { bookBytes = try QuantizationBytes.sum(bookBytes, layout.codebookBytes) }
         guard (32...96).contains(capacityPerClass), counts.count == checkpoint.recordClassCount,
               !wide || capacityPerClass == 96,
-              bytes + bookBytes <= (wide ? 1_800_000_000 : 650_000_000),
+              bytes + bookBytes <= (reinvestDenseSavings ? 3_600_000_000 : (wide ? 1_800_000_000 : 650_000_000)),
               let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= UInt64(bytes + bookBytes + 3_000_000_000) else {
             throw ModelError("VQ research cache exceeds its allocation or real-headroom bound")
         }
         var created: [VQRecordLayout: VQRecordBank] = [:]
-        for (layout, capacity) in capacities { created[layout] = try VQRecordBank(layout: layout, capacity: capacity) }
+        for (layout, capacity) in capacities { created[layout] = try VQRecordBank(layout: layout, capacity: capacity, admission: admissions[layout]!) }
         banks = created; reservedBankBytes = bytes; maximumBookBytes = bookBytes
     }
 
@@ -52,6 +62,9 @@ package final class VQRecordCache {
                 "total_capacity": values.reduce(0) { $0 + $1.capacity },
                 "maximum_bank_capacity": values.map(\.capacity).max() ?? 0,
                 "minimum_bank_capacity": values.map(\.capacity).min() ?? 0,
+                "dense_savings_reinvested": reinvestDenseSavings ? 1 : 0,
+                "maximum_executed_slot": values.map(\.maximumExecutedSlot).max() ?? -1,
+                "minimum_class_maximum_executed_slot": values.map(\.maximumExecutedSlot).min() ?? -1,
                 "resident_book_bytes": residentBookBytes, "maximum_book_bytes": maximumBookBytes,
                 "parallel_read_lanes": parallelReads ? VQRecordReadBatch.maximumLanes : 0,
                 "maximum_read_staging_bytes": maximumStagingBytes,

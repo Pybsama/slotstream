@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T12:49:57.106245Z
+updated: 2026-10-03T13:29:35.869243Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-reinvestment-static-acceptance]] — Static acceptance of the fixed larger VQ research cache
+- [[sources/runs/2026/10/2026-10-03-native-vq-larger-cache-cpu-diagnosis]] — CPU diagnosis after the larger fixed VQ cache did not improve speed
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-savings-reinvested]] — Dense composite savings reinvested into fixed expert residency
 - [[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-affine-compatibility]] — Dense composite shared dispatch preserves existing affine acceptance
 - [[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-prefill-and-cost]] — Native dense composite prefill and fixed-cache cost comparison
 - [[sources/runs/2026/10/2026-10-03-native-vq-dense-four-bit-greedy-parity]] — Native dense four-bit composite greedy parity and parent regressions
@@ -504,11 +507,8 @@ updated: 2026-10-03T12:49:57.106245Z
 - [[sources/runs/2026/09/2026-09-07-configurable-context-shared-engineering-integration]] — Shared context plan, exact source closure and unreleased documentation integrated
 - [[sources/runs/2026/09/2026-09-07-configurable-context-candidate-selection-acceptance]] — Selected-candidate planner and installer fixes; fixture passes and six headroom-blocked planner checks preserved
 - [[sources/runs/2026/09/2026-09-07-optimization-paired-correctness-independent-of-timing]] — Final response correctness and resource ceilings are independent of timing exclusion
-- [[sources/runs/2026/09/2026-09-07-optimization-static-candidate-selection]] — Static acceptance uses the exact selected candidate
-- [[sources/runs/2026/09/2026-09-07-optimization-current-default-source-review]] — Current default source and complete optimization work reconciliation
-- [[sources/runs/2026/09/2026-09-07-optimization-cache-prelaunch-and-soak-harness]] — Zero-cell cache preflight refusal and pure soak harness checks
 
 ## More
 
-This folder has 739 files. The 500 most recent are listed above.
+This folder has 742 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

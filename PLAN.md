@@ -566,6 +566,23 @@ The current research composite authenticates both parent filesets, doubling medi
 
 The next bounded experiment is the already declared fixed-cache reinvestment hypothesis. It does not advance steps 6 through 8, turn on a candidate, or establish the 20-token target. All quality, complete-configuration and hardware gates remain in force.
 
+### Fixed-cache reinvestment result, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-savings-reinvested]] implements and tests the larger fixed-cache hypothesis without changing ordinary admission bounds. The exact composite may explicitly use 1536/288 records, 3,583,180,800 bank bytes, within the same 10 GB process ceiling. Both cache sizes preserve all greedy and sparse-state reference bytes. The larger greedy run reaches the highest physical slots; the sparse run peaks at 9,328,595,360 bytes. No production budget or maximum context follows from that finite check.
+
+The same-artifact paired pilot rejects the expected speed benefit for its frozen workload. All six timed runs are eligible and produce the same 128-token sequence. Median paired decode ratio is 0.9462645070, TTFT ratio 1.1265224763 and request-duration ratio 1.0661911433. Median decode is 6.0164231060 tokens/s for 608 records and 5.6931276441 for 1824. Loads fall from 49,865 to 34,782 per request but generation gets slower. Retain the smaller cache as the cost control; the larger geometry remains a numerical research profile. Profile the implementation before another capacity or policy change. This result neither disqualifies all larger budgets nor earns Auto integration.
+
+[[sources/references/2026/10/2026-10-03-vllm-draft-full-width-normalization]] pins architecture evidence supporting the existing full-width draft input normalization. Independent q6 sidecar arithmetic, acceptance and memory qualification remain open.
+
+### Larger-cache CPU diagnosis, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-larger-cache-cpu-diagnosis]] records a separate ten-second CPU sample whose timings are discarded. Demanded reads and MLX evaluation dominate the observed main-thread stacks; the victim search barely appears. This is diagnostic evidence, not an isolated GPU cost model. The next bounded hypothesis is to compare the VQ reader's current buffered mode with the existing affine reader's uncached/random policy, retaining exact bytes, descriptor ownership and the same process envelope. It is not yet implemented or measured.
+
+
+### Fixed-cache acceptance checkpoint
+
+[[sources/runs/2026/10/2026-10-03-native-vq-reinvestment-static-acceptance]] preserves the first static harness failure and its repaired full pass against the unchanged frozen reinvestment binary. The new test script required registration in the mocked suite inventory. No native numerical gate, reference or tolerance was relaxed. All four CI workflows for the preceding dense-composite commit passed. The larger cache remains an explicit research option and a losing cost result on the fixed workload; product Auto and the 20-token target remain open.
+
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the
 design and the estimates it replaces.
