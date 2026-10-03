@@ -139,3 +139,6 @@ Captured and recorded exact native split-versus-contiguous greedy and sparse par
 ## [2026-10-03 15:12] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Completed the authenticated contiguous-record layout, full native greedy/sparse parity, all static gates and eligible paired timing campaign. Retained cache-conditioning and slower-load limits; no Auto or product activation.
 
+## [2026-10-03 15:54] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Preserved the failed composite draft prefill and corrected harness; authenticated the original four-bit head separately and recorded exact fixed-input parity under explicit research arithmetic. Fixed standalone MTP model-lock acquisition; full speculation remains open.
+

@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T15:12:10.986054+00:00
+updated: 2026-10-03T15:54:41.310937+00:00
 summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -429,3 +429,13 @@ Loading medians are 59.3513325420 and 77.1266143330 seconds. Maximum timed proce
 The complete research path improves generation while increasing authentication/load time. Candidate-only record files are read after both parent filesets, changing uncontrolled OS cache conditioning; this limitation was recorded before timing. The result cannot isolate positional-call count as its cause, claim cold-SSD speed, project standalone-pack startup, qualify another budget/Mac, or meet the twenty-token target. Main-model values are unchanged, but the underlying composite's held-out task qualification remains open.
 
 [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-static-acceptance]] records complete static acceptance on this same frozen producer. No public loader, Auto choice, installed pack or download activation changes. The earlier complete affine model-loaded battery is preserved as earlier evidence and is not represented as rerun here.
+
+### Separate original draft on real composite inputs
+
+[[sources/runs/2026/10/2026-10-03-vq-composite-draft-initial-parity-failure]] binds the CPU inventory, independent reference and preserved failed native comparison. The original head contains 68 tensors and 18 affine modules, with a 1,470,955,171-byte file, 1,470,946,816-byte payload and 419,430,400-byte largest tensor. Its own recipe is four-bit group-64. The complete-file and header hashes plus original-checkpoint conversion provenance are captured separately from the VQ trunk.
+
+The reference main prefill matches all 160 frozen boundaries and next token 760. The process releases the main stack before head computation, peaks at 2,424,162,872 bytes, and writes a 2,253,521-byte BF16 fixture from 43 composite-input head entries plus one cached step. The first native orchestration stops before launch because it repeats a lock preflight inside its own reservation. A separately recorded native-only correction executes under a parent-held lock and fails unchanged prefill parity at relative maxima 0.02927 and 0.02970; its cached outputs are exact. This also reproduces the standalone head loader's absent exclusion check without running a second model.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-owned-draft-component]] adds owned full-file authentication, separate metadata and explicit retained-payload/load-copy checks. Its research-only arithmetic profile uses the reference's fast grouped normalization, the existing qualified BF16 sigmoid and finite rotary coefficients. All four unchanged fixture outputs then match exactly; offsets are 43 and 44, all outputs are finite, native peak is 2,064,894,112 bytes and bounded BF16 traces occupy 5,811,200 bytes. The public arithmetic remains deployed. This is a combined-profile comparison, not attribution to any single arithmetic operation.
+
+Twelve actual CLI refusal checks pass for process-lock contention, ambient overrides and corrupt, symlinked, truncated or FIFO inputs at the relevant fixture/configuration/sidecar boundaries. The process-lock fix applies to ordinary standalone MTP loading as well. This component result provides no speculative acceptance, committed-generation speed, long-context, vision or held-out quality evidence. No candidate is installed, served, selected by Auto or promoted.

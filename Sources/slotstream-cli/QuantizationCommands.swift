@@ -184,3 +184,18 @@ struct QuantizationLogits: ParsableCommand {
             tokensFile: URL(fileURLWithPath: tokens), output: URL(fileURLWithPath: output)), as: UTF8.self))
     }
 }
+
+struct QuantizationDraftCheck: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "quantization-draft-check",
+        abstract: "Compare the separately authenticated research draft head; does not enable speculation or a pack")
+    @Option(name: .long) var baseline: String
+    @Option(name: .long) var fixture: String
+    @Option(name: .long) var output: String
+    @Flag(name: .long, help: "Use explicit Python-compatible research arithmetic and the bounded rotary table")
+    var referenceArithmetic = false
+    func run() throws {
+        print(String(decoding: try Diagnostics.quantizationDraft(baseline: URL(fileURLWithPath: baseline),
+            fixture: URL(fileURLWithPath: fixture), output: URL(fileURLWithPath: output),
+            referenceArithmetic: referenceArithmetic), as: UTF8.self))
+    }
+}

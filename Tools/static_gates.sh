@@ -47,6 +47,7 @@ if grep -En 'File\(path: .*sha256: nil\)' Sources/Slotstream/PinnedModel.swift; 
   exit 1
 fi
 
+python3 Tools/mtp_process_guard_gate.py --binary "$BIN"
 "$BIN" runtime-check
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.

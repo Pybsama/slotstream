@@ -617,6 +617,14 @@ All 96 native catalogue groups pass, and actual CLI checks reject a missing bank
 
 The new non-speculative pilot still misses twenty tokens/s. Neither a layout improvement nor exact parity qualifies held-out task quality, complete feature configurations or another Mac. Continue the separate draft-head admission and state/verification work under bounded protocols. No main-model or draft quantization may inherit the other's metadata, and no draft proposal may become committed output without the required main-model verification. Auto, dynamic candidate memory management and activation remain gated.
 
+### Original four-bit draft component, October 3
+
+[[sources/runs/2026/10/2026-10-03-vq-composite-draft-initial-parity-failure]] preserves the independent composite-input reference and the original head's failed prefill comparison. Main-model prefill matches all 160 existing boundaries before supplying real hidden states and embeddings to the separate four-bit draft. The original native prefill exceeds the unchanged tolerance, while its cached step is exact. The same run reproduces missing process-lock acquisition in standalone MTP loading; the loader now acquires the idempotent reservation before allocation.
+
+[[sources/runs/2026/10/2026-10-03-native-vq-owned-draft-component]] records the authenticated separate head loader and one prospective explicit arithmetic-profile test. All four reference outputs match byte for byte, with finite outputs, aligned 43/44 state offsets and a 2,064,894,112-byte native peak. The config and full sidecar are independently pinned; weights remain four-bit group-64, and their centered norms are already folded. Current host-copy memory is charged independently from retained payload. The combined arithmetic result does not isolate one operation as the cause of the earlier mismatch. Public head arithmetic and original expected fixtures remain unchanged.
+
+This closes fixed-input head component parity, not draft integration. Next implement bounded main-state checkpoints, exact batched verification and rejection rollback, then EOS, cancellation and committed-sequence checks before testing acceptance and speed. Retaining a resident head must be priced with the selected expert banks and load phase; it cannot simply be added to the near-ten-GB larger-bank sparse profile. Production candidate loading, held-out quality, contexts beyond the finite table, vision, dynamic memory, Auto, distribution and real-hardware qualification remain open.
+
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the
 design and the estimates it replaces.

@@ -918,3 +918,34 @@ while increasing load time. Exact results and the cache-conditioning limit
 are recorded in the canonical quantization measurement. Continue controlled
 research with this representation; it remains below the performance target
 and does not change product defaults or qualify a distributable pack.
+
+### Original four-bit draft on composite inputs
+
+`Tools/vq_composite_draft_reference.py` authenticates a complete main-model
+prefill and requires every previously frozen boundary to match before using
+its real embeddings and hidden states as independent draft inputs. It releases
+the main model before loading the original four-bit head with separate metadata.
+It preserves existing golden files and writes a new bounded BF16 fixture.
+
+`slotstream quantization-draft-check --baseline <original-model-directory>
+--fixture <comparison.safetensors> --output <new-directory>
+--reference-arithmetic` compares that fixed fixture through the authenticated
+research loader. The explicit arithmetic profile uses the already checked
+Python-compatible grouped normalization, unary operations and finite rotary
+table. Original public draft construction keeps its deployed arithmetic.
+The loader verifies the entire sidecar through owned descriptors, prices its
+payload and current load copy separately, checks real headroom and honors the
+shared model-process lock. It never inherits the VQ trunk's quantization recipe.
+
+The initial deployed-arithmetic prefill failed the unchanged parity tolerance;
+that failure and the later exact component comparison are both retained in
+the canonical measurement. Matching the head does not qualify speculation:
+main-state snapshots, batched verification, rejection rollback, EOS/cancellation,
+complete committed sequences and paired cost remain independent requirements.
+The command enables no serving, Auto selection or installed-pack replacement.
+
+`Tools/mtp_process_guard_gate.py` is a weights-free static regression that holds
+the real exclusion lock and requires both standalone and research draft
+entrypoints to refuse before loading. `Tools/vq_draft_admission_gate.py` adds
+actual pinned-fixture/configuration/sidecar refusal checks for a research build;
+it requires explicit binary, baseline, fixture and new output paths.

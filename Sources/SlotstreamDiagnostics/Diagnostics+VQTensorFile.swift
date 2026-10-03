@@ -116,6 +116,20 @@ extension Diagnostics {
         rejected("overlapping tensors refused") { _ = try VQTensorFile(url: overlap, identity: overlapID) }
         let (hole, holeID) = try fixture("hole.safetensors", header: ["a": entry], payload: Data([1, 2]))
         rejected("uncovered payload refused") { _ = try VQTensorFile(url: hole, identity: holeID) }
+        // Head metadata and byte reservations are checked without loading a
+        // model or constructing MLX arrays. Config identity stays independent
+        // of the main VQ recipe.
+        let draftConfig = directory.appendingPathComponent("draft-config.json")
+        try Data(repeating: 32, count: 33_408).write(to: draftConfig)
+        rejected("same-size corrupt draft config refused") { _ = try VQDraftWeights.configuration(draftConfig) }
+        rejected("draft config symlink refused") { _ = try VQDraftWeights.configuration(link) }
+        rejected("draft config FIFO refused without waiting") { _ = try VQDraftWeights.configuration(fifo) }
+        rejected("draft payload reservation must cover every array") {
+            _ = try VQDraftWeights.load(baseline: directory, maximumPayloadBytes: VQDraftWeights.payloadBytes - 1)
+        }
+        rejected("draft current tensor needs a separate load copy") {
+            _ = try VQDraftWeights.load(baseline: directory, maximumLoadCopyBytes: VQDraftWeights.largestLoadCopyBytes - 1)
+        }
         return c.report()
     }
 }

@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T15:10:46.173488Z
+updated: 2026-10-03T15:52:19.503706Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-owned-draft-component]] — Authenticated original four-bit draft matches all frozen composite-input head outputs exactly
+- [[sources/runs/2026/10/2026-10-03-vq-composite-draft-initial-parity-failure]] — Composite draft reference passes input identity but original native prefill exceeds parity tolerance
 - [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-paired-cost]] — Paired contiguous-record pilot improves generation within its research scope
 - [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-static-acceptance]] — Complete static acceptance for the frozen contiguous-record reader
 - [[sources/runs/2026/10/2026-10-03-native-vq-contiguous-record-parity]] — Authenticated contiguous VQ record reads retain exact full-model parity
@@ -505,10 +507,8 @@ updated: 2026-10-03T15:10:46.173488Z
 - [[sources/runs/2026/09/2026-09-07-optimization-serial-compiler-guard-failures]] — Serial compiler guard failures and preserved primary errors
 - [[sources/runs/2026/09/2026-09-07-optimization-typed-planner-baseline-and-isolation]] — Typed planner baseline and isolated cost-family implementation
 - [[sources/runs/2026/09/2026-09-07-optimization-resource-readiness-and-restoration]] — Resumed optimization resource readiness and restoration
-- [[sources/runs/2026/09/2026-09-07-optimization-mandatory-sampler-and-final-handoff]] — Mandatory sampler fixture and final acceptance handoff
-- [[sources/runs/2026/09/2026-09-07-optimization-final-completion-metadata]] — Final completion metadata and exact token accounting
 
 ## More
 
-This folder has 749 files. The 500 most recent are listed above.
+This folder has 751 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
