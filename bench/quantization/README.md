@@ -121,3 +121,158 @@ The pinned D8 profile switches reductions at the routed-pair boundary. A draft
 verification batch can therefore use different arithmetic from single-token
 decode. Matching this reference binding does not prove speculative row parity;
 the full draft/state gates must qualify that interaction independently.
+
+## Bounded PLE and full-reference instrument
+
+`Tools/vq_ple_stream.py` gathers only requested packed PLE rows. It validates
+the pinned file headers, dtype/shape/extents, each row ID and file stability;
+the model sees a small codebook and per-call arrays. Duplicate row requests
+retain their original ordering. Full-payload provenance remains a separate
+gate. The reader's limit covers a complete prompt chunk even when every
+n-gram head hits the same shard. It does not retain a persistent row cache.
+
+`Tools/vq_ple_reference_check.py` compares the disk-backed module with the
+resident upstream PLE class and the scalar half-product oracle. It executes
+only that hash-verified class, including its exact half-product and BF16
+conversion. The rest of `model.py` is not imported by this component check.
+
+```sh
+.venv/bin/python Tools/vq_ple_reference_check.py --runtime <pinned-model.py> \
+  --fixtures <row-fixtures> --out <new-ple-check>
+```
+
+`Tools/vq_model_reference.py` is an experimental text reference, separate from
+the production loader. It pins the architecture source from MLX-LM PR 1788
+at `2097324ed04ff76078366c77148b88b9db612ba2`, MLX 0.32.2, mlx-lm 0.31.3,
+and the inspected VQ runtime. It executes the reviewed VQ operations before
+the upstream model-file shim, so its architecture resolver does not run.
+Each artifact's complete tensor files must match the pinned full-file digest
+map before model construction. Strict weight loading refuses a missing or
+misnamed module. All PLE shards use bounded reads before parameter evaluation.
+
+The runner materializes one transformer layer at a time, with separate cache
+state for that layer and prompt chunks of 512. It re-reads each indexer cache
+at each chunk. It evaluates the head at the original chunk shape before
+selecting output rows; selecting hidden rows first could change GEMM reduction
+order. Its initial pilot is bounded to 2048 input tokens and sixteen complete
+vocabulary rows. These limits are experiment scope, not product context limits.
+Kernel knobs must be absent from the ambient environment. The reference fixes
+the decoded-expert chunk to 32, preserving a declared arithmetic mode rather
+than allowing free RAM to choose it.
+
+The complete-file verification receipt (`verified.json`) binds the exact
+revision, pinned Hub metadata and every tensor file's original size/hash.
+The runner rehashes these bytes itself. `hub-files.json`, config and the weight
+index sit next to the frozen inventory. These inputs are explicit research
+artifacts; they do not add a user-facing downloader or model catalog.
+
+Stage that artifact with the inspected Hub downloader and a separate full-file
+hash pass. The command operates only on the allowlisted research revisions,
+uses one file at a time and requires disk for a complete artifact plus reserve:
+
+```sh
+.venv/bin/python Tools/vq_model_fetch.py --inventory <inventory.json> \
+  --out <research-candidate-directory>
+```
+
+Before a full run, a new directory must record the exact first-four-layer
+comparison between ordinary chunk-major execution and layer streaming. The
+input crosses a prompt-chunk boundary and includes EOS boundaries. This is a
+storage/traversal check, not native model parity. The full run requires that
+receipt for the same candidate and reference configuration:
+
+```sh
+.venv/bin/python Tools/vq_model_reference.py --model <verified-candidate> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --tokens <frozen-boundary-tokens.json> --layers 4 --prove-order \
+  --out <new-order-proof>
+.venv/bin/python Tools/vq_model_reference.py --model <verified-candidate> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --tokens <frozen-pilot-tokens.json> --order-proof <new-order-proof/receipt.json> \
+  --out <new-full-reference>
+```
+
+The process holds the shared model lock, requires actual reclaimable headroom,
+caps its MLX allocations and physical footprint, monitors OS pressure, and
+stops on nonfinite results or changed files. It produces raw receipts, never
+a qualification flag. Synthetic boundary inputs and a short complete forward
+establish instrument feasibility only. Full native logits/generation/cache
+parity, held-out quality, app jobs and real-hardware speed remain later gates.
+
+The matching native baseline producer is `quantization-logits`. It accepts the
+same frozen token-list file, preserves the complete head batch before selecting
+rows, and writes the selected full-vocabulary F32 rows plus its receipt. It
+uses the existing 4-bit checkpoint, a bounded expert pool, deployed defaults,
+and no draft or vision component. Developer overrides are refused. Run under
+the ordinary single-process rule with a real headroom check; process-memory
+supervision and a separate `pull --verify` provide the complete run evidence.
+
+```sh
+.build/release/slotstream quantization-logits --model <pinned-4bit-directory> \
+  --tokens <frozen-pilot-tokens.json> --output <new-native-baseline>
+```
+
+Bind the baseline receipt to the tested binary, metallib and source archive.
+These raw producer receipts are not quality manifests: original checkpoint,
+tokenizer/template provenance, evaluation split and task-family identities must
+still be established before the scorer can compare artifacts. Numerical pilot
+inputs do not become a held-out task suite by assigning them a family label.
+
+`VQPLERows` also implements the bounded lookup in native Swift. It accepts
+owner-retaining checked read closures, keeps codebooks rather than complete
+tables, and returns the exact BF16 row bits. The native fixture gate reads
+the private verified fixture file positionally and compares the resulting
+bits to the scalar oracle. Checkpoint admission, persistent caching and the
+configuration-generation fence remain responsibilities of its future owner.
+
+## Matched full-model distribution pilot
+
+The supplied VQ tokenizer files differ from the original pre-tokenizer and
+decoder configuration. The vocabulary and ordered merge mapping match, but
+direct Hindi tokenization differs. The pilot therefore explicitly selects the
+original tokenizer and freezes one set of token IDs for all arms. Downloaded
+candidate files are preserved. This preprocessing choice must also be part of
+any eventual supported pack and its qualification.
+
+`logit-pilot-v1.json` freezes owned continuations before model results, with
+an explicit resource budget and no promotion verdict. The original repository's
+visible history has unchanged non-README payloads; its immutable checkpoint
+identity is supported by that history and the derivative model declarations,
+not by independently replaying the quantizer.
+
+```sh
+.venv/bin/python Tools/quantization_logit_pilot.py \
+  --protocol bench/quantization/logit-pilot-v1.json \
+  --tokenizer <original-tokenizer.json> --out <new-input-directory>
+.venv/bin/python Tools/quantization_logit_run.py --arm native \
+  --inputs <inputs.json> --model <verified-original-pack> \
+  --binary <frozen-build/slotstream> --out <new-native-run>
+.venv/bin/python Tools/quantization_logit_run.py --arm vq \
+  --inputs <inputs.json> --model <verified-vq-pack> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --order-proof <same-pack-traversal/receipt.json> --out <new-vq-run>
+```
+
+Run producers sequentially. Each case has its own process, actual headroom
+preflight, footprint/OS-pressure supervision, source identity, raw output and
+receipt. A failure stops the arm and remains inspectable. Run the VQ producer
+separately for the candidate and reference, with each one's own traversal proof.
+Verify baseline payloads independently using the frozen binary's `pull --verify`.
+
+After all arms complete, bind the producer receipts to the existing scorer:
+
+```sh
+.venv/bin/python Tools/quantization_logit_compare.py --inputs <inputs.json> \
+  --reference <vq-4.4-run> --reference-inventory <vq-4.4-inventory.json> \
+  --baseline <native-run> \
+  --candidate <vq-3.2-run> --candidate-inventory <vq-3.2-inventory.json> \
+  --out <new-comparison-directory>
+```
+
+The adapter requires the designated reference, complete matching contexts,
+successful bounded producer runs, exact inventories and unchanged logit bytes.
+It preserves full-vocabulary KL and top-1 results per case and reports
+`qualification: unproven`. These correlated teacher-forced rows do not measure
+generation quality, successful tool execution, held-out noninferiority,
+speculation, image support or throughput. The ordinary same-artifact equality
+benchmark is unchanged.

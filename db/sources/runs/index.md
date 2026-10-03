@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-02T22:22:26.813404Z
+updated: 2026-10-03T00:24:12.708084Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-bounded-reference-verification]] — Complete static and native catalogue verification for the bounded reference and PLE implementation.
+- [[sources/runs/2026/10/2026-10-02-bounded-vq-reference-and-ple]] — Bounded full VQ reference traversal, native baseline logits and native PLE storage checks; experimental only.
 - [[sources/runs/2026/10/2026-10-02-fused-vq-component-pilots]] — Fused VQ binding parity and two bounded cost pilots; scope and limitations below.
 - [[sources/runs/2026/10/2026-10-02-full-engine-quantization-foundation]] — Complete existing-engine acceptance after quantization foundations; scope and limitations below.
 - [[sources/runs/2026/10/2026-10-02-quantization-foundation-verification]] — Initial implementation checks and real memory lifecycle passed; full release and candidate quality qualification remain open.
@@ -505,10 +507,8 @@ updated: 2026-10-02T22:22:26.813404Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-native-regression-and-mtp-plan-counterexample]] — Existing native regression passes through MTP parity; mandatory MTP diagnostic stopped on unpriced head
 - [[sources/runs/2026/09/2026-09-06-optimization-qualification-verification-lock]] — Qualification verification owns model exclusion — V190
 - [[sources/runs/2026/09/2026-09-06-optimization-mtp-tail-sampled-counterexample]] — Shared native checks and sampled MTP-tail counterexample — V186–189
-- [[sources/runs/2026/09/2026-09-06-configurable-context-static-and-sampler-prerequisite]] — Build 19 static suite passes; sampler stops before execution on missing environment prerequisite
-- [[sources/runs/2026/09/2026-09-06-optimization-indexer-exceptions-and-child-cleanup]] — Indexer exceptional arithmetic and owned-process cleanup — V187–188
 
 ## More
 
-This folder has 695 files. The 500 most recent are listed above.
+This folder has 697 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

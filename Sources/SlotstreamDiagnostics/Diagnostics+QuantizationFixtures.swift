@@ -99,6 +99,45 @@ extension Diagnostics {
                 c.equal("\(fixture.path) exact native decoded row bits",
                     actual.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self),
                     expected.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self))
+                if layout.columns == 160, layout.packing == .bytes {
+                    // Exercise the CPU PLE path with positional reads from
+                    // the private, hash-verified file. Retaining the handle in
+                    // each closure keeps all row reads tied to that file.
+                    let handle = try FileHandle(forReadingFrom: verified)
+                    let headerBytes = data.withUnsafeBytes { Int($0.loadUnaligned(as: UInt64.self).littleEndian) }
+                    guard headerBytes > 0, headerBytes <= data.count - 8,
+                          let header = try JSONSerialization.jsonObject(with: data.subdata(in: 8..<(8 + headerBytes))) as? [String: Any] else {
+                        throw ModelError("invalid verified PLE fixture header")
+                    }
+                    func reader(_ name: String, stride: Int) throws -> VQPLERows.Read {
+                        guard let item = header[name] as? [String: Any], let extent = item["data_offsets"] as? [Int],
+                              extent.count == 2, extent[0] >= 0, extent[1] - extent[0] == 7 * stride,
+                              extent[1] <= data.count - 8 - headerBytes else { throw ModelError("PLE fixture row extent mismatch") }
+                        return { row, count in
+                            guard (0..<7).contains(row), count == stride else { throw CheckpointReadError.invalidRange }
+                            let offset = try ExactRead.tensorOffset(base: 8 + headerBytes + extent[0],
+                                length: extent[1] - extent[0], offset: row * stride, count: count)
+                            var bytes = Data(count: count)
+                            try bytes.withUnsafeMutableBytes { raw in
+                                try ExactRead.transfer(into: raw.baseAddress!, offset: offset, count: count) { dst, n, pos in
+                                    let got = Foundation.pread(handle.fileDescriptor, dst, n, off_t(pos))
+                                    return .init(count: got, error: got < 0 ? errno : 0)
+                                }
+                            }
+                            return bytes
+                        }
+                    }
+                    var words = book.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self).map(\.littleEndian)
+                    let native = try VQPLERows(rowCount: 7, dimensions: layout.dimensions, entries: layout.codebookEntries,
+                        codebook: words.withUnsafeMutableBytes { Data($0) }, readCodes: reader("codes", stride: layout.codeRowBytes),
+                        readScales: reader("vq_scales", stride: 10))
+                    for ids in [[6], [6, 0, 6, 2, 1, 5], (0..<512).map { $0 % 7 }, (0..<8192).map { 6 - $0 % 7 }] {
+                        let bits = expected[MLXArray(ids.map(Int32.init))].asType(.bfloat16)
+                            .reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self)
+                        c.equal("\(fixture.path) native CPU disk PLE \(ids.count) exact BF16 bits", try native.gather(ids), bits)
+                    }
+                    try handle.close()
+                }
             }
             return c.report()
         }

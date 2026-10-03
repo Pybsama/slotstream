@@ -10,6 +10,7 @@ extension Catalogue {
         [
             Check("quantization-geometry", tier: .t0) { try Diagnostics.quantizationGeometry() },
             Check("quantization-metadata", tier: .t0) { try Diagnostics.quantizationMetadata() },
+            Check("quantization-ple-storage", tier: .t0) { try Diagnostics.quantizationPLEStorage() },
             Check("quantization-kernels", tier: .t1) { try Diagnostics.quantizationKernels() },
             Check("persistent-prefix-metadata-bounds", tier: .t0) { try persistentPrefixMetadataBounds() },
             Check("prefill-schedule", tier: .t0) { Diagnostics.prefillSchedule() },

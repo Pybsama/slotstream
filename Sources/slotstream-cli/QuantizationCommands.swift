@@ -13,7 +13,8 @@ struct QuantizationCheck: ParsableCommand {
     @Flag(name: .long, help: "Check synthetic native VQ and affine kernels")
     var kernels = false
     func run() throws {
-        var reports = [try Diagnostics.quantizationGeometry(), try Diagnostics.quantizationMetadata()]
+        var reports = [try Diagnostics.quantizationGeometry(), try Diagnostics.quantizationMetadata(),
+                       try Diagnostics.quantizationPLEStorage()]
         if kernels { reports.append(try Diagnostics.quantizationKernels()) }
         if let fixtureDirectory {
             reports.append(try Diagnostics.quantizationFixtures(directory: URL(fileURLWithPath: fixtureDirectory)))
@@ -35,5 +36,20 @@ struct QuantizationBench: ParsableCommand {
     func run() throws {
         print(String(decoding: try Diagnostics.quantizationBench(
             fusedFixtureDirectory: fusedFixtureDirectory.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
+    }
+}
+
+struct QuantizationLogits: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "quantization-logits",
+        abstract: "Export bounded full-vocabulary baseline logits for a frozen quantization pilot")
+    @Option(name: .long, help: "Existing pinned 4-bit checkpoint directory")
+    var model: String
+    @Option(name: .long, help: "Frozen JSON token list, at most 2048 tokens")
+    var tokens: String
+    @Option(name: .long, help: "New output directory for logits and the raw receipt")
+    var output: String
+    func run() throws {
+        print(String(decoding: try Diagnostics.quantizationLogits(modelDir: URL(fileURLWithPath: model),
+            tokensFile: URL(fileURLWithPath: tokens), output: URL(fileURLWithPath: output)), as: UTF8.self))
     }
 }
