@@ -67,3 +67,6 @@ Both VQ packs pass exact 512-token full-model prefill plus continuation across a
 ## [2026-10-03 05:21] update | records/measurements/quantization-screen-2026-10-02.md
 Both native VQ packs match 16 independently sampled and fed-back greedy tokens and 2,560 complete state/output boundaries per pack. Frozen original-tokenizer profile; length cap reached with final token unconsumed. Twelve malformed-chain/profile/stop/CLI cases and 95 native checks pass. Engine sources match the fully validated prefill checkpoint. Sparse long context, persistent caches, draft, quality and speed remain open.
 
+## [2026-10-03 05:35] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Both pinned VQ packs pass sparse selection and continuation parity; retain explicit production and qualification gates.
+

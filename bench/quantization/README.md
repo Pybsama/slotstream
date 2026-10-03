@@ -511,5 +511,28 @@ references for all sixteen tokens and all 2,560 boundaries. Both stop at the
 length cap, so this fixture does not exercise a real sampled EOS termination.
 Malformed profile, predecessor, stop and boundary metadata are separate refusal
 gates. This diagnostic is not a production service, task-quality evaluation or
-throughput qualification. Sparse attention, persistent residency, draft and
-vision remain open.
+throughput qualification. Persistent residency, draft and vision remain open.
+
+## Sparse-selection threshold
+
+Use `--sparse` on both the complete-prefill producer and native diagnostic to
+run the fixed `sparse2053-decode1-v1` profile. It reads four 512-token passes,
+then five tokens, then one continuation token. The mask returned by each actual
+sparse indexer call becomes an additional complete Boolean boundary.
+
+```sh
+.venv/bin/python Tools/vq_model_prefill_reference.py --sparse \
+  --model <verified-vq-pack> --inventory <inventory.json> \
+  --architecture <pinned-qwen4_exp.py> --out <new-sparse-reference>
+.build/release/slotstream quantization-model-check --sparse \
+  --source-directory <verified-vq-pack> --source-inventory <inventory.json> \
+  --fixture-directory <same-pack-sparse-reference> --output <new-result>
+python3 Tools/vq_prefill_manifest_gate.py --sparse --binary <source-bound-slotstream> \
+  --source <verified-vq-pack> --inventory <inventory.json> \
+  --fixture <same-pack-sparse-reference> --out <new-fault-results>
+```
+
+Keep the same sequential supervision and resource bounds. Both packs pass all
+984 boundaries, including twenty-four sparse masks. This covers the threshold,
+partial block and continued state, not the full context range. Public loading
+and automatic selection still refuse these unqualified research packs.

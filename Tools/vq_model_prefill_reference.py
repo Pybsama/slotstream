@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hash every full-model boundary for a fixed 512-row prefill and continuation.
+"""Hash every boundary for fixed ordinary-prefill or sparse-selection passes.
 
 Whole vocabulary logits are evaluated at the original pass shape. Hashing the
 complete logical tensor bytes avoids storing duplicate large state snapshots.
@@ -24,6 +24,13 @@ PROFILE = 'prefill512-decode1-v1'
 
 
 def run(options):
+    passes = PASSES
+    profile = PROFILE
+    if options.sparse:
+        prompt = [100 + (i * 37) % 10000 for i in range(2053)]
+        prompt[255] = 248044
+        passes = [prompt[i:i+512] for i in range(0, 2053, 512)] + [[101]]
+        profile = 'sparse2053-decode1-v1'
     instrument = instrument_identity()
     own = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     before = quiet_preflight(13)
@@ -38,7 +45,7 @@ def run(options):
         arch, vq = references(options.architecture, options.model / 'model.py')
         archive = Archive(options.model, options.inventory)
         boundaries = []
-        tags = {mx.bfloat16: 'BF16', mx.float32: 'F32', mx.float16: 'F16'}
+        tags = {mx.bfloat16: 'BF16', mx.float32: 'F32', mx.float16: 'F16', mx.bool_: 'BOOL'}
 
         def observe(layer, step, arrays):
             for name, value in arrays.items():
@@ -57,9 +64,18 @@ def run(options):
                 mx.save_safetensors(str(options.out / f'layer-{layer}-pass-{step}.safetensors'), arrays)
 
         try:
+            indexer_call = arch.QSAIndexer.__call__
+            sparse_calls = []
+            def observed_indexer(self, *args, **kwargs):
+                value = indexer_call(self, *args, **kwargs)
+                if value is not None:
+                    observe(layer, step, {'sparse_mask': value})
+                    sparse_calls.append({'layer': layer, 'step': step, 'shape': list(value.shape)})
+                return value
+            if options.sparse: arch.QSAIndexer.__call__ = observed_indexer
             model = load_model(options.model, archive, arch, vq)
             core, caches = model.model, model.make_cache()
-            ids = [mx.array([p], dtype=mx.int64) for p in PASSES]
+            ids = [mx.array([p], dtype=mx.int64) for p in passes]
             hidden = [mx.tile(core.embed_tokens(tokens), (1, 1, core.hc)) for tokens in ids]
             for step, value in enumerate(hidden): observe(-1, step, {'embedded': value})
             for layer in range(48):
@@ -96,17 +112,19 @@ def run(options):
                 raise ValueError('reference head exceeded its 4 GB process bound')
             if instrument_identity()['sha256'] != instrument['sha256'] or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != own:
                 raise ValueError('full-model reference instrument changed')
-            if len(boundaries) != 320:
+            expected_sparse = 24 if options.sparse else 0
+            if len(boundaries) != len(passes) * 160 + expected_sparse or len(sparse_calls) != expected_sparse:
                 raise ValueError('incomplete reference boundary set')
-            receipt = {'schema': 1, 'profile': PROFILE, 'architecture_sha256': ARCH_SHA256,
+            receipt = {'schema': 1, 'profile': profile, 'architecture_sha256': ARCH_SHA256,
                        'normalization': NORMALIZATION, 'artifact': provenance, 'instrument': instrument,
-                       'producer_sha256': own, 'passes': PASSES, 'boundaries': boundaries,
+                       'producer_sha256': own, 'passes': passes, 'boundaries': boundaries, 'sparse_calls': sparse_calls,
                        'before': before, 'memory': physical(), 'mlx_peak_bytes': mx.get_peak_memory(),
                        'save_layer': options.save_layer, 'qualification': 'unproven',
                        'scope': 'complete prefill arithmetic and one continuation; no generation qualification'}
             (options.out / 'model.json').write_text(json.dumps(receipt, indent=2) + '\n')
             print(json.dumps({'complete': True, 'boundaries': len(boundaries), 'memory': receipt['memory']}), flush=True)
         finally:
+            arch.QSAIndexer.__call__ = indexer_call
             archive.close()
 
 
@@ -115,4 +133,5 @@ if __name__ == '__main__':
     for name in ('model', 'inventory', 'architecture', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--save-layer', type=int, choices=range(-1, 49))
+    parser.add_argument('--sparse', action='store_true', help='Fixed 2053-token prefill plus continuation; includes sparse masks')
     run(parser.parse_args())

@@ -73,11 +73,12 @@ struct QuantizationModelCheck: ParsableCommand {
     @Option(name: .long) var fixtureDirectory: String
     @Option(name: .long) var output: String
     @Flag(name: .long, help: "Use the fixed 512-row complete-prefill hash fixture") var prefill = false
+    @Flag(name: .long, help: "Check the fixed 2053-token sparse-selection and continuation profile") var sparse = false
     @Flag(name: .long, help: "Compare actual greedy generation and every retained state boundary") var greedy = false
     @Option(name: .long, help: "Frozen bench/quantization/greedy-v1.json, required with --greedy") var generationProfile: String?
     func validate() throws {
-        guard !(prefill && greedy), greedy == (generationProfile != nil) else {
-            throw ValidationError("--prefill and --greedy are exclusive; --greedy requires --generation-profile")
+        guard [prefill, sparse, greedy].filter({ $0 }).count <= 1, greedy == (generationProfile != nil) else {
+            throw ValidationError("--prefill, --sparse and --greedy are exclusive; --greedy requires --generation-profile")
         }
     }
     func run() throws {
@@ -87,10 +88,10 @@ struct QuantizationModelCheck: ParsableCommand {
                 fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output)), as: UTF8.self))
             return
         }
-        if prefill {
+        if prefill || sparse {
             print(String(decoding: try Diagnostics.quantizationPrefillModel(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
-                output: URL(fileURLWithPath: output)), as: UTF8.self))
+                output: URL(fileURLWithPath: output), sparse: sparse), as: UTF8.self))
             return
         }
         print(String(decoding: try Diagnostics.quantizationModel(source: URL(fileURLWithPath: sourceDirectory),

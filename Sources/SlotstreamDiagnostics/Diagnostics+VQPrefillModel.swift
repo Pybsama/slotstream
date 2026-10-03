@@ -6,7 +6,7 @@ import Slotstream
 extension Diagnostics {
     /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
     /// Hashes cover every byte, not selected logits or a numerical tolerance.
-    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL) throws -> Data {
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false) throws -> Data {
         struct Boundary: Decodable {
             let layer: Int, step: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(step):\(layer):\(name)" }
@@ -21,11 +21,15 @@ extension Diagnostics {
         defer { try? file.close() }
         guard let raw = try file.read(upToCount: 2_000_001), raw.count <= 2_000_000 else { throw ModelError("VQ prefill model manifest exceeds its bound") }
         let manifest = try JSONDecoder().decode(Manifest.self, from: raw)
-        var prompt = (0..<512).map { 100 + ($0 * 37) % 10000 }; prompt[255] = 248044
-        guard manifest.schema == 1, manifest.profile == "prefill512-decode1-v1", manifest.passes == [prompt, [101]],
+        var prompt = (0..<(sparse ? 2053 : 512)).map { 100 + ($0 * 37) % 10000 }; prompt[255] = 248044
+        let passes = stride(from: 0, to: prompt.count, by: 512).map { start in
+            Array(prompt[start..<min(start + 512, prompt.count)])
+        } + [[101]]
+        let expectedSparse = sparse ? 24 : 0
+        guard manifest.schema == 1, manifest.profile == (sparse ? "sparse2053-decode1-v1" : "prefill512-decode1-v1"), manifest.passes == passes,
               manifest.architecture_sha256 == "d6470a2131a64ff37024dfffd2b5bc8c3f4db625f0f3b1ceec7fe346852c1a87",
               manifest.normalization == "vq-raw-zero-centered-to-pr1788-folded-bf16-v1",
-              manifest.boundaries.count == 320 else { throw ModelError("VQ prefill model fixture does not bind the fixed reference profile") }
+              manifest.boundaries.count == passes.count * 160 + expectedSparse else { throw ModelError("VQ prefill model fixture does not bind the fixed reference profile") }
         var expectedKeys = Set<String>()
         for layer in -1...48 {
             let keys: [String]
@@ -36,17 +40,22 @@ extension Diagnostics {
             case let layer where (layer + 1) % 4 == 0: keys = ["hidden", "keys", "values", "indexer"]
             default: keys = ["hidden", "conv", "state"]
             }
-            for step in 0...1 { for key in keys { expectedKeys.insert("\(step):\(layer):\(key)") } }
+            for step in passes.indices {
+                for key in keys { expectedKeys.insert("\(step):\(layer):\(key)") }
+                if sparse && step >= 4 && layer >= 0 && layer < 48 && (layer + 1) % 4 == 0 {
+                    expectedKeys.insert("\(step):\(layer):sparse_mask")
+                }
+            }
         }
         var entries: [String: Boundary] = [:]
         for entry in manifest.boundaries {
             guard expectedKeys.contains(entry.key), entries[entry.key] == nil,
-                  ["F16", "BF16", "F32"].contains(entry.dtype), (1...5).contains(entry.shape.count),
+                  ["F16", "BF16", "F32", "BOOL"].contains(entry.dtype), (1...5).contains(entry.shape.count),
                   entry.shape.allSatisfy({ $0 > 0 }),
                   entry.sha256.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
                 throw ModelError("invalid VQ prefill boundary identity or geometry")
             }
-            var bytes = entry.dtype == "F32" ? 4 : 2
+            var bytes = entry.dtype == "F32" ? 4 : entry.dtype == "BOOL" ? 1 : 2
             for dimension in entry.shape {
                 guard dimension <= 600_000_000 / bytes else { throw ModelError("VQ prefill boundary exceeds its byte bound") }
                 bytes *= dimension
@@ -82,7 +91,7 @@ extension Diagnostics {
                 "scope": "complete prefill arithmetic and one continuation; no generation qualification",
                 "fixture_sha256": digest(raw), "inventory_sha256": checkpoint.inventorySHA256,
                 "report": try JSONSerialization.jsonObject(with: encoder.encode(c.report())), "observed": observed,
-                "segmented_prefill_layers": model.segmentedPrefillLayers,
+                "segmented_prefill_layers": model.segmentedPrefillLayers, "sparse_attention_layers": model.sparseAttentionLayers,
                 "maximum_record_batches": model.maximumRecordBatches, "maximum_live_experts": model.maximumLiveExperts,
                 "peak_process_bytes": ProcessMemory.peakResidentBytes(), "peak_mlx_bytes": MLX.Memory.peakMemory,
                 "verified_files": checkpoint.verifiedFileCount, "verified_payload_bytes": checkpoint.verifiedPayloadBytes,
@@ -99,7 +108,7 @@ extension Diagnostics {
                         let key = "\(step):\(layer):\(name)"
                         guard let entry = entries[key], observed[key] == nil else { throw ModelError("unexpected VQ prefill boundary") }
                         eval(value)
-                        let dtype = value.dtype == .bfloat16 ? "BF16" : value.dtype == .float32 ? "F32" : value.dtype == .float16 ? "F16" : "unsupported"
+                        let dtype = value.dtype == .bfloat16 ? "BF16" : value.dtype == .float32 ? "F32" : value.dtype == .float16 ? "F16" : value.dtype == .bool ? "BOOL" : "unsupported"
                         let geometry = value.shape == entry.shape && dtype == entry.dtype && value.nbytes == entry.bytes
                         guard value.nbytes <= 600_000_000 else { throw ModelError("native VQ prefill boundary exceeds its byte bound") }
                         let finite = all(isFinite(value)).item(Bool.self)
@@ -118,7 +127,8 @@ extension Diagnostics {
                 }
             }
             c.equal("every full logical tensor compared", observed.count, expectedKeys.count)
-            c.equal("every layer used segmented prefill", model.segmentedPrefillLayers, 48)
+            c.equal("every large pass used segmented prefill", model.segmentedPrefillLayers, sparse ? 192 : 48)
+            c.equal("actual sparse masks compared", model.sparseAttentionLayers, expectedSparse)
             c.expect("bounded complete staging", model.maximumLiveExperts <= 32)
             guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ prefill model exceeded its 4 GB process bound") }
             let result = try receipt(nil)

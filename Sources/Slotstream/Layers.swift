@@ -731,6 +731,7 @@ final class QSAAttention {
         let splitRows = multiRow && multiRowMode == .split
         let sparse = boundedIndexer || useSelected || pruneLastQuery || exactRows
             ? nil : selection?.mask(lo: 0, hi: S, keyEnd: offset + S)
+        if let sparse { debugSink?("sparseMask", sparse) }
 
         let qg = qProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, H, 2 * D])
         var q = qg[.ellipsis, 0 ..< D]

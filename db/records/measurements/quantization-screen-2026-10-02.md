@@ -2,7 +2,7 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T05:21:49.577518+00:00
+updated: 2026-10-03T05:35:05.703773+00:00
 summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
@@ -176,3 +176,10 @@ This completes the bounded ordinary-prefill numerical checkpoint. It does not es
 Native process peaks are 1,881,000,024 bytes for VQ 3.2 and 1,849,722,944 bytes for VQ 4.4. Each uses up to seven staging batches in a layer and at most 32 live immutable expert records per batch. These are streamed diagnostic peaks, not production resident-memory floors or speed measurements. The corresponding Python process peaks are 2,783,791,960 and 2,943,159,272 bytes. Every run remains within its declared 4 GB bound.
 
 Twelve metadata/chain/stop/CLI rejection cases and all 95 native T0/T1 checks pass without skips. The build comparison binds unchanged engine inference sources to the prior fully validated prefill build; only the diagnostic and CLI dispatch change. Compilation, exact generation, refusal checks and the native catalogue cover this increment. No new full static, app, governor, vision or hardware qualification is claimed. Persistent caches, sparse long-context selection, draft, held-out quality and complete-configuration performance remain required.
+
+
+### Sparse-selection checkpoint, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-sparse-selection]] records both packs passing the fixed 2053-token prefill plus one-token continuation. All 984 complete output/state boundaries agree with the independent reference, including the 24 actual Boolean sparse masks. Four large passes exercise segmented expert staging, and the final short pass and decode cross the selection threshold and partial block. This does not qualify the entire supported context range.
+
+The native peaks are 3,136,752,112 bytes for VQ 3.2 and 3,130,771,904 bytes for VQ 4.4, within the 4 GB diagnostic process bound. All eight malformed-fixture cases and 95 native checks pass, alongside the five reference unit tests. Global swap counters are retained as diagnostics, with no clean timing claim. These bounds describe the one-layer-at-a-time probe, not a production resident-memory floor. Mutable caching, production generation, draft, vision, held-out task quality and complete-configuration speed remain required.

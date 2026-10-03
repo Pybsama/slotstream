@@ -17,6 +17,7 @@ package final class VQModelProbe {
     package private(set) var maximumRecordBatches = 0
     package private(set) var maximumLiveExperts = 0
     package private(set) var segmentedPrefillLayers = 0
+    package private(set) var sparseAttentionLayers = 0
 
     package init(_ checkpoint: VQCheckpoint) {
         self.checkpoint = checkpoint
@@ -31,8 +32,8 @@ package final class VQModelProbe {
 
     package func forward(_ tokens: [Int], observe: (Int, String, MLXArray) throws -> Void,
                          trace: ((Int, String, MLXArray) -> Void)? = nil) throws {
-        guard !failed, (1...512).contains(tokens.count), consumed + tokens.count <= 513 else {
-            throw ModelError("VQ full-stack probe admits at most 513 tokens in passes of at most 512")
+        guard !failed, (1...512).contains(tokens.count), consumed + tokens.count <= 2054 else {
+            throw ModelError("VQ full-stack probe admits at most 2054 tokens in passes of at most 512")
         }
         // Partial state cannot be reused after any read, numerical or observer
         // failure. This probe deliberately offers no speculative recovery.
@@ -46,7 +47,11 @@ package final class VQModelProbe {
                   ProcessMemory.peakResidentBytes() <= 4_000_000_000 else {
                 throw ModelError("VQ full-stack probe lost its 3 GB headroom or exceeded its 4 GB process bound")
             }
-            hidden = try autoreleasepool { try block(layer, hidden: hidden, history: history, trace: trace) }
+            hidden = try autoreleasepool {
+                try block(layer, hidden: hidden, history: history, trace: trace) { mask in
+                    try observe(layer, "sparse_mask", mask)
+                }
+            }
             eval(hidden)
             guard all(isFinite(hidden)).item(Bool.self) else { throw ModelError("nonfinite VQ hidden state at layer \(layer)") }
             try observe(layer, "hidden", hidden)
@@ -76,7 +81,8 @@ package final class VQModelProbe {
         previous = Array(history.suffix(2)); consumed += tokens.count; failed = false
     }
 
-    private func block(_ layer: Int, hidden: MLXArray, history: [Int64], trace: ((Int, String, MLXArray) -> Void)?) throws -> MLXArray {
+    private func block(_ layer: Int, hidden: MLXArray, history: [Int64], trace: ((Int, String, MLXArray) -> Void)?,
+                       sparse: (MLXArray) throws -> Void) throws -> MLXArray {
         let weights = try checkpoint.dense(layer: layer), base = "model.layers.\(layer)."
         var h = hidden
         if layer == 1 {
@@ -101,13 +107,18 @@ package final class VQModelProbe {
         } else {
             let attention = QSAAttention(weights, layer: layer, arithmetic: .vqPR1788)
             var values: [String: MLXArray] = [:]
-            if trace != nil { attention.debugSink = { values[$0] = $1 } }
+            attention.debugSink = { name, value in
+                if trace != nil || name == "sparseMask" { values[name] = value }
+            }
             if let trace {
                 let angles = rope.table(start: kv[layer]!.offset, count: x.dim(1))
                 trace(layer, "ropeInvFreq", rope.invFreq)
                 trace(layer, "ropeCos", angles.0); trace(layer, "ropeSin", angles.1)
             }
             attended = attention(x, rope: rope, cache: kv[layer]!, idxCache: indexer[layer]!)
+            if let mask = values["sparseMask"] {
+                try sparse(mask); sparseAttentionLayers += 1
+            }
             for (name, value) in values { trace?(layer, name, value) }
         }
         trace?(layer, "attnOutput", attended)

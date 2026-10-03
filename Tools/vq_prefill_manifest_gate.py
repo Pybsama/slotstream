@@ -44,7 +44,7 @@ def run(options):
         else: data['artifact']['inventory_sha256'] = '0' * 64
         encoded = json.dumps(data).encode(); (root / 'model.json').write_bytes(encoded)
         output = root / 'native-output'
-        command = [str(options.binary), 'quantization-model-check', '--prefill',
+        command = [str(options.binary), 'quantization-model-check', '--sparse' if options.sparse else '--prefill',
                    '--source-directory', str(options.source), '--source-inventory', str(options.inventory),
                    '--fixture-directory', str(root), '--output', str(output)]
         child = subprocess.run(command, env=env, text=True, capture_output=True, timeout=30)
@@ -65,6 +65,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('binary', 'source', 'inventory', 'fixture', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--sparse', action='store_true')
     args = parser.parse_args()
     for name in ('binary', 'source', 'inventory', 'fixture', 'out'):
         setattr(args, name, getattr(args, name).resolve())
