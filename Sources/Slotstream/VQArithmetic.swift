@@ -6,20 +6,24 @@ import MLX
 /// one kernel. Exhaustive finite-BF16 parity is a separate diagnostic gate.
 /// Formula follows MLX's Apache-2.0 Sigmoid in unary_ops.h.
 package enum VQArithmetic {
-    private static let inverseFrequencyKernel = MLXFast.metalKernel(name: "slotstream_vq_rope_power_precise_v1",
-        inputNames: ["exponents", "base"], outputNames: ["output"], source: """
-            uint i = thread_position_in_grid.x;
-            output[i] = metal::precise::pow(base[0], -exponents[i]);
-            """)
-
-    /// The bundled power shader matches Metal fast::pow, while the pinned
-    /// Python inverse frequencies match precise::pow. Small FP32 differences
-    /// cross BF16 angle boundaries later in a prompt. Preserve the reference
-    /// power explicitly, without changing the deployed rotary calculation.
-    package static func inverseFrequencies(_ exponents: MLXArray, base: Float) -> MLXArray {
-        inverseFrequencyKernel([exponents, MLXArray([base])], grid: (exponents.size, 1, 1),
-            threadGroup: (min(256, exponents.size), 1, 1),
-            outputShapes: [exponents.shape], outputDTypes: [.float32])[0]
+    /// Fixed coefficients for the authenticated candidates' rotary dimension
+    /// 64 and base 10,000,000. Derived byte-for-byte from the pinned Python
+    /// fixture, inverse SHA256 2fb3c351f0a3fc12c0b204e77660cca2c1bc373dae37f5d0a2bfe2b92cef1248.
+    /// Metal precise::pow is not bit-stable across the measured Mac and CI.
+    /// Keep exact FP32 words so a GPU/compiler cannot move BF16 angle rounding.
+    /// This is a checkpoint-specific coefficient table, not a general pow API.
+    package static func inverseFrequencies() -> MLXArray {
+        let bits: [UInt32] = [
+            0x3f800000, 0x3f1ab32b, 0x3ebaf81b, 0x3e61f836,
+            0x3e088d78, 0x3da50957, 0x3d47763f, 0x3cf11176,
+            0x3c91ad39, 0x3c301052, 0x3bd4ca15, 0x3b80967e,
+            0x3b1b690c, 0x3abbd3ed, 0x3a6301e2, 0x3a092e03,
+            0x39a5cb60, 0x394860c1, 0x38f22ce3, 0x3892587f,
+            0x3830df51, 0x37d5c442, 0x37812dac, 0x371c1fc5,
+            0x36bcb0c1, 0x36640cc6, 0x3609cf4b, 0x35a68e4d,
+            0x35494c57, 0x34f3499d, 0x3493048e, 0x3431af44,
+        ]
+        return MLXArray(bits).view(dtype: .float32)
     }
 
     private static let kernel = MLXFast.metalKernel(name: "slotstream_vq_bf16_sigmoid_precise_v1",

@@ -23,8 +23,7 @@ extension Diagnostics {
             let narrow = VQArithmetic.sigmoid(MLXArray([Float(-6.84375)], [1, 1, 1]).asType(.bfloat16))
             eval(narrow)
             c.equal("rounding-boundary scalar shape", narrow.asData(access: .copy).data, Data([0x8b, 0x3a]))
-            let exponents = MLXArray(stride(from: 0, to: 64, by: 2).map { Float($0) / 64 })
-            let inverse = VQArithmetic.inverseFrequencies(exponents, base: 10_000_000)
+            let inverse = VQArithmetic.inverseFrequencies()
             let angles = Rope(dim: 64, base: 10_000_000, pinnedVQReference: true).table(start: 0, count: 512)
             for (name, value, expected) in [
                 ("inverse frequencies", inverse, "2fb3c351f0a3fc12c0b204e77660cca2c1bc373dae37f5d0a2bfe2b92cef1248"),

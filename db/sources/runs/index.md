@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T05:35:04.846372Z
+updated: 2026-10-03T06:05:08.897743Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-vq-rotary-coefficients-and-ci-portability]] — Pinned VQ rotary coefficients after cross-runner power mismatch
+- [[sources/runs/2026/10/2026-10-03-native-vq-resident-bank-component]] — Native VQ resident-bank ownership and complete expert parity
 - [[sources/runs/2026/10/2026-10-03-native-vq-sparse-selection]] — Native VQ sparse selection and retained-state parity
 - [[sources/runs/2026/10/2026-10-03-native-vq-greedy-parity]] — Exact native VQ greedy feedback and retained-state boundaries
 - [[sources/runs/2026/10/2026-10-03-native-vq-prefill-validation]] — Complete VQ prefill checkpoint regression and metadata validation
@@ -505,10 +507,8 @@ updated: 2026-10-03T05:35:04.846372Z
 - [[sources/runs/2026/09/2026-09-06-optimization-planner-family-preparation]] — Unapplied coherent planner-family draft and exact comparison preparation
 - [[sources/runs/2026/09/2026-09-06-optimization-governor-advisory-fixture-correction]] — Governor advisory fixture correction and shared successor
 - [[sources/runs/2026/09/2026-09-06-configurable-context-governor-advisory-fixture-counterexample]] — V198 pure governor matrix exposes physically invalid settled-fixture assumptions
-- [[sources/runs/2026/09/2026-09-06-optimization-advisory-fixture-counterexample]] — V198 shared build and T0 advisory-fixture counterexample
-- [[sources/runs/2026/09/2026-09-06-slotpack-v0211-publication-and-r2-retirement]] — Public v0.2.11 provenance, ordinary installation, installed-model acceptance and verified R2 bucket retirement complete the free Hugging Face migration.
 
 ## More
 
-This folder has 714 files. The 500 most recent are listed above.
+This folder has 716 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

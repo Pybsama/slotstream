@@ -70,3 +70,9 @@ Both native VQ packs match 16 independently sampled and fed-back greedy tokens a
 ## [2026-10-03 05:35] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
 Both pinned VQ packs pass sparse selection and continuation parity; retain explicit production and qualification gates.
 
+## [2026-10-03 05:50] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Capture complete-record resident-bank ownership and regression checks; keep model-wide cache and production integration unqualified.
+
+## [2026-10-03 06:05] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
+Replace candidate rotary power with verified checkpoint coefficients after CI mismatch; unchanged exact local gates and full static suite pass, remote qualification pending.
+

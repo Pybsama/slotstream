@@ -105,9 +105,10 @@ public struct Rope {
     package init(dim: Int, base: Float, pinnedVQReference: Bool) {
         self.dim = dim
         let exps = MLXArray(stride(from: 0, to: Int32(dim), by: 2).map { Float($0) / Float(dim) })
-        self.invFreq = pinnedVQReference
-            ? VQArithmetic.inverseFrequencies(exps, base: base)
-            : pow(MLXArray(base), -exps)
+        if pinnedVQReference {
+            precondition(dim == 64 && base == 10_000_000, "VQ rotary coefficients require the pinned geometry")
+            self.invFreq = VQArithmetic.inverseFrequencies()
+        } else { self.invFreq = pow(MLXArray(base), -exps) }
     }
 
     /// positions (B, T) -> cos/sin (B, T, dim)

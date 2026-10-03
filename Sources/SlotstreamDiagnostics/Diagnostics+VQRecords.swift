@@ -185,6 +185,7 @@ extension Diagnostics {
                             output.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self), want)
                     }
                 }
+                try quantizationBankFixture(layer: fixture.layer, ids: fixture.expert_ids, layout: layout, arrays: arrays, checks: &c)
                 // Mutate each caller-owned group independently after admission,
                 // before constructing or evaluating an operation. MLXArray is
                 // a reference type; retaining the caller's object is insufficient.

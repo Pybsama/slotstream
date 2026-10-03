@@ -464,10 +464,12 @@ trace. `--save-layer 2` on a fresh reference run supplies the authenticated inpu
 for `Tools/vq_prefill_attention_reference.py`; that microscope independently
 checks its expanded attention against the pinned whole call.
 
-The candidate rotary constructor uses precise Metal power for inverse
-frequencies. The public constructor keeps its deployed arithmetic. The pinned
-reference, fast/precise power comparison and exact frequency/angle digests can
-be reproduced with:
+The candidate rotary constructor uses the exact FP32 coefficient words from
+the pinned reference for its fixed dimension and base. Precise Metal power
+matched the development Mac but produced different bits on CI; it cannot define
+portable coefficients. The public constructor keeps its deployed arithmetic.
+The original development-Mac power microscope and the unchanged exact
+frequency/angle digests can be reproduced with:
 
 ```sh
 .venv/bin/python Tools/vq_rope_reference.py --architecture <pinned-qwen4_exp.py> \
@@ -536,3 +538,20 @@ Keep the same sequential supervision and resource bounds. Both packs pass all
 984 boundaries, including twenty-four sparse masks. This covers the threshold,
 partial block and continued state, not the full context range. Public loading
 and automatic selection still refuse these unqualified research packs.
+
+## Synchronous resident-bank component
+
+The existing `quantization-check --record-fixture-directory` command now also
+checks owned resident-bank storage using the real expert fixtures. Each bank
+holds complete records of one validated geometry, with separate codebooks.
+It validates direct backing strides and non-overlapping extents, pins all
+demanded hits before CLOCK eviction, publishes only complete records, and
+finishes GPU uses before releasing pins.
+
+Cold/hot and eviction outputs must match the independent reference bits.
+Hot reads fail if the payload reader is called. Partial, duplicate, oversized,
+wrong-index, cancelled and failed reads cannot publish a record. The tests
+cover retry, reentrant-clear refusal and retained output across destructive
+bank reuse. These are bounded synchronous component checks. The complete-model
+probe still uses immutable staging; model-wide mixed banks, larger capacities,
+asynchronous reads, resize, byte budgeting and governor integration remain open.
