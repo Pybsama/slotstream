@@ -61,6 +61,15 @@ package final class VQCheckpoint {
     private let recordLayouts: [VQRecordLayout]
     private let ple: PLE
     private var files: [String: VQTensorFile] = [:]
+    private let denseOverlay: VQDenseOverlay?
+    package var compositeSHA256: String? { denseOverlay == nil ? nil : VQDenseOverlay.identitySHA256 }
+    package var residentTextPayloadBytes: Int { denseOverlay == nil ? 5_318_309_400 : VQDenseOverlay.residentPayloadBytes }
+    package var largestDenseLoadCopyBytes: Int { denseOverlay?.largestLoadCopyBytes ?? 635_699_200 }
+    package var residentHeadPayloadBytes: Int { denseOverlay == nil ? 682_414_080 : 361_287_680 }
+    package var residentEmbeddingPayloadBytes: Int { denseOverlay == nil ? 675_430_400 : 357_580_800 }
+    package var embeddingBits: Int { denseOverlay == nil ? 8 : 4 }
+    package var overlayVerifiedFileCount: Int { denseOverlay?.verifiedFileCount ?? 0 }
+    package var overlayVerifiedPayloadBytes: Int { denseOverlay?.verifiedPayloadBytes ?? 0 }
 
     private static func digest(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
@@ -74,7 +83,10 @@ package final class VQCheckpoint {
         return data
     }
 
-    package init(directory: URL, inventory: URL) throws {
+    package init(directory: URL, inventory: URL, denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil) throws {
+        guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
+            throw ModelError("dense composite requires both its baseline and manifest")
+        }
         let root = directory.resolvingSymlinksInPath()
         let raw = try Self.bounded(inventory, limit: 4_000_000), hash = Self.digest(raw)
         guard let profile = Self.profiles.first(where: { $0.inventorySHA == hash }) else {
@@ -182,6 +194,11 @@ package final class VQCheckpoint {
         }
         self.directory = root; self.index = index; self.identities = identities
         self.recordLayouts = layouts; self.ple = ple
+        if let baseline = denseOverlayBaseline, let manifest = denseOverlayManifest {
+            let overlay = try VQDenseOverlay(baseline: baseline, manifest: manifest, inventorySHA256: hash)
+            denseOverlay = overlay
+            geometry = geometry.withAffineOverrides(overlay.recipes)
+        } else { denseOverlay = nil }
         self.config = geometry
         revision = profile.revision; inventorySHA256 = hash
         recordClassCount = profile.classLayers.count; wideRecordLayer = profile.wideLayer
@@ -202,6 +219,7 @@ package final class VQCheckpoint {
                     identity: identities[filename]!, shouldContinue: shouldContinue)
             }
         }
+        try denseOverlay?.authenticateAll(shouldContinue: shouldContinue)
     }
 
     private func file(for name: String, shouldContinue: () -> Bool) throws -> VQTensorFile {
@@ -246,6 +264,9 @@ package final class VQCheckpoint {
 
     private func array(_ name: String, rows: [Int]? = nil, maximumBytes: Int = 64_000_000,
                        shouldContinue: () -> Bool) throws -> MLXArray {
+        if let overlay = denseOverlay, overlay.bytes(for: name) != nil {
+            return try overlay.array(name, rows: rows, maximumBytes: maximumBytes, shouldContinue: shouldContinue)
+        }
         let (bytes, shape, tag) = try raw(name, rows: rows, maximumBytes: maximumBytes, shouldContinue: shouldContinue)
         let dtype: DType
         switch tag {
@@ -383,11 +404,17 @@ package final class VQCheckpoint {
         var values: [String: MLXArray] = [:], bytes = 0
         let limit = layer == nil ? 800_000_000 : 200_000_000
         for name in names {
-            let file = try file(for: name, shouldContinue: { true })
-            guard let ref = file.tensors[name], ref.byteCount <= limit - bytes else {
+            let byteCount: Int
+            if let replacementBytes = denseOverlay?.bytes(for: name) { byteCount = replacementBytes }
+            else {
+                let owner = try file(for: name, shouldContinue: { true })
+                guard let ref = owner.tensors[name] else { throw ModelError("VQ dense tensor is missing") }
+                byteCount = ref.byteCount
+            }
+            guard byteCount <= limit - bytes else {
                 throw ModelError("VQ dense family exceeds bounded allocation")
             }
-            bytes += ref.byteCount
+            bytes += byteCount
             var value = try array(name, maximumBytes: limit, shouldContinue: { true })
             if foldedSuffixes.contains(where: name.hasSuffix) {
                 guard value.dtype == .bfloat16 else { throw ModelError("VQ raw norm must be BF16") }
@@ -409,7 +436,7 @@ package final class VQCheckpoint {
         }
         eval(Array(values.values))
         let result = Dense(config: config, values: values)
-        guard result.payloadBytes == 675_430_400 else { throw ModelError("VQ resident embedding byte ledger changed") }
+        guard result.payloadBytes == residentEmbeddingPayloadBytes else { throw ModelError("VQ resident embedding byte ledger changed") }
         return result
     }
 
@@ -421,7 +448,7 @@ package final class VQCheckpoint {
         let weight = try array(base + "weight", rows: ids, shouldContinue: { true })
         let scales = try array(base + "scales", rows: ids, shouldContinue: { true })
         let biases = try array(base + "biases", rows: ids, shouldContinue: { true })
-        return dequantized(weight, scales: scales, biases: biases, groupSize: 64, bits: 8)
+        return dequantized(weight, scales: scales, biases: biases, groupSize: 64, bits: embeddingBits)
             .reshaped([1, ids.count, 2560])
     }
 

@@ -190,6 +190,7 @@ extension Diagnostics {
                 eval(result)
                 c.expect("affine \(bits)-bit gathered matmul finite", all(isFinite(result)).item(Bool.self))
             }
+            try checkMixedDenseRecipes(&c)
             // A scalar-exact control covers every fused dispatch family and
             // the SIMD boundary. Real-row Python binding parity is a separate
             // fixture gate; these constant weights do not certify full math.

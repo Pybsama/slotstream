@@ -7,12 +7,16 @@ extension Diagnostics {
     /// A fixed, genuinely autoregressive check. The native argmax, not the
     /// fixture's token, becomes the next input. Final sampled token is unconsumed.
     public static func quantizationGeneration(source: URL, inventory: URL, profileURL: URL,
-                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false) throws -> Data {
+                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false,
+                                              denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil) throws -> Data {
         struct Profile: Decodable, Equatable {
             let schema: Int, profile: String, prompt: [Int], sampling: String
             let max_new_tokens: Int, minimum_steps: Int, eos_token_id: Int
         }
         guard (!wideRecords && !parallelRecords) || (residentRecords && residentText) else { throw ModelError("wide banks and parallel VQ reads require resident text and records") }
+        guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
+            throw ModelError("dense composite requires both baseline and manifest")
+        }
         struct Boundary: Decodable {
             let layer: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(layer):\(name)" }
@@ -25,7 +29,9 @@ extension Diagnostics {
             let execution_profile: VQReferenceExecution?
             let runtime_sha256: String?
             let schema: Int, profile: Profile, profile_sha256: String, architecture_sha256: String, normalization: String
-            let generated: [Int], steps: [Step], consumed_tokens: Int, stop: String, artifact: Artifact
+            let generated: [Int], steps: [Step], consumed_tokens: Int, stop: String
+            let artifact: Artifact?, vq_parent: Artifact?
+            let composite_sha256: String?, policy: String?
         }
         func digest(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
         func read(_ url: URL, limit: Int) throws -> Data {
@@ -44,6 +50,22 @@ extension Diagnostics {
         let profile = try JSONDecoder().decode(Profile.self, from: profileRaw)
         let raw = try read(fixtureDirectory.appendingPathComponent("generation.json"), limit: 2_000_000)
         let manifest = try JSONDecoder().decode(Manifest.self, from: raw)
+        let parent: Manifest.Artifact
+        if denseOverlayBaseline != nil {
+            guard manifest.artifact == nil, let bound = manifest.vq_parent,
+                  bound.inventory_sha256 == VQDenseOverlay.parentInventorySHA256,
+                  manifest.composite_sha256 == VQDenseOverlay.identitySHA256,
+                  manifest.policy == "vq32-experts-ple-with-pinned-affine4-dense-v1" else {
+                throw ModelError("dense composite requires its own generated fixture identity")
+            }
+            parent = bound
+        } else {
+            guard let bound = manifest.artifact, manifest.vq_parent == nil,
+                  manifest.composite_sha256 == nil, manifest.policy == nil else {
+                throw ModelError("ordinary VQ generation refuses composite fixtures")
+            }
+            parent = bound
+        }
         guard manifest.schema == 1, manifest.profile == profile, manifest.profile_sha256 == profileHash,
               manifest.architecture_sha256 == "d6470a2131a64ff37024dfffd2b5bc8c3f4db625f0f3b1ceec7fe346852c1a87",
               manifest.normalization == "vq-raw-zero-centered-to-pr1788-folded-bf16-v1",
@@ -99,14 +121,15 @@ extension Diagnostics {
         guard !ProcessInfo.processInfo.environment.keys.contains(where: {
             $0.hasPrefix("SLOTSTREAM_") || $0.hasPrefix("SS_DEBUG") || $0.hasPrefix("VQ_") || $0.hasPrefix("VQLAB_")
         }) else { throw ModelError("VQ generation check requires no developer overrides") }
-        try VQReferenceExecution.validate(inventorySHA: manifest.artifact.inventory_sha256,
+        try VQReferenceExecution.validate(inventorySHA: parent.inventory_sha256,
             runtimeSHA: manifest.runtime_sha256, profile: manifest.execution_profile)
         try ModelProcessGuard.acquire()
         guard let before = ProcessMemory.vmActivity(), before.reclaimableBytes >= 13_000_000_000 else {
             throw ModelError("VQ generation check requires 13 GB actual reclaimable memory")
         }
-        let checkpoint = try VQCheckpoint(directory: source, inventory: inventory)
-        guard checkpoint.inventorySHA256 == manifest.artifact.inventory_sha256 else { throw ModelError("VQ generated fixture and checkpoint differ") }
+        let checkpoint = try VQCheckpoint(directory: source, inventory: inventory,
+            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest)
+        guard checkpoint.inventorySHA256 == parent.inventory_sha256 else { throw ModelError("VQ generated fixture and checkpoint differ") }
         let manager = FileManager.default
         guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ generation output directory must be new") }
         try manager.createDirectory(at: output, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
@@ -119,7 +142,7 @@ extension Diagnostics {
         if residentText {
             let prior = checkpoint.verifiedFileCount
             do {
-                _ = try VQResidentText(checkpoint, maximumPayloadBytes: VQResidentText.payloadBytes - 1)
+                _ = try VQResidentText(checkpoint, maximumPayloadBytes: checkpoint.residentTextPayloadBytes - 1)
                 throw ModelError("undersized VQ resident text budget was accepted")
             } catch let error as ModelError {
                 guard error.description.contains("below its authenticated payload"), checkpoint.verifiedFileCount == prior else { throw error }
@@ -145,6 +168,9 @@ extension Diagnostics {
             object["resident_record_cache"] = model.recordCacheStats ?? [:]
             object["resident_text"] = model.residentTextStats ?? [:]
             object["process_bound_bytes"] = model.processByteLimit
+            object["composite_sha256"] = checkpoint.compositeSHA256
+            object["overlay_verified_files"] = checkpoint.overlayVerifiedFileCount
+            object["overlay_verified_payload_bytes"] = checkpoint.overlayVerifiedPayloadBytes
             if let failure { object["failure"] = failure }
             let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: output.appendingPathComponent("receipt.json"), options: .atomic)
@@ -203,7 +229,7 @@ extension Diagnostics {
             if residentText {
                 guard let stats = model.residentTextStats else { throw ModelError("resident text was not configured") }
                 c.equal("all text families resident", stats["resident_families"], 50)
-                c.equal("exact text payload reservation", stats["payload_bytes"], VQResidentText.payloadBytes)
+                c.equal("exact text payload reservation", stats["payload_bytes"], checkpoint.residentTextPayloadBytes)
                 c.expect("resident text serves repeated forwards", (stats["dense_hits"] ?? 0) > 49 && (stats["embedding_hits"] ?? 0) > 1)
             }
             guard ProcessMemory.peakResidentBytes() <= model.processByteLimit else { throw ModelError("VQ generation exceeded its configured process bound") }

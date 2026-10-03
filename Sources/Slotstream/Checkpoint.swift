@@ -79,6 +79,14 @@ public struct ModelConfig {
             groupSize: module.contains("ngram_embedding") ? ngramQGroup : qGroup)
     }
 
+    /// Internal adapters supply already validated per-module recipes. This
+    /// does not change the public checkpoint parser's artifact admission.
+    package func withAffineOverrides(_ overrides: [String: AffineQuantization]) -> ModelConfig {
+        var copy = self
+        copy.quantizationOverrides.merge(overrides) { _, replacement in replacement }
+        return copy
+    }
+
     public var rotaryDim: Int { Int(Float(headDim) * partialRotaryFactor) }
     public var pleLayerIndices: [Int] { pleLayerIds.map { $0 - 1 } }
 

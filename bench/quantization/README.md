@@ -786,4 +786,38 @@ output-copy storage budget. It does not weaken the ordinary pack comparator.
 
 Use each tool's `--help` for required paths. Run these tools only under a
 written local resource ledger and the process supervisor; they provide no
-download activation, native loader, automatic selection or quality verdict.
+download activation, automatic selection or quality verdict.
+
+
+### Native composite checks
+
+`vq_dense_overlay_generated_reference.py` produces the independent greedy
+fixture. `vq_dense_overlay_prefill_reference.py` produces either ordinary
+prefill or, with `--sparse`, sparse selection and continuation. Both require
+the verified parent, installed affine baseline and successful composite
+traversal proof. Their `vq_parent` field deliberately differs from ordinary
+VQ manifests so an old reader cannot mistake this artifact for its parent.
+
+Write the reference receipt's `composite` object with Python
+`json.dumps(value, indent=2) + "\n"` to a new manifest file. The native
+adapter requires its frozen raw SHA-256
+`4cdae0e9c26b9a0dd07659cd9d71dd025ed110b49161c152df09d5a7f75ac28b`
+and canonical composite identity. It then independently authenticates the
+source files; matching metadata alone is insufficient.
+
+Add both `--dense-overlay-baseline <installed-affine-directory>` and
+`--dense-overlay-manifest <composite.json>` to `quantization-model-check`
+with `--greedy`, `--prefill` or `--sparse`, using the corresponding composite
+fixture. Greedy still requires `--generation-profile`. Resident-text and
+record flags remain explicit research controls. Ordinary VQ commands refuse
+composite fixtures, and composite commands refuse ordinary parent fixtures.
+
+`vq_dense_overlay_cost_pilot.py` freezes one cross-artifact comparison through
+`dense-overlay-cost-v1.json`. Each arm must reproduce its own independent
+full-logit reference before timing and its own complete sequence across
+repetitions. It keeps the same bank allocation in both arms and does not
+spend the recovered memory on extra cache records. Generated routing traces
+may differ, so the result measures the candidate as a whole. Different
+quantizations are not required to produce identical answers. The
+ordinary same-artifact comparison retains its equality gate. None of these
+commands admits the composite to Engine.load, serving or Auto.

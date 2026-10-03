@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T11:20:11.870998Z
+updated: 2026-10-03T12:49:57.106245Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-affine-compatibility]] — Dense composite shared dispatch preserves existing affine acceptance
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-prefill-and-cost]] — Native dense composite prefill and fixed-cache cost comparison
+- [[sources/runs/2026/10/2026-10-03-native-vq-dense-four-bit-greedy-parity]] — Native dense four-bit composite greedy parity and parent regressions
 - [[sources/runs/2026/10/2026-10-03-vq-dense-four-bit-overlay-screen]] — Independent same-checkpoint dense four-bit composite: traversal and quality screen
 - [[sources/runs/2026/10/2026-10-03-vq-draft-raw-normalization-audit]] — Authenticated draft norms require one explicit zero-centered fold
 - [[sources/runs/2026/10/2026-10-03-vq-allocator-profile-and-dense-overlay-feasibility]] — VQ allocator CPU profile and dense four-bit overlay hypothesis
@@ -504,11 +507,8 @@ updated: 2026-10-03T11:20:11.870998Z
 - [[sources/runs/2026/09/2026-09-07-optimization-static-candidate-selection]] — Static acceptance uses the exact selected candidate
 - [[sources/runs/2026/09/2026-09-07-optimization-current-default-source-review]] — Current default source and complete optimization work reconciliation
 - [[sources/runs/2026/09/2026-09-07-optimization-cache-prelaunch-and-soak-harness]] — Zero-cell cache preflight refusal and pure soak harness checks
-- [[sources/runs/2026/09/2026-09-07-configurable-context-after-component-handoff-readiness]] — Readiness after the bounded component handback still misses the frozen P5 preflight
-- [[sources/runs/2026/09/2026-09-07-optimization-indexer-score-screen]] — Indexer score screen rejects general prefill fusion
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-prepared-state-audit]] — V215 runtime source closure survives final harness review; resource campaign held
 
 ## More
 
-This folder has 736 files. The 500 most recent are listed above.
+This folder has 739 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

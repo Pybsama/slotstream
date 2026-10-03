@@ -7,7 +7,11 @@ extension Diagnostics {
     /// A bounded cost pilot, separate from correctness observers and production
     /// serving. The same lean path must first pass independent full-logit goldens.
     public static func quantizationPerformancePilot(source: URL, inventory: URL, profileURL: URL,
-                                                    output: URL, validationURL: URL?) throws -> Data {
+                                                    output: URL, validationURL: URL?,
+                                                    denseOverlayBaseline: URL? = nil, denseOverlayManifest: URL? = nil) throws -> Data {
+        guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
+            throw ModelError("dense composite requires both baseline and manifest")
+        }
         let preparationStart = Double(DispatchTime.now().uptimeNanoseconds) / 1e9
         struct Reference: Decodable {
             struct Logit: Decodable { let shape: [Int], dtype: String, bytes: Int, sha256: String }
@@ -36,15 +40,17 @@ extension Diagnostics {
         }
         let profileRaw = try read(profileURL), profileHash = hash(profileRaw)
         guard ["8f2c4256f6489ae5b9ce4e801ad5e9c79263b85646a3ff91220148156da810a5",
-               "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7"].contains(profileHash) else {
+               "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7",
+               "a1b2edc29e0b1a5a3a668d9b8c26ff8533523f0045e98970e5e5efc54badaa88"].contains(profileHash) else {
             throw ModelError("VQ pilot requires the frozen performance profile")
         }
         let profile = try JSONDecoder().decode(Profile.self, from: profileRaw)
         guard !ProcessInfo.processInfo.environment.keys.contains(where: {
             $0.hasPrefix("SLOTSTREAM_") || $0.hasPrefix("SS_DEBUG") || $0.hasPrefix("VQ_") || $0.hasPrefix("VQLAB_")
         }) else { throw ModelError("VQ pilot requires no developer overrides") }
-        let checkpoint = try VQCheckpoint(directory: source, inventory: inventory)
-        guard let reference = profile.references[checkpoint.inventorySHA256] else {
+        let checkpoint = try VQCheckpoint(directory: source, inventory: inventory,
+            denseOverlayBaseline: denseOverlayBaseline, denseOverlayManifest: denseOverlayManifest)
+        guard let reference = profile.references[checkpoint.compositeSHA256 ?? checkpoint.inventorySHA256] else {
             throw ModelError("VQ pilot has no reference for this inventory")
         }
         guard let executable = Bundle.main.executableURL else { throw ModelError("cannot identify VQ pilot executable") }
@@ -56,6 +62,7 @@ extension Diagnostics {
             guard let object, object["mode"] as? String == "validation", object["passed"] as? Bool == true,
                   object["profile_sha256"] as? String == profileHash,
                   object["inventory_sha256"] as? String == checkpoint.inventorySHA256,
+                  object["composite_sha256"] as? String == checkpoint.compositeSHA256,
                   object["producer"] as? [String: String] == producer,
                   object["generated"] as? [Int] == reference.generated,
                   object["observed_logit_hashes"] as? [String] == reference.logits.map(\.sha256),
@@ -110,6 +117,9 @@ extension Diagnostics {
                 "observed_timing_eligible": reasons.isEmpty, "timing_exclusions": reasons,
                 "stop": generated.last == profile.eos_token_id ? "eos" : "length",
                 "verified_payload_bytes": checkpoint.verifiedPayloadBytes, "verified_files": checkpoint.verifiedFileCount]
+            result["composite_sha256"] = checkpoint.compositeSHA256
+            result["overlay_verified_files"] = checkpoint.overlayVerifiedFileCount
+            result["overlay_verified_payload_bytes"] = checkpoint.overlayVerifiedPayloadBytes
             if let first = emissions.first { result["ttft_seconds"] = first }
             if let first = emissions.first, let last = emissions.last, emissions.count > 1, last > first {
                 result["committed_decode_tokens_per_second"] = Double(emissions.count - 1) / (last - first)

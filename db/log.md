@@ -118,3 +118,6 @@ Retain bounded allocator reuse after exact three-pack parity, six paired timings
 ## [2026-10-03 11:20] update | quantization-dense-composite-screen
 Authenticate a separate dense-four-bit/VQ3.2 composite; preserve exact traversal and mixed six-context quality evidence, full static validation and draft norm audit. Repair unquoted colon in new capture frontmatter. Native integration and product gates remain open.
 
+## [2026-10-03 12:49] update | same-model-quantization-and-automatic-memory
+Implement authenticated dense composite native adapter and own reference fixtures; record exact greedy/prefill/sparse parity, matched cost and completed existing affine compatibility, preserving the launcher failures and corrections. Larger fixed-cache experiment remains separate and unqualified.
+

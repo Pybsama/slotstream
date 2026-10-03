@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-03T11:20:47.091727+00:00
+updated: 2026-10-03T12:49:57.160482+00:00
 summary: Same Flash Next checkpoint, qualified quantizations, automatic selection with overrides, independent live memory management and measured hardware gates.
 date: 2026-10-02
 doc: plan
@@ -480,3 +480,27 @@ The comparator reuses control logits only after binding their manifests to origi
 ### Draft normalization storage resolved, October 3
 
 [[sources/runs/2026/10/2026-10-03-vq-draft-raw-normalization-audit]] authenticates both complete draft files and compares all nine normalization tensors using bounded CPU reads. All raw sidecar values, including those stored as F32, are exactly BF16-representable. None matches the installed folded tensors directly; adding one and rounding to BF16 matches every tensor exactly. This establishes the storage convention. Multiplication dtype, per-stream versus full-width normalization, fused projections and speculative acceptance still need explicit numerical qualification. Existing draft execution remains unchanged.
+
+### Dense composite native ownership and greedy parity, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-four-bit-greedy-parity]] records the separately authenticated native composite adapter. Its immutable map binds 498 dense affine replacements to the installed baseline; unmatched VQ tensors, experts, PLE and raw norms retain their own identities. The internal TensorSource dispatch honors validated module recipes and preserves explicit caller arguments. Public checkpoint loading still refuses every VQ candidate.
+
+The independent generated reference and native streamed/resident paths agree at every boundary for sixteen self-fed steps. All three ordinary VQ profiles retain their greedy and sparse-state goldens. Six refusal cases prevent incomplete controls, wrong parents, linked or modified maps and cross-artifact fixture reuse. The composite's resident payload is 2,893,477,400 bytes; its observed fixed-resident greedy process peak is 5,136,863,552 bytes. This does not establish a general minimum or transfer a memory envelope to longer contexts.
+
+Next: independently bind the composite's ordinary-prefill and sparse-continuation references, validate the lean timing path, measure its own cross-artifact cost pilot and rerun the existing affine acceptance battery because shared dispatch changed. Task quality, larger contexts, draft/vision, dynamic banks and product Auto remain unqualified.
+
+### Dense composite sparse context and cost, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-prefill-and-cost]] completes the composite's own ordinary-prefill and sparse-continuation numerical checks. Streamed and fixed-resident sparse paths agree with all 984 reference boundaries, including 24 sparse masks. The resident sparse process peak is 6,973,444,416 bytes within the same 10 GB research envelope. No context beyond 2054 consumed tokens is admitted by this evidence.
+
+The matched fixed-cache pilot validates each arm against its own independent complete logits, then measures three alternating pairs. All six timing runs are eligible; each artifact repeats its own 128-token sequence. Median paired ratios are 1.0800631462 for committed decode, 0.8191828162 for TTFT and 0.9132518003 for request duration. Median decode rates are 5.5206020465 for full VQ and 5.9470904340 for the composite. Cross-artifact sequences and routing counts differ, so this is a whole-candidate fixed-work comparison, not proof that a single kernel caused the difference. Neither arm reaches 20.
+
+Both arms retain exactly the same 608-record cache. The candidate's recovered payload is therefore a reason to test a larger fixed cache under the unchanged process ceiling, not permission for unmeasured automatic growth. That follow-up must preserve the old admission bounds by default, explicitly admit only the inspected candidate/layout, exercise the newly addressable physical rows and pass full greedy/sparse parity and footprint gates before timing. Dynamic resizing and governor integration remain later work.
+
+The current research composite authenticates both parent filesets, doubling median load time from about 29.5 to 59.3 seconds. Publishing it would require its own reproducible verified pack; this adapter is not that distribution transaction. Complete-task quality, longer contexts, draft/vision and complete-configuration performance still gate product integration. The full original affine acceptance run follows the passed static suite; no Auto default or installed pack changes.
+
+### Existing affine compatibility closed, October 3
+
+[[sources/runs/2026/10/2026-10-03-native-vq-dense-composite-affine-compatibility]] closes the compatibility gate for the shared dense dispatch. The frozen executable passes the full static suite and all existing affine acceptance categories, including real governor recovery, memory-target equality, MTP state/reference parity, serving, persistent prefixes, behavioral sanity and vision. The first full battery reported 31 passes and four failures because the temporary launcher resolved the virtual-environment Python symlink; the two reference producers could not import MLX and their dependent native checks lacked fixtures. The unchanged binary then passes those exact four checks with the correct interpreter. Both the failed campaign and corrective evidence are preserved; no golden or tolerance changed.
+
+The next bounded experiment is the already declared fixed-cache reinvestment hypothesis. It does not advance steps 6 through 8, turn on a candidate, or establish the 20-token target. All quality, complete-configuration and hardware gates remain in force.

@@ -9,10 +9,39 @@ import unittest
 
 from vq_dense_overlay import Overlay, POLICY, IDENTITY_SHA, geometry, read_json, recipe
 from vq_dense_overlay_reference import check_proof
+from vq_dense_overlay_cost_pilot import ARMS, PROFILE_SHA, VQ_INVENTORY, validate_receipt
 import vq_model_reference as ref
 
 
 class OverlayChecks(unittest.TestCase):
+    def test_cost_results_cannot_cross_artifact_boundaries(self):
+        path = Path(__file__).resolve().parent.parent / 'bench/quantization/dense-overlay-cost-v1.json'
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), PROFILE_SHA)
+        profile = json.loads(path.read_text())
+        producer = {'binary_sha256': 'binary', 'metallib_sha256': 'metal'}
+        receipts = []
+        for arm in ARMS:
+            identity = IDENTITY_SHA if arm == ARMS[1] else None
+            reference = profile['references'][identity or VQ_INVENTORY]
+            receipt = {'passed': True, 'mode': 'validation', 'profile_sha256': PROFILE_SHA,
+                'producer': producer, 'pack': arm, 'inventory_sha256': VQ_INVENTORY,
+                'composite_sha256': identity, 'verified_files': 138,
+                'overlay_verified_files': 9 if identity else 0,
+                'resident_text': {'payload_bytes': 2_893_477_400 if identity else 5_318_309_400},
+                'cache_after': {'parallel_read_lanes': 12, 'total_capacity': 608, 'pinned_records': 0},
+                'peak_process_bytes': 8_000_000_000, 'generated': reference['generated'],
+                'observed_logit_hashes': [x['sha256'] for x in reference['logits']]}
+            validate_receipt(receipt, arm, profile, producer, measurement=False)
+            receipts.append(receipt)
+        with self.assertRaises(ValueError):
+            validate_receipt(receipts[0], ARMS[1], profile, producer, measurement=False)
+        for field, value in [('composite_sha256', None), ('profile_sha256', 'changed'),
+                             ('producer', {}), ('peak_process_bytes', 10_000_000_001),
+                             ('generated', receipts[0]['generated']), ('observed_logit_hashes', [])]:
+            broken = copy.deepcopy(receipts[1]); broken[field] = value
+            with self.assertRaises(ValueError):
+                validate_receipt(broken, ARMS[1], profile, producer, measurement=False)
+
     def test_recipe_is_independent_and_exact(self):
         cfg = {'quantization': {'bits': 8, 'group_size': 64, 'model.foo': {'bits': 4, 'group_size': 64}}}
         self.assertEqual(recipe(cfg, 'model.foo'), {'bits': 4, 'group_size': 64})

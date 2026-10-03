@@ -10,15 +10,17 @@ package final class VQResidentText {
     private let layers: [VQCheckpoint.Dense]
     private let head: VQCheckpoint.Dense
     private let embedding: VQCheckpoint.Dense
+    private let payload: Int, loadCopy: Int, embeddingBits: Int
     package private(set) var denseHits = 0
     package private(set) var embeddingHits = 0
 
     package init(_ checkpoint: VQCheckpoint, maximumPayloadBytes: Int = VQResidentText.payloadBytes) throws {
-        guard maximumPayloadBytes >= Self.payloadBytes else {
+        let required = checkpoint.residentTextPayloadBytes, copy = checkpoint.largestDenseLoadCopyBytes
+        guard maximumPayloadBytes >= required else {
             throw ModelError("VQ resident text budget is below its authenticated payload")
         }
         guard let before = ProcessMemory.vmActivity(),
-              before.reclaimableBytes >= UInt64(Self.payloadBytes + Self.largestLoadCopyBytes + 3_000_000_000) else {
+              before.reclaimableBytes >= UInt64(required + copy + 3_000_000_000) else {
             throw ModelError("VQ resident text needs its payload, load copy and 3 GB real headroom")
         }
         var loaded: [VQCheckpoint.Dense] = []
@@ -36,21 +38,22 @@ package final class VQResidentText {
             loaded.append(try checkpoint.dense(layer: layer))
             MLX.Memory.clearCache()
         }
-        try admit(682_414_080)
+        try admit(checkpoint.residentHeadPayloadBytes)
         let loadedHead = try checkpoint.dense(layer: nil)
         MLX.Memory.clearCache()
-        try admit(675_430_400)
+        try admit(checkpoint.residentEmbeddingPayloadBytes)
         let loadedEmbedding = try checkpoint.embeddingWeights()
         MLX.Memory.clearCache()
         let bytes = loaded.reduce(0) { $0 + $1.payloadBytes } + loadedHead.payloadBytes + loadedEmbedding.payloadBytes
-        guard bytes == Self.payloadBytes, ProcessMemory.peakResidentBytes() <= 10_000_000_000 else {
+        guard bytes == required, ProcessMemory.peakResidentBytes() <= 10_000_000_000 else {
             throw ModelError("VQ complete resident text differs from its byte or process bound")
         }
         layers = loaded; head = loadedHead; embedding = loadedEmbedding
+        payload = required; loadCopy = copy; embeddingBits = checkpoint.embeddingBits
     }
 
     package var stats: [String: Int] {
-        ["payload_bytes": Self.payloadBytes, "largest_load_copy_bytes": Self.largestLoadCopyBytes,
+        ["payload_bytes": payload, "largest_load_copy_bytes": loadCopy,
          "resident_families": layers.count + 2, "dense_hits": denseHits, "embedding_hits": embeddingHits]
     }
 
@@ -68,6 +71,6 @@ package final class VQResidentText {
         let rows = MLXArray(ids.map(Int32.init)), base = "model.embed_tokens."
         return dequantized(embedding.tensor(base + "weight")[rows],
             scales: embedding.tensor(base + "scales")[rows], biases: embedding.tensor(base + "biases")[rows],
-            groupSize: 64, bits: 8).reshaped([1, ids.count, 2560])
+            groupSize: 64, bits: embeddingBits).reshaped([1, ids.count, 2560])
     }
 }

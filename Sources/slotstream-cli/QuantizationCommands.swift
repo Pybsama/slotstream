@@ -81,7 +81,12 @@ struct QuantizationModelCheck: ParsableCommand {
     @Flag(name: .long, help: "Overlap bounded demanded reads; requires resident records and text") var parallelRecords = false
     @Flag(name: .long, help: "Compare actual greedy generation and every retained state boundary") var greedy = false
     @Option(name: .long, help: "Frozen bench/quantization/greedy-v1.json, required with --greedy") var generationProfile: String?
+    @Option(name: .long, help: "Research composite only: pinned installed affine baseline; requires a prefill, sparse or greedy profile and --dense-overlay-manifest") var denseOverlayBaseline: String?
+    @Option(name: .long, help: "Research composite only: exact independently frozen tensor map") var denseOverlayManifest: String?
     func validate() throws {
+        guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil), denseOverlayBaseline == nil || prefill || sparse || greedy else {
+            throw ValidationError("--dense-overlay-baseline and --dense-overlay-manifest require each other and --prefill, --sparse or --greedy")
+        }
         guard [prefill, sparse, greedy].filter({ $0 }).count <= 1, greedy == (generationProfile != nil),
               (!residentRecords && !residentText) || sparse || greedy,
               (!wideRecords && !parallelRecords) || (residentRecords && residentText) else {
@@ -92,13 +97,17 @@ struct QuantizationModelCheck: ParsableCommand {
         if greedy, let generationProfile {
             print(String(decoding: try Diagnostics.quantizationGeneration(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), profileURL: URL(fileURLWithPath: generationProfile),
-                fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output), residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords), as: UTF8.self))
+                fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output), residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords,
+                denseOverlayBaseline: denseOverlayBaseline.map { URL(fileURLWithPath: $0) },
+                denseOverlayManifest: denseOverlayManifest.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
             return
         }
         if prefill || sparse {
             print(String(decoding: try Diagnostics.quantizationPrefillModel(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
-                output: URL(fileURLWithPath: output), sparse: sparse, residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords), as: UTF8.self))
+                output: URL(fileURLWithPath: output), sparse: sparse, residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords,
+                denseOverlayBaseline: denseOverlayBaseline.map { URL(fileURLWithPath: $0) },
+                denseOverlayManifest: denseOverlayManifest.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
             return
         }
         print(String(decoding: try Diagnostics.quantizationModel(source: URL(fileURLWithPath: sourceDirectory),
@@ -116,7 +125,12 @@ struct QuantizationPerformancePilot: ParsableCommand {
     @Option(name: .long) var output: String
     @Flag(name: .long, help: "Measure 128 tokens after a separate successful validation") var measure = false
     @Option(name: .long, help: "Successful validation receipt from this exact producer and profile") var validationReceipt: String?
+    @Option(name: .long, help: "Research composite only: pinned installed affine baseline") var denseOverlayBaseline: String?
+    @Option(name: .long, help: "Research composite only: exact frozen tensor map; requires matching composite reference") var denseOverlayManifest: String?
     func validate() throws {
+        guard (denseOverlayBaseline == nil) == (denseOverlayManifest == nil) else {
+            throw ValidationError("dense composite requires both baseline and manifest")
+        }
         guard measure == (validationReceipt != nil) else {
             throw ValidationError("--measure requires --validation-receipt; validation mode accepts neither")
         }
@@ -125,7 +139,9 @@ struct QuantizationPerformancePilot: ParsableCommand {
         print(String(decoding: try Diagnostics.quantizationPerformancePilot(
             source: URL(fileURLWithPath: sourceDirectory), inventory: URL(fileURLWithPath: sourceInventory),
             profileURL: URL(fileURLWithPath: profile), output: URL(fileURLWithPath: output),
-            validationURL: validationReceipt.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
+            validationURL: validationReceipt.map { URL(fileURLWithPath: $0) },
+            denseOverlayBaseline: denseOverlayBaseline.map { URL(fileURLWithPath: $0) },
+            denseOverlayManifest: denseOverlayManifest.map { URL(fileURLWithPath: $0) }), as: UTF8.self))
     }
 }
 
