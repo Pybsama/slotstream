@@ -5,8 +5,8 @@ import Slotstream
 
 extension Diagnostics {
     /// Full real expert matrices composed through routed SwiGLU. These
-    /// fixtures exercise immutable staging only, not cache lifecycle or a
-    /// complete model. No candidate is admitted to Engine.load here.
+    /// fixtures exercise immutable staging and synchronous bank ownership.
+    /// They do not run a complete model or admit candidates to Engine.load.
     public static func quantizationRecords(directory: URL, sourceDirectory: URL? = nil,
                                            inventory: URL? = nil, prefill: Bool = false) throws -> CheckReport {
         struct Projection: Decodable {
@@ -37,6 +37,7 @@ extension Diagnostics {
             let fixtures: [Fixture]
             let artifact: Artifact
             let prefill_flags: Flags?
+            let layer_coverage: String?
         }
         func read(_ path: URL, limit: Int) throws -> Data {
             let file = try FileHandle(forReadingFrom: path)
@@ -48,10 +49,19 @@ extension Diagnostics {
         }
         let manifest = try JSONDecoder().decode(Manifest.self,
             from: read(directory.appendingPathComponent("records.json"), limit: 1_000_000))
+        let layers: Set<Int>
+        if let coverage = manifest.layer_coverage {
+            guard coverage == "allocation-classes-v1" else { throw ModelError("unknown VQ record coverage profile") }
+            switch manifest.artifact.inventory_sha256 {
+            case "098c79fea05981b86145109a76cfcba5a22c51d4738cd3e9f00c23ae6d8531fe": layers = [0, 2]
+            case "a30ded4e88270d33dfcca8e9b6c414a69cf82f0ad27d20bb3fe71b2b1c14ccac": layers = [0, 3]
+            default: throw ModelError("VQ allocation-class coverage requires an inspected artifact")
+            }
+        } else { layers = [0, 2] }
         guard manifest.schema == 1, manifest.fixtures.count == 2,
-              Set(manifest.fixtures.map(\.layer)) == Set([0, 2]),
+              Set(manifest.fixtures.map(\.layer)) == layers,
               manifest.runtime_sha256 == "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8" else {
-            throw ModelError("VQ record fixtures need the pinned runtime and both layer families")
+            throw ModelError("VQ record fixtures need the pinned runtime and specified layer set")
         }
         guard !prefill || (manifest.prefill_flags?.matches == true && sourceDirectory == nil && inventory == nil) else {
             throw ModelError("VQ prefill fixtures require the pinned segmented arithmetic and no direct-source mode")
@@ -84,6 +94,7 @@ extension Diagnostics {
             c.equal("cancelled payload is not published", source.verifiedFileCount, 0)
         }
         return try withError {
+            var testedLayouts = Set<VQRecordLayout>()
             for fixture in manifest.fixtures {
                 let bound = prefill ? 320_000_000 : 64_000_000
                 let ids = prefill ? (0..<63).map { UInt32($0 * 8) } + [511] : [UInt32(0), 1, 7, 511]
@@ -102,6 +113,7 @@ extension Diagnostics {
                                         groupSize: p.group_size, packing: packing)
                 }
                 let layout = try VQRecordLayout(layouts)
+                testedLayouts.insert(layout)
                 let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("slotstream-vq-record-" + UUID().uuidString)
                 try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: false,
                     attributes: [.posixPermissions: 0o700])
@@ -213,6 +225,9 @@ extension Diagnostics {
                 guard ProcessMemory.peakResidentBytes() <= 2_000_000_000 else {
                     throw ModelError("VQ record check exceeded its 2 GB component bound")
                 }
+            }
+            if manifest.layer_coverage != nil {
+                c.equal("distinct complete-record allocation classes exercised", testedLayouts.count, 2)
             }
             if let source {
                 c.expect("demanded checkpoint payloads fully verified", source.verifiedFileCount > 0)

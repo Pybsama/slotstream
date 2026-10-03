@@ -6,7 +6,7 @@ import Slotstream
 extension Diagnostics {
     /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
     /// Hashes cover every byte, not selected logits or a numerical tolerance.
-    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false) throws -> Data {
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false) throws -> Data {
         struct Boundary: Decodable {
             let layer: Int, step: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(step):\(layer):\(name)" }
@@ -83,6 +83,7 @@ extension Diagnostics {
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
         }
         let model = VQModelProbe(checkpoint)
+        if residentRecords { try model.enableResidentRecords() }
         var c = CheckBuilder("quantization-prefill-model"), observed: [String: String] = [:]
         var traceLayer = -1, traceValues: [String: MLXArray] = [:]
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -96,6 +97,7 @@ extension Diagnostics {
                 "peak_process_bytes": ProcessMemory.peakResidentBytes(), "peak_mlx_bytes": MLX.Memory.peakMemory,
                 "verified_files": checkpoint.verifiedFileCount, "verified_payload_bytes": checkpoint.verifiedPayloadBytes,
                 "before": try JSONSerialization.jsonObject(with: encoder.encode(before))]
+            object["resident_record_cache"] = model.recordCacheStats ?? [:]
             if let failure { object["failure"] = failure }
             let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: output.appendingPathComponent("receipt.json"), options: .atomic)
@@ -130,6 +132,14 @@ extension Diagnostics {
             c.equal("every large pass used segmented prefill", model.segmentedPrefillLayers, sparse ? 192 : 48)
             c.equal("actual sparse masks compared", model.sparseAttentionLayers, expectedSparse)
             c.expect("bounded complete staging", model.maximumLiveExperts <= 32)
+            if residentRecords {
+                guard let stats = model.recordCacheStats else { throw ModelError("resident cache was not configured") }
+                c.equal("both allocation classes resident", stats["allocation_classes"], 2)
+                c.equal("all record leases released", stats["pinned_records"], 0)
+                c.expect("resident cache serves real hits", (stats["hits"] ?? 0) > 0)
+                c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)
+                c.expect("resident books fit reserved bytes", (stats["resident_book_bytes"] ?? Int.max) <= (stats["maximum_book_bytes"] ?? 0))
+            }
             guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ prefill model exceeded its 4 GB process bound") }
             let result = try receipt(nil)
             guard c.report().passed else { throw ModelError("VQ prefill model assertions failed") }

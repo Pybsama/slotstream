@@ -26,9 +26,9 @@ package final class VQRecordBank {
     private var generation: UInt64 = 0
 
     package init(layout: VQRecordLayout, capacity: Int) throws {
-        // This first ownership experiment uses the already qualified staging
-        // geometry. Larger banks require independent view/cost qualification.
-        guard (1...32).contains(capacity) else { throw ModelError("VQ bank capacity must be between one and 32") }
+        // The fixed numerical probe admits at most 96 records per class.
+        // This is an experiment bound, not a production size recommendation.
+        guard (1...96).contains(capacity) else { throw ModelError("VQ bank capacity must be between one and 96") }
         self.layout = layout; self.capacity = capacity
         owners = Array(repeating: nil, count: capacity)
         referenced = Array(repeating: false, count: capacity)
@@ -112,7 +112,7 @@ package final class VQRecordBank {
         // resident slot. All values retain this bank's owned allocation.
         let operations = try VQRecordOperations(layout: layout,
             codes: [pieces[0], pieces[2], pieces[4]], books: books,
-            scales: [pieces[1], pieces[3], pieces[5]])
+            scales: [pieces[1], pieces[3], pieces[5]], residentBank: true)
         generation += 1; busy = true
         defer {
             // No future lazy evaluation may read storage after its lease ends.

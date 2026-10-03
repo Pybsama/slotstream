@@ -76,6 +76,7 @@ struct RMSNormGated {
 public struct Rope {
     let invFreq: MLXArray  // (dim/2) f32
     let dim: Int
+    private let pinnedVQReference: Bool
     private let tables = RopeTables()
     public var sharedTables: Bool {
         get { tables.enabled }
@@ -104,6 +105,7 @@ public struct Rope {
 
     package init(dim: Int, base: Float, pinnedVQReference: Bool) {
         self.dim = dim
+        self.pinnedVQReference = pinnedVQReference
         let exps = MLXArray(stride(from: 0, to: Int32(dim), by: 2).map { Float($0) / Float(dim) })
         if pinnedVQReference {
             precondition(dim == 64 && base == 10_000_000, "VQ rotary coefficients require the pinned geometry")
@@ -113,6 +115,7 @@ public struct Rope {
 
     /// positions (B, T) -> cos/sin (B, T, dim)
     func callAsFunction(_ positions: MLXArray) -> (MLXArray, MLXArray) {
+        if pinnedVQReference { return VQRotaryTable.angles(positions) }
         let freqs = positions.asType(.float32).expandedDimensions(axis: -1) * invFreq
         let emb = concatenated([freqs, freqs], axis: -1)
         return (cos(emb), sin(emb))

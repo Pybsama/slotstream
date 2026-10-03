@@ -29,9 +29,9 @@ package struct VQExpert {
 
     // Geometry is deliberately limited to the inspected Flash Next expert
     // families. This is an implementation bound, not a quality/performance cap.
-    package init(codes: MLXArray, codebook: MLXArray, scales: MLXArray, layout: VQLayout) throws {
+    package init(codes: MLXArray, codebook: MLXArray, scales: MLXArray, layout: VQLayout, residentBank: Bool = false) throws {
         guard [640, 2560].contains(layout.columns), layout.groupSize == 64,
-              codes.ndim == 3, (1...32).contains(codes.dim(0)), (1...2560).contains(codes.dim(1)),
+              codes.ndim == 3, (1...(residentBank ? 96 : 32)).contains(codes.dim(0)), (1...2560).contains(codes.dim(1)),
               codebook.dtype == .float16, codebook.shape == [layout.codebookEntries, layout.dimensions],
               scales.dtype == .float16, scales.shape == [codes.dim(0), codes.dim(1), layout.columns / 64],
               codes.nbytes + codebook.nbytes + scales.nbytes <= 256_000_000 else {

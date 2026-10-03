@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T06:05:08.897743Z
+updated: 2026-10-03T06:57:41.963528Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-vq-finite-rotary-table-portability]] — Exact finite VQ rotary table after reproduced GPU trigonometry differences
+- [[sources/runs/2026/10/2026-10-03-native-vq-fixed-record-cache]] — Fixed mixed-class VQ cache with complete-model numerical parity
+- [[sources/runs/2026/10/2026-10-03-vq-allocation-class-coverage-correction]] — Correction to VQ component allocation-class coverage
 - [[sources/runs/2026/10/2026-10-03-vq-rotary-coefficients-and-ci-portability]] — Pinned VQ rotary coefficients after cross-runner power mismatch
 - [[sources/runs/2026/10/2026-10-03-native-vq-resident-bank-component]] — Native VQ resident-bank ownership and complete expert parity
 - [[sources/runs/2026/10/2026-10-03-native-vq-sparse-selection]] — Native VQ sparse selection and retained-state parity
@@ -504,11 +507,8 @@ updated: 2026-10-03T06:05:08.897743Z
 - [[sources/runs/2026/09/2026-09-06-configurable-context-vision-target-counterexample]] — V202 independent vision reference passes; full image fixture exceeds the 10 GB test target
 - [[sources/runs/2026/09/2026-09-06-configurable-context-full-resource-swap-exclusion]] — V202 full governor drill stops on global swap-ins; idle controls also observe swap-ins
 - [[sources/runs/2026/09/2026-09-06-optimization-indexer-input-delivery]] — Indexer V204 input delivery failure and exact V206 initializer correction
-- [[sources/runs/2026/09/2026-09-06-optimization-planner-family-preparation]] — Unapplied coherent planner-family draft and exact comparison preparation
-- [[sources/runs/2026/09/2026-09-06-optimization-governor-advisory-fixture-correction]] — Governor advisory fixture correction and shared successor
-- [[sources/runs/2026/09/2026-09-06-configurable-context-governor-advisory-fixture-counterexample]] — V198 pure governor matrix exposes physically invalid settled-fixture assumptions
 
 ## More
 
-This folder has 716 files. The 500 most recent are listed above.
+This folder has 719 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

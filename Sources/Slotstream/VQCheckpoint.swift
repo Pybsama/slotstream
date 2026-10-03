@@ -233,6 +233,43 @@ package final class VQCheckpoint {
         return MLXArray(bytes, shape, dtype: dtype)
     }
 
+    package func recordLayout(layer: Int) throws -> VQRecordLayout {
+        guard (0..<48).contains(layer) else { throw ModelError("VQ record layer is out of range") }
+        return recordLayouts[layer]
+    }
+
+    package func recordBooks(layer: Int) throws -> [MLXArray] {
+        _ = try recordLayout(layer: layer)
+        let values = try ["gate_proj", "up_proj", "down_proj"].map { name in
+            try array("model.layers.\(layer).mlp.switch_mlp." + name + ".codebook", shouldContinue: { true })
+        }
+        eval(values)
+        return values
+    }
+
+    /// One checked piece at a time; the bank publishes only after all six.
+    /// This synchronous reader never owns or stores the bank's CPU pointers.
+    package func readRecord(layer: Int, expert: Int, emit: (Int, Data) throws -> Void) throws {
+        let layout = try recordLayout(layer: layer)
+        guard (0..<512).contains(expert) else { throw ModelError("VQ expert is out of range") }
+        for (index, name) in ["gate_proj", "up_proj", "down_proj"].enumerated() {
+            let base = "model.layers.\(layer).mlp.switch_mlp." + name
+            let spec = layout.projections[index], rows = index == 2 ? 2560 : 640
+            let unpacked = spec.packing == .unpacked8
+            for piece in 0...1 {
+                let position = index * 2 + piece
+                let (bytes, shape, dtype) = try raw(base + (piece == 0 ? ".codes" : ".vq_scales"),
+                    rows: [expert], maximumBytes: layout.pieceBytes[position], shouldContinue: { true })
+                let columns = piece == 0 ? spec.codeRowBytes / (unpacked ? 1 : 4) : spec.columns / 64
+                let tag = piece == 0 ? (unpacked ? "U8" : "U32") : "F16"
+                guard shape == [1, rows, columns], dtype == tag, bytes.count == layout.pieceBytes[position] else {
+                    throw ModelError("VQ record piece disagrees with the authenticated layout")
+                }
+                try emit(position, bytes)
+            }
+        }
+    }
+
     package func records(layer: Int, experts: [UInt32], shouldContinue: () -> Bool = { true }) throws -> VQRecordBatch {
         guard (0..<48).contains(layer), (1...32).contains(experts.count), Set(experts).count == experts.count,
               experts.allSatisfy({ $0 < 512 }) else { throw ModelError("VQ record request needs bounded unique experts") }

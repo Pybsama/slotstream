@@ -61,9 +61,20 @@ def run(options):
                                for r in selected for off in range(0, stride, 1_000_000))
             return mx.array(np.frombuffer(payload, dtype=dtype).copy().reshape([len(selected)] + shape[1:]))
 
+        layers = [0, 2]
+        if options.allocation_classes:
+            signatures = set(); layers = []
+            for layer in range(48):
+                descriptors = [config['vq_modules'][f'model.layers.{layer}.mlp.switch_mlp.{name}']
+                               for name in ('gate_proj', 'up_proj', 'down_proj')]
+                signature = json.dumps(descriptors, sort_keys=True, separators=(',', ':'))
+                if signature not in signatures:
+                    signatures.add(signature); layers.append(layer)
+            if len(layers) != 2:
+                raise ValueError('inspected artifacts require exactly two complete-record allocation classes')
         fixtures = []
         try:
-            for layer in (0, 2):
+            for layer in layers:
                 ids = [i * 8 for i in range(63)] + [511]
                 module = SwitchGLU(2560, 640, len(ids))
                 arrays = {}; layouts = []
@@ -112,6 +123,7 @@ def run(options):
                       'instrument': instrument, 'record_script_sha256': own_hash, 'fixtures': fixtures,
                       'before': before, 'process_memory': physical(), 'peak_mlx_bytes': mx.get_peak_memory(),
                       'ranges': {name: {'bytes_read': f.bytes_read, 'range_sha256': f.range_hash.hexdigest()} for name,f in files.items()}}
+            if options.allocation_classes: result['layer_coverage'] = 'allocation-classes-v1'
             (options.out / 'records.json').write_text(json.dumps(result, indent=2) + '\n')
             print(json.dumps({'fixtures': len(fixtures), 'cases': len(fixtures) * 2, 'memory': physical()}))
         finally:
@@ -122,4 +134,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('model', 'inventory', 'architecture', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--allocation-classes', action='store_true', help='One real layer per complete-record allocation class; preserves legacy fixtures by default')
     run(parser.parse_args())

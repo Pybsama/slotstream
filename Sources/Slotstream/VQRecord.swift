@@ -108,15 +108,15 @@ package struct VQRecordOperations {
     }
     private let gate: VQExpert, up: VQExpert, down: VQExpert
 
-    package init(layout: VQRecordLayout, codes: [MLXArray], books: [MLXArray], scales: [MLXArray]) throws {
+    package init(layout: VQRecordLayout, codes: [MLXArray], books: [MLXArray], scales: [MLXArray], residentBank: Bool = false) throws {
         guard codes.count == 3, books.count == 3, scales.count == 3,
               codes.allSatisfy({ $0.ndim == 3 && $0.dim(0) == codes[0].dim(0) }),
               codes.enumerated().allSatisfy({ $0.element.dim(1) == ($0.offset == 2 ? 2560 : 640) }) else {
             throw ModelError("VQ projections need one complete compatible record bank")
         }
-        gate = try VQExpert(codes: codes[0], codebook: books[0], scales: scales[0], layout: layout.projections[0])
-        up = try VQExpert(codes: codes[1], codebook: books[1], scales: scales[1], layout: layout.projections[1])
-        down = try VQExpert(codes: codes[2], codebook: books[2], scales: scales[2], layout: layout.projections[2])
+        gate = try VQExpert(codes: codes[0], codebook: books[0], scales: scales[0], layout: layout.projections[0], residentBank: residentBank)
+        up = try VQExpert(codes: codes[1], codebook: books[1], scales: scales[1], layout: layout.projections[1], residentBank: residentBank)
+        down = try VQExpert(codes: codes[2], codebook: books[2], scales: scales[2], layout: layout.projections[2], residentBank: residentBank)
     }
 
     package func prefill(_ x: MLXArray, slots: [UInt32], sourceRows: [UInt32]) throws -> MLXArray {

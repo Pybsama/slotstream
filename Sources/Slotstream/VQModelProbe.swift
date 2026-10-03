@@ -2,9 +2,10 @@ import Foundation
 import MLX
 import MLXNN
 
-/// Experimental complete text stack with one dense layer and one immutable
-/// routed batch live at a time. It establishes arithmetic/state parity only.
-/// It has no mutable expert cache, generation service, draft or vision path.
+/// Experimental complete text stack with one dense layer live at a time.
+/// Routed experts use immutable staging or an optional fixed resident cache.
+/// This establishes arithmetic/state parity, not a generation service, draft
+/// execution, vision, resizing or production memory policy.
 package final class VQModelProbe {
     private let checkpoint: VQCheckpoint
     private let rope: Rope
@@ -14,6 +15,13 @@ package final class VQModelProbe {
     private var previous: [Int64]
     private var consumed = 0
     private var failed = false
+    private var recordCache: VQRecordCache?
+    package var recordCacheStats: [String: Int]? { recordCache?.stats }
+
+    package func enableResidentRecords() throws {
+        guard !failed, consumed == 0, recordCache == nil else { throw ModelError("VQ cache must be configured before the first pass") }
+        recordCache = try VQRecordCache(checkpoint, capacityPerClass: 96)
+    }
     package private(set) var maximumRecordBatches = 0
     package private(set) var maximumLiveExperts = 0
     package private(set) var segmentedPrefillLayers = 0
@@ -136,6 +144,8 @@ package final class VQModelProbe {
                 try checkpoint.records(layer: layer, experts: ids)
             }
             segmentedPrefillLayers += 1
+        } else if let recordCache {
+            streamed = try recordCache.call(input.reshaped([-1, 2560]), layer: layer, routes: routes)
         } else {
             streamed = try VQRouteStream.call(input.reshaped([-1, 2560]), routes: routes) { ids in
                 try checkpoint.records(layer: layer, experts: ids)

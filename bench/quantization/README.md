@@ -466,10 +466,14 @@ checks its expanded attention against the pinned whole call.
 
 The candidate rotary constructor uses the exact FP32 coefficient words from
 the pinned reference for its fixed dimension and base. Precise Metal power
-matched the development Mac but produced different bits on CI; it cannot define
-portable coefficients. The public constructor keeps its deployed arithmetic.
-The original development-Mac power microscope and the unchanged exact
-frequency/angle digests can be reproduced with:
+matched the development Mac but produced different bits on CI. Pinning inverse
+frequencies exposed separate CI sine/cosine differences. The research path now
+embeds the exact finite FP32 table for its admitted positions. It reconstructs
+the repeated rotary half without rounding and refuses positions outside the
+authenticated table. Host-double trigonometry was rejected after a BF16
+boundary mismatch. The public constructor keeps its deployed arithmetic.
+The original power microscope and unchanged exact frequency/angle digests can
+be reproduced with:
 
 ```sh
 .venv/bin/python Tools/vq_rope_reference.py --architecture <pinned-qwen4_exp.py> \
@@ -552,6 +556,34 @@ Cold/hot and eviction outputs must match the independent reference bits.
 Hot reads fail if the payload reader is called. Partial, duplicate, oversized,
 wrong-index, cancelled and failed reads cannot publish a record. The tests
 cover retry, reentrant-clear refusal and retained output across destructive
-bank reuse. These are bounded synchronous component checks. The complete-model
-probe still uses immutable staging; model-wide mixed banks, larger capacities,
-asynchronous reads, resize, byte budgeting and governor integration remain open.
+bank reuse. These are bounded synchronous component checks. Use `--allocation-classes` when generating new complete-record or segmented-
+prefill fixtures. That mode binds actual descriptor-class representatives to
+the inspected artifact. Historical VQ 4.4 fixtures used two layers from one
+class; their old per-layer results do not cover both classes.
+
+The complete-model probe supports `--resident-records` with `--greedy` or
+`--sparse`. It allocates a fixed 96-row bank per descriptor class and keeps
+layer codebooks once. Large prefill retains separate immutable staging. The
+receipts include exact bank/book bytes, hit/load/eviction counts and pins.
+Both packs preserve their complete reference boundaries with real cache hits
+and CLOCK replacement. This remains a small synchronous research cache.
+Larger capacity, resident dense weights, asynchronous reads, resize, production
+byte budgeting and governor integration remain open.
+
+
+The finite table is independently reproduced and embedded with:
+
+```sh
+.venv/bin/python Tools/vq_rotary_table_reference.py \
+  --architecture <pinned-qwen4_exp.py> --runtime <pinned-model.py> \
+  --out <new-rotary-table-reference>
+python3 Tools/vq_rotary_table_source.py \
+  --table <new-rotary-table-reference>/angles-f32le.bin \
+  --output <comparison-source.swift>
+```
+
+Compare the generated source against `Sources/Slotstream/VQRotaryTable.swift`.
+The generator admits only the frozen complete payload hash. The table is a
+bounded research coefficient artifact, not a qualification of longer contexts
+or a production resource policy. Full-model parity and remote checks remain
+independent of this generation step.

@@ -76,3 +76,12 @@ Capture complete-record resident-bank ownership and regression checks; keep mode
 ## [2026-10-03 06:05] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md
 Replace candidate rotary power with verified checkpoint coefficients after CI mismatch; unchanged exact local gates and full static suite pass, remote qualification pending.
 
+## [2026-10-03 06:22] update | records/measurements/quantization-screen-2026-10-02.md
+Correct component coverage: legacy 4.4 layers 0 and 2 share one class; preserve valid per-layer results and full-model evidence.
+
+## [2026-10-03 06:35] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Capture exact greedy and sparse parity with fixed mixed-class resident banks, correct actual class geometry, and retain production/portability qualification gates.
+
+## [2026-10-03 06:57] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Preserve reproduced CI trig and rejected host-arithmetic failures; bind exact finite rotary coefficients and unchanged full-model/cache parity, with completed local static gates.
+

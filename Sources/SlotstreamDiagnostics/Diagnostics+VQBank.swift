@@ -117,6 +117,26 @@ extension Diagnostics {
             equal(result, expected[indices], "CLOCK replacement exact bits")
             c.equal("L\(layer) small bank releases pins", small.snapshot().pinned, 0)
         }
+        // Fill all 96 physical rows with repeated real records under distinct
+        // synthetic keys. The independent one-token fixture supplies each
+        // expected row, including high bank offsets and subsequent hot access.
+        let wide = try VQRecordBank(layout: layout, capacity: 96)
+        for key in 0..<96 {
+            let fixtureRow = key % ids.count
+            let position = routes.firstIndex(of: ids[fixtureRow])!
+            let value = try wide.call(x[0..<1], layer: layer, routes: [UInt32(key)], dispatchPairs: routes.count, books: books) { _, emit in
+                for piece in 0..<6 { try emit(piece, pieces[piece][fixtureRow].asData(access: .copy).data) }
+            }
+            equal(value, expected[position..<(position + 1)], "physical slot \(key) exact bits")
+        }
+        c.equal("L\(layer) every physical bank row occupied", wide.snapshot().occupied, 96)
+        for key in [0, 31, 32, 63, 64, 95] {
+            let position = routes.firstIndex(of: ids[key % ids.count])!
+            let value = try wide.call(x[0..<1], layer: layer, routes: [UInt32(key)], dispatchPairs: routes.count, books: books) { _, _ in
+                throw ModelError("high-slot resident record was re-read")
+            }
+            equal(value, expected[position..<(position + 1)], "hot physical slot \(key)")
+        }
         c.expect("L\(layer) bank exercised evictions", small.snapshot().evictions > 0)
         c.expect("L\(layer) bank exercised hits", small.snapshot().hits > 0)
     }

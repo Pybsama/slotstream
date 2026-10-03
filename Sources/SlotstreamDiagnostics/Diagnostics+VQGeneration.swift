@@ -7,7 +7,7 @@ extension Diagnostics {
     /// A fixed, genuinely autoregressive check. The native argmax, not the
     /// fixture's token, becomes the next input. Final sampled token is unconsumed.
     public static func quantizationGeneration(source: URL, inventory: URL, profileURL: URL,
-                                              fixtureDirectory: URL, output: URL) throws -> Data {
+                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false) throws -> Data {
         struct Profile: Decodable, Equatable {
             let schema: Int, profile: String, prompt: [Int], sampling: String
             let max_new_tokens: Int, minimum_steps: Int, eos_token_id: Int
@@ -112,6 +112,7 @@ extension Diagnostics {
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
         }
         let model = VQModelProbe(checkpoint)
+        if residentRecords { try model.enableResidentRecords() }
         var c = CheckBuilder("quantization-generated-sequence"), observed: [String: String] = [:]
         var tokens = profile.prompt, generated: [Int] = [], traceLayer = -1, traceValues: [String: MLXArray] = [:]
         var consumedTokens = 0
@@ -126,6 +127,7 @@ extension Diagnostics {
                 "peak_mlx_bytes": MLX.Memory.peakMemory, "verified_files": checkpoint.verifiedFileCount,
                 "verified_payload_bytes": checkpoint.verifiedPayloadBytes,
                 "before": try JSONSerialization.jsonObject(with: encoder.encode(before))]
+            object["resident_record_cache"] = model.recordCacheStats ?? [:]
             if let failure { object["failure"] = failure }
             let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: output.appendingPathComponent("receipt.json"), options: .atomic)
@@ -168,6 +170,14 @@ extension Diagnostics {
             c.equal("actual autoregressive sequence", generated, manifest.generated)
             c.equal("final sampled token remains unconsumed", consumedTokens, manifest.consumed_tokens)
             c.expect("bounded complete expert staging", model.maximumLiveExperts <= 32)
+            if residentRecords {
+                guard let stats = model.recordCacheStats else { throw ModelError("resident cache was not configured") }
+                c.equal("both allocation classes resident", stats["allocation_classes"], 2)
+                c.equal("all record leases released", stats["pinned_records"], 0)
+                c.expect("resident cache serves real hits", (stats["hits"] ?? 0) > 0)
+                c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)
+                c.expect("resident books fit reserved bytes", (stats["resident_book_bytes"] ?? Int.max) <= (stats["maximum_book_bytes"] ?? 0))
+            }
             guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ generation exceeded its 4 GB process bound") }
             let data = try receipt(nil)
             guard c.report().passed else { throw ModelError("VQ generated sequence assertions failed") }
