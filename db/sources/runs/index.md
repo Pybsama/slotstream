@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T04:12:23.045641Z
+updated: 2026-10-03T04:36:32.014616Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-native-vq-segmented-prefill]] — Native VQ fused segmented prefill matches pinned expert composition
 - [[sources/runs/2026/10/2026-10-02-native-vq-partitioned-route-parity]] — Bounded VQ routed partitions preserve exact arithmetic
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-static]] — Native VQ complete-stack static acceptance
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-validation]] — Native VQ arithmetic and deployed compatibility validation
@@ -506,9 +507,8 @@ updated: 2026-10-03T04:12:23.045641Z
 - [[sources/runs/2026/09/2026-09-06-optimization-portable-integration-gates]] — V196 full native portable deployment path gates prepared
 - [[sources/runs/2026/09/2026-09-06-slotpack-hugging-face-full-mac-qualification]] — The native default completes an initially empty Mac installation across a network failure and resume; every original hash verifies, while timing measurements are discarded.
 - [[sources/runs/2026/09/2026-09-06-optimization-final-matrix-workload-binding]] — V195 final matrix binds workloads and controls across native paired and soak evidence
-- [[sources/runs/2026/09/2026-09-06-optimization-live-governor-feasibility]] — V194 live governor rejects ordinary-context advisory overcommit
 
 ## More
 
-This folder has 708 files. The 500 most recent are listed above.
+This folder has 709 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

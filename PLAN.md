@@ -359,6 +359,12 @@ Both pinned packs retain exact original short-stack outputs and pass a new eight
 
 This is synchronous immutable staging. It does not supply persistent residency, mutable cache pins, asynchronous generation fences, resize accounting or a production memory governor. The larger-batch upstream prefill path beyond 4,096 routed pairs remains a separate implementation/parity gate. Eleven functional tokens do not establish task quality, latency or committed generation speed.
 
+### Segmented prefill component checkpoint
+
+[[sources/runs/2026/10/2026-10-02-native-vq-segmented-prefill]] records the pinned large-prefill dispatch audit and exact native expert composition for both packs at 410 and 512 prompt rows. The actual default is fused segmented GEMM, with recorded kernel flags and executed variant names. The reference's fixed decoded-expert chunk of 32 affects only its fallback; it is not evidence that the admitted large-prefill path materializes decoded matrices. No prior measured outputs are retracted by this dispatch clarification.
+
+The native wrapper uses the exact reviewed segmented kernel and its preprocessor specialization, preserves complete expert token segments across storage partitions, and restores routing order. Sixty-four real experts with skewed routes exercise two staging batches, partial tiles and both codebook placements. Complete SwiGLU outputs match exactly in both inspected layer families and both packs. All 95 native catalogue checks and the reference/source unit checks pass. These are component results with bounded process-memory supervision, not full-model prefill or timing qualification. Full-model attention, PLE and recurrent state at these batch sizes are the next parity gate; mutable residency, native generation, quality and speed remain open.
+
 ## 0. Status tracker (living)
 Measured data lives in **[MEASUREMENTS.md](MEASUREMENTS.md)**; this file keeps the
 design and the estimates it replaces.

@@ -8,7 +8,7 @@ extension Diagnostics {
     /// fixtures exercise immutable staging only, not cache lifecycle or a
     /// complete model. No candidate is admitted to Engine.load here.
     public static func quantizationRecords(directory: URL, sourceDirectory: URL? = nil,
-                                           inventory: URL? = nil) throws -> CheckReport {
+                                           inventory: URL? = nil, prefill: Bool = false) throws -> CheckReport {
         struct Projection: Decodable {
             let columns: Int, dimensions: Int, entries: Int, group_size: Int
             let packing: String
@@ -21,10 +21,22 @@ extension Diagnostics {
         }
         struct Manifest: Decodable {
             struct Artifact: Decodable { let inventory_sha256: String }
+            struct Flags: Decodable {
+                let _FUSED_GEMM: Bool, _FUSED_GEMM_V2: Bool, _GEMMSEG_BF16IO: Bool
+                let _GEMMSEG_OT2: Bool, _GEMMSEG_PH2V: Bool, _GEMMSEG_DSTORE: Bool
+                let _GEMMSEG_PIPE: Bool, _GEMMSEG_XT_PAD: Bool, _SPEC_KERNELS: Bool
+                let _GEMMSEG_RTILE: Int, VQ_FUSED_MAX_N: Int
+                var matches: Bool {
+                    _FUSED_GEMM && _FUSED_GEMM_V2 && !_GEMMSEG_BF16IO && _GEMMSEG_OT2 && _GEMMSEG_PH2V
+                    && !_GEMMSEG_DSTORE && !_GEMMSEG_PIPE && !_GEMMSEG_XT_PAD && _SPEC_KERNELS
+                    && _GEMMSEG_RTILE == 32 && VQ_FUSED_MAX_N == 4096
+                }
+            }
             let schema: Int
             let runtime_sha256: String
             let fixtures: [Fixture]
             let artifact: Artifact
+            let prefill_flags: Flags?
         }
         func read(_ path: URL, limit: Int) throws -> Data {
             let file = try FileHandle(forReadingFrom: path)
@@ -41,17 +53,21 @@ extension Diagnostics {
               manifest.runtime_sha256 == "1685ec90feb24e421c379ae4e3594f659478905d2c1393617990d84d3f514ee8" else {
             throw ModelError("VQ record fixtures need the pinned runtime and both layer families")
         }
+        guard !prefill || (manifest.prefill_flags?.matches == true && sourceDirectory == nil && inventory == nil) else {
+            throw ModelError("VQ prefill fixtures require the pinned segmented arithmetic and no direct-source mode")
+        }
         try ModelProcessGuard.acquire()
-        guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 5_000_000_000 else {
-            throw ModelError("VQ record checks need 5 GB actual reclaimable memory")
+        let requiredHeadroom = prefill ? 7_000_000_000 : 5_000_000_000
+        guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= requiredHeadroom else {
+            throw ModelError("VQ record checks need \(requiredHeadroom / 1_000_000_000) GB actual reclaimable memory")
         }
         let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
-        MLX.Memory.cacheLimit = 64_000_000; MLX.Memory.memoryLimit = min(oldLimit, 1_000_000_000)
+        MLX.Memory.cacheLimit = 64_000_000; MLX.Memory.memoryLimit = min(oldLimit, prefill ? 2_000_000_000 : 1_000_000_000)
         defer {
             Stream.gpu.synchronize(); MLX.Memory.clearCache()
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
         }
-        var c = CheckBuilder("quantization-records")
+        var c = CheckBuilder(prefill ? "quantization-prefill" : "quantization-records")
         guard (sourceDirectory == nil) == (inventory == nil) else { throw ModelError("VQ source and inventory must be provided together") }
         let source = try sourceDirectory.map { try VQCheckpoint(directory: $0, inventory: inventory!) }
         if let source {
@@ -69,11 +85,15 @@ extension Diagnostics {
         }
         return try withError {
             for fixture in manifest.fixtures {
-                guard fixture.path == "record-\(fixture.layer).safetensors", fixture.bytes > 0,
-                      fixture.bytes <= 64_000_000, fixture.expert_ids == [0, 1, 7, 511], fixture.projections.count == 3 else {
+                let bound = prefill ? 320_000_000 : 64_000_000
+                let ids = prefill ? (0..<63).map { UInt32($0 * 8) } + [511] : [UInt32(0), 1, 7, 511]
+                let counts = prefill ? [410, 512] : [1, 2, 3]
+                let prefix = prefill ? "prefill" : "record"
+                guard fixture.path == "\(prefix)-\(fixture.layer).safetensors", fixture.bytes > 0,
+                      fixture.bytes <= bound, fixture.expert_ids == ids, fixture.projections.count == 3 else {
                     throw ModelError("unexpected VQ complete-record fixture metadata")
                 }
-                let data = try read(directory.appendingPathComponent(fixture.path), limit: 64_000_000)
+                let data = try read(directory.appendingPathComponent(fixture.path), limit: bound)
                 let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
                 guard data.count == fixture.bytes, digest == fixture.sha256 else { throw ModelError("VQ record fixture digest mismatch") }
                 let layouts = try fixture.projections.map { p -> VQLayout in
@@ -91,11 +111,39 @@ extension Diagnostics {
                 let arrays = try loadArrays(url: path)
                 let names = ["gate_proj", "up_proj", "down_proj"]
                 let expectedKeys = Set(names.flatMap { n in ["codes", "codebook", "vq_scales"].map { n + "." + $0 } }
-                    + (1...3).flatMap { ["x\($0)", "routes\($0)", "expected\($0)"] })
+                    + counts.flatMap { ["x\($0)", "routes\($0)", "expected\($0)"] })
                 guard Set(arrays.keys) == expectedKeys else { throw ModelError("VQ record fixture tensor set mismatch") }
                 let codes = names.map { arrays[$0 + ".codes"]! }
                 let books = names.map { arrays[$0 + ".codebook"]! }
                 let scales = names.map { arrays[$0 + ".vq_scales"]! }
+                if prefill {
+                    for count in counts {
+                        let x = arrays["x\(count)"]!, routes = arrays["routes\(count)"]!, expected = arrays["expected\(count)"]!
+                        guard x.shape == [count, 2560], x.dtype == .bfloat16,
+                              routes.shape == [count, 10], routes.dtype == .uint32,
+                              expected.shape == [count, 10, 2560], expected.dtype == .bfloat16 else {
+                            throw ModelError("VQ segmented prefill fixture shape mismatch")
+                        }
+                        let streamed = try VQPrefillStream.call(x, routes: routes.asArray(UInt32.self)) { ids in
+                            let rows = MLXArray(try ids.map { id -> Int32 in
+                                guard let position = fixture.expert_ids.firstIndex(of: id) else { throw ModelError("VQ prefill route is outside its fixture") }
+                                return Int32(position)
+                            })
+                            return try VQRecordBatch(layer: fixture.layer, expertIDs: ids, layout: layout,
+                                codes: codes.map { $0[rows] }, books: books, scales: scales.map { $0[rows] })
+                        }
+                        eval(streamed.values)
+                        c.equal("L\(fixture.layer) T\(count) segmented shape", streamed.values.shape, expected.shape)
+                        c.expect("L\(fixture.layer) T\(count) segmented finite", all(isFinite(streamed.values)).item(Bool.self))
+                        let actualHash = SHA256.hash(data: streamed.values.asData(access: .copy).data).map { String(format: "%02x", $0) }.joined()
+                        let expectedHash = SHA256.hash(data: expected.asData(access: .copy).data).map { String(format: "%02x", $0) }.joined()
+                        c.equal("L\(fixture.layer) T\(count) exact segmented SwiGLU bits", actualHash, expectedHash)
+                        c.equal("L\(fixture.layer) T\(count) complete staging batches", streamed.batches, 2)
+                        c.equal("L\(fixture.layer) T\(count) maximum staged experts", streamed.maximumExperts, 32)
+                    }
+                    guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ prefill check exceeded its 4 GB process bound") }
+                    continue
+                }
                 let batch = try VQRecordBatch(layer: fixture.layer, expertIDs: fixture.expert_ids,
                     layout: layout, codes: codes, books: books, scales: scales)
                 let direct = try source?.records(layer: fixture.layer, experts: fixture.expert_ids)

@@ -6,6 +6,7 @@ import MLX
 /// must be established separately before a pack can use this path.
 package struct VQExpert {
     private let codes: MLXArray
+    private let prefillCodes: MLXArray
     private let codebook: MLXArray
     private let scales: MLXArray
     private let layout: VQLayout
@@ -13,6 +14,7 @@ package struct VQExpert {
     private let outputRows: Int
     private let rowKernel: MLXFast.MLXFastKernel
     private let simdKernel: MLXFast.MLXFastKernel?
+    private let prefillKernel: MLXFast.MLXFastKernel
 
     private static func kernel(source: String, name: String) throws -> MLXFast.MLXFastKernel {
         let original = "const device T* xrow = x + (size_t)t * IN;"
@@ -52,6 +54,7 @@ package struct VQExpert {
         // so caller-side assignment cannot retarget an admitted record. These
         // views retain values, not leases on externally reused bank memory.
         self.codebook = codebook.reshaped(codebook.shape)
+        prefillCodes = codes.reshaped(codes.shape)
         self.scales = scales.reshaped(scales.shape); self.layout = layout
         expertCount = codes.dim(0); outputRows = codes.dim(1)
         let source: String
@@ -62,6 +65,49 @@ package struct VQExpert {
         }
         rowKernel = try Self.kernel(source: source, name: "d\(layout.dimensions)_" + layout.packing.rawValue)
         simdKernel = layout.dimensions == 8 ? try Self.kernel(source: VQKernelSources.d8simd, name: "d8simd") : nil
+        let deviceBook = layout.codebookBytes >= 16_384 || layout.codebookBytes + 12_288 > 32_768
+        // Match the pinned default specialization, including preprocessing
+        // macros. Metal template arguments cannot drive this source's #if.
+        var defines = [("BITS", layout.packing == .unpacked8 ? "0" : String(layout.bits)),
+                       ("GROUP", "64"), ("MAX_K", deviceBook ? "1" : String(layout.codebookEntries)),
+                       ("D_BAKE", String(layout.dimensions)), ("CB_DEV", deviceBook ? "1" : "0"),
+                       ("RTILE", "32"), ("XPAD", "0"), ("TIO", "half"), ("OT2", "1"),
+                       ("DSTORE", "0"), ("PIPE", "0"), ("PH2V", "1")]
+        if layout.packing == .unpacked8 { defines.append(("CT", "uchar")) }
+        let header = defines.map { "#define \($0.0) \($0.1)\n" }.joined()
+        let name = "slotstream_vq_segmented_" + defines.map { $0.1 }.joined(separator: "_")
+        prefillKernel = MLXFast.metalKernel(name: name,
+            inputNames: ["codes", "codebook", "scales", "xsrc", "srcrows", "tmeta", "dims"], outputNames: ["y"],
+            source: VQKernelSources.segmentedPrefill, header: header)
+    }
+
+    /// A complete expert segment retains all its routed rows when storage is
+    /// partitioned. Each independent reference tile has at most 32 rows and
+    /// 64 output columns. Keep the pinned F16 input/output conversion.
+    package func prefill(_ x: MLXArray, expertIDs: [UInt32], sourceRows: [UInt32]) throws -> MLXArray {
+        guard x.ndim == 2, x.dim(1) == layout.columns, (1...5120).contains(x.dim(0)),
+              [.float16, .bfloat16].contains(x.dtype), (1...5120).contains(expertIDs.count),
+              sourceRows.count == expertIDs.count, sourceRows.allSatisfy({ $0 < UInt32(x.dim(0)) }),
+              expertIDs.allSatisfy({ $0 < UInt32(expertCount) }),
+              zip(expertIDs, expertIDs.dropFirst()).allSatisfy({ $0 <= $1 }) else {
+            throw ModelError("VQ segmented prefill requires bounded sorted experts and valid source rows")
+        }
+        var tiles: [Int32] = [], first = 0
+        while first < expertIDs.count {
+            var end = first + 1
+            while end < expertIDs.count, expertIDs[end] == expertIDs[first] { end += 1 }
+            guard end - first <= 512 else { throw ModelError("VQ prefill expert segment exceeds its bound") }
+            for row in stride(from: first, to: end, by: 32) {
+                tiles += [Int32(expertIDs[first]), Int32(row), Int32(min(32, end - row))]
+            }
+            first = end
+        }
+        let count = tiles.count / 3
+        let dims = MLXArray([Int32(outputRows), Int32(layout.columns), Int32(layout.columns / 64),
+                             Int32(layout.codebookEntries), Int32(count)])
+        return prefillKernel([prefillCodes, codebook, scales, x.asType(.float16), MLXArray(sourceRows), MLXArray(tiles), dims],
+            grid: (32 * ((outputRows + 63) / 64), 4 * count, 1), threadGroup: (32, 4, 1),
+            outputShapes: [[expertIDs.count, outputRows]], outputDTypes: [.float16])[0].asType(x.dtype)
     }
 
     /// x is [tokenRows, inputColumns], indices is [tokenRows, topK]. The

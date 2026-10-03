@@ -157,8 +157,9 @@ selecting output rows; selecting hidden rows first could change GEMM reduction
 order. Its initial pilot is bounded to 2048 input tokens and sixteen complete
 vocabulary rows. These limits are experiment scope, not product context limits.
 Kernel knobs must be absent from the ambient environment. The reference fixes
-the decoded-expert chunk to 32, preserving a declared arithmetic mode rather
-than allowing free RAM to choose it.
+the decoded-expert chunk to 32 for the fallback path. The admitted large-prefill
+geometries use the pinned default fused segmented GEMM. Its executed flags and
+kernel names are captured by the prefill component producer below.
 
 The complete-file verification receipt (`verified.json`) binds the exact
 revision, pinned Hub metadata and every tensor file's original size/hash.
@@ -414,3 +415,26 @@ freezes the pinned Python GPU outputs for every finite BF16 input. The native
 the rounding-boundary scalar. The deployed sigmoid remains unchanged. Preserve
 the exact runtime identity: sharing a formula or metallib does not establish
 identical intermediate rounding across host bindings.
+
+## Large-prefill expert component
+
+`Tools/vq_prefill_reference.py` freezes the actual upstream fused segmented
+dispatch for 410 and 512 prompt rows, using sixty-four real experts and skewed
+routing. This covers partial tiles, the transition beyond fused decode and
+multiple bounded native staging batches. The producer validates the pinned
+flags and records the kernel variants it actually executed. Run it under the
+same sequential `quantization_logit_run.supervise` resource bounds:
+
+```sh
+.venv/bin/python Tools/vq_prefill_reference.py --model <verified-vq-pack> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --out <new-prefill-fixtures>
+.build/release/slotstream quantization-check \
+  --prefill-fixture-directory <same-pack-prefill-fixtures>
+```
+
+The native binding uses the reviewed kernel's exact preprocessing macros and
+F16 I/O contract. `VQPrefillStream` stages complete expert segments without
+splitting their token tiles, then restores the original pair order. Passing
+this expert-composition check does not establish full-model prefill parity,
+persistent caching, task quality or speed.

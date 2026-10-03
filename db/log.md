@@ -58,3 +58,6 @@ Completed full static acceptance of the frozen short-stack v7 checkpoint, includ
 ## [2026-10-03 04:12] update | records/measurements/quantization-screen-2026-10-02.md
 Preserved whole-batch VQ dispatch across immutable expert partitions. Exact fused fixtures, real SwiGLU with four staging capacities, original full-stack fixtures and fresh eight-plus-three-token full-stack fixtures all pass for both packs. The 95-check native catalogue passes. Larger-prefill GEMM, mutable caches, quality and speed remain open; no new static or hardware qualification claimed.
 
+## [2026-10-03 04:36] update | records/measurements/quantization-screen-2026-10-02.md
+Audited the pinned large-prefill default as fused segmented GEMM, not its decoded fallback. Added exact source-bound native specialization and complete-segment staging. Both packs match real expert SwiGLU at 410/512 rows with skewed routing; 95 native catalogue checks and source/reference tests pass. Full-model prefill and qualification remain open.
+

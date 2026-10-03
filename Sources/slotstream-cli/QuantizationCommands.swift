@@ -12,6 +12,8 @@ struct QuantizationCheck: ParsableCommand {
     var fusedFixtureDirectory: String?
     @Option(name: .long, help: "Complete real expert records from Tools/vq_record_reference.py")
     var recordFixtureDirectory: String?
+    @Option(name: .long, help: "Pinned large-prefill expert fixtures from Tools/vq_prefill_reference.py")
+    var prefillFixtureDirectory: String?
     @Option(name: .long, help: "Corrected dense-block reference fixture from Tools/vq_trunk_reference.py")
     var trunkFixtureDirectory: String?
     @Option(name: .long, help: "Research-only pinned VQ download to check against record and/or row fixtures")
@@ -26,7 +28,7 @@ struct QuantizationCheck: ParsableCommand {
         }
         if sourceDirectory != nil {
             guard recordFixtureDirectory != nil || fixtureDirectory != nil,
-                  fusedFixtureDirectory == nil, trunkFixtureDirectory == nil, !kernels else {
+                  fusedFixtureDirectory == nil, trunkFixtureDirectory == nil, prefillFixtureDirectory == nil, !kernels else {
                 throw ValidationError("direct source checks require record and/or row fixtures only")
             }
         }
@@ -50,6 +52,9 @@ struct QuantizationCheck: ParsableCommand {
         if let recordFixtureDirectory {
             reports.append(try Diagnostics.quantizationRecords(directory: URL(fileURLWithPath: recordFixtureDirectory),
                                                               sourceDirectory: source, inventory: inventory))
+        }
+        if let prefillFixtureDirectory {
+            reports.append(try Diagnostics.quantizationRecords(directory: URL(fileURLWithPath: prefillFixtureDirectory), prefill: true))
         }
         if let trunkFixtureDirectory {
             reports.append(try Diagnostics.quantizationTrunk(directory: URL(fileURLWithPath: trunkFixtureDirectory)))

@@ -86,6 +86,19 @@ package struct VQRecordBatch {
         return try composed(x, routes: routes, topK: 1, dispatchPairs: dispatchPairs).reshaped([-1, 2560])
     }
 
+    /// Complete sorted expert segments for the pinned large-prefill kernel.
+    package func prefillPairs(_ x: MLXArray, routes: [UInt32], sourceRows: [UInt32]) throws -> MLXArray {
+        let lookup = Dictionary(uniqueKeysWithValues: expertIDs.enumerated().map { ($0.element, UInt32($0.offset)) })
+        let slots = try routes.map { id -> UInt32 in
+            guard let slot = lookup[id] else { throw ModelError("VQ prefill expert is absent from its complete batch") }
+            return slot
+        }
+        let g = try gate.prefill(x, expertIDs: slots, sourceRows: sourceRows)
+        let u = try up.prefill(x, expertIDs: slots, sourceRows: sourceRows)
+        guard let hidden = Self.activation([g, u]).first else { throw ModelError("VQ prefill activation failed") }
+        return try down.prefill(hidden, expertIDs: slots, sourceRows: (0..<slots.count).map(UInt32.init))
+    }
+
     private func composed(_ x: MLXArray, routes: [UInt32], topK: Int, dispatchPairs: Int) throws -> MLXArray {
         let lookup = Dictionary(uniqueKeysWithValues: expertIDs.enumerated().map { ($0.element, UInt32($0.offset)) })
         let slots = try routes.map { id -> UInt32 in
