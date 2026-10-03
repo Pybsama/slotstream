@@ -85,3 +85,6 @@ Capture exact greedy and sparse parity with fixed mixed-class resident banks, co
 ## [2026-10-03 06:57] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Preserve reproduced CI trig and rejected host-arithmetic failures; bind exact finite rotary coefficients and unchanged full-model/cache parity, with completed local static gates.
 
+## [2026-10-03 07:10] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Capture exact greedy/sparse parity with all text weights resident inside the 10 GB probe, preserve streamed regression, and correct CLI rejection coverage.
+

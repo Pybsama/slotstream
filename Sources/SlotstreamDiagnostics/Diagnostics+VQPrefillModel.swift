@@ -6,7 +6,7 @@ import Slotstream
 extension Diagnostics {
     /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
     /// Hashes cover every byte, not selected logits or a numerical tolerance.
-    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false) throws -> Data {
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false) throws -> Data {
         struct Boundary: Decodable {
             let layer: Int, step: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(step):\(layer):\(name)" }
@@ -77,12 +77,22 @@ extension Diagnostics {
         guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ prefill output directory must be new") }
         try manager.createDirectory(at: output, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
-        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, 3_000_000_000)
+        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, residentText ? 8_500_000_000 : 3_000_000_000)
         defer {
             Stream.gpu.synchronize(); MLX.Memory.clearCache()
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
         }
+        if residentText {
+            let prior = checkpoint.verifiedFileCount
+            do {
+                _ = try VQResidentText(checkpoint, maximumPayloadBytes: VQResidentText.payloadBytes - 1)
+                throw ModelError("undersized VQ resident text budget was accepted")
+            } catch let error as ModelError {
+                guard error.description.contains("below its authenticated payload"), checkpoint.verifiedFileCount == prior else { throw error }
+            }
+        }
         let model = VQModelProbe(checkpoint)
+        if residentText { try model.enableResidentText() }
         if residentRecords { try model.enableResidentRecords() }
         var c = CheckBuilder("quantization-prefill-model"), observed: [String: String] = [:]
         var traceLayer = -1, traceValues: [String: MLXArray] = [:]
@@ -98,6 +108,8 @@ extension Diagnostics {
                 "verified_files": checkpoint.verifiedFileCount, "verified_payload_bytes": checkpoint.verifiedPayloadBytes,
                 "before": try JSONSerialization.jsonObject(with: encoder.encode(before))]
             object["resident_record_cache"] = model.recordCacheStats ?? [:]
+            object["resident_text"] = model.residentTextStats ?? [:]
+            object["process_bound_bytes"] = model.processByteLimit
             if let failure { object["failure"] = failure }
             let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: output.appendingPathComponent("receipt.json"), options: .atomic)
@@ -140,7 +152,13 @@ extension Diagnostics {
                 c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)
                 c.expect("resident books fit reserved bytes", (stats["resident_book_bytes"] ?? Int.max) <= (stats["maximum_book_bytes"] ?? 0))
             }
-            guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ prefill model exceeded its 4 GB process bound") }
+            if residentText {
+                guard let stats = model.residentTextStats else { throw ModelError("resident text was not configured") }
+                c.equal("all text families resident", stats["resident_families"], 50)
+                c.equal("exact text payload reservation", stats["payload_bytes"], VQResidentText.payloadBytes)
+                c.expect("resident text serves repeated forwards", (stats["dense_hits"] ?? 0) > 49 && (stats["embedding_hits"] ?? 0) > 1)
+            }
+            guard ProcessMemory.peakResidentBytes() <= model.processByteLimit else { throw ModelError("VQ prefill model exceeded its configured process bound") }
             let result = try receipt(nil)
             guard c.report().passed else { throw ModelError("VQ prefill model assertions failed") }
             return result

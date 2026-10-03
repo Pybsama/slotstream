@@ -7,7 +7,7 @@ extension Diagnostics {
     /// A fixed, genuinely autoregressive check. The native argmax, not the
     /// fixture's token, becomes the next input. Final sampled token is unconsumed.
     public static func quantizationGeneration(source: URL, inventory: URL, profileURL: URL,
-                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false) throws -> Data {
+                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false) throws -> Data {
         struct Profile: Decodable, Equatable {
             let schema: Int, profile: String, prompt: [Int], sampling: String
             let max_new_tokens: Int, minimum_steps: Int, eos_token_id: Int
@@ -106,12 +106,22 @@ extension Diagnostics {
         guard !manager.fileExists(atPath: output.path) else { throw ModelError("VQ generation output directory must be new") }
         try manager.createDirectory(at: output, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
-        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, 3_000_000_000)
+        MLX.Memory.cacheLimit = 128_000_000; MLX.Memory.memoryLimit = min(oldLimit, residentText ? 8_500_000_000 : 3_000_000_000)
         defer {
             Stream.gpu.synchronize(); MLX.Memory.clearCache()
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
         }
+        if residentText {
+            let prior = checkpoint.verifiedFileCount
+            do {
+                _ = try VQResidentText(checkpoint, maximumPayloadBytes: VQResidentText.payloadBytes - 1)
+                throw ModelError("undersized VQ resident text budget was accepted")
+            } catch let error as ModelError {
+                guard error.description.contains("below its authenticated payload"), checkpoint.verifiedFileCount == prior else { throw error }
+            }
+        }
         let model = VQModelProbe(checkpoint)
+        if residentText { try model.enableResidentText() }
         if residentRecords { try model.enableResidentRecords() }
         var c = CheckBuilder("quantization-generated-sequence"), observed: [String: String] = [:]
         var tokens = profile.prompt, generated: [Int] = [], traceLayer = -1, traceValues: [String: MLXArray] = [:]
@@ -128,6 +138,8 @@ extension Diagnostics {
                 "verified_payload_bytes": checkpoint.verifiedPayloadBytes,
                 "before": try JSONSerialization.jsonObject(with: encoder.encode(before))]
             object["resident_record_cache"] = model.recordCacheStats ?? [:]
+            object["resident_text"] = model.residentTextStats ?? [:]
+            object["process_bound_bytes"] = model.processByteLimit
             if let failure { object["failure"] = failure }
             let data = try JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
             try data.write(to: output.appendingPathComponent("receipt.json"), options: .atomic)
@@ -178,7 +190,13 @@ extension Diagnostics {
                 c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)
                 c.expect("resident books fit reserved bytes", (stats["resident_book_bytes"] ?? Int.max) <= (stats["maximum_book_bytes"] ?? 0))
             }
-            guard ProcessMemory.peakResidentBytes() <= 4_000_000_000 else { throw ModelError("VQ generation exceeded its 4 GB process bound") }
+            if residentText {
+                guard let stats = model.residentTextStats else { throw ModelError("resident text was not configured") }
+                c.equal("all text families resident", stats["resident_families"], 50)
+                c.equal("exact text payload reservation", stats["payload_bytes"], VQResidentText.payloadBytes)
+                c.expect("resident text serves repeated forwards", (stats["dense_hits"] ?? 0) > 49 && (stats["embedding_hits"] ?? 0) > 1)
+            }
+            guard ProcessMemory.peakResidentBytes() <= model.processByteLimit else { throw ModelError("VQ generation exceeded its configured process bound") }
             let data = try receipt(nil)
             guard c.report().passed else { throw ModelError("VQ generated sequence assertions failed") }
             return data

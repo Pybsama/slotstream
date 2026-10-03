@@ -75,25 +75,26 @@ struct QuantizationModelCheck: ParsableCommand {
     @Flag(name: .long, help: "Use the fixed 512-row complete-prefill hash fixture") var prefill = false
     @Flag(name: .long, help: "Check the fixed 2053-token sparse-selection and continuation profile") var sparse = false
     @Flag(name: .long, help: "Use fixed 96-record allocation classes in the experimental parity probe") var residentRecords = false
+    @Flag(name: .long, help: "Retain the authenticated text weights in the 10 GB research probe") var residentText = false
     @Flag(name: .long, help: "Compare actual greedy generation and every retained state boundary") var greedy = false
     @Option(name: .long, help: "Frozen bench/quantization/greedy-v1.json, required with --greedy") var generationProfile: String?
     func validate() throws {
         guard [prefill, sparse, greedy].filter({ $0 }).count <= 1, greedy == (generationProfile != nil),
-              !residentRecords || sparse || greedy else {
-            throw ValidationError("--prefill, --sparse and --greedy are exclusive; --greedy requires --generation-profile; --resident-records requires --sparse or --greedy")
+              (!residentRecords && !residentText) || sparse || greedy else {
+            throw ValidationError("--prefill, --sparse and --greedy are exclusive; --greedy requires --generation-profile; --resident-records/--resident-text require --sparse or --greedy")
         }
     }
     func run() throws {
         if greedy, let generationProfile {
             print(String(decoding: try Diagnostics.quantizationGeneration(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), profileURL: URL(fileURLWithPath: generationProfile),
-                fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output), residentRecords: residentRecords), as: UTF8.self))
+                fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output), residentRecords: residentRecords, residentText: residentText), as: UTF8.self))
             return
         }
         if prefill || sparse {
             print(String(decoding: try Diagnostics.quantizationPrefillModel(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
-                output: URL(fileURLWithPath: output), sparse: sparse, residentRecords: residentRecords), as: UTF8.self))
+                output: URL(fileURLWithPath: output), sparse: sparse, residentRecords: residentRecords, residentText: residentText), as: UTF8.self))
             return
         }
         print(String(decoding: try Diagnostics.quantizationModel(source: URL(fileURLWithPath: sourceDirectory),

@@ -587,3 +587,19 @@ The generator admits only the frozen complete payload hash. The table is a
 bounded research coefficient artifact, not a qualification of longer contexts
 or a production resource policy. Full-model parity and remote checks remain
 independent of this generation step.
+
+
+## Complete resident text probe
+
+Add `--resident-text` to the greedy or sparse model check to retain all dense
+text layers, the final head/mixer and token embedding. Combine it with
+`--resident-records` to exercise the fixed expert banks too. The research
+process bound is 10 GB, with the existing 13 GB real-headroom preflight.
+Loading admits the exact text payload plus a bounded single-tensor copy,
+checks incremental headroom and never publishes a partial resident owner.
+
+Receipts expose text payload bytes, family counts and repeated-access counters
+separately from expert banks, workspace and process footprint. Both inspected
+packs preserve complete reference bits in this layout. This is a numerical
+and memory probe, not an optimized production serving path or a speed result.
+The default remains the earlier streamed-text probe and its smaller bound.

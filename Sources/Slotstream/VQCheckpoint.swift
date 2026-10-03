@@ -312,6 +312,7 @@ package final class VQCheckpoint {
             self.config = config; self.values = values
         }
         package func optionalTensor(_ name: String) -> MLXArray? { values[name] }
+        package var payloadBytes: Int { values.values.reduce(0) { $0 + $1.nbytes } }
     }
 
     /// One dense layer or the final head, explicitly bounded. Routed matrices
@@ -343,6 +344,20 @@ package final class VQCheckpoint {
         }
         eval(Array(values.values))
         return Dense(config: config, values: values)
+    }
+
+    /// Complete affine embedding weights for the explicit resident-text probe.
+    /// The public loader and ordinary row-streaming probe remain independent.
+    package func embeddingWeights() throws -> Dense {
+        var values: [String: MLXArray] = [:]
+        for suffix in ["weight", "scales", "biases"] {
+            let name = "model.embed_tokens." + suffix
+            values[name] = try array(name, maximumBytes: 800_000_000, shouldContinue: { true })
+        }
+        eval(Array(values.values))
+        let result = Dense(config: config, values: values)
+        guard result.payloadBytes == 675_430_400 else { throw ModelError("VQ resident embedding byte ledger changed") }
+        return result
     }
 
     package func embedding(_ ids: [Int]) throws -> MLXArray {

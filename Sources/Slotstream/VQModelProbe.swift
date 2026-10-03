@@ -2,7 +2,7 @@ import Foundation
 import MLX
 import MLXNN
 
-/// Experimental complete text stack with one dense layer live at a time.
+/// Experimental complete text stack with streamed or fixed resident weights.
 /// Routed experts use immutable staging or an optional fixed resident cache.
 /// This establishes arithmetic/state parity, not a generation service, draft
 /// execution, vision, resizing or production memory policy.
@@ -16,6 +16,14 @@ package final class VQModelProbe {
     private var consumed = 0
     private var failed = false
     private var recordCache: VQRecordCache?
+    private var residentText: VQResidentText?
+    package var residentTextStats: [String: Int]? { residentText?.stats }
+    package var processByteLimit: UInt64 { residentText == nil ? 4_000_000_000 : 10_000_000_000 }
+
+    package func enableResidentText() throws {
+        guard !failed, consumed == 0, residentText == nil else { throw ModelError("VQ text residency must precede the first pass") }
+        residentText = try VQResidentText(checkpoint)
+    }
     package var recordCacheStats: [String: Int]? { recordCache?.stats }
 
     package func enableResidentRecords() throws {
@@ -46,14 +54,14 @@ package final class VQModelProbe {
         // Partial state cannot be reused after any read, numerical or observer
         // failure. This probe deliberately offers no speculative recovery.
         failed = true
-        var hidden = tiled(try checkpoint.embedding(tokens), repetitions: [1, 1, 4])
+        var hidden = tiled(try residentText?.embed(tokens) ?? checkpoint.embedding(tokens), repetitions: [1, 1, 4])
         eval(hidden)
         try observe(-1, "embedded", hidden)
         let history = previous + tokens.map(Int64.init)
         for layer in 0..<48 {
             guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 3_000_000_000,
-                  ProcessMemory.peakResidentBytes() <= 4_000_000_000 else {
-                throw ModelError("VQ full-stack probe lost its 3 GB headroom or exceeded its 4 GB process bound")
+                  ProcessMemory.peakResidentBytes() <= processByteLimit else {
+                throw ModelError("VQ full-stack probe lost its 3 GB headroom or exceeded its configured process bound")
             }
             hidden = try autoreleasepool {
                 try block(layer, hidden: hidden, history: history, trace: trace) { mask in
@@ -75,7 +83,7 @@ package final class VQModelProbe {
             MLX.Memory.clearCache()
         }
         try autoreleasepool {
-            let weights = try checkpoint.dense(layer: nil)
+            let weights = try residentText?.weights(layer: nil) ?? checkpoint.dense(layer: nil)
             let mixer = GatedResidual(weights, base: "model.hyper_connection_mixer", useCombine: false, arithmetic: .vqPR1788)
             let mixed = mixer(hidden).0
             let logits = weights.linear("lm_head")(mixed).asType(.float32)
@@ -91,7 +99,7 @@ package final class VQModelProbe {
 
     private func block(_ layer: Int, hidden: MLXArray, history: [Int64], trace: ((Int, String, MLXArray) -> Void)?,
                        sparse: (MLXArray) throws -> Void) throws -> MLXArray {
-        let weights = try checkpoint.dense(layer: layer), base = "model.layers.\(layer)."
+        let weights = try residentText?.weights(layer: layer) ?? checkpoint.dense(layer: layer), base = "model.layers.\(layer)."
         var h = hidden
         if layer == 1 {
             let ple = PLELayer(weights, layer: layer, arithmetic: .vqPR1788,
