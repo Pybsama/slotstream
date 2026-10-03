@@ -103,3 +103,6 @@ Preserve separately sampled parallel-path attribution with all timing discarded 
 ## [2026-10-03 09:08] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Retain bounded code-only VQ kernel reuse after exact model/ownership gates and a frozen paired improvement; record build-preflight correction and lossless raw evidence.
 
+## [2026-10-03 09:27] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Bind VQ 2.1 research staging separately from reference admission; preserve distinct runtime and three-class audit plus 78 fused regression results.
+

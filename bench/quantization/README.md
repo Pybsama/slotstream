@@ -706,3 +706,13 @@ receipt to its actual producer. The entire generated sequence must match in
 all three interleaved pairs. Its engineering adoption threshold does not
 qualify a product pack, task quality or the target speed. See the canonical
 measurement for the result and its limits.
+
+## Smaller-pack staging
+
+The research downloader also admits the pinned VQ 2.1 file map for bounded,
+hash-verified staging. Staging does not admit it to the reference runner, native
+loader or product. Its bundled execution source differs from the reviewed
+3.2/4.4 runtime, and its three allocation classes require separate fixtures.
+The canonical measurement tracks payload, normalization, traversal and
+numerical proof as separate gates. Never infer a memory floor or throughput
+from the advertised bit count alone.

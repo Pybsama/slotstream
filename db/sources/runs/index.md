@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T09:07:30.081651Z
+updated: 2026-10-03T09:23:36.036859Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-vq-2.1-artifact-preparation]] — VQ 2.1 immutable staging pins and distinct runtime audit
 - [[sources/runs/2026/10/2026-10-03-native-vq-kernel-object-reuse]] — Bounded VQ code-object reuse and matched generation comparison
 - [[sources/runs/2026/10/2026-10-03-native-vq-parallel-generation-cpu-profile]] — Parallel VQ CPU sample exposes repeated projection construction
 - [[sources/runs/2026/10/2026-10-03-native-vq-bounded-parallel-record-reads]] — Bounded parallel VQ demanded reads preserve full reference parity
@@ -506,9 +507,8 @@ updated: 2026-10-03T09:07:30.081651Z
 - [[sources/runs/2026/09/2026-09-07-optimization-default-and-release-acceptance-review]] — Actual-default comparison draft and release acceptance shell correction
 - [[sources/runs/2026/09/2026-09-07-configurable-context-v215-capacity-preflight-hold]] — Capacity campaign remains unrun: current real availability is below the frozen preflight
 - [[sources/runs/2026/09/2026-09-07-optimization-typed-context-correctness]] — Typed context refusal and shared affected correctness V215
-- [[sources/runs/2026/09/2026-09-07-optimization-typed-context-wire-counterexample]] — Typed context integration reveals OpenAI error.code gap
 
 ## More
 
-This folder has 727 files. The 500 most recent are listed above.
+This folder has 728 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
