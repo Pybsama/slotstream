@@ -2,11 +2,15 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T02:19:59.744308Z
+updated: 2026-10-03T03:52:22.663150Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-validation]] — Native VQ arithmetic and deployed compatibility validation
+- [[sources/runs/2026/10/2026-10-02-native-vq-authenticated-checkpoint]] — Authenticated native VQ artifact expert and PLE reads
+- [[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-smoke]] — Native VQ complete short-stack and continuation parity
+- [[sources/runs/2026/10/2026-10-02-vq-bf16-sigmoid-arithmetic]] — Candidate BF16 sigmoid rounding and diagnostic failures
 - [[sources/runs/2026/10/2026-10-02-native-vq-owned-file-reader]] — Bounded owned-descriptor VQ tensor reads pass 34 storage checks and the 94-check native catalogue; real pack binding is pending.
 - [[sources/runs/2026/10/2026-10-02-native-vq-trunk-profile]] — Pinned candidate first-block arithmetic and recurrent continuation match exactly; a complete deployed-model logit case stays byte-identical.
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-records]] — Complete real VQ routed expert composition and independent caller-context ownership checks pass for both research packs.
@@ -503,12 +507,8 @@ updated: 2026-10-03T02:19:59.744308Z
 - [[sources/runs/2026/09/2026-09-06-optimization-live-governor-feasibility]] — V194 live governor rejects ordinary-context advisory overcommit
 - [[sources/runs/2026/09/2026-09-06-optimization-plain-governor-feasibility-counterexample]] — V193 merged correctness and plain-governor feasibility counterexample
 - [[sources/runs/2026/09/2026-09-06-configurable-context-ordinary-governor-feasibility-counterexample]] — Shared V193 exposes ordinary-context governor acceptance after an infeasible replan
-- [[sources/runs/2026/09/2026-09-06-configurable-context-actual-hermes-compression-pass]] — Actual Hermes compression finishes normally and preserves the exact diagnostic fact
-- [[sources/runs/2026/09/2026-09-06-configurable-context-actual-hermes-cli-pass]] — Actual Hermes CLI passes its configured 65K window and reply budget
-- [[sources/runs/2026/09/2026-09-06-optimization-scope-checkpoint-interaction]] — Preserve common-prefix checkpoints across read scopes — V193
-- [[sources/runs/2026/09/2026-09-06-configurable-context-budget-and-schedule-component-pass]] — Explicit diagnostic budgets and actual attention schedule pass component gates
 
 ## More
 
-This folder has 702 files. The 500 most recent are listed above.
+This folder has 706 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

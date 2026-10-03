@@ -14,20 +14,42 @@ struct QuantizationCheck: ParsableCommand {
     var recordFixtureDirectory: String?
     @Option(name: .long, help: "Corrected dense-block reference fixture from Tools/vq_trunk_reference.py")
     var trunkFixtureDirectory: String?
+    @Option(name: .long, help: "Research-only pinned VQ download to check against record and/or row fixtures")
+    var sourceDirectory: String?
+    @Option(name: .long, help: "Exact inspected inventory.json for the research VQ download")
+    var sourceInventory: String?
     @Flag(name: .long, help: "Check synthetic native VQ and affine kernels")
     var kernels = false
+    func validate() throws {
+        guard (sourceDirectory == nil) == (sourceInventory == nil) else {
+            throw ValidationError("--source-directory and --source-inventory must be provided together")
+        }
+        if sourceDirectory != nil {
+            guard recordFixtureDirectory != nil || fixtureDirectory != nil,
+                  fusedFixtureDirectory == nil, trunkFixtureDirectory == nil, !kernels else {
+                throw ValidationError("direct source checks require record and/or row fixtures only")
+            }
+        }
+    }
     func run() throws {
+        let source = sourceDirectory.map { URL(fileURLWithPath: $0) }
+        let inventory = sourceInventory.map { URL(fileURLWithPath: $0) }
         var reports = [try Diagnostics.quantizationGeometry(), try Diagnostics.quantizationMetadata(),
                        try Diagnostics.quantizationPLEStorage(), try Diagnostics.quantizationTensorFile()]
-        if kernels { reports.append(try Diagnostics.quantizationKernels()) }
+        if kernels {
+            reports.append(try Diagnostics.quantizationKernels())
+            reports.append(try Diagnostics.quantizationCandidateArithmetic())
+        }
         if let fixtureDirectory {
-            reports.append(try Diagnostics.quantizationFixtures(directory: URL(fileURLWithPath: fixtureDirectory)))
+            reports.append(try Diagnostics.quantizationFixtures(directory: URL(fileURLWithPath: fixtureDirectory),
+                                                               sourceDirectory: source, inventory: inventory))
         }
         if let fusedFixtureDirectory {
             reports.append(try Diagnostics.quantizationFixtures(directory: URL(fileURLWithPath: fusedFixtureDirectory), fused: true))
         }
         if let recordFixtureDirectory {
-            reports.append(try Diagnostics.quantizationRecords(directory: URL(fileURLWithPath: recordFixtureDirectory)))
+            reports.append(try Diagnostics.quantizationRecords(directory: URL(fileURLWithPath: recordFixtureDirectory),
+                                                              sourceDirectory: source, inventory: inventory))
         }
         if let trunkFixtureDirectory {
             reports.append(try Diagnostics.quantizationTrunk(directory: URL(fileURLWithPath: trunkFixtureDirectory)))
@@ -35,6 +57,20 @@ struct QuantizationCheck: ParsableCommand {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         print(String(decoding: try encoder.encode(reports), as: UTF8.self))
         guard reports.allSatisfy(\.passed) else { throw ExitCode.failure }
+    }
+}
+
+struct QuantizationModelCheck: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "quantization-model-check",
+        abstract: "Check research VQ complete-stack parity; does not enable a candidate pack")
+    @Option(name: .long) var sourceDirectory: String
+    @Option(name: .long) var sourceInventory: String
+    @Option(name: .long) var fixtureDirectory: String
+    @Option(name: .long) var output: String
+    func run() throws {
+        print(String(decoding: try Diagnostics.quantizationModel(source: URL(fileURLWithPath: sourceDirectory),
+            inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
+            output: URL(fileURLWithPath: output)), as: UTF8.self))
     }
 }
 

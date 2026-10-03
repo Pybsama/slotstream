@@ -7,7 +7,8 @@ extension Diagnostics {
     /// Full real expert matrices composed through routed SwiGLU. These
     /// fixtures exercise immutable staging only, not cache lifecycle or a
     /// complete model. No candidate is admitted to Engine.load here.
-    public static func quantizationRecords(directory: URL) throws -> CheckReport {
+    public static func quantizationRecords(directory: URL, sourceDirectory: URL? = nil,
+                                           inventory: URL? = nil) throws -> CheckReport {
         struct Projection: Decodable {
             let columns: Int, dimensions: Int, entries: Int, group_size: Int
             let packing: String
@@ -19,9 +20,11 @@ extension Diagnostics {
             let projections: [Projection]
         }
         struct Manifest: Decodable {
+            struct Artifact: Decodable { let inventory_sha256: String }
             let schema: Int
             let runtime_sha256: String
             let fixtures: [Fixture]
+            let artifact: Artifact
         }
         func read(_ path: URL, limit: Int) throws -> Data {
             let file = try FileHandle(forReadingFrom: path)
@@ -49,6 +52,21 @@ extension Diagnostics {
             MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
         }
         var c = CheckBuilder("quantization-records")
+        guard (sourceDirectory == nil) == (inventory == nil) else { throw ModelError("VQ source and inventory must be provided together") }
+        let source = try sourceDirectory.map { try VQCheckpoint(directory: $0, inventory: inventory!) }
+        if let source {
+            guard source.inventorySHA256 == manifest.artifact.inventory_sha256 else {
+                throw ModelError("VQ source and record reference identify different artifacts")
+            }
+            c.equal("metadata authentication reads no payload", source.verifiedFileCount, 0)
+            do {
+                _ = try source.records(layer: 0, experts: [0], shouldContinue: { false })
+                c.expect("cancelled first payload verification refused", false)
+            } catch CheckpointReadError.cancelled {
+                c.expect("cancelled first payload verification refused", true)
+            }
+            c.equal("cancelled payload is not published", source.verifiedFileCount, 0)
+        }
         return try withError {
             for fixture in manifest.fixtures {
                 guard fixture.path == "record-\(fixture.layer).safetensors", fixture.bytes > 0,
@@ -80,6 +98,7 @@ extension Diagnostics {
                 let scales = names.map { arrays[$0 + ".vq_scales"]! }
                 let batch = try VQRecordBatch(layer: fixture.layer, expertIDs: fixture.expert_ids,
                     layout: layout, codes: codes, books: books, scales: scales)
+                let direct = try source?.records(layer: fixture.layer, experts: fixture.expert_ids)
                 c.equal("L\(fixture.layer) complete payload ledger", codes.reduce(0) { $0 + $1.nbytes } + scales.reduce(0) { $0 + $1.nbytes },
                         layout.recordBytes * fixture.expert_ids.count)
                 c.equal("L\(fixture.layer) codebooks counted separately", books.reduce(0) { $0 + $1.nbytes }, layout.codebookBytes)
@@ -99,6 +118,11 @@ extension Diagnostics {
                     let gotHash = got.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() }
                     let wantHash = want.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() }
                     c.equal("L\(fixture.layer) T\(count) exact routed SwiGLU bits", gotHash, wantHash)
+                    if let direct {
+                        let output = try direct.call(x, routes: routes.asArray(UInt32.self))
+                        c.equal("L\(fixture.layer) T\(count) authenticated checkpoint exact SwiGLU bits",
+                            output.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self), want)
+                    }
                 }
                 // Mutate each caller-owned group independently after admission,
                 // before constructing or evaluating an operation. MLXArray is
@@ -125,6 +149,11 @@ extension Diagnostics {
                 guard ProcessMemory.peakResidentBytes() <= 2_000_000_000 else {
                     throw ModelError("VQ record check exceeded its 2 GB component bound")
                 }
+            }
+            if let source {
+                c.expect("demanded checkpoint payloads fully verified", source.verifiedFileCount > 0)
+                c.expect("payload verification exceeds extracted fixture bytes", source.verifiedPayloadBytes > 128_000_000)
+                fputs("VQ records verified files=\(source.verifiedFileCount) bytes=\(source.verifiedPayloadBytes)\n", stderr)
             }
             return c.report()
         }

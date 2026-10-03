@@ -49,3 +49,6 @@ Captured exact native candidate first-block arithmetic and continuation parity, 
 ## [2026-10-03 02:20] update | records/measurements/quantization-screen-2026-10-02.md
 Added complete-file verification and bounded tensor reads through one owned descriptor. Captured 34 synthetic storage assertions and the 94-check native catalogue, including corruption, cancellation, path reuse and lifetime coverage. Real pack identity binding and routed/PLE integration remain open; no candidate qualification or fresh full static result is claimed.
 
+## [2026-10-03 03:59] update | records/measurements/quantization-screen-2026-10-02.md
+Authenticated both pinned VQ artifacts for native expert, PLE, dense and embedding reads. Both complete short-stack probes pass all 320 hidden/state/logit boundaries exactly. Preserved QSA failures, sigmoid diagnosis and failed FP64 test inputs; repaired finite-domain gate and 95 native catalogue checks pass. Fresh baseline payload verification and identical deployed logits plus six metadata corruption refusals pass. The complete static suite remains in progress on frozen v7; no candidate quality or performance qualification.
+

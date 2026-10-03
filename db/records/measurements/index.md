@@ -2,12 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-03T02:19:59.776387Z
+updated: 2026-10-03T03:53:23.115652Z
 ---
 
 # records/measurements
 
-- [[records/measurements/quantization-screen-2026-10-02]] — Pinned VQ inventories, exact selected-row decoding and bounded synthetic kernel costs; no candidate pack or new speed profile is qualified.
+- [[records/measurements/quantization-screen-2026-10-02]] — Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 - [[records/measurements/release-0-2-27-published-2026-09-30]] — v0.2.27 published, installed and accepted
 - [[records/measurements/release-0-2-26-published-2026-09-27]] — v0.2.26 published, installed and accepted
 - [[records/measurements/c5-macbook-pro-m4-max-64gb-community]] — C5: MacBook Pro M4 Max, 64 GB, internal and external SSD (community, 2026-09-19)

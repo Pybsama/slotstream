@@ -85,12 +85,20 @@ public struct ModelConfig {
     public static func load(from dir: URL) throws -> ModelConfig {
         let path = dir.appendingPathComponent("config.json")
         let data = try Data(contentsOf: path)
+        return try parse(data, label: path.path)
+    }
+
+    /// Shared geometry parser. Experimental artifact adapters may pass only
+    /// their authenticated text configuration, then apply their own explicit
+    /// quantization profile. The public checkpoint loader retains every pack
+    /// admission check below.
+    package static func parse(_ data: Data, label: String) throws -> ModelConfig {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw ModelError("\(path.path) is not valid JSON — re-run `slotstream pull`")
+            throw ModelError("\(label) is not valid JSON — re-run `slotstream pull`")
         }
         guard let t = root["text_config"] as? [String: Any] else {
             throw ModelError(
-                "\(path.path) has no `text_config` section, so it is not a "
+                "\(label) has no `text_config` section, so it is not a "
                     + "\(PinnedModelName.display) checkpoint — check --model")
         }
         var c = ModelConfig()

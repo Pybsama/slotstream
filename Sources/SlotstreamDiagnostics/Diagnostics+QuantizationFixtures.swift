@@ -6,7 +6,8 @@ import Slotstream
 extension Diagnostics {
     /// Exact native decoding against separately extracted scalar CPU oracles.
     /// Bound both file reads and GPU output before the MLX loader sees a file.
-    public static func quantizationFixtures(directory: URL, fused: Bool = false) throws -> CheckReport {
+    public static func quantizationFixtures(directory: URL, fused: Bool = false,
+                                            sourceDirectory: URL? = nil, inventory: URL? = nil) throws -> CheckReport {
         struct Fixture: Decodable {
             let path: String
             let sha256: String
@@ -16,12 +17,14 @@ extension Diagnostics {
             let entries: Int
             let group_size: Int
             let packing: String
+            let module: String?
         }
         struct Manifest: Decodable {
             let schema: Int
             let repo: String?
             let revision: String?
             let runtime_sha256: String?
+            let inventory_sha256: String?
             let fixtures: [Fixture]
         }
         func boundedData(_ file: URL, limit: Int) throws -> Data {
@@ -49,6 +52,22 @@ extension Diagnostics {
             throw ModelError("unpinned VQ row fixture manifest")
         }
         try ModelProcessGuard.acquire()
+        guard (sourceDirectory == nil) == (inventory == nil), !fused || sourceDirectory == nil else {
+            throw ModelError("direct VQ row checks require paired source/inventory and scalar fixtures")
+        }
+        let source = try sourceDirectory.map { try VQCheckpoint(directory: $0, inventory: inventory!) }
+        if let source {
+            guard source.inventorySHA256 == manifest.inventory_sha256, source.revision == manifest.revision,
+                  manifest.fixtures.filter({ $0.module == "model.layers.1.ple.ple_embedding.ngram_embedding.shard_0" }).count == 1 else {
+                throw ModelError("VQ source and row reference identify different artifacts")
+            }
+        }
+        let oldCache = MLX.Memory.cacheLimit, oldLimit = MLX.Memory.memoryLimit
+        MLX.Memory.cacheLimit = 64_000_000; MLX.Memory.memoryLimit = min(oldLimit, 1_000_000_000)
+        defer {
+            Stream.gpu.synchronize(); MLX.Memory.clearCache()
+            MLX.Memory.cacheLimit = oldCache; MLX.Memory.memoryLimit = oldLimit
+        }
         var c = CheckBuilder(fused ? "quantization-fused-fixtures" : "quantization-fixtures")
         return try withError {
             for fixture in manifest.fixtures {
@@ -100,6 +119,10 @@ extension Diagnostics {
                     actual.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self),
                     expected.reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self))
                 if layout.columns == 160, layout.packing == .bytes {
+                    guard source == nil || fixture.module == "model.layers.1.ple.ple_embedding.ngram_embedding.shard_0" else {
+                        throw ModelError("direct PLE fixture must identify shard zero")
+                    }
+                    let direct = try source?.pleTable(0)
                     // Exercise the CPU PLE path with positional reads from
                     // the private, hash-verified file. Retaining the handle in
                     // each closure keeps all row reads tied to that file.
@@ -135,9 +158,19 @@ extension Diagnostics {
                         let bits = expected[MLXArray(ids.map(Int32.init))].asType(.bfloat16)
                             .reshaped([-1]).view(dtype: .uint16).asArray(UInt16.self)
                         c.equal("\(fixture.path) native CPU disk PLE \(ids.count) exact BF16 bits", try native.gather(ids), bits)
+                        if let direct {
+                            c.equal("\(fixture.path) authenticated checkpoint PLE \(ids.count) exact BF16 bits", try direct.gather(ids), bits)
+                        }
                     }
                     try handle.close()
                 }
+                guard ProcessMemory.peakResidentBytes() <= 2_000_000_000 else {
+                    throw ModelError("VQ fixture check exceeded its 2 GB component bound")
+                }
+            }
+            if let source {
+                c.expect("PLE demanded checkpoint payloads fully verified", source.verifiedFileCount > 0)
+                fputs("VQ PLE verified files=\(source.verifiedFileCount) bytes=\(source.verifiedPayloadBytes)\n", stderr)
             }
             return c.report()
         }

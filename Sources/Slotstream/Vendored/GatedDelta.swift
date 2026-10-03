@@ -177,7 +177,7 @@ func candidateGatedDeltaUpdate(q: MLXArray, k: MLXArray, v: MLXArray, a: MLXArra
                               state: MLXArray?) -> (MLXArray, MLXArray) {
     let g = CandidateGatedDeltaManager.decay([aLog, a, dtBias])[0]
     let state = state ?? MLXArray.zeros([q.dim(0), v.dim(2), v.dim(3), q.dim(3)], dtype: .float32)
-    return gatedDeltaKernel(q: q, k: k, v: v, g: g, beta: sigmoid(b), state: state, candidate: true)
+    return gatedDeltaKernel(q: q, k: k, v: v, g: g, beta: VQArithmetic.sigmoid(b), state: state, candidate: true)
 }
 
 // MARK: - Kernel Dispatch

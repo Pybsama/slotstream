@@ -354,3 +354,54 @@ The synthetic storage gate runs without model weights or GPU allocations:
 This gate checks corruption, cancellation, truncation, descriptor retention,
 path replacement and malformed files. Passing it does not prove that a real
 candidate has been bound to the reader or loaded by the engine.
+
+## Authenticated artifact and complete-stack probes
+
+`VQCheckpoint` binds that reader to the two pinned research artifacts. It
+authenticates the inventory, configuration, index and full-file hash map, then
+independently verifies each demanded tensor file through its retained descriptor.
+It gathers complete expert records, bounded PLE rows, one dense layer and the
+final head without admitting the candidate to `Engine.load`. The independent
+draft sidecar is excluded from this main-model path.
+
+```sh
+.build/release/slotstream quantization-check \
+  --source-directory <verified-vq-pack> --source-inventory <inventory.json> \
+  --record-fixture-directory <same-pack-record-fixtures> \
+  --fixture-directory <same-pack-row-fixtures>
+python3 Tools/vq_checkpoint_gate.py --binary <frozen-build/slotstream> \
+  --source <verified-vq-pack> --inventory <inventory.json> \
+  --records <same-pack-record-fixtures> --out <new-metadata-check>
+```
+
+The second command changes only copied metadata and requires rejection at the
+authentication boundary before any absent tensor payload is opened.
+
+`Tools/vq_model_smoke_reference.py` records every layer's hidden and continuation
+state, final mixer and full-vocabulary logits for three fixed tokens including
+an EOS boundary, followed by one continuation token. It calls the unmodified
+pinned decoder blocks with those exact pass shapes. Run it sequentially under
+`quantization_logit_run.supervise` for process, pressure and wall-time bounds:
+
+```sh
+.venv/bin/python Tools/vq_model_smoke_reference.py --model <verified-vq-pack> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --out <new-model-fixtures>
+.build/release/slotstream quantization-model-check \
+  --source-directory <verified-vq-pack> --source-inventory <inventory.json> \
+  --fixture-directory <same-pack-model-fixtures> --output <new-native-result>
+```
+
+Both producers require actual reclaimable headroom and own the shared model
+lock. Each comparison is exact; a first mismatch poisons the probe state and
+preserves the boundary and trace instead of continuing with corrupted state.
+This short probe does not exercise ordinary prefill, sparse indexer activation,
+generation, mutable caches, draft, images, quality or throughput qualification.
+
+The candidate arithmetic uses a separate BF16 sigmoid with precise exponential
+and explicit intermediate rounding. `Tools/vq_sigmoid_reference.py --out <new-dir>`
+freezes the pinned Python GPU outputs for every finite BF16 input. The native
+`quantization-check --kernels` gate checks the same complete output digest and
+the rounding-boundary scalar. The deployed sigmoid remains unchanged. Preserve
+the exact runtime identity: sharing a formula or metallib does not establish
+identical intermediate rounding across host bindings.

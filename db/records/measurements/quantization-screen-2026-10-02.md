@@ -2,8 +2,8 @@
 type: measurement
 id: 01m3z6rmfcxgpkn96hyh2n903j
 created: 2026-10-02T21:01:46.859947+00:00
-updated: 2026-10-03T02:19:59.776387+00:00
-summary: Pinned VQ inventories, exact selected-row decoding and bounded synthetic kernel costs; no candidate pack or new speed profile is qualified.
+updated: 2026-10-03T03:53:23.115652+00:00
+summary: Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 date: 2026-10-02
 doc: measurements
 level: '2'
@@ -126,3 +126,17 @@ The final native binary is `4d07c1c6c8e629365b7415225dc45dc6ec83f7c1ac1e216fe177
 [[sources/runs/2026/10/2026-10-02-native-vq-owned-file-reader]] records the bounded native file reader needed by direct candidate loading. Its constructor verifies the complete payload through the descriptor it retains for later reads; its caller must separately authenticate the supplied file/header identities against a pinned pack manifest. Reads check tensor extents, cancellation and unchanged file metadata, with bounded allocations and syscalls. The tests preserve the distinction between owning a verified descriptor and following a replaceable filesystem path.
 
 All 34 storage assertions pass, covering cancellation, complete-file corruption, truncation, path reuse, lifetime retention, malformed extents, non-regular files and tensor coverage. The final catalogue passes 94 checks with zero failures or skips. This is a synthetic storage gate, not actual VQ artifact integration, model parity, asynchronous pool ownership or performance. The preceding trunk-profile static result is not presented as a fresh static run for this storage addition.
+
+### Authenticated artifact reads and short complete-stack parity
+
+[[sources/runs/2026/10/2026-10-02-native-vq-authenticated-checkpoint]] records direct native loading from both pinned artifact inventories. Config/index bytes and the complete-file digest map are authenticated before data access. Demanded files are independently verified through retained descriptors; bounded selected expert and PLE reads match their existing fixtures. Counters describe demanded files, not a native read of every unused payload. Draft metadata remains independent and its tensors are excluded from this main-model probe.
+
+[[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-smoke]] records a fixed three-token pass containing EOS and a subsequent one-token continuation. Both VQ 3.2 and 4.4 match all 320 observed boundaries exactly: hidden states through 48 layers, convolution/recurrent state, PLE convolution, QSA keys/values and raw indexer state, final mixer and complete vocabulary logits. Sampled native physical peaks were 1,926,531,184 and 2,003,257,576 bytes respectively; the functional harness enforced its separate process and actual-headroom bounds. Wall times include authentication and reads and are not committed-token throughput evidence. Global paging counters are retained as diagnostics.
+
+The first three native attempts failed at the first QSA layer. [[sources/runs/2026/10/2026-10-02-vq-bf16-sigmoid-arithmetic]] shows identical preceding hyper-connection intermediates and a BF16 sigmoid difference at input -6.84375. Explicit precise exponential and BF16 intermediate rounding match all 65,280 finite BF16 input patterns against the pinned Python GPU output. This is an observed arithmetic contract; an exact compiler-level root cause is not established. Only the candidate profile uses this operation. FP32 sigmoid and deployed model arithmetic remain unchanged.
+
+The native exhaustive diagnostic initially failed because a scalar test literal inferred FP64, which the GPU does not support. The first crash's accessor hypothesis was incorrect; subsequent explicit evaluation exposed the actual error. Those failures stay attached and separate from the passing v4 complete-stack engine. The final test uses an explicit Float literal.
+
+This advances step 4 without completing it. Ordinary prefill batch sizes, sparse indexer activation, native generated sequences, mutable cache pins and resize/late-I/O ownership, draft/rollback, vision, held-out task quality and speed remain unqualified. The observed four tokens cannot justify a production pack or a 20-token claim.
+
+[[sources/runs/2026/10/2026-10-02-native-vq-complete-stack-validation]] records the repaired exhaustive sigmoid gate, all 95 native T0/T1 checks passing with no skips, unchanged deployed full-model logit bits on the fixed memory-prose case, fresh baseline payload verification and six metadata rejection cases. The v7 inference sources are identical to the independently passing v4 complete-stack sources; only the diagnostic input/readback file differs. These checks do not replace the complete heavyweight app, governor and hardware qualification gates.
