@@ -6,8 +6,8 @@ import Slotstream
 extension Diagnostics {
     /// Full logical tensor hashes at the fixed ordinary-prefill batch shape.
     /// Hashes cover every byte, not selected logits or a numerical tolerance.
-    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false) throws -> Data {
-        guard !wideRecords || (residentRecords && residentText) else { throw ModelError("wide VQ banks require resident text and records") }
+    public static func quantizationPrefillModel(source: URL, inventory: URL, fixtureDirectory: URL, output: URL, sparse: Bool = false, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false) throws -> Data {
+        guard (!wideRecords && !parallelRecords) || (residentRecords && residentText) else { throw ModelError("wide banks and parallel VQ reads require resident text and records") }
         struct Boundary: Decodable {
             let layer: Int, step: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(step):\(layer):\(name)" }
@@ -94,7 +94,7 @@ extension Diagnostics {
         }
         let model = VQModelProbe(checkpoint)
         if residentText { try model.enableResidentText() }
-        if residentRecords { try model.enableResidentRecords(wide: wideRecords) }
+        if residentRecords { try model.enableResidentRecords(wide: wideRecords, parallelReads: parallelRecords) }
         var c = CheckBuilder("quantization-prefill-model"), observed: [String: String] = [:]
         var traceLayer = -1, traceValues: [String: MLXArray] = [:]
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -151,6 +151,9 @@ extension Diagnostics {
                 c.equal("complete reserved record capacity", stats["total_capacity"], wideRecords ? 608 : 192)
                 c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], wideRecords ? 512 : 96)
                 c.equal("all record leases released", stats["pinned_records"], 0)
+                c.equal("requested read mode applied", stats["parallel_read_lanes"], parallelRecords ? 12 : 0)
+                c.expect("parallel staging remains bounded", (stats["maximum_read_staging_bytes"] ?? Int.max) <= VQRecordReadBatch.maximumStagingBytes)
+                c.expect("parallel mode exercises demanded staging", !parallelRecords || (stats["maximum_read_staging_bytes"] ?? 0) > 0)
                 c.expect("resident cache serves real hits", (stats["hits"] ?? 0) > 0)
                 c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)
                 c.expect("resident books fit reserved bytes", (stats["resident_book_bytes"] ?? Int.max) <= (stats["maximum_book_bytes"] ?? 0))

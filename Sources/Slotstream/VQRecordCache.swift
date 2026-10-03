@@ -9,12 +9,16 @@ package final class VQRecordCache {
     private let layouts: [VQRecordLayout]
     private let banks: [VQRecordLayout: VQRecordBank]
     private var books: [Int: [MLXArray]] = [:]
+    private var readPlans: [Int: VQRecordReadPlan] = [:]
+    private let parallelReads: Bool
+    private var maximumStagingBytes = 0
     package let reservedBankBytes: Int
     package let maximumBookBytes: Int
     package private(set) var residentBookBytes = 0
 
-    package init(_ checkpoint: VQCheckpoint, capacityPerClass: Int, wide: Bool = false) throws {
+    package init(_ checkpoint: VQCheckpoint, capacityPerClass: Int, wide: Bool = false, parallelReads: Bool = false) throws {
         self.checkpoint = checkpoint
+        self.parallelReads = parallelReads
         layouts = try (0..<48).map { try checkpoint.recordLayout(layer: $0) }
         let counts = layouts.reduce(into: [VQRecordLayout: Int]()) { $0[$1, default: 0] += 1 }
         // The inspected packs have one six/seven-layer class and one
@@ -47,6 +51,8 @@ package final class VQRecordCache {
                 "maximum_bank_capacity": values.map(\.capacity).max() ?? 0,
                 "minimum_bank_capacity": values.map(\.capacity).min() ?? 0,
                 "resident_book_bytes": residentBookBytes, "maximum_book_bytes": maximumBookBytes,
+                "parallel_read_lanes": parallelReads ? VQRecordReadBatch.maximumLanes : 0,
+                "maximum_read_staging_bytes": maximumStagingBytes,
                 "occupied_records": values.reduce(0) { $0 + $1.occupied },
                 "pinned_records": values.reduce(0) { $0 + $1.pinned },
                 "hits": values.reduce(0) { $0 + $1.hits }, "loads": values.reduce(0) { $0 + $1.loads },
@@ -65,8 +71,26 @@ package final class VQRecordCache {
             }
             shared = loaded; books[layer] = loaded; residentBookBytes += bytes
         }
+        let batchReader: VQRecordBank.BatchReader?
+        if parallelReads {
+            let plan: VQRecordReadPlan
+            if let present = readPlans[layer] { plan = present }
+            else { plan = try checkpoint.recordReadPlan(layer: layer); readPlans[layer] = plan }
+            batchReader = { keys in
+                guard keys.allSatisfy({ $0.layer == layer }) else { throw ModelError("VQ parallel read crossed its layer plan") }
+                let reservation = try VQRecordReadBatch.reservation(jobs: keys.count, pieceBytes: plan.pieceBytes)
+                guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= UInt64(reservation + 3_000_000_000) else {
+                    throw ModelError("VQ read staging lost its real-headroom reservation")
+                }
+                self.maximumStagingBytes = max(self.maximumStagingBytes, reservation)
+                return try VQRecordReadBatch.read(experts: keys.map(\.expert), pieceBytes: plan.pieceBytes) { expert, keepGoing in
+                    try plan.read(expert: expert, shouldContinue: keepGoing)
+                }
+            }
+        } else { batchReader = nil }
         return try VQRouteStream.partition(x, routes: routes) { _, input, localRoutes, dispatchPairs in
-            try bank.call(input, layer: layer, routes: localRoutes, dispatchPairs: dispatchPairs, books: shared) { key, emit in
+            try bank.call(input, layer: layer, routes: localRoutes, dispatchPairs: dispatchPairs, books: shared,
+                          batchReader: batchReader) { key, emit in
                 try self.checkpoint.readRecord(layer: key.layer, expert: key.expert, emit: emit)
             }
         }

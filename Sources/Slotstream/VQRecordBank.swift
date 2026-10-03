@@ -7,6 +7,9 @@ import MLX
 /// releasing pins. This does not implement asynchronous prefetch or resizing.
 package final class VQRecordBank {
     package typealias Reader = (ExpertKey, (Int, Data) throws -> Void) throws -> Void
+    /// Returns complete records in requested order after all private I/O ends.
+    /// It is invoked on the owner and never receives bank addresses or emitters.
+    package typealias BatchReader = ([ExpertKey]) throws -> [[Data]]
     package struct Snapshot {
         package let capacity: Int, occupied: Int, pinned: Int, bytes: Int
         package let hits: Int, loads: Int, evictions: Int, generation: UInt64
@@ -100,7 +103,8 @@ package final class VQRecordBank {
     }
 
     package func call(_ x: MLXArray, layer: Int, routes: [UInt32], dispatchPairs: Int,
-                      books: [MLXArray], shouldContinue: @escaping () -> Bool = { true }, read: Reader) throws -> MLXArray {
+                      books: [MLXArray], shouldContinue: @escaping () -> Bool = { true },
+                      batchReader: BatchReader? = nil, read: Reader) throws -> MLXArray {
         guard lock.try() else { throw ModelError("VQ bank is busy") }
         defer { lock.unlock() }
         guard !busy, pins.isEmpty, generation < UInt64.max, (0..<48).contains(layer),
@@ -133,9 +137,22 @@ package final class VQRecordBank {
             owners[slot] = nil; referenced[slot] = false
             pins.insert(slot); reservations.append((key, slot))
         }
-        for (key, slot) in reservations {
+        // Private CPU reads may overlap. Publication stays serialized after
+        // every worker joins, with all hits and misses pinned in this epoch.
+        var staged: [[Data]]?
+        if let batchReader, !reservations.isEmpty {
+            _ = try VQRecordReadBatch.reservation(jobs: reservations.count, pieceBytes: layout.pieceBytes)
+            let records = try batchReader(reservations.map { $0.0 })
+            guard records.count == reservations.count, records.allSatisfy({ record in
+                record.count == 6 && zip(record, layout.pieceBytes).allSatisfy({ $0.count == $1 })
+            }) else { throw ModelError("VQ batch reader returned incomplete demanded records") }
+            staged = records
+        }
+        guard busy, generation == epoch, shouldContinue() else { throw CheckpointReadError.cancelled }
+        for (index, reservation) in reservations.enumerated() {
+            let (key, slot) = reservation
             var written = Set<Int>()
-            try read(key) { piece, bytes in
+            func publish(_ piece: Int, _ bytes: Data) throws {
                 guard busy, generation == epoch, shouldContinue() else { throw CheckpointReadError.cancelled }
                 guard pieces.indices.contains(piece), !written.contains(piece), bytes.count == layout.pieceBytes[piece] else {
                     throw ModelError("VQ read did not provide a complete unique record piece")
@@ -149,11 +166,15 @@ package final class VQRecordBank {
                 }
                 written.insert(piece)
             }
+            if let staged {
+                for (piece, bytes) in staged[index].enumerated() { try publish(piece, bytes) }
+            } else { try read(key, publish) }
             guard busy, generation == epoch, shouldContinue() else { throw CheckpointReadError.cancelled }
             guard written.count == 6 else { throw ModelError("VQ read ended with a partial record") }
             // Atomic publication happens only after all six checked pieces.
             owners[slot] = key; map[key] = slot; referenced[slot] = true; loads += 1
         }
+        staged = nil
         let slots = try routes.map { id -> UInt32 in
             guard let slot = map[ExpertKey(layer, Int(id))], pins.contains(slot) else {
                 throw ModelError("VQ bank lost a demanded record lease")

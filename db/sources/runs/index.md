@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T08:01:31.974451Z
+updated: 2026-10-03T08:47:48.999507Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-parallel-generation-cpu-profile]] — Parallel VQ CPU sample exposes repeated projection construction
+- [[sources/runs/2026/10/2026-10-03-native-vq-bounded-parallel-record-reads]] — Bounded parallel VQ demanded reads preserve full reference parity
+- [[sources/runs/2026/10/2026-10-03-native-vq-parallel-read-paired-pilot]] — Matched serial and parallel VQ read pilot improves bounded generation
 - [[sources/runs/2026/10/2026-10-03-native-vq-generation-cpu-profile]] — VQ prototype CPU sample identifies synchronous read waits
 - [[sources/runs/2026/10/2026-10-03-native-vq-generation-cost-pilot]] — Paired bounded VQ generation pilot remains below the speed target
 - [[sources/runs/2026/10/2026-10-03-native-vq-wide-record-cache]] — Larger VQ allocation classes preserve complete-model parity
@@ -504,11 +507,8 @@ updated: 2026-10-03T08:01:31.974451Z
 - [[sources/runs/2026/09/2026-09-07-optimization-typed-context-correctness]] — Typed context refusal and shared affected correctness V215
 - [[sources/runs/2026/09/2026-09-07-optimization-typed-context-wire-counterexample]] — Typed context integration reveals OpenAI error.code gap
 - [[sources/runs/2026/09/2026-09-07-configurable-context-v215-idle-swap-control]] — A further no-model idle control observes 16 global swap-ins; capacity held
-- [[sources/runs/2026/09/2026-09-07-configurable-context-ollama-overflow-wire-counterexample]] — Actual HTTP gate exposes stale prose matching and missing structured Ollama overflow codes
-- [[sources/runs/2026/09/2026-09-06-configurable-context-full-image-and-actual-client-pass]] — V202 full image, ordinary quality, actual Hermes and Ollama image correctness pass
-- [[sources/runs/2026/09/2026-09-06-optimization-vision-acceptance-profile]] — Full vision test profile and mandatory acceptance hardening
 
 ## More
 
-This folder has 723 files. The 500 most recent are listed above.
+This folder has 726 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -7,12 +7,12 @@ extension Diagnostics {
     /// A fixed, genuinely autoregressive check. The native argmax, not the
     /// fixture's token, becomes the next input. Final sampled token is unconsumed.
     public static func quantizationGeneration(source: URL, inventory: URL, profileURL: URL,
-                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false) throws -> Data {
+                                              fixtureDirectory: URL, output: URL, residentRecords: Bool = false, residentText: Bool = false, wideRecords: Bool = false, parallelRecords: Bool = false) throws -> Data {
         struct Profile: Decodable, Equatable {
             let schema: Int, profile: String, prompt: [Int], sampling: String
             let max_new_tokens: Int, minimum_steps: Int, eos_token_id: Int
         }
-        guard !wideRecords || (residentRecords && residentText) else { throw ModelError("wide VQ banks require resident text and records") }
+        guard (!wideRecords && !parallelRecords) || (residentRecords && residentText) else { throw ModelError("wide banks and parallel VQ reads require resident text and records") }
         struct Boundary: Decodable {
             let layer: Int, name: String, shape: [Int], dtype: String, bytes: Int, sha256: String
             var key: String { "\(layer):\(name)" }
@@ -123,7 +123,7 @@ extension Diagnostics {
         }
         let model = VQModelProbe(checkpoint)
         if residentText { try model.enableResidentText() }
-        if residentRecords { try model.enableResidentRecords(wide: wideRecords) }
+        if residentRecords { try model.enableResidentRecords(wide: wideRecords, parallelReads: parallelRecords) }
         var c = CheckBuilder("quantization-generated-sequence"), observed: [String: String] = [:]
         var tokens = profile.prompt, generated: [Int] = [], traceLayer = -1, traceValues: [String: MLXArray] = [:]
         var consumedTokens = 0
@@ -189,6 +189,9 @@ extension Diagnostics {
                 c.equal("complete reserved record capacity", stats["total_capacity"], wideRecords ? 608 : 192)
                 c.equal("class maximum matches requested profile", stats["maximum_bank_capacity"], wideRecords ? 512 : 96)
                 c.equal("all record leases released", stats["pinned_records"], 0)
+                c.equal("requested read mode applied", stats["parallel_read_lanes"], parallelRecords ? 12 : 0)
+                c.expect("parallel staging remains bounded", (stats["maximum_read_staging_bytes"] ?? Int.max) <= VQRecordReadBatch.maximumStagingBytes)
+                c.expect("parallel mode exercises demanded staging", !parallelRecords || (stats["maximum_read_staging_bytes"] ?? 0) > 0)
                 c.expect("resident cache serves real hits", (stats["hits"] ?? 0) > 0)
                 c.expect("resident cache loads and evicts", (stats["loads"] ?? 0) > 0 && (stats["evictions"] ?? 0) > 0)
                 c.expect("resident books fit reserved bytes", (stats["resident_book_bytes"] ?? Int.max) <= (stats["maximum_book_bytes"] ?? 0))

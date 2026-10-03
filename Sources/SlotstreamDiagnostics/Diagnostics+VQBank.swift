@@ -117,6 +117,8 @@ extension Diagnostics {
             equal(result, expected[indices], "CLOCK replacement exact bits")
             c.equal("L\(layer) small bank releases pins", small.snapshot().pinned, 0)
         }
+        try quantizationParallelBankFixture(layer: layer, ids: ids, layout: layout,
+            pieces: pieces, books: books, x: x, routes: routes, expected: expected, checks: &c)
         // Fill all admitted physical rows with repeated real records under distinct
         // synthetic keys. The independent one-token fixture supplies each
         // expected row, including high bank offsets and subsequent hot access.

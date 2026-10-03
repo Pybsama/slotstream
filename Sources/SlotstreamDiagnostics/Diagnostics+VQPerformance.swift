@@ -14,6 +14,8 @@ extension Diagnostics {
             let pack: String, generated: [Int], logits: [Logit]
         }
         struct Profile: Decodable {
+            struct Configuration: Decodable { let parallel_read_lanes: Int? }
+            let configuration: Configuration
             let schema: Int, profile: String, prompt: [Int], max_new_tokens: Int
             let minimum_committed_tokens: Int, validation_steps: Int, eos_token_id: Int
             let references: [String: Reference]
@@ -33,7 +35,8 @@ extension Diagnostics {
             return hasher.finalize().map { String(format: "%02x", $0) }.joined()
         }
         let profileRaw = try read(profileURL), profileHash = hash(profileRaw)
-        guard profileHash == "8f2c4256f6489ae5b9ce4e801ad5e9c79263b85646a3ff91220148156da810a5" else {
+        guard ["8f2c4256f6489ae5b9ce4e801ad5e9c79263b85646a3ff91220148156da810a5",
+               "611e1397869821e5e70ff2eea18671efe0cbb1db7901843d441115d1960bbab7"].contains(profileHash) else {
             throw ModelError("VQ pilot requires the frozen performance profile")
         }
         let profile = try JSONDecoder().decode(Profile.self, from: profileRaw)
@@ -123,7 +126,7 @@ extension Diagnostics {
         do {
             try withError {
                 try checkpoint.authenticateMainPayloads { now() - loadStart <= 1_800 }
-                try model.enableResidentText(); try model.enableResidentRecords(wide: true)
+                try model.enableResidentText(); try model.enableResidentRecords(wide: true, parallelReads: profile.configuration.parallel_read_lanes == 12)
                 guard checkpoint.verifiedFileCount == 138 else { throw ModelError("VQ timing requires every main payload authenticated") }
                 Stream.gpu.synchronize()
                 loadSeconds = now() - loadStart
@@ -166,6 +169,13 @@ extension Diagnostics {
             }
             guard ProcessMemory.peakResidentBytes() <= model.processByteLimit,
                   model.recordCacheStats?["pinned_records"] == 0 else { throw ModelError("VQ pilot exceeded its memory or lease bound") }
+            if profile.configuration.parallel_read_lanes == 12 {
+                guard model.recordCacheStats?["parallel_read_lanes"] == 12,
+                      let staging = model.recordCacheStats?["maximum_read_staging_bytes"],
+                      (1...VQRecordReadBatch.maximumStagingBytes).contains(staging) else {
+                    throw ModelError("VQ pilot did not exercise its bounded parallel-read mode")
+                }
+            }
             return try receipt(failure: nil)
         } catch {
             if requestStart > 0 { requestSeconds = now() - requestStart; requestAfter = ProcessMemory.vmActivity() }

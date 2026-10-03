@@ -658,3 +658,31 @@ After a successful validation, exercise metadata and mode refusals with
 <pilot>/validation-3.2/receipt.json --out <new-refusal-directory>`.
 These cases require complete real metadata arguments and verify the expected
 error before any model-output directory is created.
+
+## Bounded parallel demanded reads
+
+Add `--parallel-records` to `quantization-model-check` together with
+`--resident-records --resident-text`, and optionally `--wide-records`.
+This experimental option prepares immutable authenticated file plans on the
+owner thread, then reads at most 32 demanded records on up to 12 CPU lanes.
+Workers hold private data only. All workers drain before ordered publication;
+no cache address or MLX object crosses into a worker. The reservation covers
+retained records and one bounded read buffer per lane, capped at 128 MB.
+The ordinary diagnostic remains serial. This does not add service cancellation,
+prefetch, resizing or automatic memory selection.
+
+Use the frozen comparison harness to measure the concurrency change alone:
+
+```sh
+.venv/bin/python Tools/vq_read_pair_pilot.py \
+  --binary <frozen-build>/slotstream \
+  --research-root <research-directory> --out <new-comparison-directory>
+```
+
+`read-pair-v1.json` binds the serial and parallel native profiles to the same
+VQ 3.2 artifact and binary. Each mode must pass its own complete-logit prefix
+validation. Three interleaved measurement pairs then require identical entire
+generated sequences, preserve every receipt and use the same eligibility rules
+as the generation pilot. The reader's lane count is one tested hypothesis,
+not an automatic hardware policy. Current results and limits are recorded in
+[the canonical measurement](../../db/records/measurements/quantization-screen-2026-10-02.md#bounded-parallel-demanded-reads-october-3).

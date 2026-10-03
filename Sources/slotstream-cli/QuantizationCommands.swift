@@ -37,6 +37,7 @@ struct QuantizationCheck: ParsableCommand {
         let source = sourceDirectory.map { URL(fileURLWithPath: $0) }
         let inventory = sourceInventory.map { URL(fileURLWithPath: $0) }
         var reports = [try Diagnostics.quantizationGeometry(), try Diagnostics.quantizationMetadata(),
+                       try Diagnostics.quantizationReadBatch(),
                        try Diagnostics.quantizationPLEStorage(), try Diagnostics.quantizationTensorFile()]
         if kernels {
             reports.append(try Diagnostics.quantizationKernels())
@@ -77,26 +78,27 @@ struct QuantizationModelCheck: ParsableCommand {
     @Flag(name: .long, help: "Use fixed 96-record allocation classes in the experimental parity probe") var residentRecords = false
     @Flag(name: .long, help: "Retain the authenticated text weights in the 10 GB research probe") var residentText = false
     @Flag(name: .long, help: "Research with 512 rows for the main expert class; requires both residency flags") var wideRecords = false
+    @Flag(name: .long, help: "Overlap bounded demanded reads; requires resident records and text") var parallelRecords = false
     @Flag(name: .long, help: "Compare actual greedy generation and every retained state boundary") var greedy = false
     @Option(name: .long, help: "Frozen bench/quantization/greedy-v1.json, required with --greedy") var generationProfile: String?
     func validate() throws {
         guard [prefill, sparse, greedy].filter({ $0 }).count <= 1, greedy == (generationProfile != nil),
               (!residentRecords && !residentText) || sparse || greedy,
-              !wideRecords || (residentRecords && residentText) else {
-            throw ValidationError("--prefill, --sparse and --greedy are exclusive; --greedy requires --generation-profile; --resident-records/--resident-text require --sparse or --greedy; --wide-records requires both residency flags")
+              (!wideRecords && !parallelRecords) || (residentRecords && residentText) else {
+            throw ValidationError("--prefill, --sparse and --greedy are exclusive; --greedy requires --generation-profile; --resident-records/--resident-text require --sparse or --greedy; --wide-records/--parallel-records require both residency flags")
         }
     }
     func run() throws {
         if greedy, let generationProfile {
             print(String(decoding: try Diagnostics.quantizationGeneration(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), profileURL: URL(fileURLWithPath: generationProfile),
-                fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output), residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords), as: UTF8.self))
+                fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output), residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords), as: UTF8.self))
             return
         }
         if prefill || sparse {
             print(String(decoding: try Diagnostics.quantizationPrefillModel(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
-                output: URL(fileURLWithPath: output), sparse: sparse, residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords), as: UTF8.self))
+                output: URL(fileURLWithPath: output), sparse: sparse, residentRecords: residentRecords, residentText: residentText, wideRecords: wideRecords, parallelRecords: parallelRecords), as: UTF8.self))
             return
         }
         print(String(decoding: try Diagnostics.quantizationModel(source: URL(fileURLWithPath: sourceDirectory),

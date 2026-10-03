@@ -94,3 +94,9 @@ Capture larger per-class cache parity, high physical-slot checks, real cache cou
 ## [2026-10-03 08:02] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
 Added source-bound lean generation pilot and input refusals; preserved six paired below-target results and a separately discarded CPU timing profile; parallel demanded reads are the next hypothesis. Prior finite-rotary remote CI passed.
 
+## [2026-10-03 08:46] update | records/plan/same-model-quantization-and-automatic-memory-2026-10-02
+Implement bounded parallel VQ demanded reads; preserve exact reference and whole-sequence parity, record matched speed gain and full static gates without pack promotion.
+
+## [2026-10-03 08:48] update | records/measurements/quantization-screen-2026-10-02
+Preserve separately sampled parallel-path attribution with all timing discarded and record prior complete CI success.
+

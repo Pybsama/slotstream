@@ -264,6 +264,29 @@ package final class VQCheckpoint {
         return values
     }
 
+    /// Resolve mutable loader state on its owner before any read lane starts.
+    /// Workers receive only the resulting immutable descriptor/range plan.
+    package func recordReadPlan(layer: Int) throws -> VQRecordReadPlan {
+        let layout = try recordLayout(layer: layer)
+        var pieces: [VQRecordReadPlan.Piece] = []
+        for (index, name) in ["gate_proj", "up_proj", "down_proj"].enumerated() {
+            let spec = layout.projections[index], rows = index == 2 ? 2560 : 640
+            let unpacked = spec.packing == .unpacked8
+            for piece in 0...1 {
+                let key = "model.layers.\(layer).mlp.switch_mlp." + name + (piece == 0 ? ".codes" : ".vq_scales")
+                let owner = try file(for: key, shouldContinue: { true })
+                let columns = piece == 0 ? spec.codeRowBytes / (unpacked ? 1 : 4) : spec.columns / 64
+                let dtype = piece == 0 ? (unpacked ? "U8" : "U32") : "F16"
+                guard let ref = owner.tensors[key], ref.dtype == dtype, ref.shape == [512, rows, columns],
+                      ref.rowBytes == layout.pieceBytes[index * 2 + piece] else {
+                    throw ModelError("VQ read plan tensor disagrees with its complete-record layout")
+                }
+                pieces.append(.init(file: owner, name: key, bytes: layout.pieceBytes[index * 2 + piece]))
+            }
+        }
+        return try VQRecordReadPlan(pieces)
+    }
+
     /// One checked piece at a time; the bank publishes only after all six.
     /// This synchronous reader never owns or stores the bank's CPU pointers.
     package func readRecord(layer: Int, expert: Int, emit: (Int, Data) throws -> Void) throws {
