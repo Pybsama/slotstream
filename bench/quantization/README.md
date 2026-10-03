@@ -478,7 +478,38 @@ python3 Tools/vq_prefill_manifest_gate.py --binary <source-bound-slotstream> \
   --fixture <same-pack-prefill-model-reference> --out <new-fault-results>
 ```
 
-The complete prefill profile passes for both inspected packs. Native generation,
+The complete prefill profile passes for both inspected packs. Production generation,
 sparse selection at longer context, persistent residency, draft, vision and
 complete-task speed/quality remain independent gates. These checks do not make
 an alternative pack eligible for production loading or automatic selection.
+
+## Greedy feedback reference
+
+The frozen `greedy-v1.json` profile contains an owned literal chat prompt and
+the original tokenizer identity. Each implementation samples its own argmax
+and feeds that actual token into the next step. The last sampled token remains
+unconsumed. Every complete state/output boundary is compared at each step.
+
+```sh
+.venv/bin/python Tools/vq_generated_reference.py --model <verified-vq-pack> \
+  --inventory <inventory.json> --architecture <pinned-qwen4_exp.py> \
+  --profile bench/quantization/greedy-v1.json \
+  --out <new-greedy-reference>
+.build/release/slotstream quantization-model-check --greedy \
+  --generation-profile bench/quantization/greedy-v1.json \
+  --source-directory <verified-vq-pack> --source-inventory <inventory.json> \
+  --fixture-directory <same-pack-greedy-reference> --output <new-result>
+python3 Tools/vq_generation_manifest_gate.py --binary <source-bound-slotstream> \
+  --source <verified-vq-pack> --inventory <inventory.json> \
+  --fixture <same-pack-greedy-reference> --profile bench/quantization/greedy-v1.json \
+  --out <new-fault-results>
+```
+
+Run each model process sequentially under `quantization_logit_run.supervise`,
+with the profile's preflight, memory and time bounds. Both packs match their
+references for all sixteen tokens and all 2,560 boundaries. Both stop at the
+length cap, so this fixture does not exercise a real sampled EOS termination.
+Malformed profile, predecessor, stop and boundary metadata are separate refusal
+gates. This diagnostic is not a production service, task-quality evaluation or
+throughput qualification. Sparse attention, persistent residency, draft and
+vision remain open.

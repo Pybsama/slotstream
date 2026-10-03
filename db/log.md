@@ -64,3 +64,6 @@ Audited the pinned large-prefill default as fused segmented GEMM, not its decode
 ## [2026-10-03 05:06] update | records/measurements/quantization-screen-2026-10-02.md
 Both VQ packs pass exact 512-token full-model prefill plus continuation across all 320 complete tensor boundaries. Localized the first QSA failure to fast versus precise rotary power and isolated the repair to candidate arithmetic. Preserved failures and reference identities. All 95 native checks, eight manifest refusal cases, unchanged deployed logits and the complete static suite pass. Generated sequences, sparse selection, persistent caches, quality and speed remain open.
 
+## [2026-10-03 05:21] update | records/measurements/quantization-screen-2026-10-02.md
+Both native VQ packs match 16 independently sampled and fed-back greedy tokens and 2,560 complete state/output boundaries per pack. Frozen original-tokenizer profile; length cap reached with final token unconsumed. Twelve malformed-chain/profile/stop/CLI cases and 95 native checks pass. Engine sources match the fully validated prefill checkpoint. Sparse long context, persistent caches, draft, quality and speed remain open.
+

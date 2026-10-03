@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T05:06:45.575031Z
+updated: 2026-10-03T05:21:48.769340Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-native-vq-greedy-parity]] — Exact native VQ greedy feedback and retained-state boundaries
 - [[sources/runs/2026/10/2026-10-03-native-vq-prefill-validation]] — Complete VQ prefill checkpoint regression and metadata validation
 - [[sources/runs/2026/10/2026-10-02-native-vq-complete-prefill]] — Exact complete native VQ prefill and continuation boundaries
 - [[sources/runs/2026/10/2026-10-02-vq-prefill-rotary-arithmetic]] — Pinned VQ prefill rotary arithmetic diagnosis and repair
@@ -506,9 +507,8 @@ updated: 2026-10-03T05:06:45.575031Z
 - [[sources/runs/2026/09/2026-09-06-optimization-advisory-fixture-counterexample]] — V198 shared build and T0 advisory-fixture counterexample
 - [[sources/runs/2026/09/2026-09-06-slotpack-v0211-publication-and-r2-retirement]] — Public v0.2.11 provenance, ordinary installation, installed-model acceptance and verified R2 bucket retirement complete the free Hugging Face migration.
 - [[sources/runs/2026/09/2026-09-06-optimization-activation-and-evidence-preservation]] — V199 actual-default qualification preparation and V200 exact historical evidence recovery
-- [[sources/runs/2026/09/2026-09-06-optimization-public-transport-source-alignment]] — V197 exact public transport source alignment and unrun V198 shared correctness queue
 
 ## More
 
-This folder has 712 files. The 500 most recent are listed above.
+This folder has 713 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

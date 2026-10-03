@@ -73,7 +73,20 @@ struct QuantizationModelCheck: ParsableCommand {
     @Option(name: .long) var fixtureDirectory: String
     @Option(name: .long) var output: String
     @Flag(name: .long, help: "Use the fixed 512-row complete-prefill hash fixture") var prefill = false
+    @Flag(name: .long, help: "Compare actual greedy generation and every retained state boundary") var greedy = false
+    @Option(name: .long, help: "Frozen bench/quantization/greedy-v1.json, required with --greedy") var generationProfile: String?
+    func validate() throws {
+        guard !(prefill && greedy), greedy == (generationProfile != nil) else {
+            throw ValidationError("--prefill and --greedy are exclusive; --greedy requires --generation-profile")
+        }
+    }
     func run() throws {
+        if greedy, let generationProfile {
+            print(String(decoding: try Diagnostics.quantizationGeneration(source: URL(fileURLWithPath: sourceDirectory),
+                inventory: URL(fileURLWithPath: sourceInventory), profileURL: URL(fileURLWithPath: generationProfile),
+                fixtureDirectory: URL(fileURLWithPath: fixtureDirectory), output: URL(fileURLWithPath: output)), as: UTF8.self))
+            return
+        }
         if prefill {
             print(String(decoding: try Diagnostics.quantizationPrefillModel(source: URL(fileURLWithPath: sourceDirectory),
                 inventory: URL(fileURLWithPath: sourceInventory), fixtureDirectory: URL(fileURLWithPath: fixtureDirectory),
