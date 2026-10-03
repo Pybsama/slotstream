@@ -115,3 +115,6 @@ Preserve six fixed candidate forwards and unfavorable distribution results; keep
 ## [2026-10-03 10:54] update | quantization-allocator-and-independent-draft
 Retain bounded allocator reuse after exact three-pack parity, six paired timings and full static gates; authenticate independent draft metadata; preserve sampled attribution and new dense-overlay hypothesis without product promotion.
 
+## [2026-10-03 11:20] update | quantization-dense-composite-screen
+Authenticate a separate dense-four-bit/VQ3.2 composite; preserve exact traversal and mixed six-context quality evidence, full static validation and draft norm audit. Repair unquoted colon in new capture frontmatter. Native integration and product gates remain open.
+

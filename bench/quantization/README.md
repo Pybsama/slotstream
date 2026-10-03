@@ -767,3 +767,23 @@ The inventory validates the sidecar's own recipe and tensor ledger. Use its
 explicit payload-verification option when full-file authentication is required;
 header-only output declares that the payload remains unverified. Neither mode
 establishes compatibility with the native MTP adapter or qualifies execution.
+
+## Dense four-bit composite pilot
+
+`Tools/vq_dense_overlay_reference.py` defines a separate research candidate:
+the pinned VQ 3.2 experts and PLE tables with selected dense tensor triples
+from the installed same-checkpoint affine pack. Its composite digest binds
+both parent identities, the exact replacement map and every header geometry.
+Each source shard used is fully authenticated before loading. Unmatched
+tensors and the explicit VQ norm adapter remain unchanged.
+
+The producer first requires a direct-versus-streamed four-layer proof over
+exactly 513 tokens. Full-model pilot forwards then require that exact proof,
+instrument and composite. Original VQ fixtures cannot serve as composite
+parity evidence. The separate comparator verifies preserved controls against
+their original producer receipts and frozen hashes, while checking its own
+output-copy storage budget. It does not weaken the ordinary pack comparator.
+
+Use each tool's `--help` for required paths. Run these tools only under a
+written local resource ledger and the process supervisor; they provide no
+download activation, native loader, automatic selection or quality verdict.

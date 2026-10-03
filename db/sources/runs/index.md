@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-03T10:54:20.219204Z
+updated: 2026-10-03T11:20:11.870998Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-03-vq-dense-four-bit-overlay-screen]] — Independent same-checkpoint dense four-bit composite: traversal and quality screen
+- [[sources/runs/2026/10/2026-10-03-vq-draft-raw-normalization-audit]] — Authenticated draft norms require one explicit zero-centered fold
 - [[sources/runs/2026/10/2026-10-03-vq-allocator-profile-and-dense-overlay-feasibility]] — VQ allocator CPU profile and dense four-bit overlay hypothesis
 - [[sources/runs/2026/10/2026-10-03-vq-independent-draft-metadata]] — Independent VQ draft identity, storage ledger and adapter review
 - [[sources/runs/2026/10/2026-10-03-native-vq-bounded-allocator-reuse]] — Bounded VQ allocator reuse with exact parity and paired throughput
@@ -505,10 +507,8 @@ updated: 2026-10-03T10:54:20.219204Z
 - [[sources/runs/2026/09/2026-09-07-configurable-context-after-component-handoff-readiness]] — Readiness after the bounded component handback still misses the frozen P5 preflight
 - [[sources/runs/2026/09/2026-09-07-optimization-indexer-score-screen]] — Indexer score screen rejects general prefill fusion
 - [[sources/runs/2026/09/2026-09-07-configurable-context-v215-prepared-state-audit]] — V215 runtime source closure survives final harness review; resource campaign held
-- [[sources/runs/2026/09/2026-09-07-configurable-context-installed-gate-discovery-preparation]] — Installed acceptance reads the actual nested discovery cap; no installed run yet
-- [[sources/runs/2026/09/2026-09-07-configurable-context-v215-minimum-and-transition-protocols]] — Exact V215 minimum-target neighbors and prospective C19 capacity matrix
 
 ## More
 
-This folder has 734 files. The 500 most recent are listed above.
+This folder has 736 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
