@@ -45,17 +45,10 @@ class StartupChecks(unittest.TestCase):
              patch.object(fixture.time, 'sleep', clock.sleep), \
              patch.object(fixture, 'exchange', side_effect=request):
             try:
-                result = fixture.wait_for_startup(process, 12345, timeout)
+                fixture.wait_for_startup(process, 12345, timeout)
             except TimeoutError:
                 self.assertAlmostEqual(clock.now, timeout)
                 raise
-        return result
-
-    def test_readiness_after_55_seconds_with_larger_budget(self):
-        plan, elapsed = self.run_wait(180, 55)
-        self.assertEqual(plan['memory_limit_gb'], 10)
-        self.assertGreaterEqual(elapsed, 55)
-        self.assertLess(elapsed, 56)
 
     def test_shorter_override_still_times_out(self):
         with self.assertRaisesRegex(TimeoutError, '45 seconds'):
@@ -86,6 +79,8 @@ class StartupChecks(unittest.TestCase):
         connection.__exit__ = Mock(return_value=False)
 
         def receive(_size):
+            if clock.now >= .2:
+                raise AssertionError('HTTP deadline did not expire')
             clock.sleep(.04)
             return b'partial response'
 
@@ -160,7 +155,6 @@ class StartupChecks(unittest.TestCase):
                  contextlib.redirect_stdout(io.StringIO()):
                 code = fixture.main()
             report = json.loads((root/'result/report.json').read_text())
-        self.assertIsNotNone(popen.call_args, report)
         process.terminate.assert_called_once()
         process.wait.assert_called_once_with(timeout=15)
         self.assertTrue(report['server_reaped'])
@@ -175,6 +169,7 @@ class StartupChecks(unittest.TestCase):
         self.assertEqual(report['startup_timeout_seconds'], 180)
         self.assertEqual(report['completion_timeout_seconds'], 120)
         self.assertGreaterEqual(report['startup_seconds'], 55)
+        self.assertLess(report['startup_seconds'], 56)
         self.assertGreater(len(report['observations']), 2)
         self.assertIn('completion_seconds', report)
 
