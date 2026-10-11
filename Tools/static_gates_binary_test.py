@@ -47,6 +47,7 @@ BIN=${BIN:-.build/release/slotstream}
                      'Tools/process_cleanup_checks.py', 'Tools/context_qualification_checks.py',
                      'Tools/installer_gates_binary_test.py',
                      'Tools/verify_binary_test.py',
+                     'Tools/adaptive_memory_e2e_test.py',
                      'Tools/sampler_gates_test.py',
                      'Tools/reference/fixture.py', 'Tools/slotpack/checks.py']:
             self.write(path, '# Model-free dependency fixture.\n')
