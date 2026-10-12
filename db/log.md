@@ -486,3 +486,9 @@ Investigate issue 55 using installed 0.2.27, paired real-model runs and standalo
 ## [2026-10-12 16:25] update | records/decisions/remove-gpu-keepalive.md
 Remove artificial GPU work and all keepalive controls, update runtime identities and migration checks, preserve direct-read exactness, and record generic-optimization and issue-handling lessons. Release build, 102 T0/T1 checks (41181 assertions), performance protocol tests and archive tests pass. Brain validates with zero errors/warnings; 354 claim checks pass. Release qualification and publication remain pending.
 
+## [2026-10-12 16:31] update | records/measurements/issue54-context-boundary-triage-2026-10-12.md
+Preserve report and prior maintainer reply, inspect actual attention-path boundaries, and run bounded model-free MLX probes. The M5 Pro does not reproduce the reported full-model cliff; keep issue 54 separate and open pending a no-keepalive release comparison. No new runtime tuning adopted. Brain validation and claims pass.
+
+## [2026-10-12 16:41] update | records/decisions/remove-gpu-keepalive.md
+Broader local release checks found a host-dependent disk-space fixture exceeding the manifest object limit on a large SSD. Replace it with a bounded valid fixture and an internal free-space observation seam; disk refusal/margin, HTTP fault injection and sustained-transfer memory checks pass. Production continues to read actual disk availability. Preserve the original failure and corrected checks in release evidence.
+

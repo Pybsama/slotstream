@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-12T15:00:55.658767Z
+updated: 2026-10-12T16:31:12.217593Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-12-issue54-attention-triage]] — Issue 54 report capture and bounded MLX attention-boundary probe
 - [[sources/runs/2026/10/2026-10-12-issue55-model-repeat]] — Repeated installed-binary comparison: five clean on/off pairs, exact tokens, no consistent gain at the 8.1 GB floor
 - [[sources/runs/2026/10/2026-10-12-issue55-metal-probes]] — Production keepalive latency, bounded scheduling controls and candidate variants on M5 Pro
 - [[sources/runs/2026/10/2026-10-12-issue55-model-first]] — Initial real-model comparison: preserve refusals and paging-contaminated pairs; no clean timing claim
@@ -506,9 +507,8 @@ updated: 2026-10-12T15:00:55.658767Z
 - [[sources/runs/2026/09/2026-09-09-optimization-quiet-resource-scope-cohort-freeze]] — Fresh complete scope cohort frozen after material resource recovery, preserving the V467 startup failure
 - [[sources/runs/2026/09/2026-09-09-optimization-explicit-scope-complete-startup-inconclusive]] — Complete explicit-scope cohort: exact outputs and 10 GB cap pass; request gate passes but startup pair count fails
 - [[sources/runs/2026/09/2026-09-08-optimization-public-planner-threshold-cohort-freeze]] — Three original full public planner threshold cohorts frozen with exact current native proof
-- [[sources/runs/2026/09/2026-09-08-optimization-public-planner-serving-driver-preparation]] — Public planner serving measurement driver prepared and model-free checked
 
 ## More
 
-This folder has 903 files. The 500 most recent are listed above.
+This folder has 904 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

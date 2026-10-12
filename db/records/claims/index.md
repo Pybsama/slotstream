@@ -2,7 +2,7 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-10-12T16:21:20.347320Z
+updated: 2026-10-12T16:34:40.245311Z
 ---
 
 # records/claims

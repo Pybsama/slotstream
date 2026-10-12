@@ -227,19 +227,24 @@ import CSlotpack
         try alternateState("invalid")
         try expect("invalid alternate identity cannot report progress",
             SlotpackDownload.resumeModelBytes(at: alternateRoot, manifest: other, digest: "invalid").isEmpty)
-        let impossibleSize = WeightStore.freeDiskBytes(near: temp) + 4_000_000_000
-        let largeFile = PinnedModel.File(path: "impossible.bin", size: impossibleSize, sha256: digest)
-        var objects = [SlotpackManifest.Object]()
-        var offset: Int64 = 0
-        while offset < impossibleSize {
-            let size = Int(min(Int64(SLOTPACK_MAX_RAW), impossibleSize-offset))
-            objects.append(.init(sha256: object.sha256, size: 32, rawSize: size, rawSHA256: digest, ranges: [.init(file:0,offset:offset,length:size)])); offset += Int64(size)
+        // Keep the manifest valid regardless of the host's disk capacity.
+        // A free-space-sized fixture exceeds the 20,000-object manifest limit
+        // on large SSDs and never reaches the disk check it claims to test.
+        let diskFile = PinnedModel.File(path: "disk-check.bin", size: Int64(raw.count), sha256: digest)
+        let diskManifest = SlotpackManifest(format: "slotpack-v1", files: [diskFile], objects: [object])
+        for available in [Int64(0), Int64(raw.count) + 2_000_000_000 - 1] {
+            var diskRejected = false, inspectedDestination = false
+            do {
+                try SlotpackDownload(manifest: diskManifest, digest: hash, dest: temp, bases: [], rawBases: [],
+                    connections: 1, cancellation: .init(), freeDiskBytes: { url in
+                        inspectedDestination = url == temp
+                        return available
+                    }, log: { _ in }).run()
+            } catch { diskRejected = String(describing: error).contains("not enough disk") }
+            try expect("disk space and margin checked before creating parts/\(available)",
+                diskRejected && inspectedDestination && !FileManager.default.fileExists(
+                    atPath: temp.appendingPathComponent("disk-check.bin.slotpack.part").path))
         }
-        let large = SlotpackManifest(format: "slotpack-v1", files: [largeFile], objects: objects)
-        var diskRejected = false
-        do { try SlotpackDownload(manifest: large, digest: hash, dest: temp, bases: [], rawBases: [], connections: 1, cancellation: .init(), log: { _ in }).run() }
-        catch { diskRejected = String(describing: error).contains("not enough disk") }
-        try expect("disk space checked before creating large parts", diskRejected && !FileManager.default.fileExists(atPath: temp.appendingPathComponent("impossible.bin.slotpack.part").path))
         print(String(data: try JSONSerialization.data(withJSONObject: ["pass":true,"checks":checks], options: [.prettyPrinted,.sortedKeys]), encoding:.utf8)!)
     }
 }

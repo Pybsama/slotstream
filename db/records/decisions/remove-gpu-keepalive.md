@@ -2,7 +2,7 @@
 type: decision
 id: 01m4remmdjrd8qjvgrnpzyvnba
 created: 2026-10-12T16:20:25.138274+00:00
-updated: 2026-10-12T16:20:25.138274+00:00
+updated: 2026-10-12T16:38:36.008668+00:00
 summary: Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
 decided_on: 2026-10-12
 evidence: '[[records/measurements/issue55-keepalive-investigation-2026-10-12]]'
@@ -36,3 +36,7 @@ Startup recipe identities change because the actual execution policy changes. Pr
 Release completion requires complete CI for the source commit, the exact CI archive passing the native battery, successful publication with verified checksum/provenance, and the public installer plus installed serving acceptance. Functional acceptance permits diagnostic global paging but never waives real headroom or process-memory checks. Do not promise a speedup on untested hardware.
 
 Issue [#54](https://github.com/carloslfu/slotstream/issues/54) reports a context-boundary slowdown and has no keepalive-off comparison. Inspect its actual attention path and boundary before attributing it. Keep it open unless independent evidence shows the reported failure is resolved.
+
+## Release-test lesson from the removal
+
+The broader local gates exposed an unrelated disk-space fixture failure. It built a synthetic model larger than the host's free space; with nearly a terabyte free, that fixture exceeded the manifest's object-count bound and failed validation before testing disk admission. The failure was in the test's host-dependent setup, not evidence of a broken user download. Use a small valid manifest and inject only the available-disk observation into the internal downloader, then assert that both zero capacity and a missing safety-margin byte refuse before any partial file appears. Production still reads real disk availability and enforces the same margin. Keep fixtures bounded and prove that they reach the behavior their names claim to cover.

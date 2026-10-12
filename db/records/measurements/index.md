@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-12T16:21:20.252099Z
+updated: 2026-10-12T16:31:12.296100Z
 ---
 
 # records/measurements
 
+- [[records/measurements/issue54-context-boundary-triage-2026-10-12]] — The 32k report remains unconfirmed as a keepalive bug; a bounded attention probe finds only a small boundary step on the M5 Pro
 - [[records/measurements/issue55-keepalive-investigation-2026-10-12]] — Issue 55 is a credible portability regression; current floor-budget tests show no consistent gain, and scheduling probes demonstrate the cost of serialization without reproducing the base-M5 cause
 - [[records/measurements/release-0-2-28-published-2026-10-07]] — v0.2.28 published and accepted
 - [[records/measurements/quantization-screen-2026-10-02]] — Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.

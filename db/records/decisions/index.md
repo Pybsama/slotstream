@@ -2,13 +2,13 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-12T16:21:20.229941Z
+updated: 2026-10-12T16:38:36.008668Z
 ---
 
 # records/decisions
 
-- [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%
 - [[records/decisions/remove-gpu-keepalive]] — Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
+- [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%
 - [[records/decisions/same-model-lowbudget-target-remains-unmet]] — Close this implementation and research effort; retain original four-bit and independent automatic controls, with the full speed target unmet.
 - [[records/decisions/vq-2.1-held-after-distribution-screen]] — Hold full VQ2.1 and the tested original-dense mixture after adverse screens; preserve evidence and require a separately qualified recipe before promotion.
 - [[records/decisions/affine223-held-after-completed-task-screen]] — Hold the exact mixed two/three-bit affine recipe after three newly failed completed tasks
