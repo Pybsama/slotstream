@@ -129,8 +129,8 @@ that use.
 
 What the native stack does not claim: the measured gains on this page come
 from the mechanisms named with them, the decode lookahead, the corrected
-expert forecast, speculative decoding, the prefix cache, the GPU keepalive and
-direct demand reads. Warm decode is
+expert forecast, speculative decoding, the prefix cache and direct demand
+reads. Warm decode is
 dominated by SSD reads and GPU waits, so the work goes to fewer reads and
 more overlap rather than host-side micro-optimization
 ([decision](../db/records/decisions/decode-host-time-is-waiting-not-graph-construction.md)).
@@ -223,30 +223,30 @@ records its 373 MiB charge, overrides and limits.
 The short [expert lookahead guide](EXPERT-LOOKAHEAD.md) explains the mechanism
 and the experiments that led to it.
 
-### GPU keepalive and direct demand reads
-
-Streamed decode is stop-and-go. At every layer the host reads the routing
-back, reads the experts the cache is missing and only then submits the next
-burst of GPU work, so a one-token pass is a few hundred short command buffers
-with the GPU idle in between. An idle Apple GPU lowers its clock and starts
-the next buffer late. While a request generates, Slotstream now keeps the GPU
-busy with a one-thread kernel on its own command queue. The kernel computes
-nothing and touches no model memory, so outputs are unchanged.
+### Direct demand reads
 
 Cache misses used to be read into staging arrays and then scattered into the
 cache on the GPU, one more dispatch and wait per layer. They are now read into
 host memory and copied straight into their cache slots: the same bytes in the
-same place, without the scatter.
+same place, without the scatter. `SLOTSTREAM_OPT_DIRECT_DEMAND=0` restores the
+staged path. `decode-overlap-check` verifies identical output with and without
+the draft head and checks recovery from failed reads.
 
-On the development Mac, paired and interleaved with identical output, the two
-together made decode 1.28x faster at a 10 GB target without the draft head
-and 1.22x faster at 22 GB with the draft head and lookahead, counting only
-pairs with no swap activity. The keepalive costs power: energy per generated
-token rose 7% at 16 GB, so `--gpu-keepalive auto`, the default, runs it only
-on AC power outside Low Power Mode. `--gpu-keepalive off` and
-`SLOTSTREAM_OPT_DIRECT_DEMAND=0` restore the previous behavior. The
-[measurement](../db/records/measurements/decode-perf-2026-09-24.md) has every
-comparison, both screens and the ideas that did not help.
+### Optimize useful work
+
+GPU keepalive was removed in 0.2.29 after a base-M5 user reported severe
+slowdowns with it enabled. It submitted a polling kernel to influence GPU
+scheduling between useful operations. Gains measured on the development Mac
+did not establish a reliable default for other Macs, and an optional switch
+would leave users responsible for diagnosing that behavior.
+
+Prefer reducing reads, dispatches and synchronization, or overlapping actual
+work within bounded memory. Judge complete requests, pauses, cancellation,
+energy and sustained behavior across the intended hardware and power states.
+Native kernels remain useful when their correctness and resource bounds are
+established. The [removal decision](../db/records/decisions/remove-gpu-keepalive.md)
+records the evidence, uncertainty and engineering lessons. Earlier keepalive
+measurements remain historical evidence, not performance claims for this release.
 
 [MEASUREMENTS.md](../MEASUREMENTS.md) includes the configurations, comparisons,
 and failed experiments behind these results.

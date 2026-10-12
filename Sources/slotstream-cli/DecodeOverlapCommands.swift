@@ -10,7 +10,7 @@ import SlotstreamDiagnostics
 struct DecodeOverlapCheck: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "decode-overlap-check",
-        abstract: "Prove direct demand reads and the GPU keepalive leave outputs exact and recover from read failures")
+        abstract: "Prove direct demand reads leave outputs exact and recover from read failures")
     @OptionGroup var model: ModelOptions
     @Option(help: "Tokens to generate per run")
     var tokens: Int = 24

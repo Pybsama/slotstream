@@ -6,7 +6,20 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## Unreleased
+## 0.2.29
+
+- Remove GPU keepalive completely after a base-M5 MacBook Air report showed
+  severe decode stalls with the default enabled ([#55](https://github.com/carloslfu/slotstream/issues/55)).
+  Generation no longer submits artificial GPU work or changes behavior with
+  AC power. Direct demand reads and their correctness checks remain.
+- Remove `--gpu-keepalive`, `SLOTSTREAM_GPU_KEEPALIVE`, the Swift keepalive
+  configuration and `gpuKeptAwake` statistics. Remove the CLI flag from saved
+  commands after upgrading; the environment variable can be unset. Ollama's
+  unrelated `keep_alive` field and stream keepalives remain supported.
+- The development Mac app uses a new startup recipe identity. Older activation
+  receipts require fresh activation with the saved preferences; they are not
+  relabeled as evidence for the changed runtime. Historical research protocols
+  naming the removed setting must be replaced before running new comparisons.
 
 - The development Mac app has a visible Home switcher above its sidebar
   navigation, with recent locations, new/open actions and native menu commands.

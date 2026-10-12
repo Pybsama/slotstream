@@ -2,13 +2,13 @@
 type: claim
 id: 01m3a7kywf81gbxetazsrfap77
 created: 2026-09-24T17:32:39.183190+00:00
-updated: 2026-09-24T17:32:39.183190+00:00
+updated: 2026-10-12T16:21:20.324558+00:00
 summary: The GPU keepalive and direct demand reads made decode 1.28x faster at a 10 GB target without the draft head
 basis: measured
 gate: none
 needle: 1.28x faster at a 10 GB target
 supported_by: '[[records/measurements/decode-perf-2026-09-24]]'
-surfaces: docs/ENGINEERING.md, llms.txt, CHANGELOG.md
+surfaces: CHANGELOG.md
 title: The GPU keepalive and direct demand reads made decode 1.28x faster at a 10 GB target without the draft head
 status: current
 ---

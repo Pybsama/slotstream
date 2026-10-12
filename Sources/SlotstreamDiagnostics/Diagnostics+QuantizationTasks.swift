@@ -198,7 +198,6 @@ extension Diagnostics {
                 }
                 engine.generator.draftDepth = max(1, draftDepth)
                 engine.generator.footprintSampling = true
-                engine.gpuKeepAlive = .off
                 engine.prefixCache.enabled = false
                 baselineEngine = engine
                 identity["plan"] = plan.json()

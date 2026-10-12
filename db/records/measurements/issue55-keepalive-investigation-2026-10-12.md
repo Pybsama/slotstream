@@ -2,12 +2,13 @@
 type: measurement
 id: 01m4ra0tdck5y9bxc8m6yyphf2
 created: 2026-10-12T14:59:41.612026+00:00
-updated: 2026-10-12T14:59:41.612026+00:00
+updated: 2026-10-12T16:21:20.252099+00:00
 summary: Issue 55 is a credible portability regression; current floor-budget tests show no consistent gain, and scheduling probes demonstrate the cost of serialization without reproducing the base-M5 cause
 date: 2026-10-12
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]], [[records/machines/macbook-air-m5-32gb-issue55]]'
+note: Investigation remains valid. Its optional-retention recommendation is superseded by [[records/decisions/remove-gpu-keepalive]]; the removed probe source is preserved in commit 2dfc827 and the linked capture archive.
 order: '1730'
 runs: '[[sources/runs/2026/10/2026-10-12-issue55-metal-probes]], [[sources/runs/2026/10/2026-10-12-issue55-model-first]], [[sources/runs/2026/10/2026-10-12-issue55-model-repeat]]'
 title: 'Issue 55: GPU keepalive benefit, interference risk and qualification gap'

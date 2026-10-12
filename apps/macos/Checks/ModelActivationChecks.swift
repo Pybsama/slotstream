@@ -41,9 +41,18 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     legacyObject.removeValue(forKey: "startupRecipeIdentity")
     let legacySelection = try JSONDecoder().decode(Journal.Selection.self,
         from: JSONSerialization.data(withJSONObject: legacyObject))
-    try legacySelection.validate()
-    try check(legacySelection == selected && legacySelection.startupPolicyID == nil && legacySelection.startupRecipeIdentity == nil,
-        "legacy original startup identity remains equivalent and does not unlock an automatic retry")
+    try expectFailure("historical activation cannot certify revised startup settings") {
+        try legacySelection.validate()
+    }
+    try check(legacySelection != selected && legacySelection.preferences == selected.preferences,
+        "revised startup settings preserve the saved preference but require fresh activation")
+    legacyObject["startupPolicyID"] = ModelPackStartupDefaults.legacyOriginalPolicyID
+    legacyObject["startupRecipeIdentity"] = ModelPackStartupDefaults.legacyOriginalRecipeIdentity
+    let explicitHistoricalSelection = try JSONDecoder().decode(Journal.Selection.self,
+        from: JSONSerialization.data(withJSONObject: legacyObject))
+    try expectFailure("an explicit historical receipt also requires fresh activation") {
+        try explicitHistoricalSelection.validate()
+    }
     try expectFailure("resolved pack cannot override an explicit unsupported choice") {
         _ = try Journal.Selection(.init(quantization: .pack("unavailable-pack")), pack: ModelPackRegistry.baseline)
     }

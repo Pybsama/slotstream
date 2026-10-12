@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-10-06T21:35:13.587702Z
+updated: 2026-10-12T16:21:20.347320Z
 ---
 
 # records/claims
 
+- [[records/claims/keepalive-and-direct-reads-1-22x-at-22-gb]] — The GPU keepalive and direct demand reads made decode 1.22x faster at 22 GB with the draft head and lookahead
+- [[records/claims/keepalive-and-direct-reads-1-28x-at-10-gb]] — The GPU keepalive and direct demand reads made decode 1.28x faster at a 10 GB target without the draft head
+- [[records/claims/gpu-keepalive-energy-7-percent-at-16-gb]] — The GPU keepalive raised energy per generated token 7% at 16 GB
 - [[records/claims/development-original-33gb-coding]] — Original four-bit completed-coding median is 21.59 tok/s at a 33 GB budget
 - [[records/claims/development-original-33gb-context]] — Original four-bit context-workload median is 23.69 tok/s at a 33 GB budget
 - [[records/claims/development-original-33gb-short]] — Original four-bit short-workload median is 20.91 tok/s at a 33 GB budget
@@ -28,9 +31,6 @@ updated: 2026-10-06T21:35:13.587702Z
 - [[records/claims/plain-decode-lookahead-1-11x-at-10-gb]] — The decode lookahead made plain decode 1.11x faster at a 10 GB target
 - [[records/claims/draft-head-auto-floor-28-experts-per-layer]] — The draft head's automatic floor is 28 experts per layer, a 12 GB target
 - [[records/claims/streamed-draft-head-1-23x-at-12-gb]] — The draft head with streamed experts decoded 1.23x faster than plain decode with the lookahead at a 12 GB target
-- [[records/claims/gpu-keepalive-energy-7-percent-at-16-gb]] — The GPU keepalive raised energy per generated token 7% at 16 GB
-- [[records/claims/keepalive-and-direct-reads-1-22x-at-22-gb]] — The GPU keepalive and direct demand reads made decode 1.22x faster at 22 GB with the draft head and lookahead
-- [[records/claims/keepalive-and-direct-reads-1-28x-at-10-gb]] — The GPU keepalive and direct demand reads made decode 1.28x faster at a 10 GB target without the draft head
 - [[records/claims/warm-decode-m3-max-64gb-community]] — M3 Max 64 GB community report: 12.38 tok/s
 - [[records/claims/warm-decode-m4-max-36gb-community]] — M4 Max 36 GB community report: 8.41 tok/s
 - [[records/claims/warm-decode-m4-max-64gb-external-ssd-community]] — M4 Max 64 GB from a 10 Gb/s external SSD: 2.98 tok/s

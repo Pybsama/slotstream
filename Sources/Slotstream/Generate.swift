@@ -121,9 +121,6 @@ public struct GenStats: Codable {
     /// written before the direct path existed.
     public var prefillSlotDirectBatches: Int?
     public var decodeSlotDirectBatches: Int?
-    /// Whether this request kept the GPU awake (`GPUKeepAlive`); nil in
-    /// statistics written before it existed.
-    public var gpuKeptAwake: Bool?
     /// A streamed draft head's expert cache during decode; nil when the head
     /// keeps its experts resident or is off.
     public var draftExpertHits: Int?

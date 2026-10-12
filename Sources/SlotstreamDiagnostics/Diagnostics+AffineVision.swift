@@ -67,7 +67,7 @@ extension Diagnostics {
                 maxContextTokens: 8192, notes: ["fixed small vision fixture; physical process bound remains ten GB"],
                 memoryLimitGB: nil, mtpStreamedExperts: true, resources: source.resources)
             let engine = try await Engine(modelDir: baseline, affineSource: source, plan: plan)
-            engine.gpuKeepAlive = .off; engine.generator.draftDepth = 2; engine.generator.footprintSampling = true
+            engine.generator.draftDepth = 2; engine.generator.footprintSampling = true
             c.expect("explicit image capability is available", engine.visionAvailable && engine.visionAllowed)
             c.equal("candidate advertises only its checked vision horizon", engine.contextPolicyJSON["vision_limit"] as? Int, 32768)
             let cancelled = try engine.beginRequest(); cancelled.cancel()

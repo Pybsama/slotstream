@@ -5,6 +5,17 @@ experts and a slot cache. Read [PLAN.md](PLAN.md) for design, [MEASUREMENTS.md](
 for every measured number and its method, `Tools/verify.sh` for the acceptance
 battery. Work lands directly on `main`.
 
+## Optimize useful work (October 12, 2026)
+
+Follow the [GPU keepalive removal decision](db/records/decisions/remove-gpu-keepalive.md).
+Do not manufacture GPU work to influence power states or undocumented scheduling.
+Prefer bounded reductions in real work, reads, dispatches and waits. Qualify the
+whole user experience and adverse outcomes across the intended hardware and
+power envelope before adopting a default. Exact output and a one-Mac speedup
+are insufficient; an optional knob does not repair an unreliable optimization.
+Preserve historical evidence, distinguish hypotheses from verified causes, read
+prior replies before posting, and close only issues a verified release resolves.
+
 ## Sevra integration direction (September 8, 2026)
 
 Read [the canonical engineering integration record](db/records/design/sevra-maintained-model-integration.md),

@@ -16,8 +16,9 @@ extension Diagnostics {
             !ModelPackRegistry.supported.contains(where: { $0.id == research.id }))
         do { _ = try ModelPackRegistry.resolve(.pack(research.id)); c.expect("research pack cannot be selected by users", false) }
         catch { c.expect("research pack cannot be selected by users", true) }
-        c.equal("legacy activation mapping binds the exact historical startup recipe",
-            defaults.recipeIdentity, ModelPackStartupDefaults.legacyOriginalRecipeIdentity)
+        c.expect("revised startup settings cannot reuse historical activation evidence",
+            defaults.id != ModelPackStartupDefaults.legacyOriginalPolicyID
+                && defaults.recipeIdentity != ModelPackStartupDefaults.legacyOriginalRecipeIdentity)
         func encoded(_ plan: MemoryPlan) throws -> Data {
             try JSONSerialization.data(withJSONObject: plan.json(), options: [.sortedKeys])
         }
@@ -46,11 +47,11 @@ extension Diagnostics {
                     draft: Planner.MTPMode = .auto, placement: Planner.MTPExpertPlacement = .automatic, depth: Int = 2,
                     lookahead: ModelPackStartupDefaults.Lookahead = .originalAutomatic,
                     prefix: Bool = true, short: Int = 1536, chunk: Int = 512,
-                    keepAlive: GPUKeepAlive.Policy = .auto, reference: String = "fixture-only") -> ModelPackStartupDefaults {
+                    reference: String = "fixture-only") -> ModelPackStartupDefaults {
             ModelPackStartupDefaults(id: id, automaticCeilingBytes: ceiling, contextTokens: context,
                 draftMode: draft, draftPlacement: placement, draftDepth: depth, lookahead: lookahead,
                 prefixCacheEnabled: prefix, shortPromptTokens: short, shortPromptChunk: chunk,
-                gpuKeepAlive: keepAlive, reference: reference)
+                reference: reference)
         }
         let own = recipe(), quiet = Machine.simulated(ramGB: 48, availableGB: 40)
         // A synthetic recipe over the same ledger isolates policy ownership.
@@ -111,7 +112,7 @@ extension Diagnostics {
         let identity = own.executionIdentity(liveMemory: .automatic)
         c.equal("execution identities are deterministic", identity, recipe().executionIdentity(liveMemory: .automatic))
         for changed in [recipe(depth: 3), recipe(short: 0), recipe(chunk: 1024), recipe(prefix: false),
-                        recipe(keepAlive: .on), recipe(lookahead: .off), recipe(placement: .streamed), recipe(context: 8192)] {
+                        recipe(lookahead: .off), recipe(placement: .streamed), recipe(context: 8192)] {
             c.expect("changing a non-planner choice changes execution identity",
                 changed.executionIdentity(liveMemory: .automatic) != identity)
         }

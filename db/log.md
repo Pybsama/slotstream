@@ -483,3 +483,6 @@ Implement visible native Home switching with recent/new/open actions, remembered
 ## [2026-10-12 15:01] update | records/measurements/issue55-keepalive-investigation-2026-10-12.md
 Investigate issue 55 using installed 0.2.27, paired real-model runs and standalone production Metal probes. Preserve every admission refusal and paging exclusion, exact output parity, five clean floor-budget pairs with no consistent gain, and controlled serialization costs. Add a no-weights reproduction tool. Base-M5 scheduling cause remains unconfirmed; recommend conservative default policy without changing production. Full brain validation has zero errors/warnings, projections and 358 claim checks pass, generated llms-full and changed Markdown links pass.
 
+## [2026-10-12 16:25] update | records/decisions/remove-gpu-keepalive.md
+Remove artificial GPU work and all keepalive controls, update runtime identities and migration checks, preserve direct-read exactness, and record generic-optimization and issue-handling lessons. Release build, 102 T0/T1 checks (41181 assertions), performance protocol tests and archive tests pass. Brain validates with zero errors/warnings; 354 claim checks pass. Release qualification and publication remain pending.
+

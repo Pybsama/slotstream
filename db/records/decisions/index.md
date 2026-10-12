@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-07T18:31:40.717468Z
+updated: 2026-10-12T16:21:20.229941Z
 ---
 
 # records/decisions
 
+- [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%
+- [[records/decisions/remove-gpu-keepalive]] — Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
 - [[records/decisions/same-model-lowbudget-target-remains-unmet]] — Close this implementation and research effort; retain original four-bit and independent automatic controls, with the full speed target unmet.
 - [[records/decisions/vq-2.1-held-after-distribution-screen]] — Hold full VQ2.1 and the tested original-dense mixture after adverse screens; preserve evidence and require a separately qualified recipe before promotion.
 - [[records/decisions/affine223-held-after-completed-task-screen]] — Hold the exact mixed two/three-bit affine recipe after three newly failed completed tasks
@@ -24,7 +26,6 @@ updated: 2026-10-07T18:31:40.717468Z
 - [[records/decisions/decode-lookahead-in-plain-decode]] — Without the draft head the qualified decode lookahead runs in plain decode from 20 experts per layer before its charge: 1.11x at 10 GB and 1.05x at 16 GB, landed 1.05x to 1.08x under paging
 - [[records/decisions/draft-head-streams-its-experts-below-76-per-layer]] — Below 76 experts per layer after the resident charge the draft head's 512 experts stream through a 64-expert cache charged 0.4 GB, and auto enables the head from 28, a 12 GB target: 1.23x there
 - [[records/decisions/direct-demand-reads-default]] — Cache misses are read into host scratch and copied straight into their pool slots, without staging arrays or a GPU scatter: 1.16x alone at 10 GB, identical output
-- [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%
 - [[records/decisions/sevra-live-folder-navigation]] — Live folder access with bounded navigation, reliable search cursors and fresh-read edit checks
 - [[records/decisions/sevra-app-speed-defaults-2026-09-23]] — Enable qualified desktop speedups without extra user switches
 - [[records/decisions/decode-opportunities-stay-opt-in-2026-09-22]] — Keep existing decode barriers and remove the unhelpful fusion prototype

@@ -158,28 +158,6 @@ struct ModelOptions: ParsableArguments {
                 """))
     var vision: String = "auto"
 
-    @Option(
-        name: .customLong("gpu-keepalive"),
-        help: ArgumentHelp(
-            "Keep the GPU awake while generating: auto | on | off (default auto).",
-            discussion: """
-                Streamed decode leaves the GPU idle between short bursts, and \
-                an idle GPU clocks down and starts the next burst late. A tiny \
-                kernel keeps it busy while a request generates: faster decode \
-                for somewhat more energy per token. auto keeps it on with AC \
-                power outside Low Power Mode and off on battery. \
-                SLOTSTREAM_GPU_KEEPALIVE sets the default.
-                """))
-    var gpuKeepAlive: String?
-
-    func gpuKeepAlivePolicy() throws -> GPUKeepAlive.Policy {
-        guard let gpuKeepAlive else { return try GPUKeepAlive.environmentPolicy() }
-        guard let policy = GPUKeepAlive.Policy(rawValue: gpuKeepAlive) else {
-            throw PlanError("--gpu-keepalive must be auto, on, or off (got \(gpuKeepAlive))")
-        }
-        return policy
-    }
-
     var originalModelName: Bool { model == PinnedModel.name || model == PinnedModel.dirName }
 
     /// Omission retains the independent engine path. A supported explicit
@@ -506,11 +484,9 @@ struct Run: ParsableCommand {
         let sem = DispatchSemaphore(value: 0)
         var result: Result<Void, Error> = .success(())
         let plan = try model.announcedPlan(window: maxContext, maxPrefillWait: maxPrefillWait)
-        let keepAlive = try model.gpuKeepAlivePolicy()
         Task {
             do {
                 let engine = try await model.loadEngine(plan: plan)
-                engine.gpuKeepAlive = keepAlive
                 let loadSeconds = RuntimeClock.seconds(since: launchStart)
                 engine.generator.footprintSampling = sampleFootprint
                 let control = try engine.beginRequest()
@@ -750,7 +726,6 @@ struct Serve: ParsableCommand {
         let plan = try model.announcedPlan(window: maxContext, prefixCacheEnabled: !noPrefixCache, maxPrefillWait: maxPrefillWait)
         // Claim the port first: failing here after a full model load wastes
         // half a minute and used to be a fatalError.
-        let keepAlive = try model.gpuKeepAlivePolicy()
         let listenFD = try Server.bindPort(port)
         let sem = DispatchSemaphore(value: 0)
         var engine: Engine!
@@ -761,7 +736,6 @@ struct Serve: ParsableCommand {
         }
         sem.wait()
         if let e = err { throw e }
-        engine.gpuKeepAlive = keepAlive
         engine.maxContextTokens = plan.maxContextTokens
         // Long prompts announce themselves in the server log with the wait to
         // expect, then report elapsed progress, including a slow short suffix.
