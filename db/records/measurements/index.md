@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-12T16:31:12.296100Z
+updated: 2026-10-12T16:49:54.897024Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-29-prepublication-2026-10-12]] — Keepalive removal prepared and locally checked; full model acceptance and publication await memory headroom and exact-source CI
 - [[records/measurements/issue54-context-boundary-triage-2026-10-12]] — The 32k report remains unconfirmed as a keepalive bug; a bounded attention probe finds only a small boundary step on the M5 Pro
 - [[records/measurements/issue55-keepalive-investigation-2026-10-12]] — Issue 55 is a credible portability regression; current floor-budget tests show no consistent gain, and scheduling probes demonstrate the cost of serialization without reproducing the base-M5 cause
 - [[records/measurements/release-0-2-28-published-2026-10-07]] — v0.2.28 published and accepted

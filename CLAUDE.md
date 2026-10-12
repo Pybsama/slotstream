@@ -127,11 +127,14 @@ Every rule here is one this project already got wrong. They share a root:
   README's tier table ended up claiming a 32 GB Mac is faster than a 48 GB one.
   Regenerate the whole family — and prefer generating tables *from the tool*
   (`doctor --sim-ram N`) so they cannot drift from the code again.
-- **A failing test is a bug in the test until proven otherwise.** Three "product
+- **Investigate a failed check before attributing it.** Separate product,
+  fixture and environment failures with a small reproduction. Three "product
   failures" in one run were nested python-inside-shell quoting mangling the
   JSON; another two were a hardcoded version literal reporting a release bump as
-  a regression. Reproduce by hand before believing a failure, and never pin a
-  value a release will change.
+  a regression. Do not dismiss a failure or blame the product before isolating
+  it, and never pin a value a release will change. Keep resource fixtures
+  bounded and prove they reach the branch they claim to test; see the
+  [disk-space fixture lesson](db/records/decisions/remove-gpu-keepalive.md#release-test-lesson-from-the-removal).
 - **`set -e` makes cleanup lethal.** `wait $PID` returns 143 after a `kill` and
   silently truncated the whole battery — it looked like a hang. Always
   `kill ... || true; wait ... || true`, or use a `trap ... EXIT` like

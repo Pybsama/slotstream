@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-12T16:31:12.217593Z
+updated: 2026-10-12T16:49:00.014884Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-12-release-0-2-29-prepublication]] — GPU keepalive removal candidate: local checks, corrected disk fixture and release headroom refusal
 - [[sources/runs/2026/10/2026-10-12-issue54-attention-triage]] — Issue 54 report capture and bounded MLX attention-boundary probe
 - [[sources/runs/2026/10/2026-10-12-issue55-model-repeat]] — Repeated installed-binary comparison: five clean on/off pairs, exact tokens, no consistent gain at the 8.1 GB floor
 - [[sources/runs/2026/10/2026-10-12-issue55-metal-probes]] — Production keepalive latency, bounded scheduling controls and candidate variants on M5 Pro
@@ -506,9 +507,8 @@ updated: 2026-10-12T16:31:12.217593Z
 - [[sources/runs/2026/09/2026-09-09-optimization-vision-mechanism-complete-pass]] — Complete large-image vision mechanism qualifies: exact responses, reduced process peak and lower latency
 - [[sources/runs/2026/09/2026-09-09-optimization-quiet-resource-scope-cohort-freeze]] — Fresh complete scope cohort frozen after material resource recovery, preserving the V467 startup failure
 - [[sources/runs/2026/09/2026-09-09-optimization-explicit-scope-complete-startup-inconclusive]] — Complete explicit-scope cohort: exact outputs and 10 GB cap pass; request gate passes but startup pair count fails
-- [[sources/runs/2026/09/2026-09-08-optimization-public-planner-threshold-cohort-freeze]] — Three original full public planner threshold cohorts frozen with exact current native proof
 
 ## More
 
-This folder has 904 files. The 500 most recent are listed above.
+This folder has 905 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

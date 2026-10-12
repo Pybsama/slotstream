@@ -492,3 +492,6 @@ Preserve report and prior maintainer reply, inspect actual attention-path bounda
 ## [2026-10-12 16:41] update | records/decisions/remove-gpu-keepalive.md
 Broader local release checks found a host-dependent disk-space fixture exceeding the manifest object limit on a large SSD. Replace it with a bounded valid fixture and an internal free-space observation seam; disk refusal/margin, HTTP fault injection and sustained-transfer memory checks pass. Production continues to read actual disk availability. Preserve the original failure and corrected checks in release evidence.
 
+## [2026-10-12 16:50] update | records/measurements/release-0-2-29-prepublication-2026-10-12.md
+Preserve the removal candidate, local verification and original/fixed disk-fixture results. Final local T0/T1, downloader, planner, memory-override and installer checks pass; engineering brain and claims pass. Full real-model acceptance is blocked by 12.67 GB reclaimable versus 20.5 GB required. Final-source CI is running; no release or issue closure is claimed. Record exact continuation steps and reporter follow-up obligations.
+
