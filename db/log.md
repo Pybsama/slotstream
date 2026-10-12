@@ -480,3 +480,6 @@ Publish v0.2.28 from the accepted exact-source CI archive. Preserve complete nat
 ## [2026-10-10 12:27] update | records/design/sevra-spec/implementation-status.md
 Implement visible native Home switching with recent/new/open actions, remembered selection, separate runtime sessions, draft persistence and active-work/Incognito confirmation. Full Mac checks and final development bundle pass using scripted inference and real dbmd. Record exact acceptance, update the UI contract and user guide, and keep SQL/database inspection explicitly unimplemented. Brain validation has zero errors/warnings; projections, 358 claim checks and llms-full check pass.
 
+## [2026-10-12 15:01] update | records/measurements/issue55-keepalive-investigation-2026-10-12.md
+Investigate issue 55 using installed 0.2.27, paired real-model runs and standalone production Metal probes. Preserve every admission refusal and paging exclusion, exact output parity, five clean floor-budget pairs with no consistent gain, and controlled serialization costs. Add a no-weights reproduction tool. Base-M5 scheduling cause remains unconfirmed; recommend conservative default policy without changing production. Full brain validation has zero errors/warnings, projections and 358 claim checks pass, generated llms-full and changed Markdown links pass.
+

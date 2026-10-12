@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/community
-updated: 2026-09-27T05:01:36.615198Z
+updated: 2026-10-12T14:50:02.167123Z
 ---
 
 # sources/community
 
+- [[sources/community/2026/10/2026-10-12-issue55-keepalive]] — Issue 55: reported keepalive regression on base M5, workaround and follow-up controls
 - [[sources/community/2026/09/2026-09-26-macbook-pro-m4-pro-24gb-davidcavazos-0-2-25-rerun]] — Measured: MacBook M4 Pro, 24 GB (0.2.25 re-run)
 - [[sources/community/2026/09/2026-09-25-macbook-pro-m4-pro-24gb-davidcavazos]] — Measured: MacBook M4 Pro, 24 GB
 - [[sources/community/2026/09/2026-09-16-prefix-cache-min-tokens-jasen215]] — Measured: `--prefix-cache-min-tokens 2048` costs a full re-prefill on every restart of a sub-2048 conversation

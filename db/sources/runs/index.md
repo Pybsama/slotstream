@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-10T12:26:13.613293Z
+updated: 2026-10-12T15:00:55.658767Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-12-issue55-model-repeat]] — Repeated installed-binary comparison: five clean on/off pairs, exact tokens, no consistent gain at the 8.1 GB floor
+- [[sources/runs/2026/10/2026-10-12-issue55-metal-probes]] — Production keepalive latency, bounded scheduling controls and candidate variants on M5 Pro
+- [[sources/runs/2026/10/2026-10-12-issue55-model-first]] — Initial real-model comparison: preserve refusals and paging-contaminated pairs; no clean timing claim
 - [[sources/runs/2026/10/2026-10-10-sevra-home-switcher]] — Native Home switching, exact draft persistence, isolation and offscreen UI acceptance with the final development bundle
 - [[sources/runs/2026/10/2026-10-07-release-0-2-28-published-and-installed]] — v0.2.28 published and accepted through an isolated public installation
 - [[sources/runs/2026/10/2026-10-06-focused-continuation-acceptance]] — Final engine, app, coverage and context CI pass; local selection and rendered controls pass; practical speed target remains unmet
@@ -504,11 +507,8 @@ updated: 2026-10-10T12:26:13.613293Z
 - [[sources/runs/2026/09/2026-09-09-optimization-explicit-scope-complete-startup-inconclusive]] — Complete explicit-scope cohort: exact outputs and 10 GB cap pass; request gate passes but startup pair count fails
 - [[sources/runs/2026/09/2026-09-08-optimization-public-planner-threshold-cohort-freeze]] — Three original full public planner threshold cohorts frozen with exact current native proof
 - [[sources/runs/2026/09/2026-09-08-optimization-public-planner-serving-driver-preparation]] — Public planner serving measurement driver prepared and model-free checked
-- [[sources/runs/2026/09/2026-09-08-optimization-all-current-native-pass-and-scope-freeze]] — All seven current native cases pass and original full scope cohort freezes
-- [[sources/runs/2026/09/2026-09-08-optimization-resumed-recovery-and-scope-preparation]] — Current recovery integration passes and complete explicit-scope successor is prepared
-- [[sources/runs/2026/09/2026-09-08-optimization-vision-resource-resumption-preparation]] — Full vision mechanism successor frozen after verified memory recovery
 
 ## More
 
-This folder has 900 files. The 500 most recent are listed above.
+This folder has 903 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
