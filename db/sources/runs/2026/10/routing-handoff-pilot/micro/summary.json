@@ -1,0 +1,45 @@
+{
+  "comparisons": {
+    "device_all_hit": {
+      "eligible_pairs": 6,
+      "median_speed_ratio": 1.798106614001462,
+      "ratios": [
+        1.9047907288031642,
+        1.8007611773803769,
+        1.8080244351884287,
+        1.7028874288411013,
+        1.7954520506225473,
+        1.7323376754804125
+      ]
+    },
+    "device_checked": {
+      "eligible_pairs": 6,
+      "median_speed_ratio": 0.9892255686040501,
+      "ratios": [
+        0.9861592972233152,
+        0.992291839984785,
+        1.034191854084719,
+        0.9852469308070764,
+        1.0151132056331256,
+        0.9851233591354395
+      ]
+    }
+  },
+  "correctness_passed": true,
+  "device": {
+    "architecture": "applegpu_g17s",
+    "device_name": "Apple M5 Pro",
+    "max_buffer_length": 30150672384,
+    "max_recommended_working_set_size": 40200896512,
+    "memory_size": 51539607552,
+    "resource_limit": 499000
+  },
+  "layers": 48,
+  "mlx": "0.32.2",
+  "peak_mlx_bytes": 403049060,
+  "python_host_overhead_included": true,
+  "rows": 1,
+  "slots": 32,
+  "synthetic": true,
+  "topk": 10
+}

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-13T03:07:07.991055Z
+updated: 2026-10-13T14:00:46.920415Z
 ---
 
 # records/decisions
 
+- [[records/decisions/residency-speculation-waits-for-layer-completeness]] — Residency speculation remains unqualified; the earlier completeness ceiling omitted ready prefetch tickets, as corrected on October 13
 - [[records/decisions/remove-gpu-keepalive]] — Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
 - [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%
 - [[records/decisions/same-model-lowbudget-target-remains-unmet]] — Close this implementation and research effort; retain original four-bit and independent automatic controls, with the full speed target unmet.
@@ -47,7 +48,6 @@ updated: 2026-10-13T03:07:07.991055Z
 - [[records/decisions/draft-depth-defaults-to-one-and-auto-floor-120-per-layer]] — Speculative decode drafts one token by default and auto enables it only at 120 experts per layer and up
 - [[records/decisions/draft-depth-defaults-to-two]] — Two draft tokens are the adopted operating default; activation and memory policies remain separate
 - [[records/decisions/decode-host-time-is-waiting-not-graph-construction]] — Decode host time is waiting on the GPU and on reads, not graph construction: no layer compilation and no host point fixes
-- [[records/decisions/residency-speculation-waits-for-layer-completeness]] — Residency speculation waits: only 2.2% to 2.5% of layer events are fully resident, too few to pay for rollback machinery
 - [[records/decisions/clock-stays-the-eviction-policy]] — CLOCK stays the eviction policy: measured against LRU and LFU on a real trace
 - [[records/decisions/global-paging-is-diagnostic]] — Treat host-wide paging as diagnostics, separate from functional and process-memory acceptance; preserve actual headroom, pressure and budget safeguards.
 - [[records/decisions/guillermo-rauch-grant-acknowledgment]] — Credit Guillermo Rauch personally using his official GitHub photo, full name and the verified Slotstream grant listing.

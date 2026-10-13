@@ -1,0 +1,1 @@
+A hash map, also known as a hash table, is a data structure that stores key-value pairs, allowing for highly efficient data retrieval. Its core mechanism relies on a hash function, which converts a given key into a specific numerical index within an underlying array. When you insert a key-value pair, the hash function calculates

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-13T03:40:01.398026Z
+updated: 2026-10-13T14:00:46.846765Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-13-routing-handoff-pilot]] — Bounded native routing handoff probes, excluded real-model overlap pairs and readiness observations
 - [[sources/runs/2026/10/2026-10-12-release-0-2-29-published-and-installed]] — v0.2.29 published, installed and followed up with affected reporters
 - [[sources/runs/2026/10/2026-10-12-release-0-2-29-prepublication]] — GPU keepalive removal candidate: local checks, corrected disk fixture and release headroom refusal
 - [[sources/runs/2026/10/2026-10-12-issue54-attention-triage]] — Issue 54 report capture and bounded MLX attention-boundary probe
@@ -506,9 +507,8 @@ updated: 2026-10-13T03:40:01.398026Z
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-sizing-source]] — Automatic prefill smaller-group sizing draft with preserved original schedule and guards
 - [[sources/runs/2026/09/2026-09-09-optimization-scope-short-decode-observations]] — Scope short-decode observation: identical read work with higher reported I/O time; sustained behavior remains unmeasured
 - [[sources/runs/2026/09/2026-09-09-optimization-vision-mechanism-complete-pass]] — Complete large-image vision mechanism qualifies: exact responses, reduced process peak and lower latency
-- [[sources/runs/2026/09/2026-09-09-optimization-quiet-resource-scope-cohort-freeze]] — Fresh complete scope cohort frozen after material resource recovery, preserving the V467 startup failure
 
 ## More
 
-This folder has 906 files. The 500 most recent are listed above.
+This folder has 907 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -1,0 +1,20 @@
+slotstream memory plan (--memory-gb)
+  device: 52 GB RAM (23.8 GB reclaimable now), 40.2 GB Metal working set
+  target: 10.0 GB total process budget, not a RAM usage goal
+  cache:  ~18 of 512 experts per layer  (857 global slots = 2.4 GB pool)
+  plan:   ~9.0 GB full-workload envelope, ~4 tok/s warm decode (est. from M5 Pro anchors)
+  memory: 2.4 GB expert cache at load; 6.6 GB allowed for runtime, context and workspace; 1.0 GB budget headroom. Short requests can use less.
+  disk:   that estimate assumes an SSD like the one it was measured on (17.3 GB/s). A base-storage Mac mini M2 reads 1.5 GB/s and decoded at 1.41 tok/s against a ~4 estimate, so on base storage expect well under the number above — see docs/HARDWARE.md
+  prefill: 256 tokens per pass (~85 tok/s here; costs ~0.3 GB of the target)
+  context: up to 8192 tokens per request (prompt + reply); a full-length prompt takes ~1.6 min before its first token here, follow-up turns read only what is new
+  reuse:  up to 8192 tokens across 4 conversations (~0.6 GB), so a follow-up turn re-prefills only what is new
+  lookahead: on, expert prefetch in plain decode, router cache and a GPU barrier every 4 layers (409 MiB, charged above)
+[expert-lookahead] attention-corrected forecast: measured correction 37b00d3a32d1e188 at lookahead/tap-correction-attention-rank128-v1.safetensors
+engine ready in 1.0s: expert cache ~18/512 per layer (857 global slots = 2.4 GB), eos [248044, 248046]
+prompt tokens: 28 (~0 s to the first token at this plan)
+
+-- prefill 28 tok in 1.66s (16.9 tok/s)
+-- prefill split: io 1.04s + scatter 0.00s | 4763 records (13.2 GB, 12.6 GB/s)
+-- decode 64 tok in 8.19s (7.81 tok/s)
+-- decode split: io 2.36s + scatter 0.00s | 5715 records
+-- expert cache ~18/512 experts per layer, hit rate 0.440 | ngram rows 40h/968m | lifetime footprint peak 5.916 GB, current footprint 5.916 GB | total 9.9s

@@ -1,0 +1,93 @@
+{
+  "after": {
+    "page_bytes": 16384,
+    "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                   313882.\nPages active:                                 977490.\nPages inactive:                               920250.\nPages speculative:                             15885.\nPages throttled:                                   0.\nPages wired down:                             241004.\nPages purgeable:                                5839.\n\"Translation faults\":                     6306856680.\nPages copy-on-write:                       499527884.\nPages zero filled:                       22956788922.\nPages reactivated:                         884711415.\nPages purged:                               26390041.\nFile-backed pages:                           1100380.\nAnonymous pages:                              813245.\nPages stored in compressor:                  1325917.\nPages occupied by compressor:                 615653.\nDecompressions:                            243754261.\nCompressions:                              287536499.\nPageins:                                  7661013686.\nPageouts:                                    3317567.\nSwapins:                                      155542.\nSwapouts:                                     387126.\nPages tagged:                                 152608.\nPages tagged resident:                        104415.\nPages tagged compressed:                       48193.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                 8331.\nPages tag-storage free:                         1494.\nPages tag-storage non-tag pageable:            88471.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    7301184.\nTagged compressions:                         3071017.\nTagged decompressions:                       2820179.\n",
+    "reclaimable_bytes": 23266934784,
+    "swapins": 155542,
+    "swapouts": 387126
+  },
+  "arm": "resident_overlap",
+  "before": {
+    "page_bytes": 16384,
+    "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                   373492.\nPages active:                                 936861.\nPages inactive:                               937690.\nPages speculative:                              4315.\nPages throttled:                                   0.\nPages wired down:                             237032.\nPages purgeable:                               11657.\n\"Translation faults\":                     6306286278.\nPages copy-on-write:                       499506347.\nPages zero filled:                       22956161936.\nPages reactivated:                         884694057.\nPages purged:                               26366781.\nFile-backed pages:                           1047417.\nAnonymous pages:                              831449.\nPages stored in compressor:                  1276369.\nPages occupied by compressor:                 595053.\nDecompressions:                            243569714.\nCompressions:                              287299249.\nPageins:                                  7654496820.\nPageouts:                                    3317266.\nSwapins:                                      155542.\nSwapouts:                                     387126.\nPages tagged:                                 153823.\nPages tagged resident:                        108878.\nPages tagged compressed:                       44945.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                 8336.\nPages tag-storage free:                         1289.\nPages tag-storage non-tag pageable:            88671.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    6585216.\nTagged compressions:                         3066787.\nTagged decompressions:                       2819594.\n",
+    "reclaimable_bytes": 23471161344,
+    "swapins": 155542,
+    "swapouts": 387126
+  },
+  "command": [
+    "/Users/carlos/Projects/slotstream/.build/release/slotstream",
+    "run",
+    "--memory-gb",
+    "10",
+    "--mtp",
+    "off",
+    "--vision",
+    "off",
+    "--max-context",
+    "8192",
+    "--max-tokens",
+    "64",
+    "--greedy",
+    "--prompt",
+    "Explain how a hash map works, in about 200 words.",
+    "--stats-json",
+    "db/sources/runs/2026/10/routing-handoff-pilot/model/r1-resident_overlap.stats.json"
+  ],
+  "elapsed_seconds": 19.649075959110633,
+  "environment": {
+    "SLOTSTREAM_OPT_RESIDENT_OVERLAP": "1"
+  },
+  "exit_code": 0,
+  "host_after": {
+    "energy_joules": null,
+    "load_average_1_5_15_minutes": [
+      2.9482421875,
+      2.791015625,
+      2.46044921875
+    ],
+    "observed_at_unix_seconds": 1791899032.223199,
+    "power_configuration": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Battery Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         2\n womp                 0\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            10\nAC Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         10\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            10\n"
+    },
+    "power_source": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=23199843)\t100%; charged; 0:00 remaining present: true\n"
+    },
+    "thermal_limit": "pmset warning/status history, not continuous temperature",
+    "thermal_status": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded\n"
+    }
+  },
+  "host_before": {
+    "energy_joules": null,
+    "load_average_1_5_15_minutes": [
+      2.9775390625,
+      2.779296875,
+      2.44873046875
+    ],
+    "observed_at_unix_seconds": 1791899012.553855,
+    "power_configuration": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Battery Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         2\n womp                 0\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            10\nAC Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         10\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            10\n"
+    },
+    "power_source": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=23199843)\t100%; charged; 0:00 remaining present: true\n"
+    },
+    "thermal_limit": "pmset warning/status history, not continuous temperature",
+    "thermal_status": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded\n"
+    }
+  },
+  "paging_clean": true,
+  "round": 1
+}

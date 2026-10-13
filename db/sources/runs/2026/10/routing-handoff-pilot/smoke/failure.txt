@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_probe.py", line 236, in <module>
+    main()
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_probe.py", line 230, in main
+    (micro(args.out, args.rounds, args.layers) if args.mode == "micro" else model(args.out, args.rounds))
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_probe.py", line 116, in micro
+    write(out / f"correctness-{depth}-{mode}.json", correctness[-1])
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_probe.py", line 29, in write
+    with path.open("x") as f:
+         ^^^^^^^^^^^^^^
+  File "/Users/carlos/.pyenv/versions/3.12.9/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileExistsError: [Errno 17] File exists: 'db/sources/runs/2026/10/routing-handoff-pilot/smoke/correctness-4-host.json'

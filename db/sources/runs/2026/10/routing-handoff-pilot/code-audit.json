@@ -1,0 +1,78 @@
+{
+  "checkout": "0c5c14dacaeb238ac67761afcd81b61ce048c8af",
+  "files": {
+    "Sources/Slotstream/Layers.swift": {
+      "sha256": "fbd84201a7068fd65f3443b72359941bd2c26339aef8c06d6f2455819aa75feb",
+      "sections": [
+        {
+          "start_line": 1424,
+          "text": "            logits = concatenated(pieces, axis: 1)\n        } else { logits = routerProjection(x) }\n        contextNumericsObserver?(\"router\", logits)\n        let idx = RouterSelection.indices(logits, k: cfg.topK, enabled: specializedRouter)\n        let weights = softmax(takeAlong(logits, idx, axis: -1), axis: -1, precise: true)\n\n        // routing decision to CPU. Work deferred from the previous layer between\n        // decode barriers is evaluated in this same wait and finished before\n        // these routes reach any observer.\n        let routeIndices = idx.asType(.int32)\n        if let queue = readbackQueue, !queue.isEmpty {\n            let waitStart = RuntimeClock.now()\n            eval([routeIndices] + queue.arrays)\n            queue.drain(waited: RuntimeClock.seconds(since: waitStart))\n        }\n        let expertIds = routeIndices.asArray(Int32.self)  // B*S*topK\n        if RouterTrace.on {\n            RouterTrace.record(layer: layer, tokens: B * S, topK: cfg.topK, ids: expertIds)\n        }\n        routerObserver?(layer, expertIds)\n        func sharedParts(_ input: MLXArray) -> (MLXArray, MLXArray) {\n            let value = sharedDownProj(MLXNN.silu(sharedGateProj(input, minimumRows: minimumProjectionRows))"
+        }
+      ]
+    },
+    "Sources/Slotstream/ExpertStore.swift": {
+      "sha256": "3c721994c38d8688dd97021f0d95642ef084c363da118eb9ec88f7c0d4e8ab0e",
+      "sections": [
+        {
+          "start_line": 801,
+          "text": "                    missKeys.append(k)\n                }\n                missPos.append((i, j))\n            }\n        }\n        drainReturnedSlots()\n        lookahead?.prefetch?.noteLayerDemand(misses: missKeys.count)\n        let needed = hitSlots.reduce(0) { $0 + (pinned[$1] ? 0 : 1) } + missKeys.count\n        guard needed <= slots - pinned.count - inFlightCount else {\n            throw SlotPoolError.exhausted(requiredNewPins: needed, available: slots - pinned.count - inFlightCount)\n        }\n        let newHitPins = hitSlots.filter { !pinned[$0] }\n        var reservedPins: [Int] = []\n        var completed = false\n        defer {\n            if !completed {\n                for slot in newHitPins { pinned.unpin(slot) }\n                for slot in reservedPins { pinned.unpin(slot) }\n            }\n        }\n        for slot in hitSlots { refBit[slot] = true; pinned.pin(slot) }\n        hits += requestHits"
+        },
+        {
+          "start_line": 848,
+          "text": "            var slotClaim: ExpertPrefetchScheduler.ClaimResult? = nil\n            var slotScheduler: ExpertPrefetchScheduler? = nil\n            var slotDemandOrder: [Int] = []\n            var slotBases: [UnsafeMutableRawPointer]? = nil\n            if let session, let active = session.prefetch, session.inMainPass, active.usesSlotAdoption, active.liveTickets > 0 {\n                slotScheduler = active\n                let claimed = active.claimSplit(missKeys)\n                slotClaim = claimed\n                let tAdopt = RuntimeClock.now()\n                // The pool memory is materialized here (the previous layer's\n                // sync evaluated it); the join path below reuses these bases\n                // rather than forcing this layer's lazy scatter to run early.\n                let bases = currentPoolBases()\n                slotBases = bases\n                for (j, k) in missKeys.enumerated() {\n                    if let ticket = claimed.ready[k] {\n                        if let bases, publishSpeculativeSlot(ticket, key: k, bases: bases, scheduler: active) {\n                            slotIdx.append(Int32(map[k]!))\n                            reservedPins.append(map[k]!)\n                            continue\n                        }\n                        active.noteSlotStale()"
+        },
+        {
+          "start_line": 949,
+          "text": "            if let slotScheduler, let slotClaim {\n                scheduler = slotScheduler\n                pendingReads = slotClaim.reading\n                demandOrder = slotDemandOrder\n            } else if let session, let active = session.prefetch, session.inMainPass, active.liveTickets > 0 {\n                scheduler = active\n                let claimed = active.claimSplit(missKeys)\n                pendingReads = claimed.reading\n                var readyFallback = Set<Int>()\n                if !claimed.ready.isEmpty {\n                    let tAdopt = RuntimeClock.now()\n                    finishResidentReaders()\n                    readyFallback = Set(adoptTickets(claimed.ready))\n                    adoptSeconds += RuntimeClock.seconds(since: tAdopt)\n                    event?.adoptNanos = RuntimeClock.now()\n                }\n                for (j, k) in missKeys.enumerated() {\n                    if claimed.ready[k] != nil {\n                        if readyFallback.contains(j) { demandOrder.append(j) }\n                        continue\n                    }\n                    if pendingReads[k] != nil { continue }"
+        },
+        {
+          "start_line": 978,
+          "text": "            // token batch routed. Evaluating each scatter before reading the\n            // next slice lets the prior raw buffers be released immediately.\n            // Direct reads copy into pool memory from the CPU, so they stay off\n            // while resident GPU readers may still be running (the overlapping\n            // path's contract), while a transfer profile measures the staged\n            // scatter, and under the explicit slot-write experiments.\n            let direct = directDemandReads && reservedHits == nil && transferProfile == nil\n                && !store.supportsRecordReads && !cpuSlotWrites && !wordSlotWrites && !contiguousSlotWrites\n            func readDemand(_ order: [Int]) throws {\n                var lo = 0\n                while lo < order.count {\n                    let hi = min(lo + ExpertStore.defaultLoadBatch, order.count)\n                    let batchIndices = Array(order[lo ..< hi])\n                    if direct, let bases = currentPoolBases() {\n                        let destinations = batchIndices.map { Int(slotIdx[$0]) }\n                        // Unmap every victim before its bytes change. Pins keep\n                        // every slot an unevaluated gather still reads out of the\n                        // victim scan, the invariant slot adoption relies on.\n                        for s in destinations {\n                            if let old = keyOf[s] { map.removeValue(forKey: old); keyOf[s] = nil }\n                        }\n                        let tIO = RuntimeClock.now()"
+        }
+      ]
+    },
+    "Sources/Slotstream/ExpertPrefetch.swift": {
+      "sha256": "200801ecafba69c4842a9c59aae3cbb6145554170bf60f0cdf44df0195886638",
+      "sections": [
+        {
+          "start_line": 523,
+          "text": "    /// issue one call per record instead of nine.\n    public var readShape = \"piece\"\n    /// Layer events that needed no demand read: every routed expert was already\n    /// resident. A complete layer pays no read, no scatter and, once the barrier\n    /// is deferrable, no drain. The fraction of complete layers bounds what any\n    /// layer-completeness objective or residency speculation could ever win.\n    public var layersComplete = 0\n    /// Layer events that still had at least one demand miss.\n    public var layersWithMisses = 0\n    /// Workers launched with a whole-record reader (one read per record).\n    public var recordReads = 0\n    /// Workers launched piece by piece, including every fall back from record mode.\n    public var pieceModeReads = 0\n    public var slotReservations = 0\n    public var slotReleases = 0\n    public var slotRefusals = 0\n    public var slotStale = 0\n    public var slotEvictedKeys = 0\n    public init() {}\n}\n\npackage struct ExpertPrefetchConfiguration: Equatable {"
+        }
+      ]
+    },
+    "Sources/Slotstream/Model.swift": {
+      "sha256": "b369670dff2af22ab2b7b055a2af4fe6cbf56896aa814b348dc531dbe1469e34",
+      "sections": []
+    }
+  },
+  "counter_introduction": {
+    "commit": "b7cb86fa9d989f6a41718386af88146327a2dc62",
+    "path": "Sources/Slotstream/ExpertStore.swift",
+    "lines": [
+      {
+        "line": 722,
+        "text": "        lookahead?.prefetch?.noteLayerDemand(misses: missKeys.count)"
+      },
+      {
+        "line": 769,
+        "text": "                let claimed = active.claimSplit(missKeys)"
+      },
+      {
+        "line": 779,
+        "text": "                        if let bases, publishSpeculativeSlot(ticket, key: k, bases: bases, scheduler: active) {"
+      },
+      {
+        "line": 870,
+        "text": "                let claimed = active.claimSplit(missKeys)"
+      },
+      {
+        "line": 986,
+        "text": "                        if let bases, publishSpeculativeSlot(ticket, key: k, bases: bases, scheduler: scheduler) {"
+      },
+      {
+        "line": 1125,
+        "text": "    private func publishSpeculativeSlot(_ ticket: ExpertPrefetchTicket, key: ExpertKey,"
+      }
+    ]
+  }
+}

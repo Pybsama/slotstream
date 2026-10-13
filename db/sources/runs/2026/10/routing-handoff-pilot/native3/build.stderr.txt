@@ -1,0 +1,10 @@
+/Users/carlos/Projects/slotstream/Tools/routing_handoff_probe.swift:52:21: error: sending 'slotIDs' risks causing data races [#SendingRisksDataRace]
+ 50 |                 let ids = argPartition(-scores, kth: topK-1, axis: -1)[.ellipsis, ..<topK].asType(.int32)
+ 51 |                 let probabilities = softmax(takeAlong(scores, ids, axis: -1), axis: -1, precise: true)
+ 52 |                 let slotIDs: MLXArray
+    |                     |- error: sending 'slotIDs' risks causing data races [#SendingRisksDataRace]
+    |                     `- note: task-isolated 'slotIDs' is captured by a main actor-isolated closure. main actor-isolated uses in closure may race against later nonisolated uses
+ 53 |                 if mode == "host" {
+ 54 |                     slotIDs = MLXArray(ids.asArray(Int32.self).map { Int32(hostMap[Int($0)]!) }).reshaped(ids.shape)
+
+[#SendingRisksDataRace]: <https://docs.swift.org/compiler/documentation/diagnostics/sending-risks-data-race>

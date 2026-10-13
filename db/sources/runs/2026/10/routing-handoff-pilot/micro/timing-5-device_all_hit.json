@@ -1,0 +1,20 @@
+{
+  "after": {
+    "page_bytes": 16384,
+    "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                    33741.\nPages active:                                1215059.\nPages inactive:                              1209859.\nPages speculative:                              3599.\nPages throttled:                                   0.\nPages wired down:                             256738.\nPages purgeable:                               17557.\n\"Translation faults\":                     6304652982.\nPages copy-on-write:                       499451832.\nPages zero filled:                       22954712000.\nPages reactivated:                         884291680.\nPages purged:                               26324694.\nFile-backed pages:                            789947.\nAnonymous pages:                             1638570.\nPages stored in compressor:                   843115.\nPages occupied by compressor:                 366621.\nDecompressions:                            243024673.\nCompressions:                              286265670.\nPageins:                                  7641416885.\nPageouts:                                    3316408.\nSwapins:                                      155534.\nSwapouts:                                     387126.\nPages tagged:                                 171984.\nPages tagged resident:                        137592.\nPages tagged compressed:                       34392.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                10393.\nPages tag-storage free:                          167.\nPages tag-storage non-tag pageable:            87736.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    4595712.\nTagged compressions:                         3052870.\nTagged decompressions:                       2816233.\n",
+    "reclaimable_bytes": 13782958080,
+    "swapins": 155534,
+    "swapouts": 387126
+  },
+  "before": {
+    "page_bytes": 16384,
+    "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                    33714.\nPages active:                                1215058.\nPages inactive:                              1209859.\nPages speculative:                              3599.\nPages throttled:                                   0.\nPages wired down:                             256737.\nPages purgeable:                               17557.\n\"Translation faults\":                     6304651468.\nPages copy-on-write:                       499451681.\nPages zero filled:                       22954711937.\nPages reactivated:                         884291680.\nPages purged:                               26324694.\nFile-backed pages:                            789947.\nAnonymous pages:                             1638569.\nPages stored in compressor:                   843115.\nPages occupied by compressor:                 366621.\nDecompressions:                            243024673.\nCompressions:                              286265670.\nPageins:                                  7641416884.\nPageouts:                                    3316408.\nSwapins:                                      155534.\nSwapouts:                                     387126.\nPages tagged:                                 171984.\nPages tagged resident:                        137592.\nPages tagged compressed:                       34392.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                10393.\nPages tag-storage free:                          167.\nPages tag-storage non-tag pageable:            87736.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    4595712.\nTagged compressions:                         3052870.\nTagged decompressions:                       2816233.\n",
+    "reclaimable_bytes": 13782515712,
+    "swapins": 155534,
+    "swapouts": 387126
+  },
+  "mode": "device_all_hit",
+  "paging_clean": true,
+  "round": 5,
+  "seconds": 0.012064958922564983
+}
