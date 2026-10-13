@@ -2,13 +2,14 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-13T16:14:48.319231Z
+updated: 2026-10-13T16:44:57.551596Z
 ---
 
 # records/measurements
 
-- [[records/measurements/issue54-context-boundary-triage-2026-10-12]] — The 32k report remains unconfirmed as a keepalive bug; a bounded attention probe finds only a small boundary step on the M5 Pro
 - [[records/measurements/issue54-boundary-followup-2026-10-13]] — Issue 54 remains unverified after expanded path probes; full-model attempt refused before launch for insufficient headroom
+- [[records/measurements/issue54-native-boundary-probe-2026-10-13]] — Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff
+- [[records/measurements/issue54-context-boundary-triage-2026-10-12]] — The 32k report remains unconfirmed as a keepalive bug; a bounded attention probe finds only a small boundary step on the M5 Pro
 - [[records/measurements/ready-overlap-prototype-2026-10-13]] — Ready experts compute earlier with exact outputs, but the completed model screen finds no useful qualified speedup
 - [[records/measurements/routing-handoff-followup-2026-10-13]] — GPU check-first lookup loses at sparse complete layers; exact-work real-model overlap does not pass its improvement screen
 - [[records/measurements/routing-handoff-pilot-2026-10-13]] — Native all-hit GPU lookup improves a synthetic MoE chain by 1.29 to 1.36x; full-model gain is unqualified and the completeness counter omits ready tickets

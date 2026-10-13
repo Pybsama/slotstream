@@ -2,12 +2,13 @@
 type: measurement
 id: 01m4v0q2f9a88az7swysmh00ne
 created: 2026-10-13T16:14:48.297223+00:00
-updated: 2026-10-13T16:14:48.297223+00:00
+updated: 2026-10-13T16:44:57.551596+00:00
 summary: Issue 54 remains unverified after expanded path probes; full-model attempt refused before launch for insufficient headroom
 date: 2026-10-13
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
+note: The native follow-up now tests trained attention weights, real cache growth and the portable rotation branch; see issue54-native-boundary-probe-2026-10-13. The full-model issue remains unverified.
 order: '1810'
 runs: '[[sources/runs/2026/10/2026-10-13-issue54-boundary-followup]]'
 title: Issue 54 expanded boundary audit and full-model reproduction gap
