@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/community
-updated: 2026-10-12T14:50:02.167123Z
+updated: 2026-10-13T03:04:08.117079Z
 ---
 
 # sources/community
 
+- [[sources/community/2026/10/2026-10-12-issue59-keepalive]] — Issue 59 reports severe keepalive-associated stalls on M1 Max
 - [[sources/community/2026/10/2026-10-12-issue55-keepalive]] — Issue 55: reported keepalive regression on base M5, workaround and follow-up controls
 - [[sources/community/2026/09/2026-09-26-macbook-pro-m4-pro-24gb-davidcavazos-0-2-25-rerun]] — Measured: MacBook M4 Pro, 24 GB (0.2.25 re-run)
 - [[sources/community/2026/09/2026-09-25-macbook-pro-m4-pro-24gb-davidcavazos]] — Measured: MacBook M4 Pro, 24 GB

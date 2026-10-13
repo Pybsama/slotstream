@@ -2,16 +2,18 @@
 type: measurement
 id: 01m4rgamph10rg9620x79sjr9s
 created: 2026-10-12T16:49:54.897024+00:00
-updated: 2026-10-12T16:49:54.897024+00:00
+updated: 2026-10-13T03:41:31.472558+00:00
 summary: Keepalive removal prepared and locally checked; full model acceptance and publication await memory headroom and exact-source CI
 date: 2026-10-12
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
+note: Historical prepublication checkpoint preserved; memory recovered, full native and installed acceptance passed, v0.2.29 published, issues 55 and 59 followed up and closed.
 order: '1750'
 runs: '[[sources/runs/2026/10/2026-10-12-release-0-2-29-prepublication]]'
+superseded_by: '[[records/measurements/release-0-2-29-published-2026-10-12]]'
 title: '0.2.29 removal candidate: prepublication checkpoint'
-status: measured
+status: superseded
 ---
 **Prepared, not published.** The keepalive-removal code is on main, with release version 0.2.29 prepared. The final code commit is `5728fc2d64d7d918f1c16c3f45538d6fd2b9e900`; documentation-only successors do not change its source closure. [[records/decisions/remove-gpu-keepalive]] records the decision, migration and lessons. [[sources/runs/2026/10/2026-10-12-release-0-2-29-prepublication]] preserves the local build identities, raw verification and release checkpoint.
 

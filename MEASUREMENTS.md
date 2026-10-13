@@ -8309,3 +8309,42 @@ Exact-source workflows at the checkpoint: [engine CI](https://github.com/carlosl
 Resume with enough headroom: confirm complete final-source CI, download its `slotstream-ci-candidate`, verify the archive with `Tools/release_candidate.py`, and run the entire `Tools/verify.sh` against that exact executable. Only then tag/publish v0.2.29 on the accepted source commit. Verify the public archive, checksum, provenance, source reconstruction, isolated installer and installed serving via `Tools/e2e_release.sh`. Return to #55 with the verified release and close it. Read fresh replies before posting again.
 
 Issue #54 stays open. [[records/measurements/issue54-context-boundary-triage-2026-10-12]] records the separate investigation and the limited attention probe. After publication, ask for the same MTP-off boundary comparison on the new version; removal has not been proven to resolve that report. The unrelated weight-format issue #7 is outside this fix.
+
+## M1 Max keepalive report and related-issue audit
+The issue audit found a second current report of severe stalls with the GPU keepalive default: [#59](https://github.com/carloslfu/slotstream/issues/59), from `@dittsn` on a Mac Studio M1 Max with 32 GB, Slotstream 0.2.28 and weights on its internal SSD. The raw report is [[sources/community/2026/10/2026-10-12-issue59-keepalive]]. It supports removing the feature across machines, as already decided in [[records/decisions/remove-gpu-keepalive]].
+
+The reporter gives 0.94 tok/s by default and 6.23 tok/s with keepalive disabled, with the same printed text. Disabling MTP, then MTP plus lookahead, did not recover throughput while keepalive remained enabled. Three warm server requests with keepalive off reportedly reached 6.00, 6.10 and 6.09 tok/s.
+
+These are not controlled same-plan A/B timings: automatic planning changed between the default and off runs (32,768 versus 65,536 configured context, resident versus streamed draft experts, different target/cache sizes and reclaimable memory). No off-run powermetrics trace was supplied. The trace's stated end time and final printed sample also differ. Preserve those limits instead of treating the observed ratio as an isolated causal effect, power comparison or proven GPU scheduling explanation. No new machine qualification or hardware-table speed claim is made.
+
+The report belongs with #55 for release handling: remove the submitted artificial GPU work, communicate the existing off workaround, then follow up and close after the accepted removal release. The reporter's supplied output already identifies a working path. No further profiling is required to justify removing an unreliable feature.
+
+The audit covered all 20 issues returned by GitHub, open and closed, including their comments. Only #55 and #59 explicitly report the keepalive-on/off failure pattern. #54 remains a separate active-context-boundary report with no keepalive-off comparison; [[records/measurements/issue54-context-boundary-triage-2026-10-12]] preserves its analysis. Historical #21 describes long-prefill, streaming and process-exit problems addressed by earlier releases, without evidence connecting them to keepalive; its regression suite remains in release acceptance. The hardware measurement threads and open smaller-format request #7 do not establish additional duplicates. Do not reopen or close unrelated issues based on symptom words alone.
+
+## v0.2.29 published and accepted; keepalive reports closed
+**[v0.2.29](https://github.com/carloslfu/slotstream/releases/tag/v0.2.29) is published and accepted.** GPU keepalive and its controls are completely removed. Direct demand reads remain. This is an engine release; the development Mac app is not a public Desktop installer.
+
+Published 2026-10-13T03:34:33Z, October 12 in Colombia, from exact source commit `5728fc2d64d7d918f1c16c3f45538d6fd2b9e900`. [Complete source CI](https://github.com/carloslfu/slotstream/actions/runs/38279294771) passed before tagging, and the [release workflow](https://github.com/carloslfu/slotstream/actions/runs/38342292014) published its preserved archive. No locally rebuilt executable was substituted.
+
+Archive SHA-256: `6bb418c2fa477b15391a67d261eda65f9b45eea38c7594c39ae033c7d865afb6`. Executable SHA-256: `4d7d4ed4d2a19b5991d47f4731198932cd616e5c2722fcf8b6e37612c232f051`.
+
+| Acceptance | Result |
+| --- | --- |
+| Exact-source hosted CI | Engine, instrumented coverage, external library consumer, Mac app and context contracts passed |
+| Complete native battery on the CI executable | 35 gates passed, zero failures or skips; quality 15/15, API robustness 74/74, vision serving 25/25 |
+| Public distribution | Public archive equals the accepted CI archive; checksum, GitHub provenance, build identity and source reconstruction verified |
+| Public installer | Unchanged public installer fetched v0.2.29 into an isolated root; installed executable equals CI bytes; existing user installation, wrappers and profiles unchanged |
+| Installed server | 31/31 checks passed with Auto quantization, a 10 GB adaptive ceiling, 32,768-token context and MTP on; owned server reaped, no model process left |
+
+The earlier resource block in [[records/measurements/release-0-2-29-prepublication-2026-10-12]] was temporary: the resumed run passed admission and completed the entire battery. Global paging remains a diagnostic, not a substitute for actual process-memory or completed-work gates. This is functional and distribution acceptance, not a new performance benchmark or an independent run on the reporters' M5 Air and M1 Max.
+
+## Reporter follow-through and issue audit
+
+- [#55 follow-up](https://github.com/carloslfu/slotstream/issues/55#issuecomment-6137663126): release link, upgrade command and obsolete-flag cleanup; closed as completed because the problematic keepalive path is removed. The reporter is invited to reply if stalls remain.
+- [#59 follow-up](https://github.com/carloslfu/slotstream/issues/59#issuecomment-6137664073): the additional M1 Max report gets the same migration and limitation, with its own earlier workaround reply; closed as completed. [[records/measurements/issue59-keepalive-and-related-issue-audit-2026-10-12]] preserves its evidence and confounds.
+- [#54 follow-up](https://github.com/carloslfu/slotstream/issues/54#issuecomment-6137664801): keep open. The attention boundary is a lead, not a verified explanation; request the same MTP-off comparison on the new release. Removal has not been shown to resolve that cliff.
+- All 20 issues and their comments were checked for related reports. No further established keepalive duplicate was found; the unrelated smaller-format request #7 remains open, and historical issue #21 remains covered by its passing regression suite.
+
+Read prior maintainer messages before each follow-up. On upgrade, remove `--gpu-keepalive` from saved commands and unset the now-unused `SLOTSTREAM_GPU_KEEPALIVE` if present. Ollama's unrelated `keep_alive` remains supported.
+
+[[records/decisions/remove-gpu-keepalive]] and the engineering guide carry the product and optimization lessons. The personal-brain decision was separately validated and pushed as `aede63a95`. The linked raw run preserves the accepted bytes' identity, full checks, archive inventory, issue snapshots and comment/closure receipts. A documentation follow-up also corrects one obsolete source-file comment; it changes no runtime behavior or published artifact.

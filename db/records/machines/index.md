@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/machines
-updated: 2026-10-12T14:49:37.051831Z
+updated: 2026-10-13T03:03:31.844791Z
 ---
 
 # records/machines
 
+- [[records/machines/mac-studio-m1-max-32gb-issue59]] — Mac Studio M1 Max 32 GB, keepalive regression report
 - [[records/machines/macbook-air-m5-32gb-issue55]] — Base M5 MacBook Air configuration reported by Arsenitim in issue 55
 - [[records/machines/macbook-pro-m4-pro-24gb]] — MacBook Pro, Apple M4 Pro, 24 GB (community)
 - [[records/machines/macbook-pro-m4-max-36gb]] — MacBook Pro, Apple M4 Max, 36 GB (community)

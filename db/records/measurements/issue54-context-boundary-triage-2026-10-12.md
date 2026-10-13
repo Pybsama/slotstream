@@ -2,12 +2,13 @@
 type: measurement
 id: 01m4rf8cd80hzfsn004qpz0ke7
 created: 2026-10-12T16:31:12.296100+00:00
-updated: 2026-10-12T16:31:12.296100+00:00
+updated: 2026-10-13T03:41:31.540512+00:00
 summary: The 32k report remains unconfirmed as a keepalive bug; a bounded attention probe finds only a small boundary step on the M5 Pro
 date: 2026-10-12
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
+note: v0.2.29 removes keepalive but does not establish a fix for this report. A release follow-up requests the same MTP-off boundary comparison; issue 54 remains open.
 order: '1740'
 runs: '[[sources/runs/2026/10/2026-10-12-issue54-attention-triage]]'
 title: Issue 54 context-boundary triage during keepalive removal

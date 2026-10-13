@@ -2,7 +2,7 @@
 type: decision
 id: 01m4remmdjrd8qjvgrnpzyvnba
 created: 2026-10-12T16:20:25.138274+00:00
-updated: 2026-10-12T16:38:36.008668+00:00
+updated: 2026-10-13T03:07:07.991055+00:00
 summary: Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
 decided_on: 2026-10-12
 evidence: '[[records/measurements/issue55-keepalive-investigation-2026-10-12]]'
@@ -40,3 +40,7 @@ Issue [#54](https://github.com/carloslfu/slotstream/issues/54) reports a context
 ## Release-test lesson from the removal
 
 The broader local gates exposed an unrelated disk-space fixture failure. It built a synthetic model larger than the host's free space; with nearly a terabyte free, that fixture exceeded the manifest's object-count bound and failed validation before testing disk admission. The failure was in the test's host-dependent setup, not evidence of a broken user download. Use a small valid manifest and inject only the available-disk observation into the internal downloader, then assert that both zero capacity and a missing safety-margin byte refuse before any partial file appears. Production still reads real disk availability and enforces the same margin. Keep fixtures bounded and prove that they reach the behavior their names claim to cover.
+
+## Additional affected hardware and issue audit
+
+The subsequent [M1 Max report #59](https://github.com/carloslfu/slotstream/issues/59) describes the same practical keepalive-on/off failure pattern on another GPU generation. [[records/measurements/issue59-keepalive-and-related-issue-audit-2026-10-12]] preserves the original report and its automatic-planning confounds. It reinforces the removal decision without proving an exact causal speed ratio or the underlying driver mechanism. The issue audit identified #55 and #59 for the removal release; #54 remains unproven as related, and historical serving reports are not duplicates without evidence.

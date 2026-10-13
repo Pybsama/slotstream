@@ -1,7 +1,6 @@
-// Gates for the decode paths that overlap waiting: demand misses read straight
-// into their pool slots, and the GPU kept awake while a generation runs. Both
-// must leave the arithmetic untouched, and the direct reads must recover from
-// a failed read without leaving a stale or partial slot behind.
+// Gates for demand misses that read straight into their pool slots. Direct
+// reads must leave the arithmetic untouched and recover from a failed read
+// without leaving a stale or partial slot behind.
 
 import ArgumentParser
 import Foundation

@@ -6,10 +6,12 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
-## 0.2.29
+## 0.2.29 - 2026-10-13
 
-- Remove GPU keepalive completely after a base-M5 MacBook Air report showed
-  severe decode stalls with the default enabled ([#55](https://github.com/carloslfu/slotstream/issues/55)).
+- Remove GPU keepalive completely after base-M5 MacBook Air and M1 Max Mac Studio
+  reports showed severe decode stalls with the default enabled
+  ([#55](https://github.com/carloslfu/slotstream/issues/55),
+  [#59](https://github.com/carloslfu/slotstream/issues/59)).
   Generation no longer submits artificial GPU work or changes behavior with
   AC power. Direct demand reads and their correctness checks remain.
 - Remove `--gpu-keepalive`, `SLOTSTREAM_GPU_KEEPALIVE`, the Swift keepalive
