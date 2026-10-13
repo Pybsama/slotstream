@@ -2,14 +2,15 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-13T14:00:59.503553Z
+updated: 2026-10-13T14:51:42.549813Z
 ---
 
 # records/measurements
 
+- [[records/measurements/routing-handoff-followup-2026-10-13]] — GPU check-first lookup loses at sparse complete layers; exact-work real-model overlap does not pass its improvement screen
+- [[records/measurements/routing-handoff-pilot-2026-10-13]] — Native all-hit GPU lookup improves a synthetic MoE chain by 1.29 to 1.36x; full-model gain is unqualified and the completeness counter omits ready tickets
 - [[records/measurements/decode-path-serialization-round-2-2026-09-12]] — Prefetch coverage: top above ten is inert under the margin threshold, an A/A spread of 0.991 to 1.022; stride 1, stride union and no threshold cut demand reads but run slower
 - [[records/measurements/decode-path-serialization-round-1-2026-09-12]] — Deferring the per-layer GPU drain with multi-generation pins gains 3.8% to 5.1% with exact outputs; record reads and nine flags are null; profiles close compilation
-- [[records/measurements/routing-handoff-pilot-2026-10-13]] — Native all-hit GPU lookup improves a synthetic MoE chain by 1.29 to 1.36x; full-model gain is unqualified and the completeness counter omits ready tickets
 - [[records/measurements/issue54-context-boundary-triage-2026-10-12]] — The 32k report remains unconfirmed as a keepalive bug; a bounded attention probe finds only a small boundary step on the M5 Pro
 - [[records/measurements/issue59-keepalive-and-related-issue-audit-2026-10-12]] — M1 Max keepalive report and complete issue audit; preserve confounds and keep issue 54 separate
 - [[records/measurements/release-0-2-29-prepublication-2026-10-12]] — Keepalive removal prepared and locally checked; full model acceptance and publication await memory headroom and exact-source CI

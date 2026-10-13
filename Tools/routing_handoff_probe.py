@@ -276,6 +276,7 @@ def native(out, observe_model=False):
         with (out / "readiness.jsonl").open("x") as stdout, (out / "readiness.stderr.txt").open("x") as stderr:
             subprocess.run([str(binary), "--observe-model"], env=env, cwd=ROOT,
                            stdout=stdout, stderr=stderr, check=True, timeout=180)
+    return binary
 
 
 def main():

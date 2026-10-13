@@ -12,6 +12,10 @@ import Slotstream
 struct RoutingHandoffProbe {
     static func main() async throws {
         try ModelProcessGuard.acquire()
+        if CommandLine.arguments.contains("--model-cell") {
+            try await modelCell()
+            return
+        }
         if CommandLine.arguments.contains("--observe-model") {
             try await observeModel()
             return
@@ -23,6 +27,7 @@ struct RoutingHandoffProbe {
         MLX.Memory.memoryLimit = 2_000_000_000
         MLXRandom.seed(59)
         let modes = ["host", "device_checked", "device_all_hit"]
+        let mixedLookup = CommandLine.arguments.contains("--mixed-lookup")
         let slots = 32, experts = 512, hidden = 2560, intermediate = 640, topK = 10
         let resident = (0..<slots).map { ($0 * 13 + 7) % experts }
         let hostMap = Dictionary(uniqueKeysWithValues: resident.enumerated().map { ($0.element, $0.offset) })
@@ -39,6 +44,9 @@ struct RoutingHandoffProbe {
             MLX.Memory.clearCache()
         }
         eval(directory, mask, router)
+        var layerDirectories: [MLXArray] = []
+        var layerDirectoryValues: [[Int32]] = []
+        var lastFallbacks = 0
         @MainActor func project(_ x: MLXArray, _ ids: MLXArray) -> MLXArray {
             let xe = x.expandedDimensions(axes: [-2, -3])
             @MainActor func qmm(_ input: MLXArray, _ pool: (MLXArray, MLXArray, MLXArray?)) -> MLXArray {
@@ -51,17 +59,30 @@ struct RoutingHandoffProbe {
         @MainActor func run(_ initial: MLXArray, _ mode: String, _ depth: Int) -> (MLXArray, [MLXArray]) {
             var x = initial
             var routes: [MLXArray] = []
+            lastFallbacks = 0
             for layer in 0..<depth {
                 let scores = which(mask, matmul(x.asType(.float32), router.T), MLXArray(-Float.infinity))
                 let ids = argPartition(-scores, kth: topK-1, axis: -1)[.ellipsis, ..<topK].asType(.int32)
                 let probabilities = softmax(takeAlong(scores, ids, axis: -1), axis: -1, precise: true)
-                let slotIDs = mode == "host"
-                    ? MLXArray(ids.asArray(Int32.self).map { Int32(hostMap[Int($0)]!) }).reshaped(ids.shape)
-                    : directory[ids]
-                if mode == "device_checked" {
-                    let missing = any(slotIDs .< 0).item(Bool.self)
-                    if missing { fatalError("unexpected miss in frozen all-hit workload") }
+                @MainActor func locate() -> MLXArray {
+                    @MainActor func host() -> MLXArray {
+                        MLXArray(ids.asArray(Int32.self).map { Int32(hostMap[Int($0)]!) }).reshaped(ids.shape)
+                    }
+                    if mode == "host" { return host() }
+                    let table = mode == "device_checked_rebuild" ? MLXArray(layerDirectoryValues[layer])
+                        : (layerDirectories.isEmpty ? directory : layerDirectories[layer])
+                    let slots = table[ids]
+                    if mode.hasPrefix("device_checked") {
+                        let missing = any(slots .< 0).item(Bool.self)
+                        if missing {
+                            precondition(mixedLookup, "unexpected miss in frozen all-hit workload")
+                            lastFallbacks += 1
+                            return host()
+                        }
+                    }
+                    return slots
                 }
+                let slotIDs = locate()
                 let value = project(x, slotIDs)
                 x = (x + (value * probabilities.expandedDimensions(axis: -1)).sum(axis: -2)
                     .asType(x.dtype) * Float(0.03125)).asType(.bfloat16)
@@ -77,6 +98,54 @@ struct RoutingHandoffProbe {
         func emit(_ record: [String: Any]) throws {
             let data = try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys])
             FileHandle.standardOutput.write(data + Data([10]))
+        }
+        if mixedLookup {
+            let initial = MLXRandom.normal([1, 1, hidden]).asType(.bfloat16)
+            eval(initial)
+            let (expected, expectedArrays) = run(initial, "host", 48)
+            let expectedHash = outputHash(expected)
+            let expectedRoutes = expectedArrays.map { $0.asArray(Int32.self) }
+            let candidates = ["host", "device_checked", "device_checked_rebuild"]
+            try emit(["kind": "mixed_protocol", "rounds": 6, "layers": 48, "rows": 1,
+                      "ready_layers": [0, 3, 12, 48], "directory_bytes": experts * 4,
+                      "limit": "logical misses test lookup/fallback overhead only; weights immutable and already available; no SSD or eviction"])
+            for readyLayers in [0, 3, 12, 48] {
+                layerDirectoryValues = (0..<48).map { layer in
+                    var values = directoryValues
+                    let ready = (layer + 1) * readyLayers / 48 > layer * readyLayers / 48
+                    if !ready { values[Int(expectedRoutes[layer][0])] = -1 }
+                    return values
+                }
+                layerDirectories = layerDirectoryValues.map { MLXArray($0) }
+                eval(layerDirectories)
+                for mode in candidates {
+                    let (result, routes) = run(initial, mode, 48)
+                    let exact = outputHash(result) == expectedHash && routes.map { $0.asArray(Int32.self) } == expectedRoutes
+                    let expectedFallbacks = mode == "host" ? 0 : 48 - readyLayers
+                    try emit(["kind": "mixed_correctness", "ready_layers": readyLayers, "mode": mode,
+                              "exact": exact, "fallbacks": lastFallbacks, "expected_fallbacks": expectedFallbacks])
+                    guard exact, lastFallbacks == expectedFallbacks else { throw ModelError("mixed lookup parity failed") }
+                }
+                for round in 0..<6 {
+                    for mode in round % 2 == 0 ? candidates : Array(candidates.reversed()) {
+                        let before = ProcessMemory.vmActivity()!, conditions = ProcessMemory.operatingConditions()
+                        let start = ProcessInfo.processInfo.systemUptime
+                        _ = run(initial, mode, 48)
+                        let seconds = ProcessInfo.processInfo.systemUptime - start
+                        let after = ProcessMemory.vmActivity()!, end = ProcessMemory.operatingConditions()
+                        let peak = ProcessMemory.peakResidentBytes()
+                        guard peak > 0, peak < 2_000_000_000 else { throw ModelError("mixed lookup exceeds footprint budget") }
+                        let eligible = before.swapins == after.swapins && before.swapouts == after.swapouts
+                            && conditions.thermalState == "nominal" && end.thermalState == "nominal"
+                            && !conditions.lowPowerModeEnabled && !end.lowPowerModeEnabled
+                        try emit(["kind": "mixed_timing", "ready_layers": readyLayers, "round": round,
+                                  "mode": mode, "seconds": seconds, "fallbacks": lastFallbacks,
+                                  "eligible": eligible, "swapins_delta": after.swapins-before.swapins,
+                                  "swapouts_delta": after.swapouts-before.swapouts, "peak_process_bytes": peak])
+                    }
+                }
+            }
+            return
         }
         try emit(["kind": "protocol", "layers": 48, "rounds": 6, "rows": [1, 3],
                   "barrier_period": 4, "slots": slots, "top_k": topK,
@@ -128,6 +197,41 @@ struct RoutingHandoffProbe {
                 }
             }
         }
+    }
+
+    // One fresh, bounded real-model cell. The launcher freezes configuration
+    // and order, and compares the raw outputs and work counters afterwards.
+    static func modelCell() async throws {
+        let budget = CommandLine.arguments.contains("--floor") ? 8.1 : 10.0
+        guard let vm = ProcessMemory.vmActivity(), Double(vm.reclaimableBytes) >= (budget + 3) * 1e9 else {
+            throw ModelError("model cell needs target plus 3 GB real reclaimable headroom")
+        }
+        let directory = ModelLocator.resolve(PinnedModel.name).resolvingSymlinksInPath()
+        let plan = try Planner.plan(expertsPerLayer: nil, poolGB: nil, memoryGB: budget,
+            mtp: .off, vision: .off, maxContextTokens: 8192, qualification: false,
+            decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: directory))
+        try Planner.validateMemoryBudget(plan, availableGB: plan.availableGB)
+        let engine = try await Engine(modelDir: directory, plan: plan)
+        let promptText = CommandLine.arguments.contains("--sky")
+            ? "Explain why the sky is blue, in about 200 words."
+            : "Explain how a hash map works, in about 200 words."
+        let prompt = try engine.encodeChat([ChatMessage(role: "user", content: promptText)], thinking: false)
+        let before = ProcessMemory.vmActivity()!, conditions = ProcessMemory.operatingConditions()
+        var parameters = SampleParams.greedy
+        parameters.maxTokens = 64
+        let result = engine.generate(promptIds: prompt, params: parameters)
+        if let error = result.stats.runtimeError { throw ModelError(error) }
+        let after = ProcessMemory.vmActivity()!, end = ProcessMemory.operatingConditions()
+        guard result.stats.peakMemoryGB <= budget else { throw ModelError("model cell exceeded fixed process budget") }
+        let stats = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result.stats))
+        let options = try JSONSerialization.jsonObject(with: JSONEncoder().encode(engine.model.optimizations))
+        let record: [String: Any] = ["kind": "model_cell", "prompt": promptText,
+            "prompt_ids": prompt, "output_ids": result.ids, "stats": stats, "plan": plan.json(), "optimizations": options,
+            "swapins_delta": after.swapins-before.swapins, "swapouts_delta": after.swapouts-before.swapouts,
+            "thermal_before": conditions.thermalState, "thermal_after": end.thermalState,
+            "normal_power": !conditions.lowPowerModeEnabled && !end.lowPowerModeEnabled]
+        let data = try JSONSerialization.data(withJSONObject: record, options: [.sortedKeys])
+        FileHandle.standardOutput.write(data + Data([10]))
     }
 
     // Snapshot residency at the existing routing boundary. This deliberately

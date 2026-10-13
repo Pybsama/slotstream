@@ -1,0 +1,35 @@
+{
+  "binary_sha256": "64eaa6c468f18eeb3afdbdcd9c61326c4018afcd9ae5252f83e496cea4011a70",
+  "eligibility": "exact tokens and equal demand records/forward count; zero paging; nominal sampled thermal and normal power",
+  "host": {
+    "energy_joules": null,
+    "load_average_1_5_15_minutes": [
+      1.86767578125,
+      2.0419921875,
+      1.9091796875
+    ],
+    "observed_at_unix_seconds": 1791902290.500234,
+    "power_configuration": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Battery Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         2\n womp                 0\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            10\nAC Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         10\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            10\n"
+    },
+    "power_source": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=23199843)\t100%; charged; 0:00 remaining present: true\n"
+    },
+    "thermal_limit": "pmset warning/status history, not continuous temperature",
+    "thermal_status": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded\n"
+    }
+  },
+  "limit": "exploration only; no confirmation, release, M1 or energy claim",
+  "mode": "factorial",
+  "prefetch": "off",
+  "reference": "mean of two reference times bracketing each block; A/A compares reference with repeat directly",
+  "rounds": 4,
+  "screen": "minimum 3 eligible blocks; median decode and whole-request ratio >=1.05, at least 3 blocks improve both; reference-repeat median within 2% of 1"
+}

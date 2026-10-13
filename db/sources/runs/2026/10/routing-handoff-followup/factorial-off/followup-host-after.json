@@ -1,0 +1,25 @@
+{
+  "energy_joules": null,
+  "load_average_1_5_15_minutes": [
+    1.90283203125,
+    2.03955078125,
+    1.91064453125
+  ],
+  "observed_at_unix_seconds": 1791902303.356394,
+  "power_configuration": {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "Battery Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         2\n womp                 0\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            10\nAC Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         10\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            10\n"
+  },
+  "power_source": {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=23199843)\t100%; charged; 0:00 remaining present: true\n"
+  },
+  "thermal_limit": "pmset warning/status history, not continuous temperature",
+  "thermal_status": {
+    "exit_code": 0,
+    "stderr": "",
+    "stdout": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded\n"
+  }
+}

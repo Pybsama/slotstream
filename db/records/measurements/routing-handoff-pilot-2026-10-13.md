@@ -2,12 +2,13 @@
 type: measurement
 id: 01m4ts0zej0wttb268w3c5wte6
 created: 2026-10-13T14:00:24.274650+00:00
-updated: 2026-10-13T14:00:24.274650+00:00
+updated: 2026-10-13T14:50:34.963680+00:00
 summary: Native all-hit GPU lookup improves a synthetic MoE chain by 1.29 to 1.36x; full-model gain is unqualified and the completeness counter omits ready tickets
 date: 2026-10-13
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
+note: 'Later mixed-readiness tests narrow the implementation opportunity: a check-first GPU directory loses at 6.25% complete layers and real-model overlap fails its screen. All original component measurements remain valid; see [[records/measurements/routing-handoff-followup-2026-10-13]].'
 order: '1780'
 runs: '[[sources/runs/2026/10/2026-10-13-routing-handoff-pilot]]'
 title: 'Routing handoff pilot: native mechanism gain, unresolved real-model benefit'
