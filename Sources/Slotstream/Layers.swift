@@ -1684,6 +1684,9 @@ final class MoELayer {
         guard let ready else { return project(slotIds) }
         let readySet = Set(readyRanks)
         let missingRanks = expertIds.indices.filter { !readySet.contains($0) }
+        // Ready slot tickets can complete the entire route before demand I/O.
+        // readyRanks already follows router order; never submit an empty QMM.
+        if missingRanks.isEmpty { return ready }
         let missing = project(missingRanks.map { slotIds[$0] })
         let order = readyRanks + missingRanks
         var inverse = Array(repeating: Int32(0), count: expertIds.count)

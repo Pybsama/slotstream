@@ -216,7 +216,7 @@ def model(out, rounds):
         "scope": "M5 Pro, fresh native processes, 10 GB fixed target, plain decode, one prompt, 64 output tokens; no GPU-directory implementation"})
 
 
-def native(out, observe_model=False):
+def native(out, observe_model=False, compile_only=False):
     """Compile only the small probe against already-built, inventoried objects.
 
     Object hashes bind this local diagnostic; they do not claim that a cached
@@ -250,6 +250,8 @@ def native(out, observe_model=False):
         subprocess.run(command, stdout=stdout, stderr=stderr, check=True, timeout=120)
     shutil.copy2(release / "mlx.metallib", build / "mlx.metallib")
     write(out / "executable.json", {"sha256": digest(binary)})
+    if compile_only:
+        return binary
     preflight(4)
     with (out / "results.jsonl").open("x") as stdout, (out / "run.stderr.txt").open("x") as stderr:
         subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)

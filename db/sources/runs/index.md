@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-13T14:50:34.866903Z
+updated: 2026-10-13T15:59:02.344862Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-13-ready-overlap-prototype]] — Ready-ticket overlap prototype: exact trained-weight and model outputs, no qualified speed gain
 - [[sources/runs/2026/10/2026-10-13-routing-handoff-followup]] — Mixed-readiness native probes and twenty controlled real-model requests; no variant passes the fixed improvement screen
 - [[sources/runs/2026/10/2026-10-13-routing-handoff-pilot]] — Bounded native routing handoff probes, excluded real-model overlap pairs and readiness observations
 - [[sources/runs/2026/10/2026-10-12-release-0-2-29-published-and-installed]] — v0.2.29 published, installed and followed up with affected reporters
@@ -506,9 +507,8 @@ updated: 2026-10-13T14:50:34.866903Z
 - [[sources/runs/2026/09/2026-09-09-optimization-quiet-scope-complete-pass]] — Full original read-scope cohort qualifies startup and request benefit under the unchanged process cap
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-qualification-executors]] — Prepared execution code for exact smaller-scope build, pure checks and all seven native cases
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-sizing-source]] — Automatic prefill smaller-group sizing draft with preserved original schedule and guards
-- [[sources/runs/2026/09/2026-09-09-optimization-scope-short-decode-observations]] — Scope short-decode observation: identical read work with higher reported I/O time; sustained behavior remains unmeasured
 
 ## More
 
-This folder has 908 files. The 500 most recent are listed above.
+This folder has 909 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

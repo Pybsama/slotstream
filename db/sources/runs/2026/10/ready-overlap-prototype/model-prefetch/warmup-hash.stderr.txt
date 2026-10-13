@@ -1,0 +1,2 @@
+[expert-lookahead] attention-corrected forecast: measured correction 37b00d3a32d1e188 at lookahead/tap-correction-attention-rank128-v1.safetensors
+engine ready in 1.2s: expert cache ~18/512 per layer (857 global slots = 2.4 GB), eos [248044, 248046]

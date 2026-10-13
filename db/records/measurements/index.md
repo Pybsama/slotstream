@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-13T14:51:42.549813Z
+updated: 2026-10-13T15:59:02.436559Z
 ---
 
 # records/measurements
 
+- [[records/measurements/ready-overlap-prototype-2026-10-13]] — Ready experts compute earlier with exact outputs, but the completed model screen finds no useful qualified speedup
 - [[records/measurements/routing-handoff-followup-2026-10-13]] — GPU check-first lookup loses at sparse complete layers; exact-work real-model overlap does not pass its improvement screen
 - [[records/measurements/routing-handoff-pilot-2026-10-13]] — Native all-hit GPU lookup improves a synthetic MoE chain by 1.29 to 1.36x; full-model gain is unqualified and the completeness counter omits ready tickets
 - [[records/measurements/decode-path-serialization-round-2-2026-09-12]] — Prefetch coverage: top above ten is inert under the margin threshold, an A/A spread of 0.991 to 1.022; stride 1, stride union and no threshold cut demand reads but run slower

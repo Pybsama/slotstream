@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/carlos/Projects/slotstream/Tools/ready_overlap_probe.py", line 121, in <module>
+    main()
+  File "/Users/carlos/Projects/slotstream/Tools/ready_overlap_probe.py", line 115, in main
+    else: run(args.out, args.binary.resolve())
+  File "/Users/carlos/Projects/slotstream/Tools/ready_overlap_probe.py", line 54, in run
+    result = invoke(binary, arguments, out, f'r{round_id}-{arm}', env, 13)
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_followup.py", line 28, in invoke
+    raise RuntimeError(f'{name} exited {result.returncode}; raw failure preserved')
+RuntimeError: r0-reference exited -5; raw failure preserved

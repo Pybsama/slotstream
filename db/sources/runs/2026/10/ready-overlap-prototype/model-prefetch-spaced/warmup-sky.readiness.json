@@ -1,0 +1,21 @@
+{
+  "ready": true,
+  "samples": [
+    {
+      "elapsed_seconds": 0.005013084000001555,
+      "page_bytes": 16384,
+      "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                   368120.\nPages active:                                 946864.\nPages inactive:                               940392.\nPages speculative:                              3971.\nPages throttled:                                   0.\nPages wired down:                             254137.\nPages purgeable:                               14411.\n\"Translation faults\":                     6360757237.\nPages copy-on-write:                       502551176.\nPages zero filled:                       23030439063.\nPages reactivated:                         885599794.\nPages purged:                               26550190.\nFile-backed pages:                            562439.\nAnonymous pages:                             1328788.\nPages stored in compressor:                  1191552.\nPages occupied by compressor:                 571892.\nDecompressions:                            244738531.\nCompressions:                              288561680.\nPageins:                                  7681817789.\nPageouts:                                    3321201.\nSwapins:                                      157625.\nSwapouts:                                     387126.\nPages tagged:                                 170405.\nPages tagged resident:                        136335.\nPages tagged compressed:                       34070.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                 7822.\nPages tag-storage free:                          376.\nPages tag-storage non-tag pageable:            90098.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    4607232.\nTagged compressions:                         3086019.\nTagged decompressions:                       2844701.\n",
+      "reclaimable_bytes": 15482388480,
+      "swapins": 157625,
+      "swapouts": 387126
+    },
+    {
+      "elapsed_seconds": 2.017727625000001,
+      "page_bytes": 16384,
+      "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                   370630.\nPages active:                                 960272.\nPages inactive:                               954136.\nPages speculative:                              3982.\nPages throttled:                                   0.\nPages wired down:                             224903.\nPages purgeable:                               27978.\n\"Translation faults\":                     6360763615.\nPages copy-on-write:                       502551423.\nPages zero filled:                       23030442203.\nPages reactivated:                         885599794.\nPages purged:                               26550190.\nFile-backed pages:                            562452.\nAnonymous pages:                             1355938.\nPages stored in compressor:                  1191264.\nPages occupied by compressor:                 571718.\nDecompressions:                            244738678.\nCompressions:                              288561680.\nPageins:                                  7681817790.\nPageouts:                                    3321201.\nSwapins:                                      157625.\nSwapouts:                                     387126.\nPages tagged:                                 170431.\nPages tagged resident:                        136361.\nPages tagged compressed:                       34070.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                 7816.\nPages tag-storage free:                          279.\nPages tag-storage non-tag pageable:            90201.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    4607232.\nTagged compressions:                         3086019.\nTagged decompressions:                       2844701.\n",
+      "reclaimable_bytes": 15746007040,
+      "swapins": 157625,
+      "swapouts": 387126
+    }
+  ]
+}

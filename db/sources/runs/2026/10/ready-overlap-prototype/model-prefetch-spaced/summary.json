@@ -1,0 +1,208 @@
+{
+  "comparisons": {
+    "ready_direct": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 1.0072060019426095,
+        "requestSeconds": 1.005932970823428
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 1.0084687707392839,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0075232214530156,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 1.005943233145935,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0043427201938402,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9799520947692166,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9833072435769142,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9863859404708155,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9938911168764339,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 2
+    },
+    "ready_staged": {
+      "eligible_pairs": 1,
+      "medians": {
+        "decodeSeconds": 0.9708418992210334,
+        "requestSeconds": 0.9759298470766368
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 0.9416072736000014,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.952549379434853,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 0.9708418992210334,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9759298470766368,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9825997241760102,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9883131790738319,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9539913968940265,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9598872157288404,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 0
+    },
+    "reference_repeat": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 1.02579793578216,
+        "requestSeconds": 1.0187448799919445
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 1.023953013065868,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0166910790037924,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 1.0276428584984523,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0207986809800964,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9752050447965649,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9799718176971731,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9852282585234885,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.987650152355707,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 2
+    },
+    "resident_staged": {
+      "eligible_pairs": 1,
+      "medians": {
+        "decodeSeconds": 0.9658826415610566,
+        "requestSeconds": 0.9723039965166589
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 0.96027872644596,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9654531266562867,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 0.9658826415610566,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9723039965166589,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9517034598765631,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9571537742234851,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9446187623878276,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9531094543361062,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 0
+    }
+  }
+}

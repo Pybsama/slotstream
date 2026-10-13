@@ -1,0 +1,46 @@
+{
+  "arms": [
+    "reference",
+    "resident_staged",
+    "ready_staged",
+    "ready_direct",
+    "reference_repeat"
+  ],
+  "binary_sha256": "1f8e81ff9f08d7a324fcdfa2c08e63fd9c6c1ba8617bd86405e03eacf9fab9f0",
+  "budget_gb": 8.1,
+  "disk_work": "prefetch timing is part of the treatment; demand/adoption/prefetch counts are reported, not equal-work gates",
+  "eligibility": "exact output IDs, prompt, planned pool and forward/token counts; zero global paging; nominal sampled thermal; normal power",
+  "host": {
+    "energy_joules": null,
+    "load_average_1_5_15_minutes": [
+      1.44189453125,
+      2.0615234375,
+      2.27685546875
+    ],
+    "observed_at_unix_seconds": 1791906107.053083,
+    "power_configuration": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Battery Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         2\n womp                 0\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            10\nAC Power:\n Sleep On Power Button 1\n powermode            0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         10\n womp                 1\n networkoversleep     0\n sleep                0\n tcpkeepalive         1\n disksleep            10\n"
+    },
+    "power_source": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=23199843)\t100%; charged; 0:00 remaining present: true\n"
+    },
+    "thermal_limit": "pmset warning/status history, not continuous temperature",
+    "thermal_status": {
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded\n"
+    }
+  },
+  "limits": "exploratory M5 Pro screen; no release, frequency, energy, M1 or hardware-portability claim",
+  "mtp": "off",
+  "prefetch": "automatic",
+  "reference": "mean of bracketing references; A/A compares the two reference cells directly",
+  "rounds": 4,
+  "screen": "at least 3 eligible blocks, median decode and request ratios >=1.05, at least 3 blocks improve both, A/A median within 2% of one",
+  "tokens": 64,
+  "vision": "off"
+}

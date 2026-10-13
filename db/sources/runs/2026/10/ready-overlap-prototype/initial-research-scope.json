@@ -1,0 +1,8 @@
+{
+  "baseline_commit": "e0e3cba",
+  "purpose": "diagnostic prototype only; no default or installation change",
+  "readiness": "cache map plus successfully published complete slot tickets",
+  "joined_copy": "bounded host read buffers, reader join, then CPU memcpy",
+  "correctness": "trained-weight outputs, router order, all hit/miss splits, completed/unfinished/stale tickets, read-failure retry, copy-before-join refusal",
+  "performance": "prospective four-block automatic-prefetch screen in Tools/ready_overlap_probe.py; run only when existing memory gates allow"
+}

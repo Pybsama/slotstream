@@ -1,0 +1,19 @@
+{
+  "before": {
+    "page_bytes": 16384,
+    "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                   320852.\nPages active:                                 993204.\nPages inactive:                               987879.\nPages speculative:                              5186.\nPages throttled:                                   0.\nPages wired down:                             242815.\nPages purgeable:                                5401.\n\"Translation faults\":                     6357801736.\nPages copy-on-write:                       502387143.\nPages zero filled:                       23027696096.\nPages reactivated:                         885542572.\nPages purged:                               26546713.\nFile-backed pages:                            562540.\nAnonymous pages:                             1423729.\nPages stored in compressor:                  1122546.\nPages occupied by compressor:                 534396.\nDecompressions:                            244732653.\nCompressions:                              288484176.\nPageins:                                  7681735687.\nPageouts:                                    3320934.\nSwapins:                                      157621.\nSwapouts:                                     387126.\nPages tagged:                                 154582.\nPages tagged resident:                        120782.\nPages tagged compressed:                       33800.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                 7857.\nPages tag-storage free:                         1177.\nPages tag-storage non-tag pageable:            89262.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    4562304.\nTagged compressions:                         3085406.\nTagged decompressions:                       2844366.\n",
+    "reclaimable_bytes": 14561984512,
+    "swapins": 157621,
+    "swapouts": 387126
+  },
+  "command": [
+    "/Users/carlos/Projects/slotstream/.build/routing-handoff-ready-native1/routing-handoff-native",
+    "--model-cell",
+    "--floor",
+    "--ready-tickets"
+  ],
+  "environment": {
+    "SLOTSTREAM_OPT_DIRECT_DEMAND": "1",
+    "SLOTSTREAM_OPT_RESIDENT_OVERLAP": "1"
+  }
+}

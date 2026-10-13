@@ -212,6 +212,8 @@ struct RoutingHandoffProbe {
             decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: directory))
         try Planner.validateMemoryBudget(plan, availableGB: plan.availableGB)
         let engine = try await Engine(modelDir: directory, plan: plan)
+        engine.model.pool.diagnosticOverlapReadyTickets = CommandLine.arguments.contains("--ready-tickets")
+        engine.model.pool.diagnosticOverlapDirectCopies = CommandLine.arguments.contains("--joined-copies")
         let promptText = CommandLine.arguments.contains("--sky")
             ? "Explain why the sky is blue, in about 200 words."
             : "Explain how a hash map works, in about 200 words."
@@ -226,6 +228,8 @@ struct RoutingHandoffProbe {
         let stats = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result.stats))
         let options = try JSONSerialization.jsonObject(with: JSONEncoder().encode(engine.model.optimizations))
         let record: [String: Any] = ["kind": "model_cell", "prompt": promptText,
+            "ready_ticket_prelaunch_records": engine.model.pool.readyTicketPrelaunchRecords,
+            "overlap_direct_batches": engine.model.pool.overlapDirectBatches,
             "prompt_ids": prompt, "output_ids": result.ids, "stats": stats, "plan": plan.json(), "optimizations": options,
             "swapins_delta": after.swapins-before.swapins, "swapouts_delta": after.swapouts-before.swapouts,
             "thermal_before": conditions.thermalState, "thermal_after": end.thermalState,

@@ -93,6 +93,7 @@ struct OptimizationStateCheck: ParsableCommand {
         else if variant == "vision-prescaled-capacity" { report = Diagnostics.optimizationVisionCapacity(preserveQueryRounding: true) }
         else if variant == "vision-prescaled-tower" { report = try Diagnostics.optimizationVisionTowerCapacity(modelDir: model.modelURL, preserveQueryRounding: true) }
         else if variant == "resident-overlap-component" { report = try Diagnostics.optimizationResidentOverlap(modelDir: model.modelURL) }
+        else if variant == "ready-overlap-component" { report = try Diagnostics.optimizationResidentOverlap(modelDir: model.modelURL, readyPrototype: true) }
         else if variant == "resident-overlap-recovery" || variant == "resident-overlap-recovery-mtp" {
             report = try Diagnostics.optimizationRequestReadRecovery(modelDir: model.modelURL,
                 mtp: variant == "resident-overlap-recovery-mtp", residentOverlap: true)
