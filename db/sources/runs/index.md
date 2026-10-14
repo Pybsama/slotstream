@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-13T16:44:57.453435Z
+updated: 2026-10-14T15:15:55.778685Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-14-issue54-full-model]] — Six full-model requests complete without the reported 32k cliff on M5 across deployment, portable and automatic lookahead configurations; one interrupted prefill preserved
 - [[sources/runs/2026/10/2026-10-13-issue54-native-boundary]] — Native trained-weight boundary probes pass on both local deployment and portable rotation paths; full model still cannot launch safely
 - [[sources/runs/2026/10/2026-10-13-issue54-boundary-followup]] — Expanded issue 54 path audit, bounded component probe and explicit full-model headroom refusal
 - [[sources/runs/2026/10/2026-10-13-ready-overlap-prototype]] — Ready-ticket overlap prototype: exact trained-weight and model outputs, no qualified speed gain
@@ -506,9 +507,8 @@ updated: 2026-10-13T16:44:57.453435Z
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-seven-native-pass]] — All seven smaller-group native cases pass with complete prior coverage
 - [[sources/runs/2026/09/2026-09-09-optimization-qualified-scope-decode-observations]] — Qualified scope cohort retains decode work and lowers end memory while short I/O time rises
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-build-pure-and-native-freeze]] — Smaller-group sizing compiles, preserves all prior pure and CLI checks, and freezes seven exact native cases
-- [[sources/runs/2026/09/2026-09-09-optimization-quiet-scope-complete-pass]] — Full original read-scope cohort qualifies startup and request benefit under the unchanged process cap
 
 ## More
 
-This folder has 911 files. The 500 most recent are listed above.
+This folder has 912 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

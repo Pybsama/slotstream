@@ -2,12 +2,13 @@
 type: measurement
 id: 01m4v2e99sw1kmxh7fqyrm00c0
 created: 2026-10-13T16:44:57.529519+00:00
-updated: 2026-10-13T16:44:57.529519+00:00
+updated: 2026-10-14T15:16:12.682687+00:00
 summary: Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff
 date: 2026-10-13
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
+note: Full-model follow-up is now available in [[records/measurements/issue54-full-model-2026-10-14]]; the earlier component results and launch refusals remain historical evidence.
 order: '1820'
 runs: '[[sources/runs/2026/10/2026-10-13-issue54-native-boundary]]'
 title: Issue 54 native trained-weight boundary diagnosis

@@ -2,9 +2,10 @@ import Foundation
 
 /// The qualified decode lookahead: router-reuse expert prefetch with slot
 /// adoption, FP32 copies of the router weights, and a GPU barrier every four
-/// layers whose forecasts ride the next routing readback. It needs the draft
-/// head and turns on with it wherever the expert cache still reaches the draft
-/// head's activation floor.
+/// layers whose forecasts ride the next routing readback. With the draft head,
+/// it turns on wherever the expert cache still reaches the head's activation
+/// floor. Plain decode, including `--mtp off`, has its own activation floor in
+/// `Planner.plainLookaheadFloorPerLayer`.
 ///
 /// Evidence: the held-out B1 cohort ran this exact configuration against the
 /// shipped path at a 20 GB target with two drafts: 1.114 decode throughput
@@ -13,6 +14,8 @@ import Foundation
 /// Scope: one M5 Pro, text decode with the draft head, caches of about 76 to 88
 /// experts per layer. Revision: a clean paired loss at a cache size it runs at.
 /// db/records/decisions/decode-lookahead-default-with-the-draft-head.md
+/// Plain-decode qualification and its separate limits:
+/// db/records/decisions/decode-lookahead-in-plain-decode.md
 ///
 /// Planner policy only, with no MLX or environment dependency, so
 /// Tools/context_proxy.py compiles it beside the other pure planner sources.
@@ -57,8 +60,8 @@ public enum DecodeLookahead {
 
 /// How a memory plan treats the decode lookahead.
 public enum DecodeLookaheadPlanning: Sendable, Equatable {
-    /// The default: on with the draft head when the cache still reaches the
-    /// activation floor after the head's charge; its bytes come out of the pool.
+    /// The default: on when the cache reaches the applicable draft-head or
+    /// plain-decode activation floor; its bytes come out of the pool.
     case automatic
     /// The default with the checkpoint's shipped tap correction located next
     /// to the weights (`RouterTapCorrection.shipped`): the corrected attention
