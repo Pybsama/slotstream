@@ -8,7 +8,7 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/sevra-scroll-check-XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
 OBJECTS=()
 # find, not ripgrep: a clean Mac, such as a CI runner, has only the system tools.
-for target in SevraPresentation Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
+for target in SevraPresentation SevraText Markdown CAtomic cmark_gfm cmark_gfm_extensions; do
     while IFS= read -r object; do OBJECTS+=("$object"); done < <(find "$OUT/$target.build" -name '*.o' -type f | sort)
 done
 swiftc -swift-version 5 -parse-as-library -I "$OUT/Modules" \

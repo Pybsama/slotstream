@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import SevraPresentation
+import SevraText
 
 final class MarkdownDocumentTests {
     func render(_ source: String, citations: Set<String> = []) -> RenderedDocument {
@@ -49,6 +50,22 @@ final class MarkdownDocumentTests {
         let invalid = (result.text.string as NSString).range(of: "[S2]")
         checkEqual((result.text.attribute(.link, at: valid.location, effectiveRange: nil) as? URL)?.scheme, "sevra-citation")
         checkNil(result.text.attribute(.link, at: invalid.location, effectiveRange: nil))
+        let variants = render("Budget [S1, page 2]. Both [S1; S2, pp. 3-4]. Unknown [S3, page 7]. `Code [S1]`. [A link [S1]](https://example.com).", citations: ["S1", "S2"])
+        var urls: [URL] = []
+        variants.text.enumerateAttribute(.link, in: NSRange(location: 0, length: variants.text.length)) { value, _, _ in if let url = value as? URL, url.scheme == "sevra-citation" { urls.append(url) } }
+        checkEqual(urls.count, 3)
+        checkEqual(Set(urls.map { $0.lastPathComponent }), ["S1", "S2"])
+        checkTrue(CitationReferences.inText("[S1" + String(repeating: " ", count: 80_000) + "broken]").isEmpty)
+        checkEqual(CitationReferences.inMarkdown("Claim [S1, page 2], [S2; S3]. `Code [S4]` [link [S5]](https://example.com)\n\n```text\n[S6]\n```"), ["S1", "S2", "S3"])
+        let json = "{\"merchant\":\"Café\",\"total\":47.350,\"literal\":\"[S1]\"}"
+        checkEqual(StructuredReply.finalized("```json\n" + json + "\n```"), json)
+        for unchanged in ["```json\n{broken}\n```", "Here it is:\n```json\n" + json + "\n```", "```python\nx = 1\n```", "```json\n" + json] { checkEqual(StructuredReply.finalized(unchanged), unchanged) }
+        let structured = render(json, citations: ["S1"])
+        checkEqual(structured.regions.first?.copyText, json)
+        checkEqual(structured.regions.first?.source, 0..<json.utf8.count)
+        checkEqual(structured.regions.first?.title, "json")
+        let literal = (structured.text.string as NSString).range(of: "[S1]")
+        checkNil(structured.text.attribute(.link, at: literal.location, effectiveRange: nil))
     }
     func testSectionReuseAndLateReferences() {
         let renderer = MarkdownDocumentRenderer(), style = DocumentStyle()

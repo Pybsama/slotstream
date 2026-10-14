@@ -7,6 +7,7 @@ cd "$(dirname "$0")/.."
 # apps/macos/NativeChecks/ThinkingUIChecks.swift over a scripted engine.
 # Snapshots land in .build/sevra-thinking-ui/ (override with SEVRA_UI_OUT).
 DBMD=${SEVRA_DBMD:-$HOME/.dbmd/bin/dbmd}
+python3 Tools/prepare_sevra_build.py
 swift build --package-path apps/macos --product Sevra -j "${SEVRA_BUILD_JOBS:-2}"
 BIN=$(swift build --package-path apps/macos --show-bin-path)
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/sevra-thinking-ui-XXXXXX")

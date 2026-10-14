@@ -16,6 +16,17 @@ are insufficient; an optional knob does not repair an unreliable optimization.
 Preserve historical evidence, distinguish hypotheses from verified causes, read
 prior replies before posting, and close only issues a verified release resolves.
 
+## Qualify complete native workflows
+
+Follow the [native workflow qualification decision](db/records/decisions/qualify-complete-native-workflows.md).
+Test the person's complete job through the production model, tools, renderer,
+review and delivered app. Preserve failing prompts and inputs. Prefer bounded,
+schema-derived recovery and deterministic computation over special spellings or
+model arithmetic. Keep citation ownership, exact output, privacy and review
+boundaries intact. Verify the app's embedded engine and build identity separately
+from the CLI. Missing capabilities and disclosed limitations are not implemented
+features; maintain the task map and remaining gates alongside code.
+
 ## Sevra integration direction (September 8, 2026)
 
 Read [the canonical engineering integration record](db/records/design/sevra-maintained-model-integration.md),

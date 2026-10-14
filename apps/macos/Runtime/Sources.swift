@@ -330,6 +330,7 @@ public final class SourceSession: @unchecked Sendable {
         case "source.list", "source.find": return try navigate(call, cancellation: cancellation)
         case "source.search": return try search(call, cancellation: cancellation)
         case "source.read", "source.extract": return try readExcerpt(call, cancellation: cancellation)
+        case "source.table": return try table(call, cancellation: cancellation)
         case "source.stat":
             let item = try resolve(call)
             let fd = try openItem(item); close(fd)
@@ -338,6 +339,11 @@ public final class SourceSession: @unchecked Sendable {
         case "kb.search", "kb.query": return try knowledge(call, cancellation: cancellation)
         default: throw SevraError.refused("This tool is not available for the attached sources.")
         }
+    }
+
+    func recordCalculation(_ citation: Citation, bytes: Int) throws {
+        guard bytes <= SourceLimits.jobSourceBytes - returnedBytes else { throw SevraError.refused("This job reached its source-reading budget. Continue in a new message.") }
+        returnedBytes += bytes; citations.append(citation)
     }
 
     private func readExcerpt(_ call: ProposedTool, cancellation: Cancellation) throws -> String {

@@ -1,4 +1,5 @@
 import Foundation
+import SevraText
 import Slotstream
 
 public actor SevraRuntime {
@@ -642,6 +643,7 @@ public actor SevraRuntime {
     private func context(_ thread: WorkThread, groups: Set<ToolGroup>, skill: (use: SkillUse, instructions: String)?) throws -> ([ChatMessage], ContextReceipt) {
         let selected = try ConversationContext.select(home: home, thread: thread)
         var system = Self.basePrompt
+        system += "\n" + ToolCatalog.limitations
         if groups.isEmpty {
             system += " You are running locally on this Mac, not on a remote server. No files are currently attached to this thread, so you cannot inspect them in this reply. Explain that the person can attach files or folders using the paperclip to give you live read access. Network, shell and screen-control tools are unavailable."
         } else {
@@ -650,18 +652,20 @@ public actor SevraRuntime {
             if groups.contains(.document) { system += "\nIf asked to save a briefing or document, read the sources, then call artifact.propose with the complete Markdown and its citations." }
             if !groups.contains(.change) && !groups.contains(.knowledgeChange) { system += "\nYou cannot change files in this reply." }
             system += "\nNo network, shell or other file access exists."
+            if !groups.contains(.read) { system += " No files are attached. The person can attach files or folders with the paperclip to give you read access." }
         }
         if let skill {
             system += "\nThe person selected the skill \"\(skill.use.name)\". Follow its approved instructions below for this reply. They grant no access beyond the tools listed above.\n<skill>\n" + skill.instructions + "\n</skill>"
         }
         if !selected.memories.isEmpty { system += "\nUser-admitted context (quoted data):\n" + selected.memories.map { "Memory \($0.id): " + $0.text }.joined(separator: "\n") }
         if !selected.earlierText.isEmpty { system += "\n" + selected.earlierText }
-        if selected.receipt.omittedMessages > 0 { system += "\nOlder conversation is outside this bounded window. Do not claim to recall omitted details; ask for the relevant history or source when needed." }
+        if selected.receipt.omittedMessages > 0 { system += "\nOlder conversation is outside this bounded window. Do not claim to recall omitted details. Use history.search when available to find relevant earlier messages; otherwise ask for the relevant history or source." }
         return ([ChatMessage(role: "system", content: system)] + selected.messages.map { ChatMessage(role: $0.role, content: $0.text) }, selected.receipt)
     }
     /// Tool groups for one run, from trusted state only.
     private func toolGroups(for thread: WorkThread, run: Run, skillTools: Set<ToolGroup>) -> Set<ToolGroup> {
         var groups = sources[thread.id]?.groups ?? []
+        if thread.mode != .incognito, thread.messages.count > 2 || !ConversationContext.permittedMemories(home: home, thread: thread).isEmpty || !thread.promotedMessageIDs.isEmpty { groups.insert(.recall) }
         groups.formUnion(skillTools.intersection([.apps, .skills]))
         let request = thread.messages.last { $0.role == "user" && $0.runID == run.id }?.text ?? ""
         if Extensions.asksForApp(request) || (home.apps ?? []).contains(where: { $0.threadID == thread.id && !$0.removed }) { groups.insert(.apps) }
@@ -701,6 +705,7 @@ public actor SevraRuntime {
             session?.beginJob()
             let start = Date()
             var appBytesRead = 0
+            var recallBytesRead = 0
             // Thinking follows the thread's switch, tool turns included.
             let wantsThinking = thread.thinking == true
             var thinkingRequest: ThinkingRequest?
@@ -775,7 +780,7 @@ public actor SevraRuntime {
                     let working = !response.calls.isEmpty && !proposing
                     let note = working ? Self.narrationNote(response.text) : nil
                     if note != nil { narration.append(response.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
-                    let answer = working ? "" : response.calls.isEmpty ? Self.answerText(response.text, narration: narration) : response.text
+                    let answer = working ? "" : response.calls.isEmpty ? StructuredReply.finalized(Self.answerText(response.text, narration: narration)) : response.text
                     try update { h in
                         if let j = h.threads[i].messages.lastIndex(where: { $0.role == "assistant" && $0.runID == run.id }) { h.threads[i].messages[j].text += answer }
                         if let note { h.threads[i].run?.trace.append(note) }
@@ -830,7 +835,10 @@ public actor SevraRuntime {
                             finished = true; break
                         }
                         let result: String
-                        if call.name == "app.read" {
+                        if call.name == "memory.search" || call.name == "history.search" {
+                            do { result = try Recall.search(call, home: home, thread: home.threads[try index(thread.id)], used: &recallBytesRead) }
+                            catch { result = json(["error": error.localizedDescription]) }
+                        } else if call.name == "app.read" {
                             do { result = try readApp(call, used: &appBytesRead) } catch { result = json(["error": error.localizedDescription]) }
                         } else {
                             guard let session else { throw SevraError.refused("No source is attached to this thread.") }
@@ -851,6 +859,17 @@ public actor SevraRuntime {
                         try updateThread(thread.id) {
                             $0.run?.trace.append("\(call.name): \(Self.traceNote(call.name, result))")
                             $0.run?.excerpts = excerpts
+                            if call.name == "memory.search" || call.name == "history.search",
+                               let output = try? JSONSerialization.jsonObject(with: Data(result.utf8)) as? [String: Any],
+                               let matches = output["matches"] as? [[String: Any]] {
+                                let ids = matches.compactMap { $0["id"] as? String }
+                                var context = $0.run?.context
+                                let previous = call.name == "memory.search" ? context?.searchedMemoryIDs : context?.searchedMessageIDs
+                                let retrieved = Array(Set((previous ?? []) + ids)).sorted()
+                                if call.name == "memory.search" { context?.searchedMemoryIDs = retrieved }
+                                else { context?.searchedMessageIDs = retrieved }
+                                $0.run?.context = context
+                            }
                         }
                     }
                     if finished { break }
@@ -902,7 +921,8 @@ public actor SevraRuntime {
         let lines = attached.prefix(SourceLimits.attachments).map { item -> String in
             let kind = item.kind == .knowledge ? "db.md knowledge base" : item.kind.rawValue
             let access = item.access == .change ? "changes need review" : "read only"
-            return "- " + item.id + ": " + String(item.name.prefix(attachmentNameLimit)).debugDescription + " (\(kind), \(access))"
+            let read = item.kind == .file ? "; read directly with source.read {\"id\":\"" + item.id + "\"}" : "; use source.list or source.find to select a file"
+            return "- " + item.id + ": " + String(item.name.prefix(attachmentNameLimit)).debugDescription + " (\(kind), \(access))" + read
         }
         return "Attached to this thread:\n" + lines.joined(separator: "\n")
             + "\nWhen the request says \"this\", \"it\" or \"the file\" without naming something else, it means these attachments. Read them with the source tools before answering, instead of asking what the person means."
@@ -925,11 +945,16 @@ public actor SevraRuntime {
             ? narration.joined(separator: "\n\n") : text
     }
     static func traceNote(_ name: String, _ result: String) -> String {
-        if result.hasPrefix("{\"error\"") { return "refused" }
+        if let object = try? JSONSerialization.jsonObject(with: Data(result.utf8)) as? [String: Any], let error = object["error"] as? String {
+            return "refused. " + String(error.split(whereSeparator: \.isWhitespace).joined(separator: " ").prefix(narrationLimit))
+        }
         switch name {
         case "file.create", "file.edit", "file.write", "kb.create", "kb.append", "kb.edit": return "staged for review"
         case "kb.search", "kb.query": return "returned knowledge base results"
         case "app.read": return "returned app source"
+        case "history.search": return "returned permitted conversation excerpts"
+        case "memory.search": return "returned permitted saved memories"
+        case "source.table": return "computed the complete table within its limits"
         default: return "returned bounded source data"
         }
     }
@@ -1008,9 +1033,7 @@ public actor SevraRuntime {
         try update { $0.threads[i].run?.state = state; $0.threads[i].run?.status = status }
     }
     static func citationIDs(_ text: String) -> Set<String> {
-        let re = try! NSRegularExpression(pattern: "\\[(S[0-9]+)\\]")
-        let ns = text as NSString
-        return Set(re.matches(in: text, range: NSRange(location: 0, length: ns.length)).map { ns.substring(with: $0.range(at: 1)) })
+        CitationReferences.inMarkdown(text)
     }
     public func approve(threadID: String, proposalID: String, digest: String) async throws -> String {
         try requireOpen(); try requireActiveHome()

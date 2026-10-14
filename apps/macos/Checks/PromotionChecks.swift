@@ -5,9 +5,9 @@ import Slotstream
 private actor PromotionProbe: Inference {
     nonisolated let simulated = true
     var contexts: [[ChatMessage]] = []
-    var toolAvailability: [Bool] = []
+    var toolAvailability: [[String]] = []
     func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
-        contexts.append(history); toolAvailability.append(!tools.isEmpty)
+        contexts.append(history); toolAvailability.append(tools.map(\.name))
         return EngineTurn(text: "Continuation probe reply.")
     }
     func unload() {}
@@ -78,7 +78,7 @@ func promotionChecks(root: URL, dbmd: URL) async throws {
     try require(history.dropFirst().map(\.content) == selected.map(\.text) + ["What is the codename?"], "model receives exact selected turns followed by current request")
     try require(history.dropFirst().map(\.role) == ["user", "assistant", "user"], "context roles and chronology retained")
     let tools = await probe.toolAvailability.last!
-    try require(!tools, "quoted history grants no tools")
+    try require(Set(tools) == ["history.search", "memory.search"], "linked history permits recall only, never file, network or action tools")
     try require(replied.run?.state == .completed, "continued response completes")
     try await runtime!.submit(threadID: "home", text: "A later unrelated Home exchange", nonce: "later")
     _ = try await terminal(runtime!, "home")

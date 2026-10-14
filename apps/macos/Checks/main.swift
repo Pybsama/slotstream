@@ -24,6 +24,7 @@ Task {
         if try await realCacheCheckIfRequested() { return }
         if try await realSourcesIfRequested() { return }
         if try await realBasicsCheckIfRequested() { return }
+        if try await realCapabilitiesIfRequested() { return }
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-check-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -31,6 +32,7 @@ Task {
         if CommandLine.arguments.contains("--external-drafts") { try await externalDraftChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--archive") { try await archiveChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--context-window") { try await longConversationChecks(root: root, dbmd: dbmd); return }
+        if CommandLine.arguments.contains("--capabilities") { try await capabilityChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--performance") { try await performanceChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--thinking") { try await thinkingChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--response-details") { try await responseDetailsChecks(root: root, dbmd: dbmd); return }
@@ -100,6 +102,7 @@ Task {
         do { _ = try source.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:notes.md")]), cancellation: Cancellation()); throw SevraError.refused("CHECK FAILED: symlink substitution accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "source symlink substitution denied") }
         print("PASS: terminal gating, undeclared tools, single-file scope, sibling refusal, source symlink substitution")
         try await auditChecks(root: root, dbmd: dbmd)
+        try await capabilityChecks(root: root, dbmd: dbmd)
         try await archiveChecks(root: root, dbmd: dbmd)
         try await externalDraftChecks(root: root, dbmd: dbmd)
         try await longConversationChecks(root: root, dbmd: dbmd)

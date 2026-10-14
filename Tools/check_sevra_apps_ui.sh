@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
 # contacts a network. Snapshots land in .build/sevra-apps-ui/ (override with
 # SEVRA_UI_OUT).
 DBMD=${SEVRA_DBMD:-$HOME/.dbmd/bin/dbmd}
+python3 Tools/prepare_sevra_build.py
 swift build --package-path apps/macos --product Sevra -j "${SEVRA_BUILD_JOBS:-2}"
 swift build --package-path apps/macos --product sevra-extract -j "${SEVRA_BUILD_JOBS:-2}"
 BIN=$(swift build --package-path apps/macos --show-bin-path)

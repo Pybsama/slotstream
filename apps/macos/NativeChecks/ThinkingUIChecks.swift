@@ -202,6 +202,16 @@ import SevraPresentation
         check(visible("Think longer", lines), "Home composer shows the Think longer switch")
         check(visible("Local on this Mac", lines), "Home hint stays plain while thinking is off")
 
+        let helpOpened = try await clickLabel("What can I do here?")
+        check(helpOpened, "capability help label is clickable")
+        try await pause(0.4)
+        lines = try read(try snapshot("01b-capabilities"))
+        check(visible("Web browsing", lines) && visible("transcription", lines), "capability help actually opens and states unavailable features")
+        _ = try await clickLabel("What can I do here?")
+        try await pause(0.3)
+        lines = try read(render())
+        check(!visible("Web browsing", lines), "capability help closes again")
+
         // 2. A new thread starts with thinking off.
         model.newThread()
         try await settle(12, "a new thread") { model.selectedID != "home" && model.thread != nil && model.composer.ready }

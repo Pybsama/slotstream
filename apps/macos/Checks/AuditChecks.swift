@@ -105,7 +105,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["id": .string("a1:audit-source.md")]), ProposedTool(name: "shell", arguments: [:])]),
         EngineTurn(text: "", calls: [ProposedTool(name: "artifact.propose", arguments: ["filename": .string("one.md"), "content": .string("One [S1]")]), ProposedTool(name: "artifact.propose", arguments: ["filename": .string("two.md"), "content": .string("Two [S1]")])])]
     for (index, response) in malformed.enumerated() {
-        let invalid = try SevraRuntime(homeURL: root.appendingPathComponent("audit-tools-\(index)"), dbmd: dbmd, inference: ScriptedInference(turns: [response]))
+        let invalid = try SevraRuntime(homeURL: root.appendingPathComponent("audit-tools-\(index)"), dbmd: dbmd, inference: ScriptedInference(turns: [response, response]))
         try await invalid.attach(threadID: "home", folder: source)
         try await invalid.submit(threadID: "home", text: "Inspect tool response validation", nonce: "invalid")
         let failed = try await terminal(invalid, "home")
@@ -130,7 +130,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     try await repair.shutdown()
     for (name, turns, expectedCalls) in [
         ("exhausted", [invalidReadSet, invalidReadSet, EngineTurn(text: "must not run")], 2),
-        ("unknown", [EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: ["limit": .int(1)]), ProposedTool(name: "shell", arguments: [:])]), EngineTurn(text: "must not run")], 1)
+        ("unknown", [EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: ["limit": .int(1)]), ProposedTool(name: "shell", arguments: [:])]), EngineTurn(text: "", calls: [ProposedTool(name: "shell", arguments: [:])])], 2)
     ] {
         let probe = ScriptedInference(turns: turns)
         let rejected = try SevraRuntime(homeURL: root.appendingPathComponent("audit-correction-" + name), dbmd: dbmd, inference: probe)
@@ -153,7 +153,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     try await spelling.submit(threadID: "home", text: "Read the source and propose a document", nonce: "spelling")
     let spellingReview = try await terminal(spelling, "home")
     let spellingContexts = await spellingEngine.observedContexts
-    try require(spellingReview.run?.state == .needsYou && spellingContexts.count == 3 && spellingContexts[2].first?.content.contains("Use the exact tool name artifact.propose") == true, "observed tool-name misspelling receives one explicit correction")
+    try require(spellingReview.run?.state == .needsYou && spellingContexts.count == 3 && spellingContexts[2].first?.content.contains("artifact.propose(filename: string required") == true, "observed tool-name misspelling receives one explicit correction")
     try require(!FileManager.default.fileExists(atPath: spelling.homeURL.appendingPathComponent("artifacts/spelling.md").path), "misspelled tool is never executed or silently mapped to a write")
     let stoppedProposal = spellingReview.run!.proposal!
     try await spelling.stop(threadID: "home")

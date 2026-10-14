@@ -255,6 +255,14 @@ extension SourceSession {
     }
 
     func item(_ id: String) throws -> SourceItem {
+        // A selected file is itself a readable source. Its attachment ID is
+        // sufficient, with exactly the same single-file scope as its full ID.
+        if let index = attachments.firstIndex(where: { $0.id == id }) {
+            guard attachments[index].kind == .file else {
+                throw SevraError.refused("That ID names a folder. Use source.list or source.find to select a file inside it.")
+            }
+            return try inspect(attachment: index, path: attachments[index].name)
+        }
         guard let separator = id.firstIndex(of: ":"), let index = attachments.firstIndex(where: { $0.id == id[..<separator] }) else {
             throw SevraError.refused("Unknown file ID. Use source.list, source.find or a search result.")
         }
@@ -275,7 +283,10 @@ extension SourceSession {
             return try item(id)
         }
         let index = try attachmentIndex(call.optionalString("attachment"))
-        return try inspect(attachment: index, path: call.string("path"))
+        let path = try call.optionalString("path")
+        if path == nil, attachments[index].kind == .file { return try item(attachments[index].id) }
+        guard let path else { throw SevraError.refused("Choose a file inside this folder with source.list or source.find, then read its id or path.") }
+        return try inspect(attachment: index, path: path)
     }
 
     func navigation(_ call: ProposedTool, recursive: Bool) throws -> SourceCursor {

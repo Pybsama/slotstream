@@ -95,6 +95,9 @@ func sourceNavigationChecks(root: URL, dbmd: URL) async throws {
     try sourceRequire(scoped.count == 1, "an explicitly scoped dependency folder remains navigable")
     let single = SourceSession()
     try single.attach(url: folder.appendingPathComponent("nested/original.txt"), access: .read)
+    try sourceRequire(try sourceCall(single, "source.read", ["id": .string("a1")])["content"] as? String == "after\n", "a single attached file has a directly readable attachment ID")
+    try sourceRequire(try sourceCall(single, "source.read", ["attachment": .string("a1")])["content"] as? String == "after\n", "attachment-only reads resolve exactly the selected file")
+    try sourceRefuses("folder ID cannot silently choose a file") { _ = try sourceCall(session, "source.read", ["id": .string(attached.id)]) }
     try sourceRefuses("a selected file does not grant its siblings") { _ = try sourceCall(single, "source.read", ["path": .string("../outside.txt")]) }
     try sourceRefuses("a forged file ID does not expand a single-file grant") { _ = try sourceCall(single, "source.read", ["id": .string("a1:renamed.txt")]) }
     try sourceRefuses("a file attachment cannot be used as a directory grant") { _ = try sourceCall(single, "source.list", ["path": .string("nested")]) }

@@ -12,6 +12,7 @@ mkdir -p .build
 STAGE=$(mktemp -d "$PWD/.build/sevra-bundle-XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT
 python3 Tools/mac_build_inputs.py "$DBMD" > "$STAGE/before.json"
+python3 Tools/prepare_sevra_build.py --configuration "$CONFIG"
 swift build --package-path apps/macos -c "$CONFIG" --product Sevra -j 2
 swift build --package-path apps/macos -c "$CONFIG" --product sevra-extract -j 2
 OUT=$(swift build --package-path apps/macos -c "$CONFIG" --show-bin-path)

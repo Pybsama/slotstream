@@ -1023,6 +1023,26 @@ Sevra is being built as a native personal AI application around Slotstream.
 The development app lives under `apps/macos`. This is ongoing implementation,
 not an announced alpha or a supported installer.
 
+## What works in the development app
+
+| Task | Current workflow and limits |
+| --- | --- |
+| Private documents | Attach a file or folder, ask a question, then open its evidence citations. Reads are bounded; an excerpt is not proof that every page was covered. |
+| Writing and translation | Draft, rewrite or translate supplied text. Review names, facts, tone and language quality before using it. |
+| Coding | Attach code with changes allowed, inspect the proposed diff, then approve it. Run tests in your editor; Sevra does not execute project code. |
+| Learning and creative writing | Ask for explanations, examples or constrained drafts. These are model answers, with no independent fact checker. |
+| Research | Compare attached sources or saved web pages with citations. Live web browsing and web search are unavailable. |
+| Personal knowledge | Explicitly save memories or attach a db.md store. Sevra can search permitted memories and older messages in the current conversation when they do not fit its initial context. Retrieval uses literal words, not semantic search. |
+| Decisions and planning | Supply the options and constraints and ask for a comparison. External facts and availability are not checked online. |
+| Receipts and extraction | Attach images or scans for OCR. A reply consisting only of a valid JSON code block becomes raw JSON for copying and export, while staying formatted in the view. Syntax validation does not verify extracted facts or a requested schema. |
+| Table analysis | Attach UTF-8 CSV or TSV with unique column headers. Ask for counts, exact decimal sums, minimums, maximums, literal filters or grouped totals. The host computes the complete table within its limits and provides a cited result. Unsupported or oversized inputs refuse instead of producing partial totals. This is not arbitrary Python, SQL or spreadsheet-formula execution. |
+| Meeting notes | Attach or paste an existing transcript to summarize it. Recording and audio transcription are unavailable. |
+
+Images currently provide recognized text, not general visual understanding.
+The empty conversation's **What can I do here?** explains these boundaries.
+The workflow checks and remaining qualification are recorded in the
+[implementation ledger](../db/records/design/sevra-spec/implementation-status.md).
+
 ## Native philosophy
 
 Product behavior is shared through Markdown/text specifications, schemas and
@@ -1059,7 +1079,11 @@ open .build/Sevra.app
 ```
 
 The script copies the runtime dependencies into the development bundle and
-ad-hoc signs it. Developer ID signing, notarization, the installed updater and
+ad-hoc signs it. It rebuilds native consumers when local dependency or toolchain
+inputs change, so an older object cannot keep an obsolete Swift value layout.
+The bundle records its own source and helper identity. Updating the independent
+Slotstream CLI does not update the engine embedded in an existing app bundle;
+rebuild the app too. Developer ID signing, notarization, the installed updater and
 clean-machine qualification are separate work. A successful ad-hoc build does
 not establish a trusted public distribution.
 
@@ -1430,10 +1454,12 @@ after later messages. Earlier citations resolve to their own retained run and
 source excerpt, including after reopening the Home.
 
 The runtime validates the complete tool response before executing any call.
-It can request bounded schema feedback for unsupported argument keys or a
-recognized tool-name spelling mistake. The rejected response executes nothing;
-the model must return a valid new response, and saving still requires exact
-document approval. The final adversarial replay passed this path with the real local model,
+It can request bounded schema feedback for undeclared tool names, missing or
+unsupported argument keys, wrong types, or a terminal proposal mixed with other
+calls. Feedback contains only the currently offered host schemas. The rejected
+response executes nothing; aliases are not executed, the model must return a
+valid new response, and saving still requires exact approval. Staged work stays
+available during the correction. The earlier adversarial replay passed its original path with the real local model,
 including correction, cited proposal, exact approval and reopening the saved
 file. This qualifies the bounded fixture, not every possible user task.
 What the model writes before calling a tool says what it is about to do, so
@@ -1452,6 +1478,9 @@ pages; Copy conversation and Export Markdown preserve the complete source.
 Raw HTML stays literal, images do not download, and opening a web link requires
 a destination review. Evidence links resolve only to excerpts supplied by the
 native owner. Unsupported or oversized Markdown remains readable as source.
+Citation page annotations and grouped citation labels resolve to those same
+owned excerpts; code literals and ordinary web links do not become evidence.
+Activity includes the reason a tool refused, rather than only a generic label.
 
 Hover over the conversation icons for their native help: **Outline** jumps
 to a heading, code block or table and appears when the rendered view has

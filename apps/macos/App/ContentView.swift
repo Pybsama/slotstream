@@ -33,6 +33,7 @@ struct ContentView: View {
     @State private var artifactSourceMode = false
     @State private var documentNotice = ""
     @State private var showSources = false
+    @State private var showCapabilities = false
     @State private var settingsCategory = SettingsCategory.general
     @State private var selectedSearchID: String?
     @FocusState private var searchFocused: Bool
@@ -222,10 +223,22 @@ struct ContentView: View {
             if !ready {
                 VStack(spacing: 16) { if model.error == nil { ProgressView(); Text("Opening your Home…") } else { Text("Your Home could not be opened.").font(.headline); Text("Your saved files have been preserved. The message above explains what needs attention.").foregroundStyle(secondaryInk).multilineTextAlignment(.center) } }.padding(32).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if messages.isEmpty {
+                GeometryReader { viewport in
+                ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Spacer()
                     Text(model.thread?.mode == .incognito ? "A private place to think." : "What would you like to work on?").font(.custom("Poppins-Medium", size: 24))
                     Text(model.thread?.mode == .incognito ? "This thread stays out of saved history and shared memory. It disappears when you close it." : "Ask something, or bring a file and work through it together.").font(.custom("Inter-Regular", size: 16)).foregroundStyle(secondaryInk).fixedSize(horizontal: false, vertical: true)
+                    Button { showCapabilities.toggle() } label: {
+                        Label("What can I do here?", systemImage: showCapabilities ? "chevron.down" : "chevron.right")
+                    }.buttonStyle(.plain).accessibilityIdentifier("current-capabilities")
+                        .accessibilityValue(showCapabilities ? "Expanded" : "Collapsed")
+                    if showCapabilities {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Draft and translate text, explain ideas, compare options, or write a story. Attach documents for cited answers, receipts for text extraction, tables for calculations, or code for changes you review.")
+                            Text(ToolCatalog.limitations).foregroundStyle(secondaryInk)
+                        }.font(.callout).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+                    }
                     HStack(spacing: 12) {
                         Button { model.attach() } label: { Label("Attach files or folders", systemImage: "paperclip") }.disabled(!ready || model.working || model.attaching || model.aiPaused).help(attachHelp)
                         if model.thread?.mode != .incognito {
@@ -234,7 +247,9 @@ struct ContentView: View {
                     }.padding(.top, 4)
                     Text("Try: Summarize this PDF with citations, fix the dates in my notes, or search my knowledge base.").font(.callout).foregroundStyle(secondaryInk)
                     Spacer()
-                }.padding(.vertical, 32).readingColumn()
+                }.padding(.vertical, 32).readingColumn().frame(minHeight: viewport.size.height)
+                }
+                }
             } else {
                 documentToolbar
                 Transcript(documentID: model.selectedID + ":" + (pageEndID ?? "latest"), sections: loadedSections, fontSize: fontSize, sourceMode: sourceMode, hidden: covered, session: model.textSession, onLink: model.inspectLink, onNotice: { if !covered, documentNotice != $0 { documentNotice = $0 } }, onOutline: { outline = $0 }, onScrollAwayFromLatest: { scrolledAwayFromLatest = $0 }, onDetails: model.showDetails)
@@ -543,7 +558,7 @@ struct ContentView: View {
                     if context.omittedMessages > 0 || context.omittedMemories > 0 {
                         Text("\(context.omittedMessages) older messages remain in history. \(context.omittedMemories) eligible memories were outside this response's selection.").font(.callout).foregroundStyle(secondaryInk)
                     }
-                    Text("This is the conversation context selected before the response began. Later source reads are available in Activity and document citations.").font(.callout).foregroundStyle(secondaryInk)
+                    Text("This is the conversation context selected before the response began. Later recall searches are listed below; file reads and calculations appear in Activity and citations.").font(.callout).foregroundStyle(secondaryInk)
                     DisclosureGroup("Messages included") {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(context.messageIDs, id: \.self) { id in
@@ -570,6 +585,22 @@ struct ContentView: View {
                         ForEach(context.earlierExcerpts, id: \.messageID) { excerpt in
                             Text(excerpt.role == "user" ? "You" : "Sevra").font(.caption).foregroundStyle(secondaryInk)
                             Text(excerpt.text + (excerpt.truncated ? "…" : "")).textSelection(.enabled)
+                        }
+                    }
+                    if !(context.searchedMessageIDs ?? []).isEmpty || !(context.searchedMemoryIDs ?? []).isEmpty {
+                        DisclosureGroup("Retrieved during this response") {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Original messages and memories matched by recall tools. History results may have included only an excerpt.").font(.callout).foregroundStyle(secondaryInk)
+                                ForEach(context.searchedMessageIDs ?? [], id: \.self) { id in
+                                    if let message = model.snapshot?.home.threads.flatMap(\.messages).first(where: { $0.id == id }) { Text(message.text).textSelection(.enabled) }
+                                }
+                                ForEach(context.searchedMemoryIDs ?? [], id: \.self) { id in
+                                    if let memory = model.snapshot?.home.memories.first(where: { $0.id == id }) {
+                                        Text(memory.text).textSelection(.enabled)
+                                        if memory.forgotten { Text("No longer eligible for future responses.").font(.caption).foregroundStyle(secondaryInk) }
+                                    }
+                                }
+                            }.padding(.top, 8)
                         }
                     }
                 } else { Text("Send a message to inspect its context.").foregroundStyle(secondaryInk) }

@@ -1,5 +1,6 @@
 import AppKit
 import Markdown
+import SevraText
 
 public struct DocumentSection: Equatable, Sendable {
     public var id: String
@@ -244,7 +245,10 @@ private final class SectionRenderer {
             // The paginated document host limits loaded messages; source mode does not discard bytes.
             append(section.source, attributes: attributes(mono: true))
         } else if style.sourceMode { append(section.source, attributes: attributes(mono: true)) }
-        else {
+        else if StructuredReply.isJSONContainer(section.source) {
+            block(CodeBlock(language: "json", section.source), depth: 0, indent: 0)
+            if !regions.isEmpty { regions[regions.count - 1].source = 0..<bytes.count; regions[regions.count - 1].copyText = section.source }
+        } else {
             let document = Document(parsing: section.source, options: [.disableSmartOpts])
             for node in document.children { block(node, depth: 0, indent: 0) }
         }
@@ -316,7 +320,7 @@ private final class SectionRenderer {
             append(title + "   ", attributes: label)
             var action = label; action[.link] = MarkdownDocumentRenderer.codeCopyURL(sectionID: section.id, sourceOffset: sourceRange(c).lowerBound); action[.foregroundColor] = style.link
             action[.underlineStyle] = NSUnderlineStyle.single.rawValue
-            append("Copy code", attributes: action); append("\n", attributes: label)
+            append(c.language?.lowercased() == "json" ? "Copy JSON" : "Copy code", attributes: action); append("\n", attributes: label)
             let bodyStart = output.length
             append(c.code.hasSuffix("\n") ? c.code : c.code + "\n", attributes: a)
             highlight(NSRange(location: bodyStart, length: output.length - bodyStart))
@@ -356,9 +360,9 @@ private final class SectionRenderer {
         }
         regions.append(DocumentRegion(kind: .paragraph, sectionID: section.id, display: NSRange(location: start, length: output.length - start), source: sourceRange(node), title: "", copyText: nil))
     }
-    func inline(_ node: any Markup, attributes a: [NSAttributedString.Key: Any], depth: Int) {
+    func inline(_ node: any Markup, attributes a: [NSAttributedString.Key: Any], depth: Int, citations: Bool = true) {
         guard bounded(node, depth: depth) else { return }
-        if let t = node as? Markdown.Text { appendCitations(t.string, attributes: a) }
+        if let t = node as? Markdown.Text { if citations { appendCitations(t.string, attributes: a) } else { append(t.string, attributes: a) } }
         else if let c = node as? InlineCode { var b = a; b[.font] = style.font(mono: true); b[.backgroundColor] = style.well; append(c.code, attributes: b) }
         else if node is SoftBreak { append(" ", attributes: a) }
         else if node is LineBreak { append("\u{2028}", attributes: a) }
@@ -378,16 +382,14 @@ private final class SectionRenderer {
                 b[.link] = url; b[.foregroundColor] = style.link; b[.underlineStyle] = NSUnderlineStyle.single.rawValue; b[.toolTip] = destination
             }
             if node.childCount == 0 { append(raw(node), attributes: b) }
-            else { for child in node.children { inline(child, attributes: b, depth: depth + 1) } }
+            else { for child in node.children { inline(child, attributes: b, depth: depth + 1, citations: citations && !(node is Markdown.Link)) } }
         }
     }
-    static let citation = try! NSRegularExpression(pattern: #"\[(S[0-9]+)\]"#)
     func appendCitations(_ text: String, attributes a: [NSAttributedString.Key: Any]) {
         let start = output.length; append(text, attributes: a)
         guard !section.citationIDs.isEmpty, text.contains("[S") else { return }
-        let ns = text as NSString
-        for match in Self.citation.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
-            let id = ns.substring(with: match.range(at: 1)); guard section.citationIDs.contains(id) else { continue }
+        for match in CitationReferences.inText(text) {
+            let id = match.id; guard section.citationIDs.contains(id) else { continue }
             var url = URLComponents(); url.scheme = "sevra-citation"; url.host = "evidence"; url.path = "/" + section.id + "/" + id
             if let target = url.url { output.addAttributes([.link: target, .foregroundColor: style.link, .underlineStyle: NSUnderlineStyle.single.rawValue], range: NSRange(location: start + match.range.location, length: match.range.length)) }
         }

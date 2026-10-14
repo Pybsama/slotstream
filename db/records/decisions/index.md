@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-13T14:00:46.920415Z
+updated: 2026-10-14T21:37:16.792295Z
 ---
 
 # records/decisions
 
+- [[records/decisions/qualify-complete-native-workflows]] — Qualify useful native jobs across model, tools, evidence, reviewed effects and delivered bundle identity
 - [[records/decisions/residency-speculation-waits-for-layer-completeness]] — Residency speculation remains unqualified; the earlier completeness ceiling omitted ready prefetch tickets, as corrected on October 13
 - [[records/decisions/remove-gpu-keepalive]] — Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
 - [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%

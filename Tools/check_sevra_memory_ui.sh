@@ -4,6 +4,7 @@ cd "$(dirname "$0")/.."
 # Render production memory settings offscreen with simulated telemetry.
 # No model or user Home is loaded.
 DBMD=${SEVRA_DBMD:-$HOME/.dbmd/bin/dbmd}
+python3 Tools/prepare_sevra_build.py
 swift build --package-path apps/macos --product Sevra -j "${SEVRA_BUILD_JOBS:-2}"
 BIN=$(swift build --package-path apps/macos --show-bin-path)
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/sevra-memory-ui-XXXXXX")

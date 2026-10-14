@@ -220,6 +220,9 @@ struct ResponseDetailsView: View {
                 Button("Inspect") { model.inspectContext(threadID: threadID, runID: runID) }.controlSize(.small)
                     .help("See the history and memories this response started from")
             }
+            if !(context.searchedMessageIDs ?? []).isEmpty || !(context.searchedMemoryIDs ?? []).isEmpty {
+                Text("Also retrieved \(context.searchedMessageIDs?.count ?? 0) earlier messages and \(context.searchedMemoryIDs?.count ?? 0) saved memories.").font(.callout)
+            }
         }
     }
 }

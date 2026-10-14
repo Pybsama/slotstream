@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-10T12:26:40.414373+00:00
+updated: 2026-10-14T21:37:16.774016+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -261,3 +261,23 @@ Switching saves conversation and journal drafts, reserves and validates the dest
 `Tools/check_sevra_mac.sh` now includes the production Home UI check. The complete script and final ad-hoc bundle build passed with real dbmd and scripted inference. Home checks exercise draft round trips, separate identities, stale-write refusal, path refusals, owned destinations, real draft conflicts, Incognito and active-work confirmation/cancellation, remembered selection, and a click on the actual rendered recent-Home row. Light/dark chooser and sidebar views were inspected. Source and final binary identity: [[sources/runs/2026/10/2026-10-10-sevra-home-switcher]].
 
 This does not qualify a public Desktop release, real-model switching under load, full keyboard/VoiceOver behavior or other platforms. SQL and a general database inspector are not implemented by this change.
+
+## Capability audit and fixes (October 14, 2026)
+
+The [baseline audit](../../../sources/runs/2026/10/2026-10-14-sevra-capability-audit.md) exercised private documents, writing, translation, learning, creative work, supplied-option decisions, admitted memory, receipt extraction, tables and reviewed code edits. Its small offline jobs mostly completed; the code edit staged a correct change then failed on an undeclared tool spelling. Separate probes found unreadable citation labels, fenced JSON where raw output was requested, an ambiguous direct-file ID, a stale native object and a development bundle that still embedded the removed keepalive code.
+
+The [fix qualification](../../../sources/runs/2026/10/2026-10-14-sevra-capability-fixes.md) now records:
+
+- **Writing, translation, learning and creative work:** existing model workflows retained. The permanent real-workflow fixtures preserve their constraints and factual inputs. The host changes do not establish a general model-quality improvement.
+- **Private documents and offline research:** direct attached-file reads and shared annotated/grouped citation parsing; code literals and unrelated links remain literal. General live web research is still unavailable; attach saved sources.
+- **Coding:** generic schema feedback can recover a malformed name or argument while preserving staged edits for exact review. A rejected call never executes. General project-code execution and in-app test execution remain unavailable.
+- **Personal knowledge:** literal retrieval can search earlier messages in the current thread and explicitly linked Home exchange, plus permitted admitted memories outside the initial context. Pagination, budgets, provenance, Forget and Incognito remain enforced. This is not semantic search or access to every conversation.
+- **Decisions and planning:** supplied constraints/options remain the supported workflow; no online facts or current availability are fetched.
+- **Receipts and structured extraction:** complete valid JSON-only fences become raw, parseable stored output and native code presentation. This checks syntax only, not a requested schema or extracted facts. Image reading remains OCR.
+- **Tables:** a host tool computes complete bounded CSV/TSV counts, decimal sums, extrema, filters and groups with source hashes and citations. Oversize/malformed inputs refuse instead of returning partial totals. General spreadsheets, SQL and arbitrary analysis code remain outside this implementation.
+- **Meeting notes:** supplied transcripts can be summarized. Recording and audio transcription remain unavailable. The real harness adds a revised-date/owner/undecided-commitment fixture.
+- **Delivery and UX:** the empty conversation explains current workflows and limitations. Its clickable help remains usable in a small window. Native consumers are invalidated on relevant dependency/toolchain changes; the rebuilt development app has the current embedded engine, passes signing/identity checks and opens a disposable Home.
+
+The full native regression suite, subsequent focused capability/UI checks and bundle smoke passed. The new real-model replay is **pending**, not passed: its safe preflight refused twice before model loading when the desktop had insufficient headroom. The prepared command and limits are in the source receipt. No new public desktop release, installer qualification, general task success rate or speed improvement is claimed.
+
+The durable engineering policy is [qualify complete native workflows](../../decisions/qualify-complete-native-workflows.md). Follow through from input and model choice to tool execution, review, rendering and the delivered artifact; keep absent capabilities separate from defects in existing workflows.

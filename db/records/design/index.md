@@ -2,17 +2,17 @@
 type: index
 scope: type-folder
 folder: records/design
-updated: 2026-10-12T16:21:20.370947Z
+updated: 2026-10-14T21:37:16.774016Z
 ---
 
 # records/design
 
+- [[records/design/sevra-spec/implementation-status]] — Mac application implementation progress and unpassed release gates
+- [[records/design/sevra-spec/runtime-contract]] — Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
 - [[records/design/measured-operating-policies]] — Measured operating policies and revision criteria
 - [[records/design/sevra-spec/ui-contract]] — Mac UI geometry, native text, appearance and review requirements
-- [[records/design/sevra-spec/implementation-status]] — Mac application implementation progress and unpassed release gates
 - [[records/design/sevra-maintained-model-integration]] — Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.
 - [[records/design/sevra-spec/mac-platform]] — Mac native implementation baseline and dependency qualification
-- [[records/design/sevra-spec/runtime-contract]] — Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
 - [[records/design/4-2-slot-pool-mechanics]] — 4.2 Slot pool mechanics
 - [[records/design/sevra-spec/overview]] — Sevra native product specification entry point
 - [[records/design/presets-v1-est-columns-to-be-replaced-by-m8-measurements]] — Presets v1 (est. columns to be replaced by M8 measurements)

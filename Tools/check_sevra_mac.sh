@@ -3,6 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # Native development regressions use scripted inference and disposable Homes.
 # This never starts a model or qualifies a signed/installed public release.
+python3 Tools/test_prepare_sevra_build.py
+python3 Tools/prepare_sevra_build.py --configuration release
 for product in Sevra sevra-local sevra-composer-checks sevra-presentation-checks sevra-mac-checks sevra-extract; do
   swift build --package-path apps/macos -c release --product "$product" -j "${SEVRA_BUILD_JOBS:-2}"
 done
@@ -28,6 +30,7 @@ trap 'rm -rf "$EMPTY"' EXIT
 cp "$OUT/sevra-mac-checks" "$EMPTY/checks"
 settings_without_metal() { (cd "$EMPTY" && ./checks --performance); }
 suite settings_without_metal
+suite python3 Tools/prepare_sevra_build.py --configuration release --check
 if [ ${#failed[@]} -gt 0 ]; then
   printf 'FAILED SUITE: %s\n' "${failed[@]}" >&2
   exit 1

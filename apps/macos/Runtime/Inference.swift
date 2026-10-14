@@ -29,7 +29,7 @@ public struct EngineTurn: Sendable {
     public func validate(offered: [ToolSpec]) throws {
         try validateCompletion()
         if calls.count > 1, let terminal = calls.first(where: { call in offered.first { $0.name == call.name }?.terminal == true }) {
-            throw SevraError.refused(terminal.name == "artifact.propose" ? "Propose one document for review in its own response. No actions from this response were executed." : "Propose \(terminal.name) in its own response. No actions from this response were executed.")
+            throw ToolSchemaError(issue: "Propose \(terminal.name) in its own response.", offered: offered)
         }
         var correction: ToolSchemaError?
         for call in calls {
