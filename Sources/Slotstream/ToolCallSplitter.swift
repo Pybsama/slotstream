@@ -559,7 +559,7 @@ public struct ToolDefinition: Sendable {
                 // A shared definition used by another property is not a cycle.
                 var fieldInference = SchemaInference(document: parameters)
                 let types = fieldInference.types(value, referencesAllowed: referencesAllowed) ?? []
-                let concrete = types.filter { $0 != "null" }
+                let concrete = Array(Set(types.filter { $0 != "null" }))
                 params[key] = concrete.count == 1
                     ? ToolParamKind(rawValue: concrete[0]) ?? .unknown : .unknown
             }
