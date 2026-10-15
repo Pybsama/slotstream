@@ -1096,6 +1096,11 @@ public final class Server {
         if let e = Self.openAINoOpError(json) { return e }
         do { _ = try OpenAIDialect.conversation(json, contextLimit: engine.maxContextTokens) }
         catch { return "\(error)" }
+        return Self.openAIParameterError(json)
+    }
+
+    /// Sampling, stop and stream settings shared by the OpenAI handler and value checks.
+    package static func openAIParameterError(_ json: [String: Any]) -> String? {
         for key in ["temperature", "top_p", "presence_penalty"]
         where json[key] != nil && Self.num(json[key]) == nil {
             return "\(key) must be a number"
