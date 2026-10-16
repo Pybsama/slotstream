@@ -2,7 +2,7 @@
 type: decision
 id: 01m51pk98b58s3z3eg7h5qp10a
 created: 2026-10-16T06:32:39.435597+00:00
-updated: 2026-10-16T21:04:01.173058+00:00
+updated: 2026-10-16T21:06:57.165149+00:00
 summary: Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 decided_on: 2026-10-16
 evidence: '[[records/design/sevra-spec/overview]]'
@@ -30,3 +30,8 @@ The Xcode application target also sets PRODUCT_MODULE_NAME to SlotstreamMac in D
 
 
 The follow-up [Xcode job](https://github.com/carloslfu/slotstream/actions/runs/38863685366/job/116851532622) exposed a separate case-insensitive intermediate-path collision. The native project Slotstream and engine package slotstream each had a target named Slotstream. Both wrote Slotstream.SwiftFileList under the same effective build directory, so the application compiler received the engine's source list without its package settings. The native Xcode target is now SlotstreamDesktop, with all scheme references updated; the user-facing scheme and product remain Slotstream. The gate also rejects native target names that collide with local package targets after case folding. It rejects the prior project and passes the corrected project. Full Xcode CI must still confirm the corrected build.
+
+
+The completed native and engine jobs also exposed two regression-check failures. The engine evidence boundary treated the renamed SLOTSTREAM_MODEL path as an unknown runtime tuning control. Known application path selectors (model, Home, dbmd and document helper) are now explicitly allowed alongside existing test/build selectors; unknown names, runtime overrides, MLX options and non-release builds remain ineligible. The diagnostics cover both the allowed paths and a path combined with a tuning override.
+
+The native help panel itself remained visible in the CI artifact. Replaying text recognition against its expanded-panel PNG returned `V What can | do here?`, explaining why a search for the whole label missed the button. The UI check now locates the unambiguous `What can` prefix, sends the same mouse events, and requires both a successful second click and disappearance of the expanded content. No UI behavior or acceptance condition is bypassed.

@@ -202,12 +202,15 @@ import SlotstreamPresentation
         check(visible("Think longer", lines), "Home composer shows the Think longer switch")
         check(visible("Local on this Mac", lines), "Home hint stays plain while thinking is off")
 
-        let helpOpened = try await clickLabel("What can I do here?")
+        // Vision reads the standalone "I" as "|" in the expanded CI snapshot.
+        // Locate the unambiguous visible prefix, still clicking the real button.
+        let helpOpened = try await clickLabel("What can")
         check(helpOpened, "capability help label is clickable")
         try await pause(0.4)
         lines = try read(try snapshot("01b-capabilities"))
         check(visible("Web browsing", lines) && visible("transcription", lines), "capability help actually opens and states unavailable features")
-        _ = try await clickLabel("What can I do here?")
+        let helpClosed = try await clickLabel("What can")
+        check(helpClosed, "expanded capability help label is clickable")
         try await pause(0.3)
         lines = try read(render())
         check(!visible("Web browsing", lines), "capability help closes again")
