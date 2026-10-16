@@ -2,7 +2,7 @@
 type: decision
 id: 01m51pk98b58s3z3eg7h5qp10a
 created: 2026-10-16T06:32:39.435597+00:00
-updated: 2026-10-16T21:06:57.165149+00:00
+updated: 2026-10-16T21:28:28.545818+00:00
 summary: Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 decided_on: 2026-10-16
 evidence: '[[records/design/sevra-spec/overview]]'
@@ -35,3 +35,9 @@ The follow-up [Xcode job](https://github.com/carloslfu/slotstream/actions/runs/3
 The completed native and engine jobs also exposed two regression-check failures. The engine evidence boundary treated the renamed SLOTSTREAM_MODEL path as an unknown runtime tuning control. Known application path selectors (model, Home, dbmd and document helper) are now explicitly allowed alongside existing test/build selectors; unknown names, runtime overrides, MLX options and non-release builds remain ineligible. The diagnostics cover both the allowed paths and a path combined with a tuning override.
 
 The native help panel itself remained visible in the CI artifact. Replaying text recognition against its expanded-panel PNG returned `V What can | do here?`, explaining why a search for the whole label missed the button. The UI check now locates the unambiguous `What can` prefix, sends the same mouse events, and requires both a successful second click and disappearance of the expanded content. No UI behavior or acceptance condition is bypassed.
+
+
+Xcode verification: [job 117195078206](https://github.com/carloslfu/slotstream/actions/runs/38966776193/job/117195078206) passed for source commit 1fd57a79541af52eb30bd0304d32b2083f51bb04. The log reports BUILD SUCCEEDED, all 13 package versions matched the pinned revisions, and Slotstream.app passed bundle-content and strict signature verification. This confirms the product, module and native target identity corrections on Xcode; the later environment-classification and OCR-check changes are being verified in a separate run.
+
+
+The final [Xcode job 117197678135](https://github.com/carloslfu/slotstream/actions/runs/38967552238/job/117197678135) also passed for 8e5ad41efff99e241cb6923e0d4e71eff86c9d0a, which includes the app-path evidence and help-control check corrections. Its build, pinned package comparison, bundle contents and strict signature verification all succeeded. The same commit's docs, context-proxy and public-library checks passed. Full native, coverage and weights-free CI jobs were still running when this receipt was recorded, so their completion is not claimed here. Locally, all 87 T0 checks (38914 assertions), the complete thinking UI suite and the rebuilt signed app with matching build inputs passed.

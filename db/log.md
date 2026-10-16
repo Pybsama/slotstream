@@ -537,3 +537,6 @@ Keep renamed app path selectors outside runtime-tuning evidence rejection, with 
 ## [2026-10-16 21:11] repair | records/decisions/slotstream-app-identity.md
 Correct the preceding local test count: the T0 command passed 87 checks and 38914 assertions, not 105 checks. The 105 count belonged to the earlier combined remote tiers. The targeted startup-selection subset passed 61 assertions. No local T1 run is claimed.
 
+## [2026-10-16 21:28] update | records/decisions/slotstream-app-identity.md
+Verify successful final Xcode job 117197678135 at 8e5ad41: BUILD SUCCEEDED, all 13 pinned packages match, and Slotstream.app contents and strict signing pass. Docs, context proxies and public-library CI pass; other full CI jobs remain running. Correct prior validation receipts: the gate exited successfully but dbmd reported unknown repair log-kind warnings, so those earlier zero-warning claims were inaccurate. Preserve the five existing repair entries by declaring their historical kind in DB.md; future entries use standard update. Revalidate the completed store with zero errors and warnings before committing this receipt.
+
