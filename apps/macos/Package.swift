@@ -9,7 +9,9 @@ let package = Package(
     products: [
         .library(name: "SlotstreamRuntime", targets: ["SlotstreamRuntime"]),
         .library(name: "SlotstreamPresentation", targets: ["SlotstreamPresentation"]),
-        .executable(name: "Slotstream", targets: ["SlotstreamMac"]),
+        // Xcode gives package products a workspace-wide identity. Keep this
+        // internal product distinct from the public Slotstream engine library.
+        .executable(name: "SlotstreamDesktop", targets: ["SlotstreamMac"]),
         .executable(name: "slotstream-presentation-checks", targets: ["SlotstreamPresentationChecks"]),
         .executable(name: "slotstream-composer-checks", targets: ["SlotstreamComposerChecks"]),
         .executable(name: "slotstream-local", targets: ["SlotstreamLocal"]),

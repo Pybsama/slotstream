@@ -2,7 +2,7 @@
 type: decision
 id: 01m51pk98b58s3z3eg7h5qp10a
 created: 2026-10-16T06:32:39.435597+00:00
-updated: 2026-10-16T06:32:39.435597+00:00
+updated: 2026-10-16T06:49:40.019941+00:00
 summary: Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 decided_on: 2026-10-16
 evidence: '[[records/design/sevra-spec/overview]]'
@@ -19,3 +19,9 @@ The independent engine CLI, Swift library and serving APIs keep their existing n
 New development bundles are Slotstream.app with the com.slotstream.mac.development identifier. Device preferences are copied once from the former bundle domain without replacing current settings. A prior default Home remains discoverable; new users start in ~/Slotstream/Home. No user Home is moved or rewritten by this repository change.
 
 Current app contracts: [[records/design/sevra-spec/overview]], [[records/design/sevra-spec/runtime-contract]] and [[records/design/sevra-spec/implementation-status]]. Their historical record coordinates remain stable for evidence links. This decision supersedes the older separate-product name and promotion in those records.
+
+## Xcode package identity, October 16, 2026
+
+The first rename commit used Slotstream for both the internal app executable product and the independent engine library. The Xcode job refused the combined graph with duplicate GUID PACKAGE-PRODUCT:Slotstream before compilation. Its failure is preserved in [the original job](https://github.com/carloslfu/slotstream/actions/runs/38862629893/job/116848184417). Local SwiftPM compilation did not reveal this Xcode-specific conflict.
+
+The internal app product is now SlotstreamDesktop. The bundle, executable inside the bundle, Xcode scheme and visible application name remain Slotstream. Native build and UI-check scripts select the distinct internal product. Tools/check_mac_package_products.py compares the actual local Swift package manifests before native checks and Xcode builds; it reproduced the old collision and passes after the correction. The public engine library and CLI keep their names.

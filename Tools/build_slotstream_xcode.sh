@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+python3 Tools/check_mac_package_products.py
 # Build apps/macos/Slotstream.xcodeproj the way someone with Xcode would: Release,
 # Apple silicon, ad hoc signed. The development Mac has only the Command Line
 # Tools, so CI runs this (slotstream-mac.yml). The bundle phase copies the pinned

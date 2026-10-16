@@ -13,7 +13,7 @@ STAGE=$(mktemp -d "$PWD/.build/slotstream-bundle-XXXXXX")
 trap 'rm -rf "$STAGE"' EXIT
 python3 Tools/mac_build_inputs.py "$DBMD" > "$STAGE/before.json"
 python3 Tools/prepare_slotstream_build.py --configuration "$CONFIG"
-swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --product Slotstream -j 2
+swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --product SlotstreamDesktop -j 2
 swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --product slotstream-extract -j 2
 OUT=$(swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --show-bin-path)
 python3 Tools/mac_build_inputs.py "$DBMD" > "$STAGE/after.json"
@@ -26,7 +26,7 @@ mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$BUNDLE/Contents
 cp -R apps/macos/Resources/Fonts "$BUNDLE/Contents/Resources/"
 cp -R apps/macos/Resources/Licenses "$BUNDLE/Contents/Resources/"
 cp apps/macos/Resources/Slotstream.icns "$BUNDLE/Contents/Resources/"
-cp "$OUT/Slotstream" "$BUNDLE/Contents/MacOS/Slotstream"
+cp "$OUT/SlotstreamDesktop" "$BUNDLE/Contents/MacOS/Slotstream"
 cp Tools/lib/mlx-0.32.2.metallib "$BUNDLE/Contents/MacOS/mlx.metallib"
 cp "$DBMD" "$BUNDLE/Contents/Helpers/dbmd"
 cp "$OUT/slotstream-extract" "$BUNDLE/Contents/Helpers/slotstream-extract"

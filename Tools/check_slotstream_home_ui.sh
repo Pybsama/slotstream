@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 # No model or user Home is loaded.
 DBMD=${SLOTSTREAM_DBMD:-$HOME/.dbmd/bin/dbmd}
 python3 Tools/prepare_slotstream_build.py
-swift build --disable-build-manifest-caching --package-path apps/macos --product Slotstream -j "${SLOTSTREAM_BUILD_JOBS:-2}"
+swift build --disable-build-manifest-caching --package-path apps/macos --product SlotstreamDesktop -j "${SLOTSTREAM_BUILD_JOBS:-2}"
 BIN=$(swift build --disable-build-manifest-caching --package-path apps/macos --show-bin-path)
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/slotstream-home-ui-XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
@@ -39,7 +39,7 @@ swiftc -module-name SlotstreamHomeUIChecks -parse-as-library -c apps/macos/Nativ
   -module-cache-path "$BIN/ModuleCache" -swift-version 5 -I "$FW" -L "$FW" \
   -sdk "$SDK" -g -Xcc -isysroot -Xcc "$SDK" -Xcc -fPIC -Xcc -g -package-name macos
 swiftc -lc++ -L "$BIN" -o "$TMP/checks" -module-name SlotstreamHomeUIChecks -Xlinker -no_warn_duplicate_libraries -emit-executable \
-  -Xlinker -rpath -Xlinker @loader_path "@$BIN/Slotstream.product/Objects.LinkFileList" "$TMP/checks.o" \
+  -Xlinker -rpath -Xlinker @loader_path "@$BIN/SlotstreamDesktop.product/Objects.LinkFileList" "$TMP/checks.o" \
   -target arm64-apple-macosx14.0 -framework Foundation -framework Metal -framework Accelerate -framework Vision -framework WebKit \
   -I "$FW" -L "$FW" -sdk "$SDK" -g
 OUT=${SLOTSTREAM_UI_OUT:-$PWD/.build/slotstream-home-ui}

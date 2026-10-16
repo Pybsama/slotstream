@@ -1,11 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+python3 Tools/check_mac_package_products.py
 # Native development regressions use scripted inference and disposable Homes.
 # This never starts a model or qualifies a signed/installed public release.
 python3 Tools/test_prepare_slotstream_build.py
 python3 Tools/prepare_slotstream_build.py --configuration release
-for product in Slotstream slotstream-local slotstream-composer-checks slotstream-presentation-checks slotstream-mac-checks slotstream-extract; do
+for product in SlotstreamDesktop slotstream-local slotstream-composer-checks slotstream-presentation-checks slotstream-mac-checks slotstream-extract; do
   swift build --disable-build-manifest-caching --package-path apps/macos -c release --product "$product" -j "${SLOTSTREAM_BUILD_JOBS:-2}"
 done
 OUT=$(swift build --disable-build-manifest-caching --package-path apps/macos -c release --show-bin-path)
