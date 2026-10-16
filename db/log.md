@@ -534,3 +534,6 @@ Fix the remaining Xcode intermediate-path collision: native Slotstream and packa
 ## [2026-10-16 21:10] repair | records/decisions/slotstream-app-identity.md
 Keep renamed app path selectors outside runtime-tuning evidence rejection, with mixed-override and unknown-name refusal still tested. Diagnose the CI help-panel failure by replaying OCR on its artifact: the rendered I was recognized as a vertical bar. Click its unambiguous visible prefix and require a successful close. The release startup-selection check passes 61 assertions, all 105 T0 checks pass, the full local thinking UI suite passes, and the rebuilt Slotstream.app passes strict signing and exact-input comparison. The Xcode identity gate, brain validation with zero errors/warnings, projections, 354 claims and 3873 wiki-links pass. Remote CI remains pending.
 
+## [2026-10-16 21:11] repair | records/decisions/slotstream-app-identity.md
+Correct the preceding local test count: the T0 command passed 87 checks and 38914 assertions, not 105 checks. The 105 count belonged to the earlier combined remote tiers. The targeted startup-selection subset passed 61 assertions. No local T1 run is claimed.
+
