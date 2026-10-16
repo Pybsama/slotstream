@@ -2,7 +2,7 @@
 type: decision
 id: 01m51pk98b58s3z3eg7h5qp10a
 created: 2026-10-16T06:32:39.435597+00:00
-updated: 2026-10-16T06:49:40.019941+00:00
+updated: 2026-10-16T06:52:13.757426+00:00
 summary: Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 decided_on: 2026-10-16
 evidence: '[[records/design/sevra-spec/overview]]'
@@ -25,3 +25,5 @@ Current app contracts: [[records/design/sevra-spec/overview]], [[records/design/
 The first rename commit used Slotstream for both the internal app executable product and the independent engine library. The Xcode job refused the combined graph with duplicate GUID PACKAGE-PRODUCT:Slotstream before compilation. Its failure is preserved in [the original job](https://github.com/carloslfu/slotstream/actions/runs/38862629893/job/116848184417). Local SwiftPM compilation did not reveal this Xcode-specific conflict.
 
 The internal app product is now SlotstreamDesktop. The bundle, executable inside the bundle, Xcode scheme and visible application name remain Slotstream. Native build and UI-check scripts select the distinct internal product. Tools/check_mac_package_products.py compares the actual local Swift package manifests before native checks and Xcode builds; it reproduced the old collision and passes after the correction. The public engine library and CLI keep their names.
+
+The Xcode application target also sets PRODUCT_MODULE_NAME to SlotstreamMac in Debug and Release. Leaving it implicit would name the app module Slotstream and shadow its imported engine module. The same gate reads the actual Xcode build configurations and rejected both old module settings before passing the explicit names. Product naming and module naming are separate graph constraints.

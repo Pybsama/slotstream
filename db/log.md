@@ -525,3 +525,6 @@ Rename the retained native Mac app, packages, Xcode project, helpers, tools, UI 
 ## [2026-10-16 06:50] repair | records/decisions/slotstream-app-identity.md
 Correct the Xcode failure introduced by the app rename: the app executable and engine library shared PACKAGE-PRODUCT:Slotstream. Name the internal app product SlotstreamDesktop while preserving Slotstream.app, its executable, scheme and public engine interfaces. Update native build/UI scripts and add a manifest-based product collision gate; it failed on the prior manifest and passes on the correction. The corrected local bundle builds, strict signing and exact build-input comparison pass, shell/plist checks pass, and brain validation/projections/354 claims/3873 wiki-links pass. Replacement Xcode CI remains to be verified.
 
+## [2026-10-16 06:52] repair | records/decisions/slotstream-app-identity.md
+Complete the Xcode naming boundary by explicitly setting the application Swift module to SlotstreamMac in Debug and Release, matching its working SwiftPM target. Extend the actual-manifest/project gate to reject application modules that shadow engine targets; both old configurations fail and the correction passes. Keep the visible application, bundle executable and scheme Slotstream. The local native Home/UI check on the distinct executable product passed; Xcode CI remains pending.
+
