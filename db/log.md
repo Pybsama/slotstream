@@ -528,3 +528,6 @@ Correct the Xcode failure introduced by the app rename: the app executable and e
 ## [2026-10-16 06:52] repair | records/decisions/slotstream-app-identity.md
 Complete the Xcode naming boundary by explicitly setting the application Swift module to SlotstreamMac in Debug and Release, matching its working SwiftPM target. Extend the actual-manifest/project gate to reject application modules that shadow engine targets; both old configurations fail and the correction passes. Keep the visible application, bundle executable and scheme Slotstream. The local native Home/UI check on the distinct executable product passed; Xcode CI remains pending.
 
+## [2026-10-16 21:04] repair | records/decisions/slotstream-app-identity.md
+Fix the remaining Xcode intermediate-path collision: native Slotstream and package slotstream both wrote the Slotstream target SwiftFileList. Rename the native target SlotstreamDesktop and update scheme references, preserving Slotstream.app and its visible scheme. The expanded gate reproduces the old case-insensitive target collision and passes the correction; project plist and scheme XML parse, brain validation has zero errors/warnings, projections and 354 claims pass, and 3873 wiki-links resolve. Xcode verification is still pending.
+

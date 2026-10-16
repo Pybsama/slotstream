@@ -2,7 +2,7 @@
 type: decision
 id: 01m51pk98b58s3z3eg7h5qp10a
 created: 2026-10-16T06:32:39.435597+00:00
-updated: 2026-10-16T06:52:13.757426+00:00
+updated: 2026-10-16T21:04:01.173058+00:00
 summary: Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 decided_on: 2026-10-16
 evidence: '[[records/design/sevra-spec/overview]]'
@@ -27,3 +27,6 @@ The first rename commit used Slotstream for both the internal app executable pro
 The internal app product is now SlotstreamDesktop. The bundle, executable inside the bundle, Xcode scheme and visible application name remain Slotstream. Native build and UI-check scripts select the distinct internal product. Tools/check_mac_package_products.py compares the actual local Swift package manifests before native checks and Xcode builds; it reproduced the old collision and passes after the correction. The public engine library and CLI keep their names.
 
 The Xcode application target also sets PRODUCT_MODULE_NAME to SlotstreamMac in Debug and Release. Leaving it implicit would name the app module Slotstream and shadow its imported engine module. The same gate reads the actual Xcode build configurations and rejected both old module settings before passing the explicit names. Product naming and module naming are separate graph constraints.
+
+
+The follow-up [Xcode job](https://github.com/carloslfu/slotstream/actions/runs/38863685366/job/116851532622) exposed a separate case-insensitive intermediate-path collision. The native project Slotstream and engine package slotstream each had a target named Slotstream. Both wrote Slotstream.SwiftFileList under the same effective build directory, so the application compiler received the engine's source list without its package settings. The native Xcode target is now SlotstreamDesktop, with all scheme references updated; the user-facing scheme and product remain Slotstream. The gate also rejects native target names that collide with local package targets after case folding. It rejects the prior project and passes the corrected project. Full Xcode CI must still confirm the corrected build.

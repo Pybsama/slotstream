@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep local package products distinct in Xcode's combined dependency graph."""
+"""Keep local package and app identities distinct in Xcode's build graph."""
 import json
 from pathlib import Path
 import subprocess
@@ -11,11 +11,13 @@ def main():
     owners = {}
     collisions = []
     engine_modules = set()
+    package_targets = set()
     for package in [root, root / "apps/macos"]:
         manifest = json.loads(subprocess.check_output(
             ["swift", "package", "--package-path", str(package), "dump-package"], text=True))
         if package == root:
             engine_modules = {target["name"] for target in manifest["targets"]}
+        package_targets.update(target["name"].casefold() for target in manifest["targets"])
         for product in manifest["products"]:
             name = product["name"]
             owner = str(package.relative_to(root))
@@ -28,6 +30,11 @@ def main():
     for target in objects.values():
         if target.get("isa") != "PBXNativeTarget":
             continue
+        # Xcode uses target names in intermediate build paths. The native
+        # project and engine package also differ only in capitalization, so
+        # equal target names overwrite compiler inputs on ordinary macOS disks.
+        if target["name"].casefold() in package_targets:
+            collisions.append(f"app target {target['name']} shares a package target's intermediate build path")
         for identifier in objects[target["buildConfigurationList"]]["buildConfigurations"]:
             config = objects[identifier]
             settings = config["buildSettings"]
@@ -36,7 +43,7 @@ def main():
                 collisions.append(f"{config['name']} app module {module} shadows an engine module")
     if collisions:
         sys.exit("Xcode package or module names collide: " + "; ".join(collisions))
-    print("PASS: local package products and the Xcode app module are distinct from the engine")
+    print("PASS: local package products, Xcode app target and module have distinct identities")
 
 
 if __name__ == "__main__":
