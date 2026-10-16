@@ -144,5 +144,5 @@ still swap heavily.
 
 **Can I use a different model or another operating system?** The current
 engine supports only `qwen3.8-flash-next:4bit` on Apple Silicon. Windows and
-Linux support for AMD and NVIDIA is planned for Sevra. See
+Linux are not supported. See
 [related projects](ENGINEERING.md#related-projects) for other runtimes.

@@ -2,13 +2,13 @@ import Foundation
 import Darwin
 
 extension DocumentReader {
-    /// The helper bundled beside Sevra, or an explicit development override.
+    /// The helper bundled beside Slotstream, or an explicit development override.
     public static func locateHelper() -> URL? {
         let fm = FileManager.default
         var candidates: [URL] = []
-        if let path = ProcessInfo.processInfo.environment["SEVRA_EXTRACT"], path.hasPrefix("/") { candidates.append(URL(fileURLWithPath: path)) }
-        candidates.append(Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/sevra-extract"))
-        if let executable = Bundle.main.executableURL { candidates.append(executable.deletingLastPathComponent().appendingPathComponent("sevra-extract")) }
+        if let path = ProcessInfo.processInfo.environment["SLOTSTREAM_EXTRACT"], path.hasPrefix("/") { candidates.append(URL(fileURLWithPath: path)) }
+        candidates.append(Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/slotstream-extract"))
+        if let executable = Bundle.main.executableURL { candidates.append(executable.deletingLastPathComponent().appendingPathComponent("slotstream-extract")) }
         return candidates.first { fm.isExecutableFile(atPath: $0.path) }
     }
 
@@ -17,7 +17,7 @@ extension DocumentReader {
     public static func processGroupFootprint(_ group: pid_t) -> UInt64 { BoundedProcess.groupFootprint(group) }
 }
 
-extension SevraRuntime {
+extension SlotstreamRuntime {
     // MARK: review decisions
 
     /// After a review decision, the run completes once nothing awaits review.
@@ -39,10 +39,10 @@ extension SevraRuntime {
         try requireReviewable()
         let i = try threadIndex(threadID)
         guard let set = home.threads[i].run?.changes, set.id == changeSetID, set.state == .proposed, set.digest == digest,
-              home.threads[i].run?.state == .needsYou else { throw SevraError.refused("These changes changed or are no longer awaiting approval. Review the current version.") }
-        guard !applyingChanges else { throw SevraError.refused("Other changes are being written. Try again in a moment.") }
+              home.threads[i].run?.state == .needsYou else { throw AppRuntimeError.refused("These changes changed or are no longer awaiting approval. Review the current version.") }
+        guard !applyingChanges else { throw AppRuntimeError.refused("Other changes are being written. Try again in a moment.") }
         guard let session = sources[threadID] else {
-            throw SevraError.refused("Attach " + set.roots.values.map(\.name).sorted().joined(separator: ", ") + " again to write these changes. Sevra keeps folder access only while a folder is attached.")
+            throw AppRuntimeError.refused("Attach " + set.roots.values.map(\.name).sorted().joined(separator: ", ") + " again to write these changes. Slotstream keeps folder access only while a folder is attached.")
         }
         applyingChanges = true
         defer { applyingChanges = false }
@@ -97,11 +97,11 @@ extension SevraRuntime {
         let i = try threadIndex(threadID)
         let thread = home.threads[i]
         guard let set = thread.allRuns.compactMap(\.changes).first(where: { $0.id == changeSetID }), [.applied, .partial].contains(set.state) else {
-            throw SevraError.refused("Only written changes can be undone.")
+            throw AppRuntimeError.refused("Only written changes can be undone.")
         }
-        guard !applyingChanges else { throw SevraError.refused("Other changes are being written. Try again in a moment.") }
+        guard !applyingChanges else { throw AppRuntimeError.refused("Other changes are being written. Try again in a moment.") }
         guard let session = sources[threadID] else {
-            throw SevraError.refused("Attach " + set.roots.values.map(\.name).sorted().joined(separator: ", ") + " again, with changes allowed, to undo.")
+            throw AppRuntimeError.refused("Attach " + set.roots.values.map(\.name).sorted().joined(separator: ", ") + " again, with changes allowed, to undo.")
         }
         applyingChanges = true
         defer { applyingChanges = false }
@@ -129,7 +129,7 @@ extension SevraRuntime {
         try requireReviewable()
         let i = try threadIndex(threadID)
         guard let proposal = home.threads[i].run?.appProposal, proposal.id == proposalID, proposal.digest == digest,
-              home.threads[i].run?.state == .needsYou else { throw SevraError.refused("The app changed or is no longer awaiting approval. Review its current version.") }
+              home.threads[i].run?.state == .needsYou else { throw AppRuntimeError.refused("The app changed or is no longer awaiting approval. Review its current version.") }
         var apps = home.apps ?? []
         let appIndex: Int
         if let id = proposal.appID, let existing = apps.firstIndex(where: { $0.id == id }) { appIndex = existing }
@@ -169,7 +169,7 @@ extension SevraRuntime {
     public func activateApp(appID: String, version: Int) async throws {
         try requireOpen(); try requireActiveHome()
         var apps = home.apps ?? []
-        guard let index = apps.firstIndex(where: { $0.id == appID }), let chosen = apps[index].versions.first(where: { $0.number == version }) else { throw SevraError.refused("That app version is not available.") }
+        guard let index = apps.firstIndex(where: { $0.id == appID }), let chosen = apps[index].versions.first(where: { $0.number == version }) else { throw AppRuntimeError.refused("That app version is not available.") }
         _ = try appSource(apps[index], version: chosen)
         apps[index].active = version
         apps[index].removed = false
@@ -205,14 +205,14 @@ extension SevraRuntime {
 
     func appSource(_ app: MiniApp, version: AppVersion) throws -> String {
         let data = try HomeStore.readOwned(app.folder(version.number) + "/index.html", at: homeURL, limit: Extensions.appBytes)
-        guard digestBytes(data) == version.digest else { throw SevraError.conflict("\(app.name) version \(version.number) changed outside Sevra, so it will not run. Restore it from a backup or turn on another version.") }
+        guard digestBytes(data) == version.digest else { throw AppRuntimeError.conflict("\(app.name) version \(version.number) changed outside Slotstream, so it will not run. Restore it from a backup or turn on another version.") }
         return String(decoding: data, as: UTF8.self)
     }
 
     /// The exact bytes for the app host. The host serves nothing else.
     public func appDocument(appID: String, version: Int? = nil) throws -> (app: MiniApp, version: AppVersion, html: String, grant: AppGrant?) {
-        guard let app = (home.apps ?? []).first(where: { $0.id == appID }) else { throw SevraError.refused("This app is no longer available.") }
-        guard let chosen = version.flatMap({ number in app.versions.first { $0.number == number } }) ?? app.activeVersion ?? app.latest else { throw SevraError.refused("This app has no versions.") }
+        guard let app = (home.apps ?? []).first(where: { $0.id == appID }) else { throw AppRuntimeError.refused("This app is no longer available.") }
+        guard let chosen = version.flatMap({ number in app.versions.first { $0.number == number } }) ?? app.activeVersion ?? app.latest else { throw AppRuntimeError.refused("This app has no versions.") }
         let grant = grants[appID].flatMap { $0.version == chosen.number ? $0 : nil }
         return (app, chosen, try appSource(app, version: chosen), grant)
     }
@@ -221,14 +221,14 @@ extension SevraRuntime {
         let requested = try call.string("app_id")
         guard let app = (home.apps ?? []).first(where: { !$0.removed && ($0.id == requested || $0.name.caseInsensitiveCompare(requested) == .orderedSame) }) else {
             let names = (home.apps ?? []).filter { !$0.removed }.map { "\($0.name) (\($0.id))" }
-            throw SevraError.refused(names.isEmpty ? "There are no apps yet." : "No app matches. Apps: " + names.joined(separator: ", "))
+            throw AppRuntimeError.refused(names.isEmpty ? "There are no apps yet." : "No app matches. Apps: " + names.joined(separator: ", "))
         }
-        guard let version = app.activeVersion ?? app.latest else { throw SevraError.refused("This app has no versions.") }
+        guard let version = app.activeVersion ?? app.latest else { throw AppRuntimeError.refused("This app has no versions.") }
         let html = Array(try appSource(app, version: version).utf8)
         let start = try call.integer("offset", default: 0)
-        guard start <= html.count else { throw SevraError.refused("Invalid offset.") }
+        guard start <= html.count else { throw AppRuntimeError.refused("Invalid offset.") }
         let remaining = 96 * 1024 - used
-        guard remaining > 0 else { throw SevraError.refused("This job has read as much app source as it can.") }
+        guard remaining > 0 else { throw AppRuntimeError.refused("This job has read as much app source as it can.") }
         var end = min(html.count, start + min(24 * 1024, remaining))
         while end > start && String(bytes: html[start..<end], encoding: .utf8) == nil { end -= 1 }
         used += end - start
@@ -265,7 +265,7 @@ extension SevraRuntime {
             guard request.count <= 256 * 1024, let body = (try? JSONSerialization.jsonObject(with: request)) as? [String: Any], let op = body["op"] as? String else {
                 return failure("invalid", "Malformed request.")
             }
-            guard !shuttingDown, !storagePaused else { return failure("paused", "Sevra has paused saving. Your data is preserved.") }
+            guard !shuttingDown, !storagePaused else { return failure("paused", "Slotstream has paused saving. Your data is preserved.") }
             if let review = restoreReview, !review.reviewed { return failure("paused", "Review this restored Home before using apps.") }
             guard let app = (home.apps ?? []).first(where: { $0.id == appID }), !app.removed, app.active == version,
                   let active = app.activeVersion else { return failure("inactive", "This app is turned off.") }
@@ -283,7 +283,7 @@ extension SevraRuntime {
             // handled; loading reads in the writer and may await.
             if let collection = body["collection"] as? String, allowed.contains(where: { $0.name == collection }) {
                 try await loadCollection(collection)
-                guard !shuttingDown, !storagePaused else { return failure("paused", "Sevra has paused saving. Your data is preserved.") }
+                guard !shuttingDown, !storagePaused else { return failure("paused", "Slotstream has paused saving. Your data is preserved.") }
             }
             let outcome = try AppData.handle(op: op, body: body, name: app.name, version: version, collections: allowed, appID: appID, now: Date()) { collection in
                 appRecords[collection] ?? [:]
@@ -309,8 +309,8 @@ extension SevraRuntime {
                 return reply(value)
             }
         } catch {
-            // A record changed outside Sevra pauses writes until reviewed.
-            if case SevraError.conflict = error { pausedHere = true; lastErrorForApps(error) }
+            // A record changed outside Slotstream pauses writes until reviewed.
+            if case AppRuntimeError.conflict = error { pausedHere = true; lastErrorForApps(error) }
             return failure("error", error.localizedDescription)
         }
     }
@@ -350,12 +350,12 @@ extension SevraRuntime {
         try requireReviewable()
         let i = try threadIndex(threadID)
         guard let proposal = home.threads[i].run?.skillProposal, proposal.id == proposalID, proposal.digest == digest,
-              home.threads[i].run?.state == .needsYou else { throw SevraError.refused("The skill changed or is no longer awaiting approval. Review its current version.") }
+              home.threads[i].run?.state == .needsYou else { throw AppRuntimeError.refused("The skill changed or is no longer awaiting approval. Review its current version.") }
         var skills = home.skills ?? []
         let skillIndex: Int
         if let id = proposal.skillID, let existing = skills.firstIndex(where: { $0.id == id }) { skillIndex = existing }
         else {
-            guard !skills.contains(where: { !$0.removed && $0.name == proposal.name }) else { throw SevraError.refused("A skill named \(proposal.name) already exists.") }
+            guard !skills.contains(where: { !$0.removed && $0.name == proposal.name }) else { throw AppRuntimeError.refused("A skill named \(proposal.name) already exists.") }
             skills.append(Skill(id: UUID().uuidString.lowercased(), name: proposal.name, description: proposal.description, versions: [], active: nil, created: Date()))
             skillIndex = skills.count - 1
         }
@@ -384,7 +384,7 @@ extension SevraRuntime {
         try requireOpen()
         var skills = home.skills ?? []
         guard let index = skills.firstIndex(where: { $0.id == skillID }) else { return }
-        if let version { guard skills[index].versions.contains(where: { $0.number == version }) else { throw SevraError.refused("That skill version is not available.") } }
+        if let version { guard skills[index].versions.contains(where: { $0.number == version }) else { throw AppRuntimeError.refused("That skill version is not available.") } }
         skills[index].active = version
         skills[index].removed = remove
         if !remove, version != nil { skills[index].removed = false }
@@ -392,9 +392,9 @@ extension SevraRuntime {
     }
 
     public func skillText(skillID: String, version: Int) throws -> String {
-        guard let skill = (home.skills ?? []).first(where: { $0.id == skillID }), let chosen = skill.versions.first(where: { $0.number == version }) else { throw SevraError.refused("That skill version is not available.") }
+        guard let skill = (home.skills ?? []).first(where: { $0.id == skillID }), let chosen = skill.versions.first(where: { $0.number == version }) else { throw AppRuntimeError.refused("That skill version is not available.") }
         let data = try HomeStore.readOwned(skill.file(version), at: homeURL, limit: Extensions.skillBytes + 4096)
-        guard digestBytes(data) == chosen.digest else { throw SevraError.conflict("The /\(skill.name) skill changed outside Sevra, so it will not be used.") }
+        guard digestBytes(data) == chosen.digest else { throw AppRuntimeError.conflict("The /\(skill.name) skill changed outside Slotstream, so it will not be used.") }
         return String(decoding: data, as: UTF8.self)
     }
 
@@ -409,7 +409,7 @@ extension SevraRuntime {
         guard let use else { return nil }
         if use.builtIn, let builtIn = Extensions.builtIns.first(where: { "builtin:" + $0.name == use.id }) { return (use, builtIn.instructions, builtIn.tools) }
         guard let skill = (home.skills ?? []).first(where: { $0.id == use.id }), let version = skill.versions.first(where: { $0.number == use.version }) else {
-            throw SevraError.refused("The skill /\(use.name) is no longer available.")
+            throw AppRuntimeError.refused("The skill /\(use.name) is no longer available.")
         }
         let text = try skillText(skillID: skill.id, version: version.number)
         return (use, String(RecordText.body(of: text)).trimmingCharacters(in: .whitespacesAndNewlines), Set(version.tools))

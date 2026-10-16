@@ -53,7 +53,7 @@ public enum ThinkingPolicy {
         return total % 60 == 0 ? "\(total / 60) min" : "\(total / 60) min \(total % 60) s"
     }
     /// The end of a running thought as one flowing passage, for the few lines
-    /// shown while Sevra thinks: whitespace and line breaks collapse, Markdown
+    /// shown while Slotstream thinks: whitespace and line breaks collapse, Markdown
     /// emphasis marks drop, and a long thought starts at a word with an ellipsis.
     public static func preview(_ text: String, limit: Int = 480) -> String {
         let recent = text.suffix(limit * 4)

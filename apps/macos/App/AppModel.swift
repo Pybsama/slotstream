@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
-import SevraPresentation
+import SlotstreamPresentation
 import UniformTypeIdentifiers
 import Combine
 
@@ -81,28 +81,28 @@ import Combine
     private var selectionChanges: AnyCancellable?
     lazy var journalComposer = ComposerSession(store: .init(
         read: { [weak self] _ in
-            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            guard let runtime = self?.runtime else { throw AppRuntimeError.unavailable("Your Home is still opening.") }
             let draft = await runtime.journalDraftState()
             return .init(text: draft.text, revision: draft.revision)
         },
         write: { [weak self] _, text, revision in
-            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            guard let runtime = self?.runtime else { throw AppRuntimeError.unavailable("Your Home is still opening.") }
             do { let draft = try await runtime.saveJournalDraft(text: text, expectedRevision: revision); return .init(text: draft.text, revision: draft.revision) }
             catch let conflict as DraftConflict { throw ComposerSession.Changed(.init(text: conflict.current.text, revision: conflict.current.revision)) }
         },
         send: { [weak self] _, text, nonce, revision, remaining in
-            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            guard let runtime = self?.runtime else { throw AppRuntimeError.unavailable("Your Home is still opening.") }
             do { let draft = try await runtime.submitJournalDraft(text: text, nonce: nonce, expectedRevision: revision, remainingDraft: remaining); return .init(text: draft.text, revision: draft.revision) }
             catch let conflict as DraftConflict { throw ComposerSession.Changed(.init(text: conflict.current.text, revision: conflict.current.revision)) }
         }))
     lazy var composer = ComposerSession(store: .init(
         read: { [weak self] id in
-            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            guard let runtime = self?.runtime else { throw AppRuntimeError.unavailable("Your Home is still opening.") }
             let value = try await runtime.draftState(threadID: id)
             return .init(text: value.text, revision: value.revision)
         },
         write: { [weak self] id, text, revision in
-            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            guard let runtime = self?.runtime else { throw AppRuntimeError.unavailable("Your Home is still opening.") }
             do {
                 let value = try await runtime.saveDraft(threadID: id, text: text, expectedRevision: revision)
                 return .init(text: value.text, revision: value.revision)
@@ -111,7 +111,7 @@ import Combine
             }
         },
         send: { [weak self] id, text, nonce, revision, remaining in
-            guard let runtime = self?.runtime else { throw SevraError.unavailable("Your Home is still opening.") }
+            guard let runtime = self?.runtime else { throw AppRuntimeError.unavailable("Your Home is still opening.") }
             do {
                 let value = try await runtime.submitDraft(threadID: id, text: text, nonce: nonce, expectedRevision: revision, remainingDraft: remaining)
                 return .init(text: value.text, revision: value.revision)
@@ -129,7 +129,7 @@ import Combine
     private var performancePoll: Task<Void, Never>?
     private var sleepTask: Task<Void, Never>?
     @Published var appearance = Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "System") ?? .system
-    var runtime: SevraRuntime?
+    var runtime: SlotstreamRuntime?
     var endpoint: LocalEndpoint?
     @Published var setup: ModelSetup?
     var poll: Task<Void, Never>?
@@ -295,7 +295,7 @@ import Combine
     func backUpHome() {
         guard let runtime, !transferringHome else { return }
         let panel = NSSavePanel(); panel.title = "Back up Home"
-        panel.nameFieldStringValue = "Sevra Home.sevrahome"; panel.canCreateDirectories = true
+        panel.nameFieldStringValue = "Slotstream Home.slotstreamhome"; panel.canCreateDirectories = true
         panel.message = "Includes saved conversations, drafts, memories, journal and owned files. Model weights and attached source folders stay separate."
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         transferringHome = true; homeTransferMessage = ""
@@ -307,7 +307,7 @@ import Combine
                         let result = try await runtime.exportHome(to: destination)
                         self.notice = result.manifest.evidenceComplete ? "Home backup verified and saved." : "Home backup saved. Original attached source folders are separate dependencies."
                         self.homeTransferMessage = self.notice; self.backupURL = result.url; self.error = nil
-                    }) else { throw SevraError.refused("Finish saving the journal before backing up Home.") }
+                    }) else { throw AppRuntimeError.refused("Finish saving the journal before backing up Home.") }
                 }
                 if !closed { error = "Finish the current draft operation before backing up Home." }
             } catch { self.error = error.localizedDescription }
@@ -319,7 +319,7 @@ import Combine
         picker.canChooseFiles = false; picker.canChooseDirectories = true; picker.allowsMultipleSelection = false
         guard picker.runModal() == .OK, let archive = picker.url else { return }
         let destination = NSSavePanel(); destination.title = "Restore to a new Home"
-        destination.nameFieldStringValue = "Restored Sevra Home"; destination.canCreateDirectories = true
+        destination.nameFieldStringValue = "Restored Slotstream Home"; destination.canCreateDirectories = true
         destination.directoryURL = archive.deletingLastPathComponent()
         destination.message = "Your current Home stays in place. The restored copy opens with AI paused until you review its dated privacy choices."
         guard destination.runModal() == .OK, let url = destination.url else { return }
@@ -348,15 +348,15 @@ import Combine
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         Task { do { try await runtime.acknowledgeRestore(archiveDigest: review.archiveDigest); await refresh() } catch { self.error = error.localizedDescription } }
     }
-    func makeHomeRuntime(at root: URL) async throws -> SevraRuntime {
+    func makeHomeRuntime(at root: URL) async throws -> SlotstreamRuntime {
         let dbmd = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/dbmd")
-        let modelPath = ProcessInfo.processInfo.environment["SEVRA_MODEL"]
+        let modelPath = ProcessInfo.processInfo.environment["SLOTSTREAM_MODEL"]
         let preferences = performancePreferences
         return try await Task.detached(priority: .userInitiated) {
             let model = modelPath.map { URL(fileURLWithPath: $0) } ?? WeightStore.default.modelDirectory
             let engine = LocalInference(model: model, preferences: preferences,
                 activationDirectory: LocalInference.defaultActivationDirectory(model: model))
-            return try SevraRuntime(homeURL: root, dbmd: dbmd, inference: engine, performancePreferences: preferences)
+            return try SlotstreamRuntime(homeURL: root, dbmd: dbmd, inference: engine, performancePreferences: preferences)
         }.value
     }
     func start() {
@@ -528,7 +528,7 @@ import Combine
         }
     }
     func send() {
-        guard !preparingForSleep else { notice = "Sevra is preparing for sleep. Send again after your Mac wakes."; return }
+        guard !preparingForSleep else { notice = "Slotstream is preparing for sleep. Send again after your Mac wakes."; return }
         guard setup?.snapshot().busy != true else { error = "Finish model setup before sending."; return }
         guard !busy, !submitting, !attaching, !aiPaused, !composer.transitioning else { return }
         let id = selectedID
@@ -536,7 +536,7 @@ import Combine
             let accepted = await composer.send()
             await refresh()
             if accepted, selectedID == id {
-                NotificationCenter.default.post(name: .sevraJumpToLatest, object: nil, userInfo: ["focus": false])
+                NotificationCenter.default.post(name: .slotstreamJumpToLatest, object: nil, userInfo: ["focus": false])
             }
         }
         // The runtime shows the message before it is on disk; show it here
@@ -602,7 +602,7 @@ import Combine
         }
     }
     func inspectLink(_ url: URL) {
-        if url.scheme == "sevra-citation" {
+        if url.scheme == "slotstream-citation" {
             let components = url.pathComponents.filter { $0 != "/" }
             guard components.count == 2, let thread else { return }
             let citations: [Citation]
@@ -735,7 +735,7 @@ import Combine
                     try await runtime.acceptModelSetup(setup)
                     accepted = true
                 }
-            } catch SevraError.cancelled {
+            } catch AppRuntimeError.cancelled {
                 // The setup panel already reports the deliberate stop.
             } catch { self.error = error.localizedDescription }
             if acquired {
@@ -752,7 +752,7 @@ import Combine
             await refresh()
         }
     }
-    func perform(_ operation: @escaping (SevraRuntime) async throws -> Void) {
+    func perform(_ operation: @escaping (SlotstreamRuntime) async throws -> Void) {
         guard let runtime else { return }
         Task { do { try await operation(runtime); await refresh() } catch { self.error = error.localizedDescription } }
     }

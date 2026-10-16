@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 /// Real model, 10 GB plan: the numbers a run records are the engine's own.
@@ -16,14 +16,14 @@ func realMetricsCheckIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--real-metrics") else { return false }
     let args = CommandLine.arguments
     func option(_ name: String) -> String? { guard let i = args.firstIndex(of: name), i + 1 < args.count else { return nil }; return args[i + 1] }
-    guard let destination = option("--home") else { throw SevraError.refused("A real metrics check requires a new --home directory.") }
+    guard let destination = option("--home") else { throw AppRuntimeError.refused("A real metrics check requires a new --home directory.") }
     let home = URL(fileURLWithPath: destination).standardizedFileURL
-    guard !FileManager.default.fileExists(atPath: home.path) else { throw SevraError.refused("Real checks require a new disposable Home.") }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    guard !FileManager.default.fileExists(atPath: home.path) else { throw AppRuntimeError.refused("Real checks require a new disposable Home.") }
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     let budget = try realCheckBudget()
-    guard (Machine.current().availableGB ?? 0) >= budget + 3 else { throw SevraError.refused("The real check requires the selected plan plus at least 3 GB headroom.") }
+    guard (Machine.current().availableGB ?? 0) >= budget + 3 else { throw AppRuntimeError.refused("The real check requires the selected plan plus at least 3 GB headroom.") }
     let engine = LocalInference(memoryGB: budget)
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: engine)
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: engine)
     let thread = try await runtime!.newThread(title: "Metrics")
     var phases: [[String: Any]] = []
 
@@ -31,18 +31,18 @@ func realMetricsCheckIfRequested() async throws -> Bool {
         var previous = ""
         for _ in 0..<1200 {
             let s = await runtime!.snapshot()
-            guard let t = s.home.threads.first(where: { $0.id == thread }), let run = t.run, run.id == runID else { throw SevraError.unavailable("run vanished") }
+            guard let t = s.home.threads.first(where: { $0.id == thread }), let run = t.run, run.id == runID else { throw AppRuntimeError.unavailable("run vanished") }
             if run.status != previous, !run.status.hasPrefix("Thinking") { print(run.status); fflush(stdout); previous = run.status }
             if run.state.terminal { return run }
             try await Task.sleep(nanoseconds: 500_000_000)
         }
-        throw SevraError.refused("CHECK FAILED: run did not finish")
+        throw AppRuntimeError.refused("CHECK FAILED: run did not finish")
     }
     func near(_ a: Double, _ b: Double) -> Bool { abs(a - b) <= 1e-9 * max(1, abs(b)) }
     /// The run's numbers against the engine's statistics for its requests.
     func compare(_ phase: String, _ run: Run, thought: Bool) async throws {
         let stats = await engine.lastStats
-        guard let m = run.metrics else { throw SevraError.refused("CHECK FAILED: \(phase) recorded no numbers") }
+        guard let m = run.metrics else { throw AppRuntimeError.refused("CHECK FAILED: \(phase) recorded no numbers") }
         try require(stats.count == (thought ? 2 : 1), "\(phase): one engine request per phase")
         let answer = stats[stats.count - 1], first = stats[0]
         let thoughtStats = thought ? stats[0] : nil

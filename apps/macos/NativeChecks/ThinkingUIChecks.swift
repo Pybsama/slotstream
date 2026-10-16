@@ -3,9 +3,9 @@ import SwiftUI
 import CoreText
 import Combine
 import Vision
-@testable import SevraMac
-import SevraRuntime
-import SevraPresentation
+@testable import SlotstreamMac
+import SlotstreamRuntime
+import SlotstreamPresentation
 
 /// Offscreen check of the thinking controls in the production Mac views.
 ///
@@ -17,24 +17,24 @@ import SevraPresentation
 /// the working notes, the thinking line above the reply, the optional speed
 /// line and live speed, and the typical-time hint, in light and dark
 /// appearance. Popover content is rendered from its own view. Snapshots go to
-/// `SEVRA_UI_OUT`. The window lives far outside every display, the process
+/// `SLOTSTREAM_UI_OUT`. The window lives far outside every display, the process
 /// never activates, and no user Home is touched. Run it with
-/// `Tools/check_sevra_thinking_ui.sh`.
+/// `Tools/check_slotstream_thinking_ui.sh`.
 @main struct ThinkingUIChecks {
     @MainActor static func main() async throws {
         setvbuf(stdout, nil, _IOLBF, 0)
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.prohibited)
         let env = ProcessInfo.processInfo.environment
-        let out = URL(fileURLWithPath: env["SEVRA_UI_OUT"] ?? FileManager.default.temporaryDirectory.appendingPathComponent("sevra-ui-probe").path)
+        let out = URL(fileURLWithPath: env["SLOTSTREAM_UI_OUT"] ?? FileManager.default.temporaryDirectory.appendingPathComponent("slotstream-ui-probe").path)
         try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-        let fonts = URL(fileURLWithPath: env["SEVRA_FONTS"] ?? "apps/macos/Resources/Fonts")
+        let fonts = URL(fileURLWithPath: env["SLOTSTREAM_FONTS"] ?? "apps/macos/Resources/Fonts")
         for name in ["Inter", "Poppins-Medium"] {
             CTFontManagerRegisterFontsForURL(fonts.appendingPathComponent(name + ".ttf") as CFURL, .process, nil)
         }
         let home = out.appendingPathComponent("home")
         try? FileManager.default.removeItem(at: home)
-        let dbmd = URL(fileURLWithPath: env["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+        let dbmd = URL(fileURLWithPath: env["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
         let words = ["The", "user", "asks", "when", "a", "train", "arrives.", "Departure", "is", "9:40", "and", "the", "trip", "takes", "2", "hours", "35", "minutes.", "Adding", "the", "hours", "first", "gives", "11:40,", "then", "35", "minutes", "more", "gives", "12:15.", "I", "should", "also", "check", "whether", "the", "duration", "crosses", "noon,", "which", "it", "does,", "so", "the", "answer", "stays", "in", "the", "same", "day."]
         let trace = (0..<8).flatMap { _ in words }.joined(separator: " ")
         let engine = ScriptedInference(turns: [EngineTurn(text: "The train arrives at **12:15**. Two hours after 9:40 is 11:40, and 35 minutes more is 12:15."),
@@ -43,7 +43,7 @@ import SevraPresentation
         // Response details start off, as they do for a person.
         UserDefaults.standard.removeObject(forKey: "responseDetails.visible")
         defer { UserDefaults.standard.removeObject(forKey: "responseDetails.visible") }
-        let runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: engine)
+        let runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: engine)
         let model = AppModel()
         model.runtime = runtime
         // The same composer observation the app's start() installs.
@@ -269,7 +269,7 @@ import SevraPresentation
         check(model.thread?.run?.state == .completed && (model.snapshot?.home.conversationMessages(for: model.thread!).last?.text.contains("12:15") ?? false), "the answer arrived after Answer now")
         check(model.thread?.run?.metrics?.answerTokens ?? 0 > 0, "the run recorded its numbers")
         lines = try read(try snapshot("06-answered"))
-        check(visible("Thought for", lines) && visible("then answered when you asked", lines), "the reply shows how long Sevra thought, above the answer")
+        check(visible("Thought for", lines) && visible("then answered when you asked", lines), "the reply shows how long Slotstream thought, above the answer")
         check(!visible("Answer now", lines) && !visible("tok/s", lines), "Answer now is gone and no speed line shows while details are off")
         check(visible("Recently about", lines), "the composer hint now quotes a typical thinking time")
 
@@ -280,7 +280,7 @@ import SevraPresentation
         lines = try popover("07-details-after")
         check(visible("then answered when you asked", lines), "the details state how thinking ended")
         check(visible("Speed", lines) && visible("tokens per second", lines) && visible("First token", lines), "the details show the recorded speed")
-        check(visible("Departure is 9:40", lines) || visible("the answer stays", lines), "the working notes remain while Sevra is open")
+        check(visible("Departure is 9:40", lines) || visible("the answer stays", lines), "the working notes remain while Slotstream is open")
         try await closePopover()
 
         // 7. The optional speed line: off by default, on from the same control people use.

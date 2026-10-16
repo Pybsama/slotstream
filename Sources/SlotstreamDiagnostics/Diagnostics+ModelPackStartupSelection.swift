@@ -95,7 +95,7 @@ extension Diagnostics {
         let fusedProposal = try pack.startupCandidate(plan: originalPlan, liveMemory: .automatic, observation: fusedObservation)
         c.expect("resolved platform execution defaults change the complete policy identity",
             fusedProposal?.executionPolicyID != proposal.executionPolicyID)
-        for environment in [[:], ["PATH": "/fixture", "SEVRA_MODEL": "/fixture/model"],
+        for environment in [[:], ["PATH": "/fixture", "SLOTSTREAM_MODEL": "/fixture/model"],
                             ["SLOTSTREAM_TEST_BINARY": "/fixture/cli", "SLOTSTREAM_METALLIB_MACOS": "26"]] {
             c.expect("ordinary paths and build-tool selectors do not change loaded execution evidence",
                 Engine.admitsStartupEvidence(environment: environment, build: .release))

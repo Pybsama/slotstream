@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 func longConversationChecks(root: URL, dbmd: URL) async throws {
@@ -14,7 +14,7 @@ func longConversationChecks(root: URL, dbmd: URL) async throws {
     let originalIDs = seed.threads[0].messages.map(\.id)
     do { let store = try HomeStore(root: destination, dbmd: dbmd); try store.save(seed) }
     let probe = ScriptedInference(turns: Array(repeating: EngineTurn(text: "Bounded context response"), count: 6))
-    let runtime = try SevraRuntime(homeURL: destination, dbmd: dbmd, inference: probe)
+    let runtime = try SlotstreamRuntime(homeURL: destination, dbmd: dbmd, inference: probe)
     try await runtime.remember(threadID: "home", messageID: originalIDs[0], text: "Copper orchard shipment: the durable relevant answer is ORCHARD-CANARY-729.", admitted: true)
     for n in 1..<12 {
         try await runtime.remember(threadID: "home", messageID: originalIDs[n], text: "Unrelated memory \(n): " + String(repeating: "A different subject. ", count: 60), admitted: true)

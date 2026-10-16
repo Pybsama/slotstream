@@ -1,8 +1,8 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
-func require(_ value: @autoclosure () -> Bool, _ message: String) throws { if !value() { throw SevraError.refused("CHECK FAILED: " + message) } }
+func require(_ value: @autoclosure () -> Bool, _ message: String) throws { if !value() { throw AppRuntimeError.refused("CHECK FAILED: " + message) } }
 let sem = DispatchSemaphore(value: 0)
 var result: Int32 = 0
 do { try crashChildIfRequested() } catch { fputs(error.localizedDescription + "\n", stderr); exit(1) }
@@ -25,10 +25,10 @@ Task {
         if try await realSourcesIfRequested() { return }
         if try await realBasicsCheckIfRequested() { return }
         if try await realCapabilitiesIfRequested() { return }
-        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-check-" + UUID().uuidString)
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("slotstream-check-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+        let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
         if CommandLine.arguments.contains("--external-drafts") { try await externalDraftChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--archive") { try await archiveChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--context-window") { try await longConversationChecks(root: root, dbmd: dbmd); return }
@@ -47,8 +47,8 @@ Task {
             EngineTurn(text: "Here is a briefing to review.", calls: [ProposedTool(name: "artifact.propose", arguments: ["filename": .string("briefing.md"), "content": .string("# Briefing\n\nThe launch is October 12 with a budget of 400 dollars. [S1]\n")])])
         ])
         let home = root.appendingPathComponent("Home")
-        var runtime: SevraRuntime? = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: script)
-        do { _ = try HomeStore(root: home, dbmd: dbmd); throw SevraError.refused("CHECK FAILED: second owner accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "exclusive Home owner") }
+        var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: script)
+        do { _ = try HomeStore(root: home, dbmd: dbmd); throw AppRuntimeError.refused("CHECK FAILED: second owner accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "exclusive Home owner") }
         try await runtime!.attach(threadID: "home", folder: folder)
         let input = "Read the notes and propose a saved briefing."
         let runID = try await runtime!.submit(threadID: "home", text: input, nonce: "submit-1")
@@ -63,7 +63,7 @@ Task {
         let proposal = snapshot.home.threads[0].run!.proposal
         try require(proposal != nil, "tool loop reaches approval")
         try require(!FileManager.default.fileExists(atPath: home.appendingPathComponent("artifacts/briefing.md").path), "proposal cannot save itself")
-        do { _ = try await runtime!.approve(threadID: "home", proposalID: proposal!.id, digest: "wrong"); throw SevraError.refused("CHECK FAILED: stale approval accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "approval binds exact digest") }
+        do { _ = try await runtime!.approve(threadID: "home", proposalID: proposal!.id, digest: "wrong"); throw AppRuntimeError.refused("CHECK FAILED: stale approval accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "approval binds exact digest") }
         let artifact = try await runtime!.approve(threadID: "home", proposalID: proposal!.id, digest: proposal!.digest)
         let artifactText = try String(contentsOfFile: artifact, encoding: .utf8)
         try require(artifactText == proposal!.content, "exact artifact bytes")
@@ -72,10 +72,10 @@ Task {
         let artifactURL = URL(fileURLWithPath: artifact)
         try FileManager.default.removeItem(at: artifactURL)
         try FileManager.default.createSymbolicLink(at: artifactURL, withDestinationURL: home.appendingPathComponent("db/DB.md"))
-        do { _ = try await runtime!.readSavedArtifact(threadID: "home"); throw SevraError.refused("CHECK FAILED: saved document followed symlink") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "saved document symlink refused") }
+        do { _ = try await runtime!.readSavedArtifact(threadID: "home"); throw AppRuntimeError.refused("CHECK FAILED: saved document followed symlink") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "saved document symlink refused") }
         try FileManager.default.removeItem(at: artifactURL)
         try Data(repeating: 65, count: 1_048_577).write(to: artifactURL)
-        do { _ = try await runtime!.readSavedArtifact(threadID: "home"); throw SevraError.refused("CHECK FAILED: oversized preview accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "saved document read budget enforced") }
+        do { _ = try await runtime!.readSavedArtifact(threadID: "home"); throw AppRuntimeError.refused("CHECK FAILED: oversized preview accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "saved document read budget enforced") }
         try Data(artifactText.utf8).write(to: artifactURL)
         print("PASS: saved document preview, symlink refusal and read budget")
         try await runtime!.saveDraft(threadID: "home", text: "unsent durable draft")
@@ -87,19 +87,19 @@ Task {
         try require(saved.threads.count == 1 && saved.threads[0].draft == "unsent durable draft", "restart retains draft and excludes incognito")
         try inspectCanaryFiles(home, canary: "PRIVATE-CANARY-9387")
         print("PASS: owner exclusion, real dbmd persistence, duplicate submit, bounded tool loop, exact approval, artifact publication, restart, draft, incognito")
-        do { try EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: [:])], finishReason: "length").validate(); throw SevraError.refused("CHECK FAILED: truncated calls accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "whole-turn completion gate") }
-        do { try EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: [:]), ProposedTool(name: "shell", arguments: [:])]).validate(); throw SevraError.refused("CHECK FAILED: undeclared tool accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "validate complete set before execution") }
+        do { try EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: [:])], finishReason: "length").validate(); throw AppRuntimeError.refused("CHECK FAILED: truncated calls accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "whole-turn completion gate") }
+        do { try EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: [:]), ProposedTool(name: "shell", arguments: [:])]).validate(); throw AppRuntimeError.refused("CHECK FAILED: undeclared tool accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "validate complete set before execution") }
         let source = try SourceFolder(url: folder)
         let single = try SourceFolder(url: folder.appendingPathComponent("notes.md"))
         try Data("Sibling must stay outside the grant".utf8).write(to: folder.appendingPathComponent("sibling.md"))
         let singleList = try single.execute(ProposedTool(name: "source.list", arguments: [:]), cancellation: Cancellation())
         try require(singleList.contains("notes.md") && !singleList.contains("sibling.md"), "file selection grants only the selected item")
         _ = try single.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:notes.md")]), cancellation: Cancellation())
-        do { _ = try single.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:sibling.md")]), cancellation: Cancellation()); throw SevraError.refused("CHECK FAILED: single-file grant exposed sibling") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "sibling identifier refused") }
+        do { _ = try single.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:sibling.md")]), cancellation: Cancellation()); throw AppRuntimeError.refused("CHECK FAILED: single-file grant exposed sibling") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "sibling identifier refused") }
         try FileManager.default.removeItem(at: folder.appendingPathComponent("notes.md"))
         try FileManager.default.createSymbolicLink(at: folder.appendingPathComponent("notes.md"), withDestinationURL: home.appendingPathComponent("db/DB.md"))
-        do { _ = try SourceFolder(url: folder.appendingPathComponent("notes.md")); throw SevraError.refused("CHECK FAILED: selected symlink accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "selected symlink refused") }
-        do { _ = try source.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:notes.md")]), cancellation: Cancellation()); throw SevraError.refused("CHECK FAILED: symlink substitution accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "source symlink substitution denied") }
+        do { _ = try SourceFolder(url: folder.appendingPathComponent("notes.md")); throw AppRuntimeError.refused("CHECK FAILED: selected symlink accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "selected symlink refused") }
+        do { _ = try source.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:notes.md")]), cancellation: Cancellation()); throw AppRuntimeError.refused("CHECK FAILED: symlink substitution accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "source symlink substitution denied") }
         print("PASS: terminal gating, undeclared tools, single-file scope, sibling refusal, source symlink substitution")
         try await auditChecks(root: root, dbmd: dbmd)
         try await capabilityChecks(root: root, dbmd: dbmd)

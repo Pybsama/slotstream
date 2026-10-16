@@ -2,7 +2,7 @@
 type: decision
 id: 01m2p1cdk96hbcm8azc733h1x1
 created: 2026-09-16T21:18:52.009560+00:00
-updated: 2026-09-16T21:18:52.009560+00:00
+updated: 2026-10-16T06:32:39.287261+00:00
 summary: Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
 decided_on: 2026-09-16
 evidence: '[[records/decisions/decode-host-time-is-waiting-not-graph-construction]], [[records/decisions/target-range-macs-that-cannot-hold-the-model]], [[records/decisions/custom-metal-kernels-are-not-blocked-on-xcode]], [[records/decisions/newcomer-documentation]]'
@@ -18,7 +18,7 @@ GPU, with Slotstream's own run-time-compiled Metal kernels, a C decoder for
 the download format, and no Python runtime, interpreter or bridge on the
 request path. The README has a Built native section, an introduction sentence
 and a FAQ entry; the engineering notes have a native-stack table; the Swift
-library guide and the Sevra Mac notes state the in-process consequence; and
+library guide and the Slotstream Mac notes state the in-process consequence; and
 `llms.txt` carries the fact. The Python under `Tools/` is described as what it
 is: the reference implementation the port is checked against, the sampler
 oracle, the trace simulators and benchmark drivers, the model-free gates and
@@ -37,7 +37,7 @@ Three rules travel with the statement:
   comparison, which does not exist; the related-projects section keeps
   saying so.
 - The trade-offs stay visible: Apple Silicon only, and Windows and Linux are
-  planned in Sevra as their own native engines.
+  planned in Slotstream as their own native engines.
 
 Custom kernels are possible without Xcode because `MLXFast.metalKernel`
 compiles Metal source at run time

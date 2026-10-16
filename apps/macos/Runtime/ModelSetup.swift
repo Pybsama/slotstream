@@ -56,14 +56,14 @@ public final class ModelSetup: @unchecked Sendable {
     private func set(_ mutate: (inout ModelSetupStatus) -> Void) { lock.lock(); defer { lock.unlock() }; mutate(&value) }
     private func begin(_ phase: String) throws -> PullCancellation {
         lock.lock(); defer { lock.unlock() }
-        guard !value.busy else { throw SevraError.refused("Model setup is already in progress.") }
+        guard !value.busy else { throw AppRuntimeError.refused("Model setup is already in progress.") }
         let token = PullCancellation(); cancellation = token; value.busy = true; value.phase = phase; value.detail = phase
         return token
     }
     public func check() throws {
         let token = try begin("Checking local files")
         do { finish(try store.status(shouldContinue: { !token.isCancelled })) }
-        catch { let reason: Error = token.isCancelled ? SevraError.cancelled : error; pause(reason); throw reason }
+        catch { let reason: Error = token.isCancelled ? AppRuntimeError.cancelled : error; pause(reason); throw reason }
     }
     public func download() throws {
         let token = try begin("Downloading local model")
@@ -82,7 +82,7 @@ public final class ModelSetup: @unchecked Sendable {
             }
             finish(try store.status(shouldContinue: { !token.isCancelled }))
         } catch {
-            let reason: Error = token.isCancelled ? SevraError.cancelled : error
+            let reason: Error = token.isCancelled ? AppRuntimeError.cancelled : error
             pause(reason)
             throw reason
         }
