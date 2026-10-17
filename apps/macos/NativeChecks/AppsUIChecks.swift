@@ -4,9 +4,9 @@ import CoreText
 import Combine
 import Vision
 import WebKit
-@testable import SevraMac
-import SevraRuntime
-import SevraPresentation
+@testable import SlotstreamMac
+import SlotstreamRuntime
+import SlotstreamPresentation
 
 /// Offscreen checks of the mini-app host and the review views.
 ///
@@ -17,7 +17,7 @@ import SevraPresentation
 /// scripted engine and clicks through a file-change review with undo, then an
 /// app review, activation and first data write. Web content is read through
 /// script evaluation, since a web view draws out of process. Snapshots go to
-/// `SEVRA_UI_OUT`. Run it with `Tools/check_sevra_apps_ui.sh`.
+/// `SLOTSTREAM_UI_OUT`. Run it with `Tools/check_slotstream_apps_ui.sh`.
 final class LoopbackListener: @unchecked Sendable {
     let port: UInt16
     private let fd: Int32
@@ -117,9 +117,9 @@ final class RecordingBroker: @unchecked Sendable {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.prohibited)
         let env = ProcessInfo.processInfo.environment
-        let out = URL(fileURLWithPath: env["SEVRA_UI_OUT"] ?? FileManager.default.temporaryDirectory.appendingPathComponent("sevra-apps-ui").path)
+        let out = URL(fileURLWithPath: env["SLOTSTREAM_UI_OUT"] ?? FileManager.default.temporaryDirectory.appendingPathComponent("slotstream-apps-ui").path)
         try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-        let fonts = URL(fileURLWithPath: env["SEVRA_FONTS"] ?? "apps/macos/Resources/Fonts")
+        let fonts = URL(fileURLWithPath: env["SLOTSTREAM_FONTS"] ?? "apps/macos/Resources/Fonts")
         for name in ["Inter", "Poppins-Medium"] {
             CTFontManagerRegisterFontsForURL(fonts.appendingPathComponent(name + ".ttf") as CFURL, .process, nil)
         }
@@ -152,13 +152,13 @@ final class RecordingBroker: @unchecked Sendable {
 
         // MARK: 0. a counter app a model built, when one is named
 
-        // SEVRA_APP_UNDER_TEST names an app's index.html and SEVRA_APP_DATA its
+        // SLOTSTREAM_APP_UNDER_TEST names an app's index.html and SLOTSTREAM_APP_DATA its
         // collections. The app runs twice in the production host over one
         // scratch store: plus is clicked three times, then the reopened app
         // must show 3 and the store must hold a single record.
-        if let path = env["SEVRA_APP_UNDER_TEST"] {
+        if let path = env["SLOTSTREAM_APP_UNDER_TEST"] {
             let html = try String(contentsOfFile: path, encoding: .utf8)
-            let collections = try AppCollection.parse(env["SEVRA_APP_DATA"] ?? "")
+            let collections = try AppCollection.parse(env["SLOTSTREAM_APP_DATA"] ?? "")
             let store = AppPreviewData(name: "Under test", collections: collections)
             func open(_ label: String) async throws -> (MiniAppController, NSWindow, WKWebView) {
                 let controller = MiniAppController(session: MiniAppSession(appID: "under-test", version: 1, name: "Under test", html: html, collections: collections, preview: false),
@@ -212,12 +212,13 @@ final class RecordingBroker: @unchecked Sendable {
         <a id="link" href="\(target)/link" ping="\(target)/ping">link</a>
         <link rel="icon" href="\(target)/favicon.ico"><link rel="prefetch" href="\(target)/prefetch"><link rel="preload" as="fetch" href="\(target)/preload">
         <script>
-        window.addEventListener('sevra-change', (event) => { window.lastChange = event.detail.collection; });
+        window.addEventListener('slotstream-change', (event) => { window.lastChange = event.detail.collection; });
+        window.addEventListener('sevra-change', (event) => { window.legacyChange = event.detail.collection; });
         (async () => {
           const report = {};
           const attempt = async (name, run) => { try { await run(); report[name] = 'allowed'; } catch (error) { report[name] = 'blocked'; } };
           await attempt('fetch', () => fetch('\(target)/fetch'));
-          await attempt('fetchSelf', () => fetch('sevra-app://app/other'));
+          await attempt('fetchSelf', () => fetch('slotstream-app://app/other'));
           await attempt('xhr', () => new Promise((ok, fail) => { const x = new XMLHttpRequest(); x.open('GET', '\(target)/xhr'); x.onload = ok; x.onerror = fail; x.send(); }));
           await attempt('websocket', () => new Promise((ok, fail) => { const w = new WebSocket('ws://127.0.0.1:\(listener.port)/ws'); w.onopen = ok; w.onerror = fail; setTimeout(fail, 1500); }));
           await attempt('eventsource', () => new Promise((ok, fail) => { const s = new EventSource('\(target)/sse'); s.onopen = ok; s.onerror = fail; setTimeout(fail, 1500); }));
@@ -241,10 +242,12 @@ final class RecordingBroker: @unchecked Sendable {
           report.popup = String(window.open('\(target)/popup') !== null);
           report.stored = localStorage.getItem('probe');
           localStorage.setItem('probe', 'kept');
-          report.info = JSON.stringify(await sevra.info());
-          try { await sevra.create('secrets', { x: 1 }); report.undeclared = 'allowed'; } catch (error) { report.undeclared = error.code; }
-          report.overwrite = (() => { try { window.sevra = null; return String(window.sevra === null); } catch (error) { return 'refused'; } })();
-          const created = await sevra.create('probe', { report: JSON.stringify(report) });
+          report.info = JSON.stringify(await slotstream.info());
+          report.legacyAPI = window.sevra === window.slotstream;
+          report.legacyRead = JSON.stringify(await sevra.list('probe'));
+          try { await slotstream.create('secrets', { x: 1 }); report.undeclared = 'allowed'; } catch (error) { report.undeclared = error.code; }
+          report.overwrite = (() => { try { window.slotstream = null; return String(window.slotstream === null); } catch (error) { return 'refused'; } })();
+          const created = await slotstream.create('probe', { report: JSON.stringify(report) });
           window.probeReport = report;
           document.getElementById('status').textContent = 'Probe finished ' + created.id;
           try { document.getElementById('form').submit(); } catch (error) {}
@@ -274,6 +277,7 @@ final class RecordingBroker: @unchecked Sendable {
             controller.notifyChange(collection: "secrets")
             try await Task.sleep(nanoseconds: 300_000_000)
             report["lastChange"] = await evaluate(view, "window.lastChange || ''") ?? ""
+            report["legacyChange"] = await evaluate(view, "window.legacyChange || ''") ?? ""
             report["records"] = broker.records.count
             controller.close()
             window.contentView = nil; window.orderOut(nil)
@@ -292,10 +296,11 @@ final class RecordingBroker: @unchecked Sendable {
         check(datagrams.datagrams == 0, "no peer connection sent a datagram (\(datagrams.datagrams) seen; fresh frame: \(first["freshRtc"] ?? ""), srcdoc frame: \(first["innerRtc"] ?? ""))")
         check(first["popup"] as? String == "false", "the page cannot open windows")
         check(first["undeclared"] as? String == "denied", "an undeclared collection is refused")
-        check(first["overwrite"] as? String != "true", "the page cannot replace the Sevra API")
+        check(first["overwrite"] as? String != "true", "the page cannot replace the Slotstream API")
         check((first["info"] as? String)?.contains("\"probe\"") == true, "info reports only the declared collection")
-        check(first["url"] as? String == "sevra-app://app/index.html", "navigation away is refused (at \(first["url"] ?? ""))")
+        check(first["url"] as? String == "slotstream-app://app/index.html", "navigation away is refused (at \(first["url"] ?? ""))")
         check(first["lastChange"] as? String == "probe", "the page hears changes to its own collection only")
+        check(first["legacyAPI"] as? Bool == true && first["legacyRead"] as? String == "[]" && first["legacyChange"] as? String == "probe", "saved apps retain the same scoped API and change notifications")
         check(first["records"] as? Int == 1, "the declared write reached the broker once")
         let second = try await probe("second")
         check(second["stored"] is NSNull || second["stored"] == nil, "browser storage does not outlive the app view (\(second["stored"] ?? "nil"))")
@@ -321,12 +326,12 @@ final class RecordingBroker: @unchecked Sendable {
         </head><body><h1>Habit tracker</h1><ul id="list"></ul>
         <script>
         async function load() {
-          const items = await sevra.list('habits');
+          const items = await slotstream.list('habits');
           document.getElementById('list').replaceChildren(...items.map((item) => { const li = document.createElement('li'); li.textContent = item.data.name; return li; }));
           return items;
         }
-        window.addEventListener('sevra-change', load);
-        load().then((items) => { if (items.length === 0) return sevra.create('habits', { name: 'Walk every morning' }).then(load); });
+        window.addEventListener('slotstream-change', load);
+        load().then((items) => { if (items.length === 0) return slotstream.create('habits', { name: 'Walk every morning' }).then(load); });
         </script></body></html>
         """
         // The pattern a local model wrote in a real run: it looks for a record
@@ -336,15 +341,15 @@ final class RecordingBroker: @unchecked Sendable {
         <!doctype html><html><head><meta charset="utf-8"><title>Tally</title></head><body><p id="n">0</p>
         <script>
         async function load() {
-          const rows = await sevra.list('tally');
-          if (!rows.find((row) => row.id === 'count')) { await sevra.create('tally', { count: 0 }); }
+          const rows = await slotstream.list('tally');
+          if (!rows.find((row) => row.id === 'count')) { await slotstream.create('tally', { count: 0 }); }
           document.getElementById('n').textContent = String(rows.length);
         }
-        window.addEventListener('sevra-change', load);
+        window.addEventListener('slotstream-change', load);
         load();
         </script></body></html>
         """
-        let dbmd = URL(fileURLWithPath: env["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+        let dbmd = URL(fileURLWithPath: env["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
         let engine = ScriptedInference(turns: [
             EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["path": .string("plan.md")])]),
             EngineTurn(text: "", calls: [ProposedTool(name: "file.edit", arguments: ["id": .string("a1:plan.md"), "old": .string("Status: draft"), "new": .string("Status: approved")])]),
@@ -356,8 +361,8 @@ final class RecordingBroker: @unchecked Sendable {
             EngineTurn(text: "Here is a tally.", calls: [ProposedTool(name: "app.propose", arguments: ["name": .string("Tally"), "description": .string("Keep a tally."),
                                                                                                   "data": .string("tally:write"), "html": .string(selfFeeding)])]),
         ], delayNanoseconds: 2_000_000)
-        guard let helper = env["SEVRA_EXTRACT"].map(URL.init(fileURLWithPath:)) else { print("FAIL: set SEVRA_EXTRACT"); exit(1) }
-        let runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: engine, helper: helper)
+        guard let helper = env["SLOTSTREAM_EXTRACT"].map(URL.init(fileURLWithPath:)) else { print("FAIL: set SLOTSTREAM_EXTRACT"); exit(1) }
+        let runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: engine, helper: helper)
         let model = AppModel()
         model.runtime = runtime
         // The same composer observation the app's start() installs.

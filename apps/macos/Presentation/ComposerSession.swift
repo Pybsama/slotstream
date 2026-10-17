@@ -17,9 +17,9 @@ import Combine
         case save(String), conflict(Draft), send(String)
         public var message: String {
             switch self {
-            case .save(let reason): return "Sevra could not confirm that your draft was saved. " + reason
+            case .save(let reason): return "Slotstream could not confirm that your draft was saved. " + reason
             case .conflict: return "The saved draft changed before saving finished. Your text is still here. Choose which version to keep."
-            case .send(let reason): return "Sevra could not confirm that your message was sent. " + reason
+            case .send(let reason): return "Slotstream could not confirm that your message was sent. " + reason
             }
         }
     }

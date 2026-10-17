@@ -1,6 +1,6 @@
 ---
 type: db-md
-updated: 2026-10-06T03:23:33.371285+00:00
+updated: 2026-10-16T21:28:57.523946+00:00
 owner: Carlos Galarza
 scope: engineering
 ---
@@ -102,11 +102,11 @@ moment they finish.
 ### Ignored types
 
 ### Validation log kinds
-
-Preserve historical log bytes. One September 5, 2026 entry uses `change` for an update, and one October 6, 2026 entry uses `experiment` for a completed research update. New entries use standard kinds.
+Preserve historical log bytes. One September 5, 2026 entry uses `change` for an update, and one October 6, 2026 entry uses `experiment` for a completed research update. The October 16, 2026 Xcode follow-up entries use `repair` for regression fixes and a receipt correction. These existing kinds remain declared so their evidence is preserved. New entries use standard kinds.
 
 - change
 - experiment
+- repair
 
 ## Folders
 

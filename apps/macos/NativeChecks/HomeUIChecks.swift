@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 import Vision
 import CoreText
-@testable import SevraMac
-import SevraRuntime
-import SevraPresentation
+@testable import SlotstreamMac
+import SlotstreamRuntime
+import SlotstreamPresentation
 
 /// Real dbmd, production navigation and views, disposable Homes, no model.
 @main struct HomeUIChecks {
@@ -12,24 +12,40 @@ import SevraPresentation
         setvbuf(stdout, nil, _IOLBF, 0)
         NSApplication.shared.setActivationPolicy(.prohibited)
         let env = ProcessInfo.processInfo.environment
-        let fonts = URL(fileURLWithPath: env["SEVRA_FONTS"]!)
+        let fonts = URL(fileURLWithPath: env["SLOTSTREAM_FONTS"]!)
         for name in ["Inter", "Poppins-Medium"] {
             CTFontManagerRegisterFontsForURL(fonts.appendingPathComponent(name + ".ttf") as CFURL, .process, nil)
         }
-        let out = URL(fileURLWithPath: env["SEVRA_UI_OUT"]!).resolvingSymlinksInPath()
+        let out = URL(fileURLWithPath: env["SLOTSTREAM_UI_OUT"]!).resolvingSymlinksInPath()
         let root = out.appendingPathComponent("fixtures-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        let dbmd = URL(fileURLWithPath: env["SEVRA_DBMD"]!)
-        let suite = "Sevra.HomeChecks." + UUID().uuidString
+        let dbmd = URL(fileURLWithPath: env["SLOTSTREAM_DBMD"]!)
+        let suite = "Slotstream.HomeChecks." + UUID().uuidString
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
+        let oldHome = root.appendingPathComponent("old-custom-home").path
+        AppPreferences.migrateLegacy(defaults: defaults, legacy: ["homes.selected.v1": oldHome, "appearance": "Dark", "unrelated": "ignore"])
+        precondition(defaults.string(forKey: "homes.selected.v1") == oldHome)
+        precondition(defaults.string(forKey: "appearance") == "Dark" && defaults.object(forKey: "unrelated") == nil)
+        defaults.set("Light", forKey: "appearance")
+        AppPreferences.migrateLegacy(defaults: defaults, legacy: ["appearance": "Dark"])
+        precondition(defaults.string(forKey: "appearance") == "Light")
+        let emptyUser = root.appendingPathComponent("new-user")
+        precondition(HomeLocation.defaultURL(in: emptyUser).path == emptyUser.appendingPathComponent("Slotstream/Home").path)
+        let oldDefault = emptyUser.appendingPathComponent("Sevra/Home")
+        try FileManager.default.createDirectory(at: oldDefault, withIntermediateDirectories: true)
+        precondition(HomeLocation.defaultURL(in: emptyUser).path == oldDefault.path)
+        let newDefault = emptyUser.appendingPathComponent("Slotstream/Home")
+        try FileManager.default.createDirectory(at: newDefault, withIntermediateDirectories: true)
+        precondition(HomeLocation.defaultURL(in: emptyUser).path == newDefault.path)
+        print("PASS: renamed bundle retains selected Home and preferences once; existing defaults remain discoverable")
         let a = root.appendingPathComponent("Personal", isDirectory: true)
         let b = root.appendingPathComponent("Research", isDirectory: true)
         defaults.set(a.path, forKey: "homes.selected.v1")
         let homes = HomeNavigation(defaults: defaults, environment: [:])
         homes.makeRuntime = { url in
-            try SevraRuntime(homeURL: url, dbmd: dbmd, inference: ScriptedInference(
+            try SlotstreamRuntime(homeURL: url, dbmd: dbmd, inference: ScriptedInference(
                 turns: [EngineTurn(text: String(repeating: "Working on a long response. ", count: 120))], delayNanoseconds: 50_000_000))
         }
         var current = AppModel(homeURL: a, homes: homes)
@@ -88,7 +104,7 @@ import SevraPresentation
         try require(current.draft == "Personal draft survives switching", "conversation draft restored exactly")
         try require(current.journalComposer.text == "Personal journal draft", "journal draft restored exactly")
         try require(HomeNavigation(defaults: defaults, environment: [:]).current == a, "last selected Home persists for next launch")
-        let explicit = HomeNavigation(defaults: defaults, environment: ["SEVRA_HOME": b.path])
+        let explicit = HomeNavigation(defaults: defaults, environment: ["SLOTSTREAM_HOME": b.path])
         explicit.opened(b)
         try require(HomeNavigation(defaults: defaults, environment: [:]).current == a, "explicit development Home does not replace saved startup Home")
         let missing = root.appendingPathComponent("Disconnected")
@@ -161,7 +177,7 @@ import SevraPresentation
         window.appearance = NSAppearance(named: .darkAqua)
         _ = try snapshot("sidebar-dark")
         window.setContentSize(NSSize(width: 620, height: 660))
-        NotificationCenter.default.post(name: .sevraShowHomes, object: nil)
+        NotificationCenter.default.post(name: .slotstreamShowHomes, object: nil)
         try await Task.sleep(nanoseconds: 400_000_000)
         try require(homes.showing, "Home menu remains reachable with collapsed navigation")
         homes.showing = false

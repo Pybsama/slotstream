@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 /// One bounded model instance, disposable source files and a disposable Home.
@@ -8,10 +8,10 @@ import Slotstream
 func realSourcesIfRequested() async throws -> Bool {
     let args = CommandLine.arguments
     guard args.contains("--real-sources") else { return false }
-    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw SevraError.refused("Use --real-sources --home with a new disposable directory.") }
+    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw AppRuntimeError.refused("Use --real-sources --home with a new disposable directory.") }
     let base = URL(fileURLWithPath: args[i + 1]).standardizedFileURL
     guard !FileManager.default.fileExists(atPath: base.path), (Machine.current().availableGB ?? 0) >= 13 else {
-        throw SevraError.refused("This check needs a new directory and the 10 GB model budget plus 3 GB headroom.")
+        throw AppRuntimeError.refused("This check needs a new directory and the 10 GB model budget plus 3 GB headroom.")
     }
     let fm = FileManager.default
     let documents = base.appendingPathComponent("Documents"), notes = documents.appendingPathComponent("Notes")
@@ -21,8 +21,8 @@ func realSourcesIfRequested() async throws -> Bool {
     let revisedCode = "CEDAR-" + UUID().uuidString.prefix(8)
     let old = notes.appendingPathComponent("launch-plan.md"), new = notes.appendingPathComponent("launch-revised.md")
     try Data("# Launch\nLaunch code: \(initialCode)\nStatus: draft\n".utf8).write(to: old)
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
-    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: 10))
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    let runtime = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: 10))
     var records: [[String: Any]] = []
     var failures: [String] = []
     func expect(_ value: Bool, _ label: String) { print((value ? "PASS: " : "FAIL: ") + label); fflush(stdout); if !value { failures.append(label) } }
@@ -41,7 +41,7 @@ func realSourcesIfRequested() async throws -> Bool {
             try await Task.sleep(nanoseconds: 1_000_000_000)
         }
         try await runtime.stop(threadID: thread)
-        throw SevraError.refused("The live source check exceeded its wait budget.")
+        throw AppRuntimeError.refused("The live source check exceeded its wait budget.")
     }
     do {
         let plain = try await runtime.newThread(mode: .threadOnly)

@@ -1,4 +1,4 @@
-#include "sevra_sandbox.h"
+#include "slotstream_sandbox.h"
 #include <string.h>
 #include <servers/bootstrap.h>
 #include <mach/mach.h>
@@ -11,7 +11,7 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include <sandbox.h>
 
-int sevra_sandbox_apply(const char *profile, char *message, unsigned long capacity) {
+int slotstream_sandbox_apply(const char *profile, char *message, unsigned long capacity) {
     char *error = NULL;
     int result = sandbox_init(profile, 0, &error);
     if (result != 0 && message != NULL && capacity > 0) {
@@ -23,7 +23,7 @@ int sevra_sandbox_apply(const char *profile, char *message, unsigned long capaci
 }
 #pragma clang diagnostic pop
 
-int sevra_can_look_up(const char *service) {
+int slotstream_can_look_up(const char *service) {
     mach_port_t port = MACH_PORT_NULL;
     kern_return_t result = bootstrap_look_up(bootstrap_port, service, &port);
     if (result == KERN_SUCCESS && port != MACH_PORT_NULL) {

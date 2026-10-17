@@ -2,19 +2,19 @@
 type: design
 id: 01m21xw595ac9n303q61m8kvtq
 created: 2026-09-09T01:52:44.837037+00:00
-updated: 2026-10-07T18:31:40.813251+00:00
-summary: 'Sevra integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.'
+updated: 2026-10-16T06:32:38.133159+00:00
+summary: 'Slotstream integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.'
 date: 2026-09-08
 doc: plan
 level: '2'
 order: '5'
-title: 'Sevra integration: maintained model choices for hardware'
+title: 'Slotstream integration: maintained model choices for hardware'
 ---
 Owner-approved engineering direction, September 8, 2026. Implementation of
 the maintained-selection lifecycle is planned; the current Slotstream engine
 continues to support its documented checkpoint and independent interfaces.
 
-Sevra will select and maintain a small set of models for supported hardware,
+Slotstream will select and maintain a small set of models for supported hardware,
 optimizing inference, context, tools, memory and the interface as one experience.
 The appropriate model may differ by hardware profile and change as better
 choices qualify. The permanent single-flagship constraint is superseded at the
