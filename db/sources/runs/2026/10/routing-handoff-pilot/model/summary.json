@@ -1,0 +1,28 @@
+{
+  "eligible_pairs": 0,
+  "median_speed_ratio": null,
+  "pairs": [
+    {
+      "eligible": false,
+      "equal_work": false,
+      "exact": true,
+      "round": 0,
+      "speed_ratio": 0.881202441281779
+    },
+    {
+      "eligible": false,
+      "equal_work": false,
+      "exact": true,
+      "round": 1,
+      "speed_ratio": 0.9385536257262422
+    },
+    {
+      "eligible": false,
+      "equal_work": false,
+      "exact": true,
+      "round": 2,
+      "speed_ratio": 1.0932478375554635
+    }
+  ],
+  "scope": "M5 Pro, fresh native processes, 10 GB fixed target, plain decode, one prompt, 64 output tokens; no GPU-directory implementation"
+}

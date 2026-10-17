@@ -1,0 +1,6 @@
+{
+  "native": "local build-directory name collision before compiler invocation; used fresh ready-native1",
+  "model": "incomplete 8.1 GB pilot: two successful requests, then native pre-allocation headroom refusal; no speed conclusion",
+  "setup_error": "8.1 GB plan disables automatic lookahead; successful cells have decode_lookahead=false and expertPrefetch absent, so do not exercise ready tickets",
+  "next": "new prospective 10 GB cohort with active-prefetch/path assertions, unchanged improvement and clean-timing gates, and two unscored warmup requests"
+}

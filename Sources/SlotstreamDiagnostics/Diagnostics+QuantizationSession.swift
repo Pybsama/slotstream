@@ -217,7 +217,6 @@ extension Diagnostics {
             engine.generator.draftDepth = max(1, specification.draftDepth)
             engine.generator.footprintSampling = true
             engine.prefixCache.enabled = specification.prefixCache
-            engine.gpuKeepAlive = .off
             guard (engine.model.mtpHead != nil) == (specification.draftDepth > 0),
                   engine.visionAllowed == specification.vision,
                   !specification.vision || engine.visionAvailable,

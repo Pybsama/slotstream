@@ -2,11 +2,24 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-07T19:34:49.320599Z
+updated: 2026-10-14T15:16:12.682687Z
 ---
 
 # records/measurements
 
+- [[records/measurements/issue54-native-boundary-probe-2026-10-13]] — Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff
+- [[records/measurements/issue54-full-model-2026-10-14]] — Six public-release full-model requests on M5 do not reproduce the sustained 32k cliff; M4 cause and release-fix status remain unresolved
+- [[records/measurements/issue54-boundary-followup-2026-10-13]] — Issue 54 remains unverified after expanded path probes; full-model attempt refused before launch for insufficient headroom
+- [[records/measurements/issue54-context-boundary-triage-2026-10-12]] — The 32k report remains unconfirmed as a keepalive bug; a bounded attention probe finds only a small boundary step on the M5 Pro
+- [[records/measurements/ready-overlap-prototype-2026-10-13]] — Ready experts compute earlier with exact outputs, but the completed model screen finds no useful qualified speedup
+- [[records/measurements/routing-handoff-followup-2026-10-13]] — GPU check-first lookup loses at sparse complete layers; exact-work real-model overlap does not pass its improvement screen
+- [[records/measurements/routing-handoff-pilot-2026-10-13]] — Native all-hit GPU lookup improves a synthetic MoE chain by 1.29 to 1.36x; full-model gain is unqualified and the completeness counter omits ready tickets
+- [[records/measurements/decode-path-serialization-round-2-2026-09-12]] — Prefetch coverage: top above ten is inert under the margin threshold, an A/A spread of 0.991 to 1.022; stride 1, stride union and no threshold cut demand reads but run slower
+- [[records/measurements/decode-path-serialization-round-1-2026-09-12]] — Deferring the per-layer GPU drain with multi-generation pins gains 3.8% to 5.1% with exact outputs; record reads and nine flags are null; profiles close compilation
+- [[records/measurements/issue59-keepalive-and-related-issue-audit-2026-10-12]] — M1 Max keepalive report and complete issue audit; preserve confounds and keep issue 54 separate
+- [[records/measurements/release-0-2-29-prepublication-2026-10-12]] — Keepalive removal prepared and locally checked; full model acceptance and publication await memory headroom and exact-source CI
+- [[records/measurements/release-0-2-29-published-2026-10-12]] — v0.2.29 published and accepted; keepalive reports closed
+- [[records/measurements/issue55-keepalive-investigation-2026-10-12]] — Issue 55 is a credible portability regression; current floor-budget tests show no consistent gain, and scheduling probes demonstrate the cost of serialization without reproducing the base-M5 cause
 - [[records/measurements/release-0-2-28-published-2026-10-07]] — v0.2.28 published and accepted
 - [[records/measurements/quantization-screen-2026-10-02]] — Pinned VQ inventories, authenticated native artifact reads and exact bounded complete-stack parity; no alternative pack or speed profile is qualified.
 - [[records/measurements/release-0-2-27-published-2026-09-30]] — v0.2.27 published, installed and accepted
@@ -82,13 +95,11 @@ updated: 2026-10-07T19:34:49.320599Z
 - [[records/measurements/decode-path-serialization-b1-cohort-2026-09-13]] — B1 cohort: combined candidate 1.106 against shipped, lower bound 1.073, families 1.033 or above, identical outputs; not a pass (r0245 kept one clean pair); rescored from 1.116
 - [[records/measurements/expert-lookahead-2-slot-adoption-screen-2026-09-12]] — Slot adoption turns the router-reuse prefetch into a measured 1.138x on the 12-pair validation screen (every pair faster, outputs exact); the held-out cohort is blocked by a host I/O stall
 - [[records/measurements/decode-path-serialization-combination-screen-2026-09-13]] — Combined candidate (B0 prefetch, barrier period 4 on the routing readback, router weight cache) is exact and screens at 1.104 against shipped, 1.018 over B0 prefetch, five of six pairs above 1
-- [[records/measurements/decode-path-serialization-round-1-2026-09-12]] — Deferring the per-layer GPU drain with multi-generation pins gains 3.8% to 5.1% with exact outputs; record reads and nine flags are null; profiles close compilation
 - [[records/measurements/decode-path-serialization-closing-profiles-2026-09-13]] — Whole-thread profiles: B0 prefetch waits 36% on reads and 40% on the GPU; the combination cuts GPU-wait samples 18% and adds 9% reads; round 1's split covered one thread block
 - [[records/measurements/decode-path-serialization-round-3b-2026-09-13]] — Forecasts on the routing readback remove round 3's loss and stay exact; the rule picks period 4 at 1.087, but without two slow reference cells it reads 1.014, a gain of about 1%
 - [[records/measurements/decode-path-serialization-round-5-2026-09-12]] — Router weight cache under prefetch: 1.017 over twelve pairs, ten above 1, approximate interval 1.003 to 1.031, exact; adding router top-k removes the gain; the cache carries into step 6
 - [[records/measurements/decode-path-serialization-round-4-2026-09-12]] — Draft depth under prefetch: depth 3 is 1.022 inside the noise band, depths 4 and 6 lose as each verified position loads its own experts, depth 1 changes the greedy output; depth 2 stays
 - [[records/measurements/decode-path-serialization-round-3-2026-09-12]] — Holding router forecasts until a deferred barrier is exact but costs 7% to 26% under prefetch with no pair above 1; dropped targets, weaker strides and read bursts outweigh the drain saved
-- [[records/measurements/decode-path-serialization-round-2-2026-09-12]] — Prefetch coverage: top above ten is inert under the margin threshold, an A/A spread of 0.991 to 1.022; stride 1, stride union and no threshold cut demand reads but run slower
 - [[records/measurements/expert-lookahead-2-router-reuse-prefetch-native-screens-2026-09-12]] — Router-reuse prefetch: forecast exact and 76% right one layer early, twin projects 1.247x, yet native screens lose 4 to 29%: the runtime's per-record critical-path work outweighs the read time saved
 - [[records/measurements/expert-lookahead-router-reuse-and-replacement-probes-2026-09-11]] — Router reuse forecasts routing 4x better than the trained predictors; Belady halves cache misses at the same memory; demand-read cost model and early-layer structure
 - [[records/measurements/expert-lookahead-pilot-offline-stop-2026-09-11]] — Expert Lookahead pilot stopped at the offline gate: capture and prefetch runtime exact, oracle ceiling 1.59x, best predictor projects 1.006x under the traffic bound

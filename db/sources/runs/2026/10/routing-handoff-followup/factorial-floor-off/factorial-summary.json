@@ -1,0 +1,171 @@
+{
+  "comparisons": {
+    "reference_repeat": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 0.9875656121820363,
+        "requestSeconds": 0.9892091274660991
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 0.9779948293300684,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.9790891012363493,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 0.9971363950340042,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.999329153695849,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 1.0126412113413525,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 1.0104105789816156,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9927404027849384,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.9929869654617047,
+          "round": 3
+        }
+      ]
+    },
+    "resident": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 0.9225573790291958,
+        "requestSeconds": 0.9206583057332287
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 0.9143128786441621,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.910499671527135,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 0.9308018794142294,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.9308169399393226,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9093609433819938,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.9089290555029718,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9269774792547216,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.9225282016156544,
+          "round": 3
+        }
+      ]
+    },
+    "shared": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 1.0127700081592126,
+        "requestSeconds": 1.0126401653779473
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 1.0136360985093809,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 1.0138605339835274,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 1.0119039178090445,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 1.0114197967723673,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 1.0193687181510562,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 1.01629294795511,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 1.0109818049350308,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 1.007972900235596,
+          "round": 3
+        }
+      ]
+    },
+    "staged": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 0.9135746511667906,
+        "requestSeconds": 0.9066479306591859
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 0.9126875890181263,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.895210932083874,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 0.914461713315455,
+          "eligible": true,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.9180849292344977,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9159421299335226,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.915086728465589,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9211613796894406,
+          "eligible": false,
+          "equal_work": true,
+          "exact": true,
+          "requestSeconds": 0.9182627652204545,
+          "round": 3
+        }
+      ]
+    }
+  },
+  "limit": "screen existing paths, two short prompts, plain decode; no adoption or GPU-directory implementation",
+  "memory_target_gb": 8.1,
+  "prefetch": "off"
+}

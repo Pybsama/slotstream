@@ -13,14 +13,22 @@ import subprocess
 import time
 
 
-def exchange(port, method, path, body=None):
+def exchange(port, method, path, body=None, *, timeout=30, deadline=None):
+    def socket_timeout():
+        remaining = timeout if deadline is None else deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError('HTTP request timed out')
+        return min(timeout, remaining)
+
     data = b'' if body is None else json.dumps(body).encode()
     head = (f'{method} {path} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n'
             f'Content-Type: application/json\r\nContent-Length: {len(data)}\r\n\r\n').encode()
-    with socket.create_connection(('127.0.0.1', port), timeout=30) as connection:
+    with socket.create_connection(('127.0.0.1', port), timeout=socket_timeout()) as connection:
+        connection.settimeout(socket_timeout())
         connection.sendall(head + data)
         chunks = []
         while True:
+            connection.settimeout(socket_timeout())
             chunk = connection.recv(65536)
             if not chunk:
                 break
@@ -30,19 +38,65 @@ def exchange(port, method, path, body=None):
     return json.loads(payload)
 
 
+def positive_seconds(value):
+    try:
+        seconds = float(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError('must be a positive finite number of seconds') from error
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise argparse.ArgumentTypeError('must be a positive finite number of seconds')
+    return seconds
+
+
+def wait_for_startup(process, port, timeout_seconds):
+    started = time.monotonic()
+    deadline = started + timeout_seconds
+    while True:
+        exit_code = process.poll()
+        if exit_code is not None:
+            raise RuntimeError(f'server exited before answering (exit {exit_code})')
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(f'startup timed out after {timeout_seconds:g} seconds')
+        # Bound each probe as well as the whole wait, including an accepted
+        # connection whose HTTP response never completes.
+        probe_timeout = min(1, remaining)
+        try:
+            response = exchange(port, 'GET', '/api/ps', timeout=probe_timeout,
+                                deadline=min(deadline, time.monotonic() + probe_timeout))
+            initial = response['models'][0]['details']['memory_plan']
+        except OSError:
+            remaining = deadline - time.monotonic()
+            if remaining > 0:
+                time.sleep(min(.2, remaining))
+            continue
+        elapsed = time.monotonic() - started
+        if elapsed >= timeout_seconds:
+            raise TimeoutError(f'startup timed out after {timeout_seconds:g} seconds')
+        return initial, elapsed
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, default=os.environ.get('SLOTSTREAM_TEST_BINARY', '.build/release/slotstream'))
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--limit-gb', type=float, default=10, help='Bounded test ceiling, between 8.1 and 10 GB')
     parser.add_argument('--no-elastic', action='store_true', help='Also exercise the explicitly pinned serving path')
+    # Named-model startup hashes the complete pinned checkpoint before loading.
+    # This fixture tests saved adaptive settings, not a startup-speed target.
+    parser.add_argument('--startup-timeout-seconds', type=positive_seconds, default=180,
+                        help='Maximum wait for server readiness, including checkpoint verification (default: 180)')
+    parser.add_argument('--completion-timeout-seconds', type=positive_seconds, default=120,
+                        help='Maximum wait for the non-streaming completion (default: 120)')
     args = parser.parse_args()
     if not math.isfinite(args.limit_gb) or not 8.1 <= args.limit_gb <= 10:
         parser.error('--limit-gb must be between 8.1 and 10 for this bounded test')
     binary = args.binary.resolve()
     args.out.mkdir(parents=True, exist_ok=False)
     report = {'passed': False, 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
-              'limit_gb': args.limit_gb, 'no_elastic': args.no_elastic, 'observations': []}
+              'limit_gb': args.limit_gb, 'no_elastic': args.no_elastic, 'observations': [],
+              'startup_timeout_seconds': args.startup_timeout_seconds,
+              'completion_timeout_seconds': args.completion_timeout_seconds}
     process = None
     try:
         # Probe the normal shared lock. Never override it or stop another task.
@@ -66,21 +120,13 @@ def main():
         report['command'] = [binary.name, *command[1:]]
         with (args.out / 'server.log').open('w') as log:
             process = subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT)
-            deadline = time.monotonic() + 45
-            while True:
-                assert process.poll() is None, 'server exited before answering'
-                try:
-                    initial = exchange(port, 'GET', '/api/ps')['models'][0]['details']['memory_plan']
-                    break
-                except OSError:
-                    assert time.monotonic() < deadline, 'startup timed out'
-                    time.sleep(.2)
+            initial, report['startup_seconds'] = wait_for_startup(process, port, args.startup_timeout_seconds)
 
             def verify_plan(plan):
                 assert plan.get('memory_limit_gb') == args.limit_gb, 'server lost the saved adaptive limit'
                 assert plan['target_gb'] <= args.limit_gb, 'server exceeded the selected target'
                 assert plan['memory_ledger']['expected_peak_bytes'] <= args.limit_gb * 1e9, 'live plan exceeded the ceiling'
-                assert plan['max_prefill_wait_minutes'] == 17, 'request deadline was lost'
+                assert plan['max_prefill_wait_minutes'] == 17, 'prefill wait setting was lost'
                 report['observations'].append({key: plan[key] for key in
                     ('memory_limit_gb', 'target_gb', 'pool_slots', 'max_prefill_wait_minutes')})
 
@@ -96,10 +142,15 @@ def main():
             assert ('elastic: on' in (args.out / 'server.log').read_text()) != args.no_elastic
             if args.no_elastic:
                 assert 'elastic: off (--no-elastic)' in (args.out / 'server.log').read_text()
-            response = exchange(port, 'POST', '/v1/chat/completions', {
-                'model': 'qwen3.8-flash-next:4bit', 'messages': [{'role': 'user', 'content': 'Name one river.'}],
-                'max_tokens': 12, 'temperature': 0, 'stream': False,
-                'reasoning_effort': 'none'})
+            completion_started = time.monotonic()
+            try:
+                response = exchange(port, 'POST', '/v1/chat/completions', {
+                    'model': 'qwen3.8-flash-next:4bit', 'messages': [{'role': 'user', 'content': 'Name one river.'}],
+                    'max_tokens': 12, 'temperature': 0, 'stream': False,
+                    'reasoning_effort': 'none'}, timeout=args.completion_timeout_seconds,
+                    deadline=completion_started + args.completion_timeout_seconds)
+            finally:
+                report['completion_seconds'] = time.monotonic() - completion_started
             assert response.get('choices') and 'error' not in response, response
             report['completion'] = response['choices'][0]
             verify_plan(exchange(port, 'GET', '/api/ps')['models'][0]['details']['memory_plan'])

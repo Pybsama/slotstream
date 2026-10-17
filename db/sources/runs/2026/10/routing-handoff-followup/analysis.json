@@ -1,0 +1,283 @@
+{
+  "interpretation": "No screen winner; two of four comparison blocks globally paging-excluded. No replacement cohort or threshold relaxation.",
+  "model_mechanism_checks": [
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r0-reference.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r0-reference_repeat.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r0-resident.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r0-shared.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r0-staged.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r1-reference.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r1-reference_repeat.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r1-resident.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r1-shared.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r1-staged.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r2-reference.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r2-reference_repeat.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r2-resident.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r2-shared.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r2-staged.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r3-reference.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r3-reference_repeat.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r3-resident.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r3-shared.jsonl"
+    },
+    {
+      "checks": {
+        "budget": true,
+        "mechanism": true,
+        "output_count": true,
+        "prefetch_off": true,
+        "target_8_1": true
+      },
+      "file": "factorial-floor-off/r3-staged.jsonl"
+    }
+  ],
+  "prospective_screen": {
+    "resident": {
+      "checks": {
+        "aa_median_within_two_percent": true,
+        "enough_clean_blocks": false,
+        "five_percent_decode": false,
+        "five_percent_request": false,
+        "three_positive_blocks": false
+      },
+      "screen_pass": false
+    },
+    "shared": {
+      "checks": {
+        "aa_median_within_two_percent": true,
+        "enough_clean_blocks": false,
+        "five_percent_decode": false,
+        "five_percent_request": false,
+        "three_positive_blocks": false
+      },
+      "screen_pass": false
+    },
+    "staged": {
+      "checks": {
+        "aa_median_within_two_percent": true,
+        "enough_clean_blocks": false,
+        "five_percent_decode": false,
+        "five_percent_request": false,
+        "three_positive_blocks": false
+      },
+      "screen_pass": false
+    }
+  },
+  "readiness_input": "db/sources/runs/2026/10/routing-handoff-pilot/native7/readiness.jsonl",
+  "readiness_reanalysis": [
+    {
+      "complete_run_lengths": {
+        "1": 193,
+        "2": 15
+      },
+      "ready_expert_fraction": 0.6514880952380953,
+      "ready_experts_histogram": {
+        "0": 125,
+        "1": 108,
+        "2": 131,
+        "3": 118,
+        "4": 168,
+        "5": 222,
+        "6": 311,
+        "7": 428,
+        "8": 607,
+        "9": 583,
+        "10": 223
+      },
+      "request": 0
+    },
+    {
+      "complete_run_lengths": {
+        "1": 193,
+        "2": 14
+      },
+      "ready_expert_fraction": 0.6488095238095238,
+      "ready_experts_histogram": {
+        "0": 125,
+        "1": 108,
+        "2": 116,
+        "3": 151,
+        "4": 171,
+        "5": 237,
+        "6": 299,
+        "7": 402,
+        "8": 606,
+        "9": 588,
+        "10": 221
+      },
+      "request": 1
+    }
+  ],
+  "readiness_sha256": "31295143e3d914102fe6ec6d3ac5eaf9d4c10b91a6a195bc2882633b5a0c8f69"
+}

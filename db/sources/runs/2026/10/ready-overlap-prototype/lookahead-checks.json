@@ -1,0 +1,904 @@
+{
+  "checks" : [
+    {
+      "items" : [
+        {
+          "name" : "first speculative lane acquires",
+          "passed" : true
+        },
+        {
+          "name" : "second speculative lane acquires",
+          "passed" : true
+        },
+        {
+          "name" : "third lane waits then honors cancellation",
+          "passed" : true
+        },
+        {
+          "name" : "released lane acquires again",
+          "passed" : true
+        },
+        {
+          "name" : "demand blocks new speculative lanes",
+          "passed" : true
+        },
+        {
+          "name" : "demand batches counted",
+          "passed" : true
+        },
+        {
+          "name" : "waiter still blocked behind demand",
+          "passed" : true
+        },
+        {
+          "name" : "waiter acquired after demand ended",
+          "passed" : true
+        },
+        {
+          "name" : "speculative resumes after demand",
+          "passed" : true
+        },
+        {
+          "name" : "deferred acquisitions are counted",
+          "passed" : true
+        },
+        {
+          "name" : "reserve within cap",
+          "passed" : true
+        },
+        {
+          "name" : "reserve beyond cap refused",
+          "passed" : true
+        },
+        {
+          "name" : "reserve up to cap allowed",
+          "passed" : true
+        },
+        {
+          "name" : "live bytes track releases",
+          "passed" : true
+        },
+        {
+          "name" : "peak bytes retained",
+          "passed" : true
+        },
+        {
+          "name" : "negative reservation refused",
+          "passed" : true
+        }
+      ],
+      "measurements" : {
+
+      },
+      "name" : "expert-lookahead-lane-budget",
+      "passed" : true
+    },
+    {
+      "items" : [
+        {
+          "name" : "allocation reserved",
+          "passed" : true
+        },
+        {
+          "name" : "complete read is ready",
+          "passed" : true
+        },
+        {
+          "name" : "all pieces read",
+          "passed" : true
+        },
+        {
+          "name" : "adopted state",
+          "passed" : true
+        },
+        {
+          "name" : "adopted bytes are exactly the read bytes",
+          "passed" : true
+        },
+        {
+          "name" : "double adoption refused",
+          "passed" : true
+        },
+        {
+          "name" : "bytes stay charged until the consumer releases",
+          "passed" : true
+        },
+        {
+          "name" : "discard after adoption frees nothing",
+          "passed" : true
+        },
+        {
+          "name" : "consumer release pays the accounting back",
+          "passed" : true
+        },
+        {
+          "name" : "discard before start releases",
+          "passed" : true
+        },
+        {
+          "name" : "discarded ticket never starts",
+          "passed" : true
+        },
+        {
+          "name" : "worker entered the read",
+          "passed" : true
+        },
+        {
+          "name" : "discard while reading does not free under the worker",
+          "passed" : true
+        },
+        {
+          "name" : "buffers still charged while the worker holds them",
+          "passed" : true
+        },
+        {
+          "name" : "cancelled mid-read ends discarded",
+          "passed" : true
+        },
+        {
+          "name" : "worker freed on exit",
+          "passed" : true
+        },
+        {
+          "name" : "cancelled read releases once",
+          "passed" : true
+        },
+        {
+          "name" : "cancelled ticket cannot be adopted",
+          "passed" : true
+        },
+        {
+          "name" : "read fault marks the ticket failed",
+          "passed" : true
+        },
+        {
+          "name" : "failure is recorded",
+          "passed" : true
+        },
+        {
+          "name" : "failed ticket cannot be adopted",
+          "passed" : true
+        },
+        {
+          "name" : "failed ticket releases its bytes",
+          "passed" : true
+        },
+        {
+          "name" : "EINTR seam entered",
+          "passed" : true
+        },
+        {
+          "name" : "cancellation stops repeated EINTR",
+          "passed" : true
+        },
+        {
+          "name" : "interrupted ticket releases its bytes",
+          "passed" : true
+        },
+        {
+          "name" : "cap admits exactly three records",
+          "passed" : true
+        },
+        {
+          "name" : "fourth record refused at the cap",
+          "passed" : true
+        },
+        {
+          "name" : "held records released",
+          "passed" : true
+        },
+        {
+          "name" : "lanes never exceed the speculative budget",
+          "passed" : true
+        },
+        {
+          "name" : "no worker left running",
+          "passed" : true
+        },
+        {
+          "name" : "slot ticket is slot mode",
+          "passed" : true
+        },
+        {
+          "name" : "slot ticket charges no bytes",
+          "passed" : true
+        },
+        {
+          "name" : "slot read is ready",
+          "passed" : true
+        },
+        {
+          "name" : "slot ticket keeps its reservation while ready",
+          "passed" : true
+        },
+        {
+          "name" : "slot bytes landed in the caller's memory",
+          "passed" : true
+        },
+        {
+          "name" : "staging adoption refused for a slot ticket",
+          "passed" : true
+        },
+        {
+          "name" : "slot adoption hands the reservation over",
+          "passed" : true
+        },
+        {
+          "name" : "adopted slot state",
+          "passed" : true
+        },
+        {
+          "name" : "double slot adoption refused",
+          "passed" : true
+        },
+        {
+          "name" : "discard after slot adoption returns nothing",
+          "passed" : true
+        },
+        {
+          "name" : "record scratch declares whole records",
+          "passed" : true
+        },
+        {
+          "name" : "piece scratch does not",
+          "passed" : true
+        },
+        {
+          "name" : "whole-record read is ready",
+          "passed" : true
+        },
+        {
+          "name" : "one read call for the whole record",
+          "passed" : true
+        },
+        {
+          "name" : "ticket reports a whole-record read",
+          "passed" : true
+        },
+        {
+          "name" : "whole-record read counts every piece",
+          "passed" : true
+        },
+        {
+          "name" : "whole-record split matches the piece path byte for byte",
+          "passed" : true
+        },
+        {
+          "name" : "whole-record ticket keeps its slot while ready",
+          "passed" : true
+        },
+        {
+          "name" : "whole-record slot adoption hands the reservation over",
+          "passed" : true
+        },
+        {
+          "name" : "piece-sized scratch refuses whole-record reads",
+          "passed" : true
+        },
+        {
+          "name" : "fallback still completes through the piece path",
+          "passed" : true
+        },
+        {
+          "name" : "fallback ticket reports no whole-record read",
+          "passed" : true
+        },
+        {
+          "name" : "slot worker entered the read",
+          "passed" : true
+        },
+        {
+          "name" : "slot not returned while the worker still writes",
+          "passed" : true
+        },
+        {
+          "name" : "cancelled slot read ends discarded",
+          "passed" : true
+        },
+        {
+          "name" : "cancelled slot returned exactly once",
+          "passed" : true
+        },
+        {
+          "name" : "second discard returns nothing more",
+          "passed" : true
+        },
+        {
+          "name" : "queued slot ticket returns its slot at discard",
+          "passed" : true
+        },
+        {
+          "name" : "discarded slot ticket never starts",
+          "passed" : true
+        },
+        {
+          "name" : "slot mode never charged the byte cap",
+          "passed" : true
+        },
+        {
+          "name" : "scratch pool served the slot reads without temporaries",
+          "passed" : true
+        }
+      ],
+      "measurements" : {
+
+      },
+      "name" : "expert-lookahead-tickets",
+      "passed" : true
+    },
+    {
+      "items" : [
+        {
+          "name" : "no predictor means no forecast without an override",
+          "passed" : true
+        },
+        {
+          "name" : "override enables forecasting",
+          "passed" : true
+        },
+        {
+          "name" : "first window issues layers 0 and 1 without duplicates or residents or invalid ids",
+          "passed" : true
+        },
+        {
+          "name" : "first ticket completed on its own",
+          "passed" : true
+        },
+        {
+          "name" : "one ticket per distinct key",
+          "passed" : true
+        },
+        {
+          "name" : "claimed ticket is ready",
+          "passed" : true
+        },
+        {
+          "name" : "adopted bytes exact",
+          "passed" : true
+        },
+        {
+          "name" : "adoption counted",
+          "passed" : true
+        },
+        {
+          "name" : "unknown miss counted as demand",
+          "passed" : true
+        },
+        {
+          "name" : "layer 0 tickets expired and layer 2 issued after the layer completed",
+          "passed" : true
+        },
+        {
+          "name" : "expired ready ticket counted",
+          "passed" : true
+        },
+        {
+          "name" : "layer 3 ticket in flight",
+          "passed" : true
+        },
+        {
+          "name" : "in-flight ticket promoted and joined",
+          "passed" : true
+        },
+        {
+          "name" : "promotion waited for the read",
+          "passed" : true
+        },
+        {
+          "name" : "promotion counted",
+          "passed" : true
+        },
+        {
+          "name" : "cap bounds outstanding tickets",
+          "passed" : true
+        },
+        {
+          "name" : "pass end retires everything",
+          "passed" : true
+        },
+        {
+          "name" : "stale claims after request end are demand",
+          "passed" : true
+        },
+        {
+          "name" : "no key read twice by the scheduler",
+          "passed" : true
+        },
+        {
+          "name" : "accounting drained at request end",
+          "passed" : true
+        },
+        {
+          "name" : "shadow mode issues no reads",
+          "passed" : true
+        },
+        {
+          "name" : "shadow mode still counts candidates",
+          "passed" : true
+        },
+        {
+          "name" : "shadow claims are demand",
+          "passed" : true
+        },
+        {
+          "name" : "recent policy issues from observed routes",
+          "passed" : true
+        },
+        {
+          "name" : "recent scheduler drained",
+          "passed" : true
+        },
+        {
+          "name" : "record size known",
+          "passed" : true
+        }
+      ],
+      "measurements" : {
+
+      },
+      "name" : "expert-lookahead-scheduler",
+      "passed" : true
+    },
+    {
+      "items" : [
+        {
+          "name" : "router policy needs no start features",
+          "passed" : true
+        },
+        {
+          "name" : "router policy forecasts through the session",
+          "passed" : true
+        },
+        {
+          "name" : "forecast before any pass is ignored",
+          "passed" : true
+        },
+        {
+          "name" : "no candidates before any forecast",
+          "passed" : true
+        },
+        {
+          "name" : "merge drops resident keys, duplicates and sub-threshold margins",
+          "passed" : true
+        },
+        {
+          "name" : "out-of-range target ignored",
+          "passed" : true
+        },
+        {
+          "name" : "window issues target 1 (one key) and target 2 (two keys)",
+          "passed" : true
+        },
+        {
+          "name" : "resident key never issued",
+          "passed" : true
+        },
+        {
+          "name" : "target-1 ticket issued",
+          "passed" : true
+        },
+        {
+          "name" : "refresh merges only the new key",
+          "passed" : true
+        },
+        {
+          "name" : "target-1 ticket expired at its layer",
+          "passed" : true
+        },
+        {
+          "name" : "dirty target re-scanned: refreshed key issued",
+          "passed" : true
+        },
+        {
+          "name" : "refresh never cancels an issued ticket",
+          "passed" : true
+        },
+        {
+          "name" : "dirty re-scan counted",
+          "passed" : true
+        },
+        {
+          "name" : "byte cap refused the rest of target 3",
+          "passed" : true
+        },
+        {
+          "name" : "live tickets at the byte cap",
+          "passed" : true
+        },
+        {
+          "name" : "after the refusal the target still issues at the next tick",
+          "passed" : true
+        },
+        {
+          "name" : "per-target issue cap held",
+          "passed" : true
+        },
+        {
+          "name" : "target 3 holds exactly its cap",
+          "passed" : true
+        },
+        {
+          "name" : "expiry at the target layer unchanged",
+          "passed" : true
+        },
+        {
+          "name" : "no key read twice",
+          "passed" : true
+        },
+        {
+          "name" : "accounting drained at request end",
+          "passed" : true
+        },
+        {
+          "name" : "holding ticket entered its second piece",
+          "passed" : true
+        },
+        {
+          "name" : "second ticket waits for the single lane with no progress",
+          "passed" : true
+        },
+        {
+          "name" : "ticket with progress returned for a later join",
+          "passed" : true
+        },
+        {
+          "name" : "reading ticket is the held one",
+          "passed" : true
+        },
+        {
+          "name" : "nothing ready yet",
+          "passed" : true
+        },
+        {
+          "name" : "lane-waiting ticket left the live set",
+          "passed" : true
+        },
+        {
+          "name" : "lane-waiting ticket and unknown key counted as demand",
+          "passed" : true
+        },
+        {
+          "name" : "lane-waiting ticket counted as cancelled",
+          "passed" : true
+        },
+        {
+          "name" : "promoted ticket reads on during the demand batch",
+          "passed" : true
+        },
+        {
+          "name" : "joined ticket promoted after the demand batch",
+          "passed" : true
+        },
+        {
+          "name" : "promoted ticket ready",
+          "passed" : true
+        },
+        {
+          "name" : "promotion counted once",
+          "passed" : true
+        },
+        {
+          "name" : "adoption counted once",
+          "passed" : true
+        },
+        {
+          "name" : "split scheduler drained",
+          "passed" : true
+        },
+        {
+          "name" : "shadow router policy issues no reads",
+          "passed" : true
+        },
+        {
+          "name" : "shadow router policy still counts candidates",
+          "passed" : true
+        }
+      ],
+      "measurements" : {
+
+      },
+      "name" : "expert-lookahead-forecast-merge",
+      "passed" : true
+    },
+    {
+      "items" : [
+        {
+          "name" : "the tap defaults to the boundary with its stride window",
+          "passed" : true
+        },
+        {
+          "name" : "the qualified default reads the boundary",
+          "passed" : true
+        },
+        {
+          "name" : "attention parses with a one-layer window",
+          "passed" : true
+        },
+        {
+          "name" : "attention-shared parses with a one-layer window",
+          "passed" : true
+        },
+        {
+          "name" : "attention-readout parses with a one-layer window",
+          "passed" : true
+        },
+        {
+          "name" : "an unknown tap is refused",
+          "passed" : true
+        },
+        {
+          "name" : "record codes are stable",
+          "passed" : true
+        },
+        {
+          "name" : "the readout can be consumed after the demand reads",
+          "passed" : true
+        },
+        {
+          "name" : "or with the readback, the default",
+          "passed" : true
+        },
+        {
+          "name" : "another placement is refused",
+          "passed" : true
+        },
+        {
+          "name" : "the placement needs the readout tap",
+          "passed" : true
+        },
+        {
+          "name" : "the readout self-check is refused as a scheduler tap",
+          "passed" : true
+        },
+        {
+          "name" : "both readout taps evaluate as observers",
+          "passed" : true
+        },
+        {
+          "name" : "the corrected tap needs its factors",
+          "passed" : true
+        },
+        {
+          "name" : "the corrected tap parses with its factors and a one-layer window",
+          "passed" : true
+        },
+        {
+          "name" : "the factors join the default reserve in whole MiB",
+          "passed" : true
+        },
+        {
+          "name" : "a correction fitted on the attention tap is refused for the corrected readout",
+          "passed" : true
+        },
+        {
+          "name" : "a correction fitted on the readout serves the corrected readout tap",
+          "passed" : true
+        },
+        {
+          "name" : "and is refused for the corrected attention tap",
+          "passed" : true
+        },
+        {
+          "name" : "factors without the corrected tap are refused",
+          "passed" : true
+        },
+        {
+          "name" : "an absent shipped correction locates nothing",
+          "passed" : true
+        },
+        {
+          "name" : "and its reason names the command that downloads it",
+          "passed" : true
+        },
+        {
+          "name" : "a shipped correction is located with its header and digest",
+          "passed" : true
+        },
+        {
+          "name" : "the measured digest is required when pinned",
+          "passed" : true
+        },
+        {
+          "name" : "the qualified default with a located correction is the corrected attention tap",
+          "passed" : true
+        },
+        {
+          "name" : "its reserve is the staging reserve plus the file in whole MiB",
+          "passed" : true
+        },
+        {
+          "name" : "the planner's charge grows by the same bytes",
+          "passed" : true
+        },
+        {
+          "name" : "without a located correction the qualified default is unchanged",
+          "passed" : true
+        },
+        {
+          "name" : "the automatic plan carries a located correction's bytes",
+          "passed" : true
+        },
+        {
+          "name" : "and stays automatic without one",
+          "passed" : true
+        },
+        {
+          "name" : "the boundary override keeps the previous forecast with the file present",
+          "passed" : true
+        },
+        {
+          "name" : "and the engine's shipped lookup honours it",
+          "passed" : true
+        },
+        {
+          "name" : "the sidecar reports the copied file as mismatched against the pinned digest",
+          "passed" : true
+        },
+        {
+          "name" : "and an empty directory as absent",
+          "passed" : true
+        },
+        {
+          "name" : "the sidecar url is the pinned mirror commit and path",
+          "passed" : true
+        },
+        {
+          "name" : "the pin names the measured file",
+          "passed" : true
+        },
+        {
+          "name" : "the shipped pin sees the copied file as a size mismatch",
+          "passed" : true
+        },
+        {
+          "name" : "a mismatched file with a cancelled pull is reported, not fetched, and left in place",
+          "passed" : true
+        },
+        {
+          "name" : "an absent file with a cancelled pull is reported, not fetched, and nothing is created",
+          "passed" : true
+        },
+        {
+          "name" : "the log names the file at every step",
+          "passed" : true
+        },
+        {
+          "name" : "a readout-fitted file at the shipped path does not select the default",
+          "passed" : true
+        },
+        {
+          "name" : "the loader refuses another geometry",
+          "passed" : true
+        },
+        {
+          "name" : "the correction is the registered formula (FP16 factors, within 1e-2)",
+          "passed" : true
+        },
+        {
+          "name" : "an in-memory correction applies exactly as the loaded one",
+          "passed" : true
+        },
+        {
+          "name" : "the corrected tap is skipped until a correction is loaded",
+          "passed" : true
+        },
+        {
+          "name" : "with a correction both taps evaluate",
+          "passed" : true
+        },
+        {
+          "name" : "a correction for the attention tap does not serve the corrected readout",
+          "passed" : true
+        },
+        {
+          "name" : "an attention tap issues on arrival, before any tick",
+          "passed" : true
+        },
+        {
+          "name" : "the arrival issue is counted",
+          "passed" : true
+        },
+        {
+          "name" : "the observation names the tap",
+          "passed" : true
+        },
+        {
+          "name" : "the byte cap refuses the rest of target 2",
+          "passed" : true
+        },
+        {
+          "name" : "live tickets at the byte cap",
+          "passed" : true
+        },
+        {
+          "name" : "target 1 stays live through the previous layer's tick",
+          "passed" : true
+        },
+        {
+          "name" : "target 1 expired at its layer",
+          "passed" : true
+        },
+        {
+          "name" : "the refused candidates issue at the next tick",
+          "passed" : true
+        },
+        {
+          "name" : "target 2 holds its issue cap",
+          "passed" : true
+        },
+        {
+          "name" : "accounting drained at request end",
+          "passed" : true
+        },
+        {
+          "name" : "the boundary tap waits for a tick",
+          "passed" : true
+        },
+        {
+          "name" : "no arrival issue at the boundary",
+          "passed" : true
+        },
+        {
+          "name" : "the tick issues the boundary forecast",
+          "passed" : true
+        },
+        {
+          "name" : "no taps outside a verification pass",
+          "passed" : true
+        },
+        {
+          "name" : "an attention policy reads no boundary strides",
+          "passed" : true
+        },
+        {
+          "name" : "the policy's tap first, then observer-only taps, never the boundary",
+          "passed" : true
+        },
+        {
+          "name" : "other taps never reach an attention policy",
+          "passed" : true
+        },
+        {
+          "name" : "the policy's own tap reaches it",
+          "passed" : true
+        },
+        {
+          "name" : "the observer sees every forecast",
+          "passed" : true
+        },
+        {
+          "name" : "no taps after the pass",
+          "passed" : true
+        },
+        {
+          "name" : "a boundary policy forecasts its own strides",
+          "passed" : true
+        },
+        {
+          "name" : "observer-only taps still evaluate beside a boundary policy",
+          "passed" : true
+        },
+        {
+          "name" : "a stride the policy does not use never reaches it",
+          "passed" : true
+        },
+        {
+          "name" : "the policy's stride reaches it",
+          "passed" : true
+        },
+        {
+          "name" : "an observer-only tap never reaches a boundary policy",
+          "passed" : true
+        }
+      ],
+      "measurements" : {
+
+      },
+      "name" : "expert-lookahead-forecast-tap",
+      "passed" : true
+    }
+  ],
+  "failed" : 0,
+  "passed" : 5,
+  "skipped" : 0
+}

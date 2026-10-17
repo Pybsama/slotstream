@@ -3,14 +3,14 @@ name: ci
 # separate runners. These builds do not depend on each other's artifacts.
 # A prose-only push skips this workflow and runs docs.yml instead; mixed
 # source/documentation changes keep the full CI suite. A push that changes only
-# the Mac app in apps/ or its workflow runs sevra-mac.yml instead, which also
+# the Mac app in apps/ or its workflow runs slotstream-mac.yml instead, which also
 # runs for engine changes because the app builds on the engine.
 on:
   pull_request:
-    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE", "apps/**", ".github/workflows/sevra-mac.yml"]
+    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE", "apps/**", ".github/workflows/slotstream-mac.yml"]
   push:
     branches: [main]
-    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE", "apps/**", ".github/workflows/sevra-mac.yml"]
+    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE", "apps/**", ".github/workflows/slotstream-mac.yml"]
 permissions:
   contents: read
 jobs:

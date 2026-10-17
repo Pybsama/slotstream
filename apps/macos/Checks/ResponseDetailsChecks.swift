@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 /// Response details: each run records what the response cost from the
@@ -69,7 +69,7 @@ func responseDetailsChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "The launch is October 12.", metrics: exact(10, 1, context: 1400)),
     ], thinkingTraces: [canary + " first look", canary + " second look", canary + " final look"])
     let home = root.appendingPathComponent("details")
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: engine)
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: engine)
     let thread = try await runtime!.newThread(title: "Details")
     try await runtime!.setThinking(threadID: thread, enabled: true)
     try await runtime!.attach(threadID: thread, folder: source)
@@ -96,7 +96,7 @@ func responseDetailsChecks(root: URL, dbmd: URL) async throws {
     // Live speed while a delayed engine thinks and then writes.
     let reply = String(repeating: "steady ", count: 40)
     let live = ScriptedInference(turns: [EngineTurn(text: reply)], delayNanoseconds: 2_000_000, thinkingTraces: [canary + String(repeating: " pondering", count: 40)])
-    let liveRuntime = try SevraRuntime(homeURL: root.appendingPathComponent("details-live"), dbmd: dbmd, inference: live)
+    let liveRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("details-live"), dbmd: dbmd, inference: live)
     let liveThread = try await liveRuntime.newThread(title: "Live")
     try await liveRuntime.setThinking(threadID: liveThread, enabled: true)
     let liveRun = try await liveRuntime.submit(threadID: liveThread, text: "Say something steady.", nonce: "details-live")
@@ -117,7 +117,7 @@ func responseDetailsChecks(root: URL, dbmd: URL) async throws {
 
     // Working notes stay for the eight most recent runs; the ninth drops the oldest.
     let many = ScriptedInference(turns: (0..<9).map { EngineTurn(text: "Answer \($0).") }, thinkingTraces: (0..<9).map { canary + " note \($0)" })
-    let manyRuntime = try SevraRuntime(homeURL: root.appendingPathComponent("details-many"), dbmd: dbmd, inference: many)
+    let manyRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("details-many"), dbmd: dbmd, inference: many)
     let manyThread = try await manyRuntime.newThread(title: "Many")
     try await manyRuntime.setThinking(threadID: manyThread, enabled: true)
     var runs: [String] = []

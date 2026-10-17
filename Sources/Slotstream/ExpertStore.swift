@@ -345,7 +345,8 @@ public final class ExpertStore {
     /// staging path, which owns its read-failure fallback.
     package func readIntoSlotsChecked(_ keys: [ExpertKey], slots: [Int], bases: [UnsafeMutableRawPointer],
                                       scratch: ExpertPrefetchScratch,
-                                      queueDepth: Int = ExpertStore.poolQueueDepth) throws {
+                                      queueDepth: Int = ExpertStore.poolQueueDepth,
+                                      finishReaders: (() -> Void)? = nil) throws {
         let n = keys.count
         guard n > 0, slots.count == n, bases.count == 9, pieceRowBytes.count == 9, !supportsRecordReads else {
             throw CheckpointReadError.invalidRange
@@ -358,6 +359,39 @@ public final class ExpertStore {
         // 9n reads spread across worker lanes in the staging path's order.
         let jobs = n * 9
         let lanes = min(max(queueDepth, 1), jobs)
+        if let finishReaders {
+            // Diagnostic overlap variant: keep disk reads independent of the
+            // pool until the existing GPU readers have joined. The caller
+            // slices at defaultLoadBatch, so this host staging is bounded.
+            // No staging MLX arrays or GPU scatter are created.
+            guard n <= Self.defaultLoadBatch else { throw CheckpointReadError.invalidRange }
+            let buffers = try allocateStaging(rows: n)
+            defer { buffers.forEach { free($0) } }
+            DispatchQueue.concurrentPerform(iterations: lanes) { lane in
+                var j = lane
+                while j < jobs {
+                    let (record, piece) = (j / 9, j % 9)
+                    let key = keys[record], bytes = rowBytes[piece]
+                    do { try read(into: buffers[piece] + record * bytes, layer: key.layer,
+                                  piece: piece, offset: key.expert * bytes, count: bytes) }
+                    catch { failure.record(error) }
+                    j += lanes
+                }
+            }
+            // On failure the caller's defer still joins its readers. Nothing
+            // has touched the destination, including after a partial read.
+            try failure.finish()
+            finishReaders()
+            DispatchQueue.concurrentPerform(iterations: lanes) { lane in
+                var j = lane
+                while j < jobs {
+                    let (record, piece) = (j / 9, j % 9), bytes = rowBytes[piece]
+                    memcpy(bases[piece] + slots[record] * bytes, buffers[piece] + record * bytes, bytes)
+                    j += lanes
+                }
+            }
+            return
+        }
         DispatchQueue.concurrentPerform(iterations: lanes) { lane in
             guard let (buffer, temporary) = scratch.acquire() else {
                 failure.record(ModelError("out of memory for a demand read buffer"))
@@ -542,6 +576,13 @@ public final class SlotPool {
     /// the GPU. It skips one batch of staging arrays, one scatter per piece and
     /// the GPU sync each scatter cost, per layer that misses.
     package var directDemandReads = false
+    /// Research-only controls; no CLI/environment setting or changed default.
+    /// Include validated ready slot tickets in the early compute batch and
+    /// retain host copies by joining readers between demand I/O and copying.
+    package var diagnosticOverlapReadyTickets = false
+    package var diagnosticOverlapDirectCopies = false
+    package private(set) var readyTicketPrelaunchRecords = 0
+    package private(set) var overlapDirectBatches = 0
     /// One piece-sized host buffer per demand lane, plus a few spare.
     private lazy var demandScratch = ExpertPrefetchScratch(pieceBytes: store.pieceRowBytes.max() ?? 1,
                                                            count: ExpertStore.poolQueueDepth + 4)
@@ -773,7 +814,7 @@ public final class SlotPool {
 
     /// Resident GPU work may be submitted after the whole request is pinned.
     /// Complete those readers after synchronous I/O and before the first write,
-    /// including the error path. No direct CPU writes or new worker lifetimes.
+    /// including the error path. Diagnostic host copies also join first.
     package func ensureOverlapping(_ keys: [ExpertKey], reservedHits: @escaping ([Int]) -> Void,
                                    finishReaders: @escaping () -> Void) throws -> [Int] {
         try ensureCore(keys, reservedHits: reservedHits, finishReaders: finishReaders)
@@ -895,6 +936,17 @@ public final class SlotPool {
                 }
             }
             event?.victimSlots = slotIdx
+            if diagnosticOverlapReadyTickets, reservedHits != nil {
+                // Only a successful publish installs a missing key in map.
+                // Reserved demand victims and unfinished/stale tickets must
+                // remain -1; their slotIdx entries are not evidence of bytes.
+                for (i, _) in missPos {
+                    if let slot = map[keys[i]] {
+                        result[i] = slot
+                        readyTicketPrelaunchRecords += 1
+                    }
+                }
+            }
             reservedHits?(result)
             var readersPending = reservedHits != nil
             func finishResidentReaders() {
@@ -984,7 +1036,7 @@ public final class SlotPool {
             // while resident GPU readers may still be running (the overlapping
             // path's contract), while a transfer profile measures the staged
             // scatter, and under the explicit slot-write experiments.
-            let direct = directDemandReads && reservedHits == nil && transferProfile == nil
+            let direct = directDemandReads && (reservedHits == nil || diagnosticOverlapDirectCopies) && transferProfile == nil
                 && !store.supportsRecordReads && !cpuSlotWrites && !wordSlotWrites && !contiguousSlotWrites
             func readDemand(_ order: [Int]) throws {
                 var lo = 0
@@ -1003,7 +1055,8 @@ public final class SlotPool {
                         laneBudget?.beginDemand()
                         do {
                             try store.readIntoSlotsChecked(batchIndices.map { missKeys[$0] }, slots: destinations,
-                                                           bases: bases, scratch: demandScratch)
+                                                           bases: bases, scratch: demandScratch,
+                                                           finishReaders: readersPending ? finishResidentReaders : nil)
                         } catch {
                             laneBudget?.endDemand()
                             ioSeconds += RuntimeClock.seconds(since: tIO)
@@ -1018,6 +1071,7 @@ public final class SlotPool {
                             refBit[s] = true
                         }
                         slotDirectBatches += 1
+                        if reservedHits != nil { overlapDirectBatches += 1 }
                         recordsFetched += hi - lo
                         lo = hi
                         continue

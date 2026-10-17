@@ -1,0 +1,10 @@
+/Users/carlos/Projects/slotstream/Tools/routing_handoff_probe.swift:75:70: error: sending 'slots' risks causing data races [#SendingRisksDataRace]
+ 73 |                         : (layerDirectories.isEmpty ? directory : layerDirectories[layer])
+ 74 |                     let slots = table[ids]
+ 75 |                     if mode.hasPrefix("device_checked") && any(slots .< 0).item(Bool.self) {
+    |                                                                      |- error: sending 'slots' risks causing data races [#SendingRisksDataRace]
+    |                                                                      `- note: task-isolated 'slots' is captured by a main actor-isolated closure. main actor-isolated uses in closure may race against later nonisolated uses
+ 76 |                         precondition(mixedLookup, "unexpected miss in frozen all-hit workload")
+ 77 |                         lastFallbacks += 1
+
+[#SendingRisksDataRace]: <https://docs.swift.org/compiler/documentation/diagnostics/sending-risks-data-race>

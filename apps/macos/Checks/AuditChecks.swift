@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 import Darwin
 
@@ -10,10 +10,10 @@ private final class ReadGate: @unchecked Sendable {
 }
 
 func auditChecks(root: URL, dbmd: URL) async throws {
-    let aliasPath = "/private/tmp/sevra-path-audit-" + UUID().uuidString.lowercased()
+    let aliasPath = "/private/tmp/slotstream-path-audit-" + UUID().uuidString.lowercased()
     defer { try? FileManager.default.removeItem(atPath: aliasPath) }
     do {
-        let pathRuntime = try SevraRuntime(homeURL: URL(fileURLWithPath: aliasPath), dbmd: dbmd, inference: ScriptedInference(turns: []))
+        let pathRuntime = try SlotstreamRuntime(homeURL: URL(fileURLWithPath: aliasPath), dbmd: dbmd, inference: ScriptedInference(turns: []))
         try await pathRuntime.saveDraft(threadID: "home", text: "Fresh URL restart canary")
         let endpoint = try LocalEndpoint(runtime: pathRuntime)
         let direct = try LocalClient(home: URL(fileURLWithPath: aliasPath)).request(LocalRequest(operation: "status"))
@@ -27,7 +27,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     }
     let homeLink = root.appendingPathComponent("home-link")
     try FileManager.default.createSymbolicLink(at: homeLink, withDestinationURL: URL(fileURLWithPath: aliasPath))
-    do { _ = try HomeStore(root: homeLink, dbmd: dbmd); throw SevraError.refused("CHECK FAILED: user Home symlink accepted") }
+    do { _ = try HomeStore(root: homeLink, dbmd: dbmd); throw AppRuntimeError.refused("CHECK FAILED: user Home symlink accepted") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "system path normalization still refuses user-created Home symlinks") }
     print("PASS: fresh-URL Home restart, macOS system-alias IPC binding and user-symlink refusal")
     let source = root.appendingPathComponent("audit-source.md")
@@ -38,7 +38,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "A later ordinary answer.")
     ])
     let path = root.appendingPathComponent("audit-history")
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: path, dbmd: dbmd, inference: engine)
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: path, dbmd: dbmd, inference: engine)
     let id = try await runtime!.newThread(title: "Historical documents")
     try await runtime!.attach(threadID: id, folder: source)
     try await runtime!.submit(threadID: id, text: "Read the source and propose audit.md", nonce: "document")
@@ -54,7 +54,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     var thread = snapshot.home.threads.first { $0.id == id }!
     try require(snapshot.home.citations(for: citedMessage, in: thread).first?.content?.contains("Juniper") == true, "earlier citations survive a new run")
     try await runtime!.shutdown(); runtime = nil
-    runtime = try SevraRuntime(homeURL: path, dbmd: dbmd, inference: engine)
+    runtime = try SlotstreamRuntime(homeURL: path, dbmd: dbmd, inference: engine)
     let reopened = try await runtime!.readSavedArtifact(threadID: id)
     try require(reopened == proposal.content, "historical document remains reachable after restart")
     snapshot = await runtime!.snapshot(); thread = snapshot.home.threads.first { $0.id == id }!
@@ -65,28 +65,28 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     let saved = try await runtime!.submitJournalDraft(text: entryText, nonce: "journal-entry", expectedRevision: draft.revision, remainingDraft: "New text typed during save")
     let duplicate = try await runtime!.submitJournalDraft(text: entryText, nonce: "journal-entry", expectedRevision: draft.revision, remainingDraft: "")
     try require(saved == duplicate && saved.text == "New text typed during save", "journal acceptance is idempotent and preserves later draft")
-    do { _ = try await runtime!.saveJournalDraft(text: "stale", expectedRevision: 0); throw SevraError.refused("CHECK FAILED: stale journal draft accepted") }
+    do { _ = try await runtime!.saveJournalDraft(text: "stale", expectedRevision: 0); throw AppRuntimeError.refused("CHECK FAILED: stale journal draft accepted") }
     catch { try require(error is DraftConflict, "stale journal draft exposes a conflict") }
-    do { _ = try await runtime!.submitJournalDraft(text: "changed", nonce: "journal-entry", expectedRevision: saved.revision, remainingDraft: ""); throw SevraError.refused("CHECK FAILED: changed journal nonce accepted") }
+    do { _ = try await runtime!.submitJournalDraft(text: "changed", nonce: "journal-entry", expectedRevision: saved.revision, remainingDraft: ""); throw AppRuntimeError.refused("CHECK FAILED: changed journal nonce accepted") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "journal nonce binds content") }
     let beforeJournal = await runtime!.snapshot()
     try require(beforeJournal.home.journal.map(\.text) == [entryText], "journal cannot duplicate on repeated acceptance")
     try await runtime!.shutdown(); runtime = nil
-    runtime = try SevraRuntime(homeURL: path, dbmd: dbmd, inference: engine)
+    runtime = try SlotstreamRuntime(homeURL: path, dbmd: dbmd, inference: engine)
     let journal = await runtime!.journalDraftState()
     try require(journal == saved, "journal draft survives restart")
     let reopenedJournal = await runtime!.snapshot()
     try require(reopenedJournal.home.journal.map(\.text) == [entryText], "journal entries survive restart")
     try await runtime!.shutdown()
-    do { _ = try await runtime!.newThread(mode: .incognito); throw SevraError.refused("CHECK FAILED: thread created during shutdown") }
+    do { _ = try await runtime!.newThread(mode: .incognito); throw AppRuntimeError.refused("CHECK FAILED: thread created during shutdown") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "closed owner rejects new threads") }
-    do { try await runtime!.journal(text: "after shutdown"); throw SevraError.refused("CHECK FAILED: journal accepted during shutdown") }
+    do { try await runtime!.journal(text: "after shutdown"); throw AppRuntimeError.refused("CHECK FAILED: journal accepted during shutdown") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "closed owner rejects journal writes") }
     runtime = nil
     print("PASS: historical documents and citations, journal atomic acceptance and restart, duplicate/revision refusal and closed-owner guards")
 
     let memoryEngine = ScriptedInference(turns: [EngineTurn(text: "Source response"), EngineTurn(text: "Recall checked")])
-    let memoryRuntime = try SevraRuntime(homeURL: root.appendingPathComponent("audit-memory"), dbmd: dbmd, inference: memoryEngine)
+    let memoryRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("audit-memory"), dbmd: dbmd, inference: memoryEngine)
     try await memoryRuntime.submit(threadID: "home", text: "A source for a long explicit memory", nonce: "memory")
     let origin = try await terminal(memoryRuntime, "home")
     let fullMemory = String(repeating: "Durable detail. ", count: 45) + "CANARY-AT-END-924"
@@ -105,7 +105,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["id": .string("a1:audit-source.md")]), ProposedTool(name: "shell", arguments: [:])]),
         EngineTurn(text: "", calls: [ProposedTool(name: "artifact.propose", arguments: ["filename": .string("one.md"), "content": .string("One [S1]")]), ProposedTool(name: "artifact.propose", arguments: ["filename": .string("two.md"), "content": .string("Two [S1]")])])]
     for (index, response) in malformed.enumerated() {
-        let invalid = try SevraRuntime(homeURL: root.appendingPathComponent("audit-tools-\(index)"), dbmd: dbmd, inference: ScriptedInference(turns: [response]))
+        let invalid = try SlotstreamRuntime(homeURL: root.appendingPathComponent("audit-tools-\(index)"), dbmd: dbmd, inference: ScriptedInference(turns: [response, response]))
         try await invalid.attach(threadID: "home", folder: source)
         try await invalid.submit(threadID: "home", text: "Inspect tool response validation", nonce: "invalid")
         let failed = try await terminal(invalid, "home")
@@ -118,7 +118,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     let repairEngine = ScriptedInference(turns: [invalidReadSet,
         EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["id": .string("a1:audit-source.md")])]),
         EngineTurn(text: "", calls: [ProposedTool(name: "artifact.propose", arguments: ["filename": .string("repaired.md"), "content": .string("Juniper launches October 12. [S1]")])])])
-    let repair = try SevraRuntime(homeURL: root.appendingPathComponent("audit-correction"), dbmd: dbmd, inference: repairEngine)
+    let repair = try SlotstreamRuntime(homeURL: root.appendingPathComponent("audit-correction"), dbmd: dbmd, inference: repairEngine)
     try await repair.attach(threadID: "home", folder: source)
     try await repair.submit(threadID: "home", text: "Read the source and propose a document", nonce: "repair")
     let corrected = try await terminal(repair, "home")
@@ -130,10 +130,10 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     try await repair.shutdown()
     for (name, turns, expectedCalls) in [
         ("exhausted", [invalidReadSet, invalidReadSet, EngineTurn(text: "must not run")], 2),
-        ("unknown", [EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: ["limit": .int(1)]), ProposedTool(name: "shell", arguments: [:])]), EngineTurn(text: "must not run")], 1)
+        ("unknown", [EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: ["limit": .int(1)]), ProposedTool(name: "shell", arguments: [:])]), EngineTurn(text: "", calls: [ProposedTool(name: "shell", arguments: [:])])], 2)
     ] {
         let probe = ScriptedInference(turns: turns)
-        let rejected = try SevraRuntime(homeURL: root.appendingPathComponent("audit-correction-" + name), dbmd: dbmd, inference: probe)
+        let rejected = try SlotstreamRuntime(homeURL: root.appendingPathComponent("audit-correction-" + name), dbmd: dbmd, inference: probe)
         try await rejected.attach(threadID: "home", folder: source)
         try await rejected.submit(threadID: "home", text: "Check correction boundaries", nonce: name)
         let failed = try await terminal(rejected, "home")
@@ -148,18 +148,18 @@ func auditChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["id": .string("a1:audit-source.md")])]),
         EngineTurn(text: "", calls: [misspelled]),
         EngineTurn(text: "", calls: [ProposedTool(name: "artifact.propose", arguments: misspelled.arguments)])])
-    let spelling = try SevraRuntime(homeURL: root.appendingPathComponent("audit-real-tool-spelling"), dbmd: dbmd, inference: spellingEngine)
+    let spelling = try SlotstreamRuntime(homeURL: root.appendingPathComponent("audit-real-tool-spelling"), dbmd: dbmd, inference: spellingEngine)
     try await spelling.attach(threadID: "home", folder: source)
     try await spelling.submit(threadID: "home", text: "Read the source and propose a document", nonce: "spelling")
     let spellingReview = try await terminal(spelling, "home")
     let spellingContexts = await spellingEngine.observedContexts
-    try require(spellingReview.run?.state == .needsYou && spellingContexts.count == 3 && spellingContexts[2].first?.content.contains("Use the exact tool name artifact.propose") == true, "observed tool-name misspelling receives one explicit correction")
+    try require(spellingReview.run?.state == .needsYou && spellingContexts.count == 3 && spellingContexts[2].first?.content.contains("artifact.propose(filename: string required") == true, "observed tool-name misspelling receives one explicit correction")
     try require(!FileManager.default.fileExists(atPath: spelling.homeURL.appendingPathComponent("artifacts/spelling.md").path), "misspelled tool is never executed or silently mapped to a write")
     let stoppedProposal = spellingReview.run!.proposal!
     try await spelling.stop(threadID: "home")
     let stoppedReview = await spelling.snapshot()
     try require(stoppedReview.home.threads[0].run?.state == .stopped && stoppedReview.home.threads[0].run?.proposal == nil, "rejecting review clears the pending proposal")
-    do { _ = try await spelling.approve(threadID: "home", proposalID: stoppedProposal.id, digest: stoppedProposal.digest); throw SevraError.refused("CHECK FAILED: rejected proposal saved") }
+    do { _ = try await spelling.approve(threadID: "home", proposalID: stoppedProposal.id, digest: stoppedProposal.digest); throw AppRuntimeError.refused("CHECK FAILED: rejected proposal saved") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "rejected proposal cannot be approved later") }
     try await spelling.shutdown()
     print("PASS: observed artifact=propose spelling correction without alias execution; rejection and stale approval refusal")
@@ -169,12 +169,12 @@ func auditChecks(root: URL, dbmd: URL) async throws {
         let store = try HomeStore(root: storagePath, dbmd: dbmd)
         try store.save(HomeState())
         for name in ["../escape.md", ".hidden.md", "nested/file.md", "wrong.txt"] {
-            do { try store.save(HomeState(), artifact: ArtifactProposal(id: "invalid", filename: name, content: "bad", citations: [])); throw SevraError.refused("CHECK FAILED: invalid artifact staged") }
+            do { try store.save(HomeState(), artifact: ArtifactProposal(id: "invalid", filename: name, content: "bad", citations: [])); throw AppRuntimeError.refused("CHECK FAILED: invalid artifact staged") }
             catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "invalid artifact refused before recovery intent") }
             try require(!FileManager.default.fileExists(atPath: storagePath.appendingPathComponent(".sevra/recovery.json").path), "invalid artifact leaves no poisoned recovery intent")
         }
         var duplicateHome = HomeState(); duplicateHome.threads.append(WorkThread(id: "home", title: "Duplicate"))
-        do { try store.save(duplicateHome); throw SevraError.refused("CHECK FAILED: duplicate Home identity accepted") }
+        do { try store.save(duplicateHome); throw AppRuntimeError.refused("CHECK FAILED: duplicate Home identity accepted") }
         catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "duplicate Home identities refused before writes") }
         let intact = try store.load()
         try require(intact.threads.count == 1, "invalid writes leave the existing Home usable")
@@ -185,7 +185,7 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     let unicode = root.appendingPathComponent("unicode-source.md")
     try Data("é👋text".utf8).write(to: unicode)
     let reader = try SourceFolder(url: unicode)
-    do { _ = try reader.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:unicode-source.md"), "offset": .int(1)]), cancellation: Cancellation()); throw SevraError.refused("CHECK FAILED: split UTF-8 offset accepted") }
+    do { _ = try reader.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:unicode-source.md"), "offset": .int(1)]), cancellation: Cancellation()); throw AppRuntimeError.refused("CHECK FAILED: split UTF-8 offset accepted") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "UTF-8 offset boundary enforced") }
     _ = try reader.execute(ProposedTool(name: "source.read", arguments: ["id": .string("a1:unicode-source.md"), "offset": .int(2)]), cancellation: Cancellation())
     try require(reader.citations.first?.content == "👋text", "valid Unicode offset preserves exact text")
@@ -205,19 +205,19 @@ func auditChecks(root: URL, dbmd: URL) async throws {
     let actual = try WeightStore.sha256(of: hashFile, shouldContinue: { true })
     try require(actual == expected, "cancellable verifier preserves SHA-256")
     let gate = ReadGate()
-    do { _ = try WeightStore.sha256(of: hashFile, shouldContinue: { gate.proceed() }); throw SevraError.refused("CHECK FAILED: hashing ignored cancellation") }
+    do { _ = try WeightStore.sha256(of: hashFile, shouldContinue: { gate.proceed() }); throw AppRuntimeError.refused("CHECK FAILED: hashing ignored cancellation") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "hashing stops between bounded reads") }
-    do { _ = try WeightStore(modelDirectory: root).status(shouldContinue: { false }); throw SevraError.refused("CHECK FAILED: status ignored cancellation") }
+    do { _ = try WeightStore(modelDirectory: root).status(shouldContinue: { false }); throw AppRuntimeError.refused("CHECK FAILED: status ignored cancellation") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "setup status respects initial cancellation") }
     print("PASS: model verification hash parity and mid-read cancellation without model allocation")
 }
 
 func auditIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--audit") else { return false }
-    let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-audit-" + UUID().uuidString)
+    let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("slotstream-audit-" + UUID().uuidString)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: root) }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     try await auditChecks(root: root, dbmd: dbmd)
     return true
 }

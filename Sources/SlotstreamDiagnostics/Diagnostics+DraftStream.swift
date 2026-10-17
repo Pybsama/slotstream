@@ -32,7 +32,6 @@ extension Diagnostics {
             // The pass size decides prefill rounding; pin it so plans that
             // size their pools differently compute the same prompt.
             engine.generator.prefillChunk = 256
-            engine.gpuKeepAlive = .off
             MLX.Memory.cacheLimit = 128 << 20
             return engine
         }

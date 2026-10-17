@@ -1,13 +1,13 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 func seedAuditUIIfRequested() throws -> Bool {
     let args = CommandLine.arguments
     guard let i = args.firstIndex(of: "--seed-audit-ui"), args.count > i + 2 else { return false }
     let home = URL(fileURLWithPath: args[i+1]), source = URL(fileURLWithPath: args[i+2])
-    guard !FileManager.default.fileExists(atPath: home.path) else { throw SevraError.refused("Audit UI fixtures require a new disposable Home.") }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    guard !FileManager.default.fileExists(atPath: home.path) else { throw AppRuntimeError.refused("Audit UI fixtures require a new disposable Home.") }
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     let store = try HomeStore(root: home, dbmd: dbmd)
     let reader = try SourceFolder(url: source)
     _ = try reader.execute(ProposedTool(name: "source.read", arguments: ["path": .string(source.lastPathComponent)]), cancellation: Cancellation())
@@ -41,7 +41,7 @@ func seedUIIfRequested() throws -> Bool {
     let args = CommandLine.arguments
     guard let i = args.firstIndex(of: "--seed-ui"), args.count > i + 2 else { return false }
     let home = URL(fileURLWithPath: args[i+1]), source = URL(fileURLWithPath: args[i+2])
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     let store = try HomeStore(root: home, dbmd: dbmd)
     var state = try store.load()
     var thread = WorkThread(id: "00000000-0000-4000-8000-000000000042", title: "Native UI review")

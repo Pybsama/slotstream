@@ -8134,3 +8134,643 @@ Archive SHA-256: `1947c1b325f80097f0eac3f86da2ef7b091ced32d50e4487703f683f28b098
 | Installed serving | 31/31 checks passed with Auto quantization, a 10 GB adaptive ceiling, 32,768-token context and MTP on; owned server reaped and no model processes remained |
 
 The linked run preserves raw native, installer and serving logs, commands, identities, workflow receipts and cleanup evidence. Global paging remains diagnostic: the native run observed swap-ins without increased swap-outs, while process-memory and functional gates passed. These checks establish functional and distribution acceptance, not a new throughput result or qualification of other Macs. The broader same-checkpoint speed target remains unmet, as recorded in the closed [[records/plan/same-model-quantization-and-automatic-memory-2026-10-02]] plan.
+
+## Issue 55: GPU keepalive benefit, interference risk and qualification gap
+**Conclusion.** The reported regression is credible and the automatic policy is
+broader than its evidence. Keepalive creates real, continuous GPU work; its
+benefit depends on that work overlapping useful model work cheaply. AC power
+alone does not establish that. The available development Mac does not reproduce
+the base-M5 collapse. The exact base-M5 driver or hardware scheduling mechanism
+remains unconfirmed. This investigation adds a diagnostic and evidence, with no
+change to engine defaults, no issue reply and no claim that a fix is qualified.
+
+**Community evidence.** The verbatim [issue #55](https://github.com/carloslfu/slotstream/issues/55)
+report is [[sources/community/2026/10/2026-10-12-issue55-keepalive]]. On a base
+M5 MacBook Air, 32 GB, internal SSD, macOS 26.6.2 and CLI 0.2.27, on AC outside
+Low Power Mode, disabling keepalive changes reported greedy decode from
+293.85 to 15.27 seconds for 128 tokens, a 19.24x throughput ratio. Disk-read
+records differ by only 0.58%; the additional measured IO time is 4.33 seconds
+out of 278.58 seconds additional decode time. IO timings may overlap other
+work, so this is not an additive phase decomposition, but disk-read volume
+alone cannot explain the collapse. Disabling expert prefetch or MTP did not
+remove the reported slowdown. Raw token IDs, GPU traces and thermal samples
+from that Mac have not been supplied. Matching draft acceptance counts alone
+are not proof of identical tokens. Issue #12 is another reporter on similar
+hardware, not an independent on/off replication of this issue.
+
+**Code path and root assumption.** `Engine.swift` starts keepalive around the
+entire generator call, including prefill and decode. `GPUKeepAlive.swift`
+creates its own Metal queue, dispatches one thread polling a shared flag up to
+200,000 times, and continuously keeps two command buffers in flight. It does
+not run only during idle gaps, select qualified hardware or give model work
+priority. `auto` checks only battery and Low Power Mode. The installed 0.2.27
+source and current production keepalive source are byte-identical.
+
+Routing in `Layers.swift` materializes expert IDs on the CPU before loading
+missing expert weights. Repeating that dependency across layers produces
+short GPU bursts and CPU/SSD gaps. Keepalive can reduce the cost of starting
+those bursts, but can also compete with them. No resource or explicit event
+dependency connects the keepalive flag to the model in this code. A separate
+queue allows independent submission; it does not establish a portable latency
+or noninterference guarantee. Apple's [Metal execution guidance](https://developer.apple.com/videos/play/tech-talks/10580/)
+explains submission overhead, CPU/GPU bubbles and the need to measure GPU
+utilization. The current MLX checkout uses concurrent compute encoders; this
+is not evidence that every useful kernel overlaps the keepalive on every GPU.
+
+There is no five-second timer in keepalive. `verifySeconds` measures the entire
+main-model verification forward pass plus evaluation, not one command buffer.
+Many repeated smaller stalls could accumulate into the reported five seconds.
+The report alone does not establish a watchdog timeout, lack of hardware
+concurrency, thermal throttling, or a particular Metal driver defect. A
+GPU/CPU flag-coherency concern also does not by itself explain a persistent
+mid-request slowdown: the flag stays zero until generation ends.
+
+**New real-model comparison.** Installed 0.2.27 on the M5 Pro 48 GB,
+macOS 26.6.2, a live desktop, two report prompts, fresh processes, 64 greedy
+output tokens, 8.1 GB budget, 640 slots, MTP/vision off, 8192 context and
+256-token prefill chunk. Three alternating rounds per prompt. This is a
+smaller cache than the reporter's automatic plan and the historical larger
+cache tests; it does not replace them.
+
+An initial attempt produced no clean pairs and is retained as discarded
+for timing. In the repeated twelve-run experiment, all six pairs generated
+identical output IDs and matched configurations. One pair is excluded for
+global paging. All sampled thermal states were nominal. The five eligible
+pairs give these throughput ratios, keepalive on divided by off:
+
+| Prompt | Round | On/off ratio |
+| --- | --- | --- |
+| Hash map | 1 | 0.9656 |
+| Sky | 2 | 1.0730 |
+| Hash map | 2 | 1.0034 |
+| Sky | 3 | 0.9858 |
+| Hash map | 3 | 0.9751 |
+
+The median paired ratio is **0.9858**, or 1.4% lower throughput with keepalive;
+the range is 3.4% lower to 7.3% higher. This short experiment shows no consistent
+benefit at the floor budget, not a statistically established general slowdown.
+Both arms decode at roughly 5.5 to 6.1 tok/s in the repeated experiment, with
+no order-of-magnitude collapse. Exact per-cell results, all exclusions and
+source/binary identities are in the linked run records. All owned model
+processes exited before later GPU probes ran.
+
+**The benefit exists, but is conditional.** The earlier qualified measurements
+in [[records/measurements/decode-perf-2026-09-24]] found keepalive alone gave
+1.067x at 10 GB without the head, 1.110x at 22 GB with the head/lookahead and
+1.17x at 16 GB with the streamed head. Energy per token increased 7.1% in the
+16 GB experiment. The 1.28x claim combined keepalive with direct demand reads;
+it must not be attributed to keepalive alone. Today's floor-budget results
+neither invalidate those experiments nor show the same benefit at other
+budgets. This investigation did not measure energy or qualify sustained heat.
+
+**New Metal probes.** The unchanged production keepalive was linked into a
+small standalone Swift program. Four alternating on/off rounds, nominal
+thermal state and unchanged global swap counters; exact output throughout.
+For a synthetic arithmetic dispatch of 65,536 threads after a 200 microsecond
+host sleep, the median of per-round median wall times was 192.9 microseconds
+off and 139.7 on. Commit-to-GPU-start was 80.0 versus 27.7 microseconds; GPU
+command duration was 50.5 versus 52.3 microseconds. Here the measured benefit
+is mainly reduced start latency, not faster arithmetic. These are dispatch
+measurements, not model throughput or direct GPU clock measurements.
+
+The bounded 200,000-poll kernel itself had a median GPU command duration of
+19.8 milliseconds. In a separate scheduling probe, independent useful work
+completed in a median 0.225 milliseconds with two polling buffers submitted.
+A shared event deliberately forcing that work to wait for the two buffers
+raised it to 35.975 milliseconds. With shorter 5,000-poll buffers the deliberately
+serialized case took 1.249 milliseconds. This demonstrates why long busy-work
+buffers can be costly when ordering prevents overlap. **It does not prove
+that such ordering occurs on the reporter's Mac.** Command-buffer intervals
+can include waits and are not individual kernel instruction traces.
+
+Separate synthetic arms tested 5,000 polls, one in-flight buffer and a
+concurrent keepalive encoder against their own on/off controls. All kept
+exact output and reduced the small workload's wall latency locally, with no
+paging. The short-poll arm submitted far more buffers. Cross-arm baselines
+varied considerably, so these experiments do not rank the alternatives or
+qualify any for inference. None was adopted as a production change.
+
+**Why tests passed.** Existing checks cover policy, submission lifecycle and
+exact generated tokens. They do not gate throughput or successful keepalive
+buffer completion across hardware. `gpuKeptAwake` reports that an instance
+was used, not that it benefited the request. The class lacks a measured
+noninterference check or automatic disablement after a regression.
+
+**Recommended next step, not an adopted policy change.** Disable automatic
+keepalive on unqualified hardware; the simplest conservative hotfix is an
+off default with explicit `on` retained for users who have measured a benefit.
+Do not delete the option solely from this one report, and do not replace the
+loop with a shorter one and call the problem fixed without base-M5 evidence.
+Any future automatic enablement needs paired real-model qualification for the
+hardware/configuration, output parity and an energy/thermal check. The original
+[[records/decisions/gpu-keepalive-on-ac-power]] explicitly listed lack of benefit
+on another Mac as a reason to revisit the decision.
+
+For the reporter, the immediate workaround is `--gpu-keepalive off` or
+`SLOTSTREAM_GPU_KEEPALIVE=off`; it disables the busy work and preserves model
+execution. Suggested communication: acknowledge a real regression, explain
+that the optimization was qualified on a different Mac, give the workaround,
+and avoid claiming a proven Apple scheduler bug. Request the no-weights
+`bash Tools/keepalive_probe/run.sh > keepalive-probe.jsonl` output and matched
+on/off `--stats-json` runs. If only the full model reproduces it, a Metal System
+Trace on the affected Mac is the next discriminating evidence. Xcode's
+`xctrace` is unavailable on this development host. No message was posted.
+
+## Issue 54 context-boundary triage during keepalive removal
+**Scope.** [Issue #54](https://github.com/carloslfu/slotstream/issues/54) reports a sharp decode slowdown above 32,768 active tokens on an M4 Pro 48 GB, version 0.2.27, with MTP off. Changing the configured window, expert-cache size and adaptive memory did not remove the reported boundary. It has no keepalive-off comparison. Carlos had already suggested a possible relationship to #55; that possibility is not confirmation.
+
+**Source inspection.** The pinned MLX 0.32.2 `scaled_dot_product_attention.cpp` increases the two-pass vector attention partition count from 256 to 512 beyond 32,768 keys in its `s` architecture branch when `n_simds > 4`. The model's ordinary one-row decode has GQA factor 12. This is a plausible boundary to isolate, not a diagnosis. Do not infer applicability from the backend comment labeling `s` as Max: the existing [[records/machines/macbook-pro-m4-pro-24gb]] report identifies an M4 Pro as `applegpu_g16s`, and the current probe identifies the M5 Pro as `applegpu_g17s`. Verify actual runtime architecture and dispatch on the affected machine.
+
+Slotstream's experimental `SelectedAttention` also has a 32,768-key guard, but requires more than eight query rows. It is not the ordinary one-query decode path in this report. Configured context-memory reservations and prefill chunk limits likewise do not establish a per-token decode cliff. Finding the same number in code is not enough; follow the executed path and verify the mechanism.
+
+**Bounded probe.** [[sources/runs/2026/10/2026-10-12-issue54-attention-triage]] preserves a synthetic single-query attention test on the M5 Pro with the production head dimensions. The default median changes from approximately 0.319 to 0.337 ms across 32,768/32,769 keys. Holding the partition count at 256 or 512 removes that small step on this Mac. All outputs were finite and the recorded peak allocation was below 0.3 GB. These live-desktop component timings have no clean-performance qualification, use a synthetic mask, and neither reproduce the reported threefold full-model slowdown nor qualify an override. No product setting changes follow from them.
+
+**Disposition.** Keep #54 open. GPU keepalive removal directly addresses #55's controlled on/off failure, but has not been shown to fix #54. Ask for the same boundary comparison after the removal release, preserving the reporter's MTP-off setting and measuring actual prompt plus output tokens. If it persists, isolate attention dispatch and GPU scheduling on that M4 Pro, retaining complete-request and resource evidence. Do not tell the reporter to adopt an unqualified MLX override or claim the exact root cause is known. Keeping active prompt plus reply within the faster reported range is a temporary workload constraint, not a fix.
+
+## 0.2.29 removal candidate: prepublication checkpoint
+**Prepared, not published.** The keepalive-removal code is on main, with release version 0.2.29 prepared. The final code commit is `5728fc2d64d7d918f1c16c3f45538d6fd2b9e900`; documentation-only successors do not change its source closure. [[records/decisions/remove-gpu-keepalive]] records the decision, migration and lessons. [[sources/runs/2026/10/2026-10-12-release-0-2-29-prepublication]] preserves the local build identities, raw verification and release checkpoint.
+
+The initial reporter reply is [posted on #55](https://github.com/carloslfu/slotstream/issues/55#issuecomment-6128166082), after reading Carlos's earlier acknowledgement. It states the complete-removal plan, the immediate `--gpu-keepalive off` / environment workaround and the commitment to return with a release. The reporter has not yet been told that a release is available.
+
+Local acceptance completed:
+
+- The corrected optimized build succeeds; its executable SHA-256 is `9c0c3732114b70f3ff50a6d0263ba246440fc6d0cf554da49abd5f7cba9fe1a6`.
+- T0/T1: 102 passed, zero failed or skipped, 41,181 assertions on the final local build.
+- The removed CLI option is absent from help and rejected as unknown; pack settings omit it; the executable has no `GPUKeepAlive` symbols.
+- Archive-verifier and performance-protocol regression tests pass. Direct-read equality/recovery gates remain in the model battery.
+- The broader static run exposed a host-sized disk-space fixture failure. A small valid fixture with an internal available-disk observation now checks refusal before file creation. Complete compressed/raw HTTP, cancellation, corruption, retry and sustained-memory checks pass after correction.
+- The remaining local static gates pass: CLI pull checks, 97 planner checks, 420 simulated memory-override cases and installer gates. This is staged local verification, not complete native acceptance of a CI archive.
+- The engineering brain validates with zero errors/warnings; generated documents, 354 public-claim checks and changed Markdown links pass. The personal-brain lesson was separately validated and pushed as `aede63a95`.
+
+**Remaining release gate.** The last preflight found 12.67 GB reclaimable against the required 20.5 GB. The user was asked to free memory; no other app was closed by the agent. The full real-model battery was not started, no gate was weakened, and no model or inference server remains running. Functional acceptance treats global paging as diagnostic but still requires real admission headroom.
+
+Exact-source workflows at the checkpoint: [engine CI](https://github.com/carloslfu/slotstream/actions/runs/38279294771), [Mac app](https://github.com/carloslfu/slotstream/actions/runs/38279294911), [context](https://github.com/carloslfu/slotstream/actions/runs/38279294788). The earlier 210b40e engine/app runs were superseded and cancelled to free runners after the fixture correction. Do not use their candidate for publication.
+
+Resume with enough headroom: confirm complete final-source CI, download its `slotstream-ci-candidate`, verify the archive with `Tools/release_candidate.py`, and run the entire `Tools/verify.sh` against that exact executable. Only then tag/publish v0.2.29 on the accepted source commit. Verify the public archive, checksum, provenance, source reconstruction, isolated installer and installed serving via `Tools/e2e_release.sh`. Return to #55 with the verified release and close it. Read fresh replies before posting again.
+
+Issue #54 stays open. [[records/measurements/issue54-context-boundary-triage-2026-10-12]] records the separate investigation and the limited attention probe. After publication, ask for the same MTP-off boundary comparison on the new version; removal has not been proven to resolve that report. The unrelated weight-format issue #7 is outside this fix.
+
+## M1 Max keepalive report and related-issue audit
+The issue audit found a second current report of severe stalls with the GPU keepalive default: [#59](https://github.com/carloslfu/slotstream/issues/59), from `@dittsn` on a Mac Studio M1 Max with 32 GB, Slotstream 0.2.28 and weights on its internal SSD. The raw report is [[sources/community/2026/10/2026-10-12-issue59-keepalive]]. It supports removing the feature across machines, as already decided in [[records/decisions/remove-gpu-keepalive]].
+
+The reporter gives 0.94 tok/s by default and 6.23 tok/s with keepalive disabled, with the same printed text. Disabling MTP, then MTP plus lookahead, did not recover throughput while keepalive remained enabled. Three warm server requests with keepalive off reportedly reached 6.00, 6.10 and 6.09 tok/s.
+
+These are not controlled same-plan A/B timings: automatic planning changed between the default and off runs (32,768 versus 65,536 configured context, resident versus streamed draft experts, different target/cache sizes and reclaimable memory). No off-run powermetrics trace was supplied. The trace's stated end time and final printed sample also differ. Preserve those limits instead of treating the observed ratio as an isolated causal effect, power comparison or proven GPU scheduling explanation. No new machine qualification or hardware-table speed claim is made.
+
+The report belongs with #55 for release handling: remove the submitted artificial GPU work, communicate the existing off workaround, then follow up and close after the accepted removal release. The reporter's supplied output already identifies a working path. No further profiling is required to justify removing an unreliable feature.
+
+The audit covered all 20 issues returned by GitHub, open and closed, including their comments. Only #55 and #59 explicitly report the keepalive-on/off failure pattern. #54 remains a separate active-context-boundary report with no keepalive-off comparison; [[records/measurements/issue54-context-boundary-triage-2026-10-12]] preserves its analysis. Historical #21 describes long-prefill, streaming and process-exit problems addressed by earlier releases, without evidence connecting them to keepalive; its regression suite remains in release acceptance. The hardware measurement threads and open smaller-format request #7 do not establish additional duplicates. Do not reopen or close unrelated issues based on symptom words alone.
+
+## v0.2.29 published and accepted; keepalive reports closed
+**[v0.2.29](https://github.com/carloslfu/slotstream/releases/tag/v0.2.29) is published and accepted.** GPU keepalive and its controls are completely removed. Direct demand reads remain. This is an engine release; the development Mac app is not a public Desktop installer.
+
+Published 2026-10-13T03:34:33Z, October 12 in Colombia, from exact source commit `5728fc2d64d7d918f1c16c3f45538d6fd2b9e900`. [Complete source CI](https://github.com/carloslfu/slotstream/actions/runs/38279294771) passed before tagging, and the [release workflow](https://github.com/carloslfu/slotstream/actions/runs/38342292014) published its preserved archive. No locally rebuilt executable was substituted.
+
+Archive SHA-256: `6bb418c2fa477b15391a67d261eda65f9b45eea38c7594c39ae033c7d865afb6`. Executable SHA-256: `4d7d4ed4d2a19b5991d47f4731198932cd616e5c2722fcf8b6e37612c232f051`.
+
+| Acceptance | Result |
+| --- | --- |
+| Exact-source hosted CI | Engine, instrumented coverage, external library consumer, Mac app and context contracts passed |
+| Complete native battery on the CI executable | 35 gates passed, zero failures or skips; quality 15/15, API robustness 74/74, vision serving 25/25 |
+| Public distribution | Public archive equals the accepted CI archive; checksum, GitHub provenance, build identity and source reconstruction verified |
+| Public installer | Unchanged public installer fetched v0.2.29 into an isolated root; installed executable equals CI bytes; existing user installation, wrappers and profiles unchanged |
+| Installed server | 31/31 checks passed with Auto quantization, a 10 GB adaptive ceiling, 32,768-token context and MTP on; owned server reaped, no model process left |
+
+The earlier resource block in [[records/measurements/release-0-2-29-prepublication-2026-10-12]] was temporary: the resumed run passed admission and completed the entire battery. Global paging remains a diagnostic, not a substitute for actual process-memory or completed-work gates. This is functional and distribution acceptance, not a new performance benchmark or an independent run on the reporters' M5 Air and M1 Max.
+
+## Reporter follow-through and issue audit
+
+- [#55 follow-up](https://github.com/carloslfu/slotstream/issues/55#issuecomment-6137663126): release link, upgrade command and obsolete-flag cleanup; closed as completed because the problematic keepalive path is removed. The reporter is invited to reply if stalls remain.
+- [#59 follow-up](https://github.com/carloslfu/slotstream/issues/59#issuecomment-6137664073): the additional M1 Max report gets the same migration and limitation, with its own earlier workaround reply; closed as completed. [[records/measurements/issue59-keepalive-and-related-issue-audit-2026-10-12]] preserves its evidence and confounds.
+- [#54 follow-up](https://github.com/carloslfu/slotstream/issues/54#issuecomment-6137664801): keep open. The attention boundary is a lead, not a verified explanation; request the same MTP-off comparison on the new release. Removal has not been shown to resolve that cliff.
+- All 20 issues and their comments were checked for related reports. No further established keepalive duplicate was found; the unrelated smaller-format request #7 remains open, and historical issue #21 remains covered by its passing regression suite.
+
+Read prior maintainer messages before each follow-up. On upgrade, remove `--gpu-keepalive` from saved commands and unset the now-unused `SLOTSTREAM_GPU_KEEPALIVE` if present. Ollama's unrelated `keep_alive` remains supported.
+
+[[records/decisions/remove-gpu-keepalive]] and the engineering guide carry the product and optimization lessons. The personal-brain decision was separately validated and pushed as `aede63a95`. The linked raw run preserves the accepted bytes' identity, full checks, archive inventory, issue snapshots and comment/closure receipts. A documentation follow-up also corrects one obsolete source-file comment; it changes no runtime behavior or published artifact.
+
+## Routing handoff pilot: native mechanism gain, unresolved real-model benefit
+**Result.** Routing handoffs are a demonstrated optimization opportunity in
+an isolated native Swift workload. A faster complete Slotstream request is
+not established. The code has a real per-layer GPU-to-CPU dependency even
+when expert weights are already present; replacing that dependency is a
+scheduler and cache-lifetime change, not simply increasing GPU frequency.
+Evidence: [[sources/runs/2026/10/2026-10-13-routing-handoff-pilot]].
+
+**What the code does.** In `Layers.swift`, `routeIndices.asArray(Int32.self)`
+waits for the router and pending dependent GPU work. The CPU then looks up
+expert IDs in `SlotPool.map`, pins slots, claims prefetched tickets and reads
+missing weights before scheduling expert computation. Unified memory avoids
+a separate PCIe copy but does not remove the producer/consumer dependency.
+Time waiting in this readback includes real GPU computation, so its duration
+cannot all be counted as removable overhead. Four-layer evaluation barriers
+already defer a different drain; the route readback still occurs each layer.
+
+**Native mechanism test.** Random affine 4-bit weights, hidden width 2560,
+intermediate width 640, top ten of 512 IDs, 32 immutable resident slots and
+48 dependent MoE layers. The mask makes every timed route a hit. All arms
+use the same router, gather-QMM operations, reductions and four-layer barriers.
+The host arm materializes IDs, uses a Swift dictionary and uploads slot IDs.
+The checked arm looks up slots on the GPU but reads one missing-ID flag back.
+The all-hit arm keeps the lookup and dependent expert work on the GPU.
+
+Six alternating rounds per row count, repeated in two independent processes:
+
+| Native capture | Rows | GPU lookup plus host miss check / host | GPU lookup without readback / host |
+| --- | --- | --- | --- |
+| native6 | 1 | 1.1931x | 1.3631x |
+| native6 | 3 | 1.1118x | 1.2865x |
+| native7 | 1 | 1.1862x | 1.3554x |
+| native7 | 3 | 1.1349x | 1.2860x |
+
+Each value is the median paired throughput ratio. All pairs are eligible:
+zero global paging increments, nominal sampled thermal state and normal
+power mode. Each process passes 18 exact output/routing checks at depths
+one, four and 48; all 512 directory entries and eleven hit/miss splits also
+match. Both peak below 0.61 GB process footprint. Three rows are a component
+shape, not an MTP inference test. The same small pool is reused across layers;
+there is no attention, model KV state, SSD traffic, eviction or miss recovery.
+These ratios cannot be applied to total inference throughput.
+
+The earlier Python probe gives 1.7981x without readback and 0.9892x with the
+miss check. Its exactness passes, but the additional Python overhead makes
+it unsuitable for estimating Swift benefit. The native measurements above
+are the relevant mechanism evidence.
+
+**Current real-model overlap test.** Six fresh-process native 0.2.29 requests,
+three alternating baseline/resident-overlap pairs, one hash-map prompt,
+64 greedy tokens, 10 GB process target, MTP/vision off and 8192 context.
+All output IDs match and no cell pages. Ratios span 0.8812x to 1.0932x; every
+pair fails the predeclared equal demand-read-count criterion. No median gain
+qualifies. Counts differ only slightly, but this short, variable experiment
+still does not establish a benefit or general regression.
+
+There is also a concrete tradeoff in the existing prototype:
+`ExpertStore.ensureCore` enables direct demand reads only when
+`reservedHits == nil`. Resident overlap supplies that callback and therefore
+uses staging/scatter instead. The raw cells confirm about 2616 direct batches
+in the baseline versus zero direct batches and about 2616 scatter batches in
+the candidate. This comparison tests that whole tradeoff, not a GPU directory
+or the isolated value of overlap. No runtime optimization is enabled.
+
+**Completeness counter correction.** `noteLayerDemand` runs before ready
+prefetch tickets are claimed and published in the pool map. Consequently,
+`layersComplete` measures map hits at entry, not every layer that already has
+all weight data ready, and not every layer avoiding a fresh demand read.
+This ordering also appears in the counter's introducing commit `b7cb86f`.
+The old 2.2% to 2.5% counter values remain historical observations; interpreting
+them as a hard ceiling on no-wait execution is unsupported. The original
+[[records/decisions/residency-speculation-waits-for-layer-completeness]] now
+carries this correction without changing its historical text.
+
+Two new observed requests each have 3024 main-plain decode layer events:
+
+| Request | All experts in map | Map plus ready-ticket candidates |
+| --- | --- | --- |
+| First | 35 / 3024 = 1.16% | 223 / 3024 = 7.37% |
+| Repeated, prefix cache cleared | 37 / 3024 = 1.22% | 221 / 3024 = 7.31% |
+
+The global counter includes prefill events; this observer selects main-plain
+passes only. Both requests generate the same 64 tokens as the unobserved
+baseline, peak around 5.91 GB and have zero paging increments. Ready tickets
+still require generation/base/slot validation. The observer adds host work
+and checks tickets sequentially, so these are diagnostic readiness candidates,
+not an unperturbed atomic snapshot or a proven fast-path hit rate. Most layers
+still have at least one unfinished or absent expert at this 10 GB budget.
+The fraction does not bound gains from overlapping partial hits, nor establish
+readiness at larger caches, with MTP, or on the issue reporter's M1 Max.
+
+**Implementation implication.** A useful prototype would publish an
+expert-to-slot directory readable by GPU operations, distinguish valid hits
+from misses, and preserve slot ownership until every dependent GPU reader
+finishes. It must handle ready-ticket adoption, eviction and pool relocation,
+and preserve the current direct-read path for real misses. Skipping the
+readback across layers additionally needs safe conditional execution or
+speculation with exact state recovery when a miss invalidates the assumption.
+A directory alone does not provide these guarantees. Partially resident
+layers may benefit from useful overlap even when an all-hit fast path is rare.
+
+This is substantial scheduler/cache work with encouraging native component
+evidence. Completion requires paired full-model request tests at equal budgets,
+exact routes/state/outputs, actual overlap evidence and no memory, I/O or power
+regression. The current experiments neither diagnose the reporter's frequency
+policy nor support a claim of doubling performance at maximum clock.
+
+## Routing handoff follow-up: the all-hit gain does not establish a streaming improvement
+**Assessment.** The handoff overhead is real, but the straightforward GPU
+lookup fast path is not supported as a useful optimization for the tested
+streaming workload. The all-hit benefit survives native repetition; its
+benefit largely disappears once most layers need the host fallback. Existing
+real-model overlap variants also fail the prospective improvement screen.
+This narrows the earlier [[records/measurements/routing-handoff-pilot-2026-10-13]]
+claim to a mechanism opportunity, not a justified whole-engine speedup.
+Raw evidence: [[sources/runs/2026/10/2026-10-13-routing-handoff-followup]].
+
+**Mixed readiness test.** The native Swift probe retains the same immutable
+32-slot, 512-ID, top-ten, 48-layer MoE workload. A captured exact reference
+route identifies one selected expert to mark missing on designated layers.
+The candidate checks a GPU directory and reads a missing flag. On a miss it
+also materializes route IDs and performs the ordinary host lookup. Invalid
+indices never reach the expert kernels. A second candidate rebuilds each
+2048-byte directory from CPU values during the timed interval, pricing a
+simple update rather than assuming an eternally free directory.
+
+This tests logical miss detection and fallback overhead only. Every physical
+weight is already available; no SSD delay, eviction or state recovery is
+simulated. Both implementations must produce the same outputs and routes.
+Six alternating rounds per configuration, repeated in two native processes:
+
+| Fully ready layers | Persistent directory, first run | Persistent directory, repeat | Rebuilt directory, first run | Rebuilt directory, repeat |
+| --- | --- | --- | --- | --- |
+| 0 / 48 | 0.9676x | 0.9790x | 0.9640x | 0.9763x |
+| 3 / 48 = 6.25% | 0.9773x | 0.9896x | 0.9697x | 0.9879x |
+| 12 / 48 = 25% | 1.0101x | 1.0331x | 1.0127x | 1.0260x |
+| 48 / 48 = 100% | 1.1943x | 1.1909x | 1.1932x | 1.1983x |
+
+Numbers are median paired throughput ratios against the ordinary host lookup.
+All component cells have zero paging, nominal sampled thermal state and normal
+power. Each process passes twelve mixed-output/routing/fallback-count checks,
+in addition to the original eighteen all-hit exactness checks and directory
+entry tests. At 6.25% ready layers, the check-first path loses about 1% to 3%.
+At 25% it gains only about 1% to 3%; there is no universal break-even threshold
+in this small sample. At 100% it gains about 19%, while the separate no-readback
+all-hit control again gives a much larger gain. Reading one Boolean still
+requires synchronization; when the flag says missing, the host must do the
+original work too. These ratios do not estimate full inference throughput.
+
+**Real-model factorial screen.** Twenty successful fresh-process requests on
+the M5 Pro, two short prompts, four blocks, fixed 8.1 GB target, 640 slots,
+64 greedy tokens, MTP/vision off and prefetch off. Each block brackets the
+three alternatives with two direct-read references. Disabling prefetch here
+makes demand work deterministic; it is a controlled mechanism test, not a
+measurement of the default automatic configuration. The earlier 10 GB pilot
+already preserves the automatic-prefetch comparison and its timing exclusions.
+
+All twenty requests match output IDs and read/forward counts within their
+blocks. Hash-map cells fetch 19322 decode records; sky cells fetch 19277.
+Every mechanism is exercised: references and shared overlap use direct reads,
+staging and resident overlap use scatter, resident launches match joins, and
+shared overlap schedules its projections. Peak footprint is 4.927 to 5.533 GB.
+
+Two blocks have global swap-in activity and are excluded. Only two clean
+blocks remain, fewer than the predefined minimum of three. Their descriptive
+ratios against the mean of the two references are:
+
+| Path | Decode throughput ratio | Whole-request throughput ratio |
+| --- | --- | --- |
+| Staging without overlap | 0.9136x | 0.9066x |
+| Resident-expert overlap with staging | 0.9226x | 0.9207x |
+| Shared-expert overlap retaining direct reads | 1.0128x | 1.0126x |
+| Reference repeat / reference, A/A | 0.9876x | 0.9892x |
+
+The existing resident overlap recovers little of staging's cost and remains
+about 8% below the direct-read reference in these clean observations. Shared
+overlap's roughly 1.3% apparent gain is comparable to baseline variation and
+below the predefined 5% threshold. **No variant passes the original screen.**
+Request time here is the engine generation interval, including prefill and
+decode; it excludes process/model loading and prompt encoding.
+These are small descriptive observations, not a qualified general slowdown,
+statistical significance result or a reason to enable a path. All exclusions,
+including the earlier pre-allocation headroom refusal, remain in the capture.
+
+**Why the directory result does not carry over.** Reanalyzing the previous
+two observed real-model requests finds 64.9% to 65.1% of selected experts in
+the map or in ready-ticket candidates, but only 7.3% to 7.4% of layers have
+all ten ready. There are 193 isolated complete-layer runs in each request,
+14 to 15 runs of length two, and no run of length three. A few missing experts
+keep the whole layer's result waiting, and the next layer's exact routing
+depends on that result. Ready-ticket validation and observer perturbation
+still limit this diagnostic. These readiness figures are from the earlier
+10 GB, automatic-prefetch requests, not the new prefetch-off experiment, and
+must not be extrapolated to larger caches or MTP.
+
+**Concrete candidates worth separating.**
+
+1. Improve how early the missing experts become usable. Cache admission and
+   prefetch should optimize layer wait time and useful completed records,
+   not aggregate hit rate or GPU frequency. Existing prefetch already does
+   useful work; new forecasting is not presumed faster just because it reads
+   more weights. The measured readiness distribution motivates this target
+   but does not establish a winning replacement policy.
+2. Preserve direct-read efficiency while overlapping resident computation.
+   The current guard against direct writes is deliberate: raw CPU writes
+   must not race active GPU readers. A candidate could read missing bytes
+   into bounded reusable host buffers, finish the resident readers, then
+   copy and publish slots. It must price staging, buffer ownership, joins
+   and dispatches together, retain error/cancellation recovery and beat the
+   current direct path. Simply removing the guard is not a fix.
+3. Let the overlap callback see already adopted prefetch slots. In
+   `ExpertStore.ensureCore`, ready slot tickets are published before
+   `reservedHits?(result)`, but `result` still contains the original map-hit
+   slots. Newly ready entries are copied into it only after demand I/O.
+   This withholds usable experts from the existing early computation path.
+   Exposing them earlier is a concrete code candidate, subject to pin/epoch
+   and exactness checks. No speedup is measured or claimed for that change.
+4. A more ambitious GPU directory must keep useful resident computation
+   running through mixed misses, with valid slot snapshots and explicit
+   reader lifetimes. It cannot merely insert a flag readback before the
+   old path. Cross-layer speculation additionally needs exact recovery when
+   an expert is missing. The current all-hit gain justifies investigating
+   the mechanism, not committing to this rewrite.
+
+The next implementation, if pursued, should first beat the direct-read
+reference on a mixed-miss component including its real transfer/lifetime
+costs, then pass full-model tests with prefetch enabled at the intended memory
+budget. The current results do not justify a 30% whole-model prediction,
+a default change, or an explanation of the M1 Max reporter's clock policy.
+
+## Ready-expert overlap prototype: exact, no qualified speedup
+**Result.** The proposed overlap is implemented and numerically correct, but
+it does not establish a useful end-to-end speedup. The best candidate's two
+clean pairs show only 1.0072x decode throughput and 1.0059x whole-request
+throughput. The same pairs' baseline-to-baseline decode ratio is 1.0258x.
+There are too few eligible pairs, and the gain is below the prospective 5%
+threshold. No default, release or installed CLI changes.
+
+This tests the concrete next candidate identified in
+[[records/measurements/routing-handoff-followup-2026-10-13]]. Evidence is
+[[sources/runs/2026/10/2026-10-13-ready-overlap-prototype]].
+
+**Implementation.** Two package-only diagnostic controls are disabled in
+ordinary execution. The first includes successfully published, completed
+prefetch slot tickets in the early resident-compute batch. It never treats a
+reserved victim, unfinished ticket or stale reservation as ready. Existing
+pins protect the early readers, and the final reduction retains router order.
+A fully ready route returns its already-computed output without submitting an
+empty second gather-QMM batch.
+
+The second retains CPU copies for missing weights: read a bounded batch into
+host buffers while ready experts compute, join the GPU readers, then copy the
+completed bytes into pool slots. It creates no MLX staging arrays or GPU
+scatter for those demand batches. Buffers are bounded by the existing
+`ExpertStore.defaultLoadBatch` slice; failed reads join worker lanes and copy
+no partial record. The pool's error cleanup still joins early GPU readers and
+releases request pins. Packed-record and explicit alternate write paths retain
+their existing fallback. These controls have no serving or CLI/environment
+optimization switch; the CLI only exposes the correctness diagnostic.
+
+**Correctness.** The freshly built `ready-overlap-component` diagnostic passes
+850 assertions with actual checkpoint weights. It covers every one-row
+resident-count split from zero through ten, multiple seeds, two- and eight-row
+fallbacks, ordered router IDs, exact complete MoE output bytes, complete ready
+routes, stale base identities, unfinished-ticket promotion with duplicate
+keys, partial-read failure/retry and joining before CPU writes. Forty validated
+prefetch records enter the new early view; 28 joined-copy batches execute.
+The existing five expert-lookahead checks add 213 passing assertions with no
+skips. Seven weight-free scoring fixtures reject token/pool mismatches,
+insufficient clean pairs, excessive A/A drift and gains below the threshold.
+Python syntax and source-diff checks pass.
+
+**Prospective model comparison.** One M5 Pro, four alternating blocks and two
+short prompts, five fresh processes per block: direct-read reference, existing
+resident overlap with staging, newly ready overlap with staging, newly ready
+overlap with joined CPU copies, and repeated reference. Reverse order on
+alternate blocks. Each candidate is compared with the mean of the two
+bracketing references. Two unscored warmup requests precede the scored cohort.
+Fixed 10 GB target, 857 slots, 64 greedy output tokens, 8192 context, MTP and
+vision off. Automatic corrected-attention prefetch is required active in every
+cell, and counters must prove the candidate actually executes.
+
+The launcher waits up to 60 seconds for two observations of at least 15 GB
+reclaimable memory, two seconds apart. The launcher and native process also
+independently enforce the unchanged target-plus-3 GB pre-allocation gate.
+Readiness waiting and process/model loading are outside request timing.
+Whole-request timing includes engine prefill and decoding.
+
+All twenty scored requests produce identical output IDs within each prompt,
+with equal token/forward/prefill-read counts and equal plans. Prefetch timing
+can change demand/adoption counts, so unlike the earlier prefetch-off study,
+these counts are reported outcomes rather than an equality gate. Every early
+launch has a matching join. The joined-copy candidate executes 2616 to 2619
+decode direct-copy batches per request and zero decode scatter batches. Its
+four requests launch 4610 to 6116 ready-ticket records early. Physical process
+peaks across all arms are 5.903 to 5.970 GB, below the fixed target.
+
+| Path | Eligible pairs | Decode throughput ratio | Whole-request throughput ratio |
+| --- | ---: | ---: | ---: |
+| Existing resident overlap, staging | 1 | 0.9659x | 0.9723x |
+| Newly ready overlap, staging | 1 | 0.9708x | 0.9759x |
+| Newly ready overlap, joined CPU copies | 2 | 1.0072x | 1.0059x |
+| Repeated reference / reference, A/A | 2 | 1.0258x | 1.0187x |
+
+These are descriptive medians over the eligible pairs, not qualified speedup
+or slowdown estimates. Eight cells have global paging activity. In particular,
+the repeated references in blocks 2 and 3 exclude those blocks for every
+candidate. The frozen screen requires at least three clean pairs, three
+positive pairs, at least 1.05x median decode and request ratios, and A/A medians
+within 2% of one. **Every candidate fails the screen.** Completed cells and
+exclusions are preserved without replacement. Global paging is an eligibility
+condition here, not a correctness or process-memory failure.
+
+**Setup attempts retained.** An initial 8.1 GB pilot completes two requests
+before a native headroom refusal; its plan disables automatic prefetch, so it
+cannot test the ready-ticket hypothesis. A subsequent 10 GB attempt completes
+two unscored warmups with prefetch active, then refuses the first timed launch
+before allocation. The final cohort adds the prospective launch-readiness
+wait. Earlier cells are never pooled into it. Two serial builds, the initial
+helper build-directory collision, and every refused launch remain documented.
+
+**Interpretation and limit.** Preserving CPU copies recovers the disadvantage
+of returning to staging, but the earlier ready-ticket work adds no convincing
+net benefit in this screen. Extra GPU launches, output reordering and bounded
+host staging are plausible costs that offset the overlap; this experiment
+does not isolate their individual contributions. The earlier all-hit lookup
+result remains a mechanism result, not a prediction for streaming inference.
+Keep this as a reproducible diagnostic prototype. There is no basis here for
+a default change, a large speedup claim, a conclusion about M1 Max frequency,
+or a power/energy claim. Wider hardware, longer requests, MTP lifecycle and
+packed-layout qualification have not been performed for the prototype.
+
+## Issue 54 expanded boundary audit and full-model reproduction gap
+**Status.** We have not reproduced the reporter's threefold full-model slowdown, have not established its cause, and have not demonstrated that v0.2.29 fixes it. The release could already remove the cause through keepalive removal; neither the prior attention test nor this broader component test answers that question. Keep [issue #54](https://github.com/carloslfu/slotstream/issues/54) open. The earlier [[records/measurements/issue54-context-boundary-triage-2026-10-12]] remains limited evidence, not an end-to-end diagnosis.
+
+**What was actually tried.** [[sources/runs/2026/10/2026-10-13-issue54-boundary-followup]] preserves the expanded source audit, component measurements and a full-model reproduction attempt against the exact published v0.2.29 executable. That attempt stopped at its preflight: 11.63 GB reclaimable versus a 12 GB requirement for a fixed 9 GB target. No server launched, no prompt ran, and there is no decode result. This is a measured resource refusal, not a failed reproduction or proof that the bug disappeared. Smaller planner probes did not admit the requested above-32k window. No other application was closed and no memory guard was bypassed.
+
+The frozen full-model protocol keeps the reporter's original model, MTP off, templated German repetition prompt, temperature zero and 500 requested output tokens. It samples 10,750 and 10,900 repetitions with a 36,864 configured window. Vision is disabled, memory is bounded to 9 GB, and prefill is bounded to 256 tokens. Those resource differences and the local M5 Pro mean even a completed run would be an exploratory reproduction, not the reporter's M4 Pro 40 GB-target configuration. Existing benchmark metadata captures the actual prompt/output IDs, inter-token intervals, I/O, allocations and process observations. A later run needs a fresh output directory and identity/memory checks rather than overwriting this refusal.
+
+**Relevant execution paths.** Audited public release source `5728fc2`, comparing v0.2.27 and current main where necessary. Main's later ready-overlap prototypes are not evidence about the published executable.
+
+| Path | Boundary and implication | Evidence limit |
+| --- | --- | --- |
+| One-query MLX vector attention | On the applicable `s` GPU architecture branch, partition count changes from 256 to 512 at 32,769 keys. | Plausible sustained dispatch change; no threefold component slowdown measured on this M5 Pro. |
+| QSA indexer selection | Four-token compression means 8,193 blocks at 32,772 keys. MLX implements `argPartition` by sorting; this changes four sort blocks to five and adds a merge stage. | Newly identified lead missed by the attention-only probe. Reporter points cannot distinguish 32,769 from 32,772. |
+| KV and indexer backing storage | Grows in 1,024-row steps, including at 32,769. Capacity changes strides and can temporarily retain old and new allocations. | New component probe uses capacity-backed KV views. Actual cache mutation and process pressure still need a full-model run; growth alone does not explain a permanent slower mode. |
+| Context planning and allocation guards | 32,768 is a fixed-footprint baseline, and larger configured windows reserve more memory before serving. Actual dispatches also check allocation/headroom. | No intentional slower decode tier found. Cannot exclude runtime memory pressure or driver behavior from static inspection. |
+| Prefill and experimental selection | `SelectedAttention`'s 32,768-key guard requires more than eight query rows. Experimental block selection is off by default. | Neither is the ordinary one-query decode branch; prefill performance is excluded from the reporter's decode metric. |
+| MTP and expert residency | MTP is explicitly off; a fixed memory target pins the expert pool. The reporter also tested no-elastic and a larger fixed pool. | Speculative verification is not the reported path. Full-model routing, I/O waits and cache behavior remain unmeasured locally for this workload. |
+| API metrics and prefix reuse | `eval_duration` is timed over decode, separate from prefill. Prefix reuse affects prompt processing; non-streaming output avoids streamed-client stalls. The 32,768 output ceiling is a response-length ceiling, not active context. | Need actual per-token intervals to distinguish a one-time stall from a sustained change and actual output lengths to confirm boundary crossings. |
+
+The pinned MLX dependency, deployment optimization configuration, attention wrapper, experimental selectors and context constants are unchanged between v0.2.27 and v0.2.29. Original-model indexer/cache implementation has no targeted boundary fix in that comparison. Keepalive removal is relevant, but inspecting a diff cannot certify the user's outcome.
+
+**Broader component probe.** Production-shaped synthetic score computation, reference partition, mask assembly and attention were run separately and together. It covers 32,320, 32,767, 32,768, 32,769, 32,771, 32,772, 32,776 and 33,070 keys, with four alternating sweeps and thirty evaluations after five warmups. The combined mask/attention median is approximately 0.416 ms at 32,768 and 0.470 ms at 32,769; reference partition is approximately 0.185 ms at 8,192 blocks and 0.191 ms at 8,193. This does not reproduce the reported threefold complete-model cliff. Every mask has the expected cardinality, all observed outputs are finite, peak tracked MLX allocation is about 212 MB, and global paging counters stay unchanged. These live-desktop Python timings are excluded from clean performance qualification. Synthetic operands, finite outputs and mask counts do not establish model parity or M4 behavior. The probe excludes projection, pooling/normalization/rotary preparation, cache writes, expert I/O and full generation.
+
+**Next experiment and communication.** Once real headroom clears, execute the frozen public-release workload and inspect per-token timing on both sides, completed output, actual memory, I/O and routing. A same-configuration v0.2.29 retest on the reporter's M4 Pro remains the direct check of whether keepalive removal already resolved it. If the cliff persists, distinguish attention's 32,769 boundary, indexer sorting's 32,772 boundary and storage growth with tightly spaced active-token samples, then isolate the responsible operation on that hardware. Do not recommend `MLX_SDPA_BLOCKS`, enable an experimental selector, delete another feature or announce a fix without causal and completed-request evidence. No additional GitHub comment is needed while the existing retest request is unanswered and no end-to-end result is available.
+
+**Investigation lesson.** A component probe is useful to isolate a mechanism but cannot stand in for reproducing the user's workload. Record separately whether a test was planned, refused before launch, executed, reproduced the symptom, or verified a fix. A matching numeric threshold is a lead; follow every applicable operation around it before promoting it to the explanation.
+
+## Issue 54 native trained-weight boundary diagnosis
+**Result.** We can investigate the actual boundary code locally with much less memory than the whole model. The new reusable native diagnostic executes trained attention weights, real indexer preparation, rotary transforms, real cache growth and one-query attention across 32k. It passes on both the local deployment path and the portable rotation fallback that M4 uses. Neither reproduces the reported sustained threefold slowdown on this M5 Pro. This narrows the mechanism search; it does not establish that [issue #54](https://github.com/carloslfu/slotstream/issues/54) is fixed or invalid.
+
+Evidence: [[sources/runs/2026/10/2026-10-13-issue54-native-boundary]]. This extends [[records/measurements/issue54-boundary-followup-2026-10-13]], which had only Python component measurements and a refused full-model launch.
+
+**Reusable implementation.** Run `slotstream optimization-state-check --variant context-boundary-component --json` after a bounded build. It reads only the first and last full-attention layers, not the multi-GB resident trunk or expert pool. It takes the same model-process lock as inference and independently requires 4 GB reclaimable. Original checkpoint geometry and a per-layer weight-byte bound are checked. The 34 loaded tensors total 62,589,952 bytes; their exact hashes are captured.
+
+For each layer, the existing `appendKeysOnly` path projects deterministic synthetic hidden inputs into actual KV/indexer caches up to 32,704 tokens. Ordinary one-row calls then advance through 32,832, including the attention partition, cache-allocation and sort-merge boundaries. The optional dense forecast readout runs separately and is checked for non-mutation. Three ordinary sweeps and one synchronized-stage sweep preserve all per-token intervals. The synchronized probe changes scheduling and is not treated as default throughput. The relevant attention source prefix, rotation implementation, optimization defaults and platform gate are byte-identical to v0.2.29; later main-branch MoE prototypes do not enter this test.
+
+**Coverage and observed behavior.** Both final processes pass 3,080 assertions, including repeated/instrumented output-byte equality within each arm, finite output, exact advancing cache offsets and non-mutating readout. This is deterministic component correctness, not an independent language-model quality oracle or cross-arm numerical comparison. The preliminary probe's results are retained too.
+
+| Final arm, on M5 Pro | Warm ordinary layer call below 32k | Warm ordinary layer call above 32k | Persistent change |
+| --- | --- | --- | --- |
+| Local deployment, fused rotation enabled | About 1.42–1.43 ms | About 1.48–1.51 ms | About 4–5% |
+| Portable rotation fallback, fused rotation disabled | About 1.54–1.55 ms | About 1.58–1.59 ms | About 2–3% |
+
+Ranges cover both measured layers and both repeated ordinary rounds; all initial and instrumented rounds remain in the capture. The growth call at 32,769 is about 3.5–3.7 ms in the repeated ordinary runs, then returns near the steady range. Allocated cache capacity grows by 2,359,296 bytes per measured layer at that call. These observations fit a brief allocation/copy pause rather than the reporter's persistent slower regime. They do not rule out memory pressure when all layers, prefix states and a large expert pool coexist.
+
+Final tracked MLX peaks are approximately 229 MB and 232 MB; end-of-probe physical footprints are approximately 366 MB and 367 MB. These are distinct counters, not interchangeable process-peak claims. Global paging is unchanged during both arms. Timing remains exploratory on a live desktop, not a clean performance qualification or a portable speed promise.
+
+**Hardware-path lesson.** `OptimizationPlatform.qualifiedPartialRotation` currently admits only the measured M5 Pro machine/OS combination. The earlier local native run therefore exercised a different rotation branch from an ordinary M4 deployment. The new probe resolves the real environment, records which rotation path engaged and permits the existing explicit diagnostic override to select the portable branch. Testing that branch on M5 improves code coverage; it does not simulate M4 scheduling, GPU resources or driver behavior.
+
+The first local-deployment sweep also exposes repeated first-use stalls, often on each new four-token block count. In the final first-layer run, mean times are about 7.6 ms below and 8.4 ms above, despite much lower medians; the retained per-step/p95 data prevents hiding those stalls behind a warmed median. Later sweeps remove them, and the portable path lacks that pattern. `PartialRotation` specializes its Metal kernel on `Rows`, which changes as the indexer grows. This is consistent with repeated shape-specific compilation and deserves separate causal profiling before any optimization change. It is not an explanation for this reporter's default M4 path, where the fused kernel is disabled. Do not change another runtime feature merely because an isolated benchmark found an adjacent cost.
+
+**Full-model work remains local next work.** A smaller legitimate public-release configuration was prepared rather than waiting only for a reporter reply: fixed minimum expert pool, prefix retention off, MTP/vision off, 256-token prefill, 33,792-token maximum and the same two German repetition prompts with 500 requested output tokens. Fixed pool sizing matters: disabling retained prefixes under a fixed total-memory target reallocates the saved reservation into experts, while pinning the pool preserves the saving. Doctor admits a full-workload envelope of 8.337 GB. The new protocol retains 3 GB of additional real headroom and requires 11.34 GB reclaimable. Its first attempt sees 10.03 GB and never launches; a post-probe recheck sees 10.91 GB. The old frozen 12 GB preflight is preserved separately and has not been weakened retroactively.
+
+Complete that bounded workload when actual headroom clears, retaining inter-token timings, output IDs, cache/I/O counts, footprint and operating conditions. It will still differ from the reporter's large cache and M4 hardware. If it reproduces the cliff, use the existing per-token and stage evidence to isolate full-model routing, storage or memory interactions. If it does not, targeted M4 observation remains necessary to resolve the hardware-specific question. Keep #54 open and do not claim a new fix or recommend experimental user tuning.
+
+**Validation and scope.** The final bounded native build succeeds, all 84 T0 checks pass with 38,821 assertions and no failures/skips, and a held-model-lock test confirms the new diagnostic refuses before allocation. All owned model-bearing processes exit. This change adds a diagnostic and evidence; it does not change inference defaults or constitute a release fix.
+
+## Issue 54 full-model reproduction across 32k
+**Verdict.** Treat issue #54 as a credible unresolved performance report, not intentional behavior or a confirmed fix. A sustained threefold decode loss across a tiny context change is not the expected gradual cost of a longer conversation. The reporter supplied repeated boundary measurements and controls for cache sizing, elasticity and maximum configured context. Those are useful evidence, although the affected M4 has not been independently profiled.
+
+Evidence: [[sources/runs/2026/10/2026-10-14-issue54-full-model]]. Prior component coverage: [[records/measurements/issue54-native-boundary-probe-2026-10-13]] and [[records/measurements/issue54-boundary-followup-2026-10-13]].
+
+**What this follow-up adds.** Actual full-model API generation against the exact public v0.2.29 binary, with the reporter's templated German repetition prompts, MTP off, temperature zero and 500 output tokens. The two prompts tokenize to precisely 32,320 and 32,770 tokens. The first crosses the boundary during generation; the second starts above it. Both have per-token intervals, returned IDs/counts, process memory samples and global operating-condition observations. No generation request ran in the earlier component-only studies.
+
+**Important scope.** The local hardware is M5 Pro. The 640-slot, 9 GB test plan cannot reproduce the reporter's 24–26 GB pool, near-working-set allocation, long retained prefixes, exact prefill chunk or M4 driver scheduling. Default prefix retention was enabled but neither long request stored a checkpoint or reused a prefix. Portable overrides select the ordinary M4 rotation and prefill branches on M5; they do not emulate M4 hardware. The source/header identities are captured, but this session did not repeat the prior full checkpoint payload verification.
+
+**Boundary audit.** The existing source analysis still finds real transitions: SDPA work partitioning at 32,769 keys on the relevant backend family; stepped KV/indexer allocation at the same key; and an additional indexer sort merge stage at 32,772 keys. Small costs at those boundaries do not by themselves establish the reporter's sustained loss. Both release tags pin the same mlx-swift revision. GPU keepalive is absent in the tested release, so a successful new-version M5 run cannot establish whether removing it fixed the old-version M4 report.
+
+**Read-ahead coverage matters.** `--mtp off` does not imply decode lookahead is off. The planner independently enables plain-decode lookahead from 20 experts per layer before its charge. The first 640-slot tests do not engage it. A fixed 960-slot configuration can engage the real automatic corrected forecast with MTP off while remaining below a 10 GB planned envelope. The older top-level comments in DecodeLookahead.swift incorrectly described a draft-head requirement; this follow-up corrects those comments and links the standing plain-decode decision, with all noncomment lines unchanged. The default corrected attention tap does not perform the separate dense attention readout measured in the earlier component probe.
+
+**Interpretation discipline.** Keep complete API execution separate from clean performance qualification. Global paging and thermal variation exclude the live-desktop timings from published speed claims. Preserve interrupted attempts and actual OS warnings separately from the reported 32k symptom. Do not call an externally stopped prefill a reproduced decode cliff. Likewise, selected fallback branches and successful low-memory runs do not certify another GPU or a large-memory profile. Change runtime behavior only after identifying a failing path and verifying a remedy.
+
+**Completed results.** Six requests complete with 500 output tokens each, for 3,000 output tokens. Each reports the expected rendered prompt length, MTP off, 256-token prefill, the intended pool size and 499 plain forward passes. No request returns an inference error. Responses contain German explanations of Rayleigh scattering, ending at the requested output limit; this is a basic completion check, not an independent quality evaluation.
+
+The following are observed diagnostic rates on this live desktop, excluded from clean performance qualification. They are not speed guarantees or a causal comparison between configurations, which differ in cache size, arithmetic path and retained-state settings.
+
+| Configuration on M5 Pro | 32,320-token prompt, 500 output | 32,770-token prompt, 500 output | Largest reported process peak |
+| --- | --- | --- | --- |
+| Deployment defaults, 640 slots | 5.06 tok/s | 5.68 tok/s | 7.824 GB |
+| Portable rotation/prefill, 640 slots | 5.44 tok/s | 5.49 tok/s | 7.647 GB |
+| Portable paths and automatic corrected lookahead, 960 slots | 7.22 tok/s | 7.92 tok/s | 8.893 GB |
+
+The 32,320-token requests each contain 448 observed forward intervals at or below 32,768 active keys and 51 above. Median intervals before/after are approximately 196/194 ms for deployment, 180/171 ms for portable paths and 134/125 ms with lookahead. Narrow adjacent windows and every boundary interval are preserved too; their small changes do not form the sustained threefold regime in the report. Each 32,770-token request then observes 499 intervals entirely above the boundary without the reported slower regime.
+
+The lookahead arm actually runs the automatic `attention-corrected` forecast, with the pinned correction file, router cache, issued reads and adopted experts. Both portable arms return identical output IDs for each matched prompt. The deployment and portable output IDs differ because those tests select different prefill arithmetic; this study does not claim equivalence across those branches or a speed gain from switching them. The small-cache requests store and reuse no full-prompt checkpoints, so large retained-prefix interactions remain untested.
+
+**Interrupted attempt and memory safety.** Four model processes were launched sequentially: the deployment pair, an interrupted lookahead prefill, the portable pair and the successful guarded lookahead retry. The initial lookahead attempt met its 12.66 GB launch gate, but subsequent observations recorded an OS warning. It was stopped during prefill before any decode result. The cause of that global warning is not established, and it is not evidence for the reported 32k cliff. The later portable and lookahead processes monitor OS pressure and process footprint every two seconds and stop on a warning or their respective 9/10 GB footprint ceilings. Both complete without triggering the monitor. All owned servers, observers and drivers exit.
+
+Global swap-ins changed in five of the six completed requests, with no new swap-outs. Fair thermal states are present. Keep these measurements outside clean timing qualification, even for the one request without paging. Functional completion and observed absence of the large cliff remain distinct evidence; the measurements cannot rule out smaller regressions or certify performance on M4.
+
+**Disposition and next discriminating observation.** The maintainer has now completed the full-model work that earlier memory refusals prevented. No sustained cliff reproduces in these three bounded configurations on the local M5. Keep #54 open, retain the reporter's controls, and do not claim a release fix, dismiss the report, change context limits or remove unrelated mechanisms based on these negatives. The next decisive check is the same comparison on the affected M4 with v0.2.29 and its original memory settings. If it persists, record macOS, the actual planner output and per-token/memory observations before choosing a targeted kernel, allocation or read-ahead comparison. The lower-context workaround remains based on the reporter's own observations, not a new independently verified M4 remedy.
+
+Prior replies were read again before posting the [new full-model follow-up](https://github.com/carloslfu/slotstream/issues/54#issuecomment-6171643768). Its body and the still-open state are verified and archived. No inference default, installed CLI or release changed. The only source edit corrects stale lookahead comments; all noncomment lines are identical. The six payload/runtime validations, binary/helper identities, archive hashes and process cleanup pass.

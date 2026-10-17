@@ -1,0 +1,479 @@
+{
+  "completed_cells": 20,
+  "all_exact_tokens_and_forward_counts": true,
+  "all_early_launches_joined": true,
+  "all_candidates_exercised": true,
+  "pool_slots": 857,
+  "peak_process_gb_range": [
+    5.903127184,
+    5.969908536
+  ],
+  "comparisons": {
+    "ready_direct": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 1.0072060019426095,
+        "requestSeconds": 1.005932970823428
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 1.0084687707392839,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0075232214530156,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 1.005943233145935,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0043427201938402,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9799520947692166,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9833072435769142,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9863859404708155,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9938911168764339,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 2
+    },
+    "ready_staged": {
+      "eligible_pairs": 1,
+      "medians": {
+        "decodeSeconds": 0.9708418992210334,
+        "requestSeconds": 0.9759298470766368
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 0.9416072736000014,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.952549379434853,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 0.9708418992210334,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9759298470766368,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9825997241760102,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9883131790738319,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9539913968940265,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9598872157288404,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 0
+    },
+    "reference_repeat": {
+      "eligible_pairs": 2,
+      "medians": {
+        "decodeSeconds": 1.02579793578216,
+        "requestSeconds": 1.0187448799919445
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 1.023953013065868,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0166910790037924,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 1.0276428584984523,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 1.0207986809800964,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9752050447965649,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9799718176971731,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9852282585234885,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.987650152355707,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 2
+    },
+    "resident_staged": {
+      "eligible_pairs": 1,
+      "medians": {
+        "decodeSeconds": 0.9658826415610566,
+        "requestSeconds": 0.9723039965166589
+      },
+      "pairs": [
+        {
+          "decodeSeconds": 0.96027872644596,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9654531266562867,
+          "round": 0
+        },
+        {
+          "decodeSeconds": 0.9658826415610566,
+          "eligible": true,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9723039965166589,
+          "round": 1
+        },
+        {
+          "decodeSeconds": 0.9517034598765631,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9571537742234851,
+          "round": 2
+        },
+        {
+          "decodeSeconds": 0.9446187623878276,
+          "eligible": false,
+          "equal_forward_work": true,
+          "equal_pool": true,
+          "equal_prompt": true,
+          "exact": true,
+          "requestSeconds": 0.9531094543361062,
+          "round": 3
+        }
+      ],
+      "passes_screen": false,
+      "positive_blocks": 0
+    }
+  },
+  "paging_exclusions": [
+    {
+      "file": "r0-ready_staged.jsonl",
+      "swapins": 12,
+      "swapouts": 0
+    },
+    {
+      "file": "r0-resident_staged.jsonl",
+      "swapins": 4,
+      "swapouts": 0
+    },
+    {
+      "file": "r2-ready_direct.jsonl",
+      "swapins": 4,
+      "swapouts": 0
+    },
+    {
+      "file": "r2-reference_repeat.jsonl",
+      "swapins": 1558,
+      "swapouts": 700
+    },
+    {
+      "file": "r2-resident_staged.jsonl",
+      "swapins": 8,
+      "swapouts": 0
+    },
+    {
+      "file": "r3-ready_staged.jsonl",
+      "swapins": 194,
+      "swapouts": 0
+    },
+    {
+      "file": "r3-reference_repeat.jsonl",
+      "swapins": 4,
+      "swapouts": 0
+    },
+    {
+      "file": "r3-resident_staged.jsonl",
+      "swapins": 12,
+      "swapouts": 0
+    }
+  ],
+  "counts": [
+    {
+      "file": "r0-ready_direct.jsonl",
+      "ready_ticket_prelaunch_records": 5084,
+      "overlap_direct_batches": 2617,
+      "decodeRecords": 5708,
+      "residentExpertPrelaunches": 2849,
+      "residentExpertJoins": 2849,
+      "decodeSlotDirectBatches": 2617,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r0-ready_staged.jsonl",
+      "ready_ticket_prelaunch_records": 6985,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5713,
+      "residentExpertPrelaunches": 2875,
+      "residentExpertJoins": 2875,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2616
+    },
+    {
+      "file": "r0-reference.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5711,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2616,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r0-reference_repeat.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5710,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2617,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r0-resident_staged.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5707,
+      "residentExpertPrelaunches": 2649,
+      "residentExpertJoins": 2649,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2617
+    },
+    {
+      "file": "r1-ready_direct.jsonl",
+      "ready_ticket_prelaunch_records": 4610,
+      "overlap_direct_batches": 2619,
+      "decodeRecords": 5793,
+      "residentExpertPrelaunches": 2852,
+      "residentExpertJoins": 2852,
+      "decodeSlotDirectBatches": 2619,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r1-ready_staged.jsonl",
+      "ready_ticket_prelaunch_records": 5918,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5793,
+      "residentExpertPrelaunches": 2867,
+      "residentExpertJoins": 2867,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2619
+    },
+    {
+      "file": "r1-reference.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5795,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2618,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r1-reference_repeat.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5793,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2618,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r1-resident_staged.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5798,
+      "residentExpertPrelaunches": 2680,
+      "residentExpertJoins": 2680,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2619
+    },
+    {
+      "file": "r2-ready_direct.jsonl",
+      "ready_ticket_prelaunch_records": 6116,
+      "overlap_direct_batches": 2616,
+      "decodeRecords": 5712,
+      "residentExpertPrelaunches": 2870,
+      "residentExpertJoins": 2870,
+      "decodeSlotDirectBatches": 2616,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r2-ready_staged.jsonl",
+      "ready_ticket_prelaunch_records": 6580,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5710,
+      "residentExpertPrelaunches": 2864,
+      "residentExpertJoins": 2864,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2616
+    },
+    {
+      "file": "r2-reference.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5710,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2617,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r2-reference_repeat.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5706,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2617,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r2-resident_staged.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5718,
+      "residentExpertPrelaunches": 2649,
+      "residentExpertJoins": 2649,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2617
+    },
+    {
+      "file": "r3-ready_direct.jsonl",
+      "ready_ticket_prelaunch_records": 5096,
+      "overlap_direct_batches": 2618,
+      "decodeRecords": 5797,
+      "residentExpertPrelaunches": 2859,
+      "residentExpertJoins": 2859,
+      "decodeSlotDirectBatches": 2618,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r3-ready_staged.jsonl",
+      "ready_ticket_prelaunch_records": 6539,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5797,
+      "residentExpertPrelaunches": 2881,
+      "residentExpertJoins": 2881,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2618
+    },
+    {
+      "file": "r3-reference.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5792,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2619,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r3-reference_repeat.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5801,
+      "residentExpertPrelaunches": 0,
+      "residentExpertJoins": 0,
+      "decodeSlotDirectBatches": 2619,
+      "decodeSlotScatterBatches": 0
+    },
+    {
+      "file": "r3-resident_staged.jsonl",
+      "ready_ticket_prelaunch_records": 0,
+      "overlap_direct_batches": 0,
+      "decodeRecords": 5793,
+      "residentExpertPrelaunches": 2680,
+      "residentExpertJoins": 2680,
+      "decodeSlotDirectBatches": 0,
+      "decodeSlotScatterBatches": 2619
+    }
+  ],
+  "unfiltered_ratios_diagnostic_only": {
+    "ready_direct": {
+      "decodeSeconds": 0.9961645868083753,
+      "requestSeconds": 0.9991169185351371
+    },
+    "ready_staged": {
+      "decodeSeconds": 0.9624166480575299,
+      "requestSeconds": 0.9679085314027386
+    },
+    "reference_repeat": {
+      "decodeSeconds": 1.0045906357946783,
+      "requestSeconds": 1.0021706156797496
+    },
+    "resident_staged": {
+      "decodeSeconds": 0.9559910931612616,
+      "requestSeconds": 0.9613034504398859
+    }
+  }
+}

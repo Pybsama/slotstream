@@ -29,7 +29,6 @@ public struct ModelPackStartupDefaults: Sendable {
     public let prefixCacheEnabled: Bool
     public let shortPromptTokens: Int
     public let shortPromptChunk: Int
-    public let gpuKeepAlive: GPUKeepAlive.Policy
     public let reference: String
 
     /// Stable acceptance identity for this compiled recipe. Canonicalizing
@@ -41,32 +40,32 @@ public struct ModelPackStartupDefaults: Sendable {
                  draftMode: Planner.MTPMode, draftPlacement: Planner.MTPExpertPlacement,
                  draftDepth: Int, lookahead: Lookahead, prefixCacheEnabled: Bool,
                  shortPromptTokens: Int, shortPromptChunk: Int,
-                 gpuKeepAlive: GPUKeepAlive.Policy, reference: String) {
+                 reference: String) {
         self.id = id; self.automaticCeilingBytes = automaticCeilingBytes
         self.contextTokens = contextTokens; self.draftMode = draftMode
         self.draftPlacement = draftPlacement; self.draftDepth = draftDepth
         self.lookahead = lookahead; self.prefixCacheEnabled = prefixCacheEnabled
         self.shortPromptTokens = shortPromptTokens; self.shortPromptChunk = shortPromptChunk
-        self.gpuKeepAlive = gpuKeepAlive; self.reference = reference
+        self.reference = reference
     }
 
     /// Existing Desktop choices, moved without enlarging any budget or
     /// claiming new qualification. The total ceiling already includes MTP.
-    package static let original = Self(id: legacyOriginalPolicyID,
+    package static let original = Self(id: "original-desktop-startup-v2",
         automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
         draftMode: .auto, draftPlacement: .automatic, draftDepth: 2,
         lookahead: .originalAutomatic, prefixCacheEnabled: true,
-        shortPromptTokens: 1536, shortPromptChunk: 512, gpuKeepAlive: .auto,
+        shortPromptTokens: 1536, shortPromptChunk: 512,
         reference: "db/records/decisions/sevra-app-speed-defaults-2026-09-23.md")
 
     /// Explicit candidate recipe. Generic original Auto thresholds do not
     /// qualify a different arithmetic path. The streamed head is already
     /// checked; selection and speed qualification remain separate.
-    package static let affine3Standalone = Self(id: "affine3-standalone-startup-v1",
+    package static let affine3Standalone = Self(id: "affine3-standalone-startup-v2",
         automaticCeilingBytes: 22_000_000_000, contextTokens: 32768,
         draftMode: .on, draftPlacement: .streamed, draftDepth: 2,
         lookahead: .uncorrected, prefixCacheEnabled: true,
-        shortPromptTokens: 1536, shortPromptChunk: 512, gpuKeepAlive: .auto,
+        shortPromptTokens: 1536, shortPromptChunk: 512,
         reference: "db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md")
 
     package func validate(resources: PackMemoryProfile) throws {
@@ -177,7 +176,7 @@ public struct ModelPackStartupDefaults: Sendable {
             "speculation_enabled": true,
             "lookahead": lookahead.rawValue, "prefix_cache": prefixCacheEnabled,
             "short_prompt_tokens": shortPromptTokens, "short_prompt_chunk": shortPromptChunk,
-            "gpu_keep_alive": gpuKeepAlive.rawValue, "live_memory": liveMemory.rawValue]
+            "live_memory": liveMemory.rawValue]
         let bytes = try! JSONSerialization.data(withJSONObject: configuration, options: [.sortedKeys])
         return SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
     }

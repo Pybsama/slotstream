@@ -1,0 +1,11 @@
+{"round": 0, "arm": "reference", "eligible": true, "decode_seconds": 9.505789584, "request_seconds": 11.396822042, "decode_records": 16187}
+Traceback (most recent call last):
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_followup.py", line 131, in <module>
+    main()
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_followup.py", line 125, in main
+    else: factorial(args.out, args.binary.resolve(), args.prefetch)
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_followup.py", line 71, in factorial
+    result = invoke(binary, arguments, out, f'r{round_id}-{arm}', env, 13)
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_followup.py", line 28, in invoke
+    raise RuntimeError(f'{name} exited {result.returncode}; raw failure preserved')
+RuntimeError: r0-staged exited -5; raw failure preserved

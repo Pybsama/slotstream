@@ -21,7 +21,6 @@ struct ModelPackCommand: ParsableCommand {
                     "prefix_cache": pack.startupDefaults.prefixCacheEnabled,
                     "short_prompt_tokens": pack.startupDefaults.shortPromptTokens,
                     "short_prompt_chunk": pack.startupDefaults.shortPromptChunk,
-                    "gpu_keep_alive": pack.startupDefaults.gpuKeepAlive.rawValue,
                     "reference": pack.startupDefaults.reference]
                 return ["id": pack.id, "title": pack.title, "manifest_sha256": pack.manifestDigest,
                  "checkpoint_revision": pack.checkpointRevision, "conversion_revision": pack.conversionRevision,

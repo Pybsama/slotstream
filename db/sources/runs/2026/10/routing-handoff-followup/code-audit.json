@@ -1,0 +1,32 @@
+{
+  "head": "4adfffd9479ab9ddebfe2fb8ab236d083cd4b52c",
+  "path": "Sources/Slotstream/ExpertStore.swift",
+  "sha256": "3c721994c38d8688dd97021f0d95642ef084c363da118eb9ec88f7c0d4e8ab0e",
+  "lines": [
+    {
+      "line": 792,
+      "text": "                result[i] = s"
+    },
+    {
+      "line": 864,
+      "text": "                        if let bases, publishSpeculativeSlot(ticket, key: k, bases: bases, scheduler: active) {"
+    },
+    {
+      "line": 895,
+      "text": "            reservedHits?(result)"
+    },
+    {
+      "line": 984,
+      "text": "            let direct = directDemandReads && reservedHits == nil && transferProfile == nil"
+    },
+    {
+      "line": 1108,
+      "text": "                        if let bases, publishSpeculativeSlot(ticket, key: k, bases: bases, scheduler: scheduler) {"
+    },
+    {
+      "line": 1141,
+      "text": "            for (i, j) in missPos { result[i] = Int(slotIdx[j]) }"
+    }
+  ],
+  "finding": "The early callback receives the pre-adoption result vector; new ready slot mappings are copied into result after demand I/O. A candidate could expose valid adopted slots earlier, subject to lifetime and exactness tests; no benefit is measured here."
+}

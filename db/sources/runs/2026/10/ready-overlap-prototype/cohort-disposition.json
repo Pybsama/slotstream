@@ -1,0 +1,6 @@
+{
+  "model": "8.1 GB incomplete pilot, automatic prefetch off, two completed references and one pre-allocation refusal; no candidate result",
+  "model-prefetch": "10 GB automatic prefetch confirmed in two unscored warmups; first timed cell refused native 13 GB headroom before model allocation; no scored cells",
+  "model-prefetch-spaced": "new prospective 10 GB cohort with two unscored warmups and 20 completed scored requests; two >=15 GB launch observations separated by two seconds, maximum wait 60 seconds, native target-plus-3 GB gate intact; no completed cell repeated or replaced",
+  "screen": "all candidates fail unchanged speed/eligibility/noise screen; exclusions retained"
+}

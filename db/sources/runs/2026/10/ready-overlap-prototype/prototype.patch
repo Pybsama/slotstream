@@ -1,0 +1,350 @@
+diff --git a/Sources/Slotstream/ExpertStore.swift b/Sources/Slotstream/ExpertStore.swift
+index a858075..709fa12 100644
+--- a/Sources/Slotstream/ExpertStore.swift
++++ b/Sources/Slotstream/ExpertStore.swift
+@@ -342,7 +342,8 @@ public final class ExpertStore {
+     /// staging path, which owns its read-failure fallback.
+     package func readIntoSlotsChecked(_ keys: [ExpertKey], slots: [Int], bases: [UnsafeMutableRawPointer],
+                                       scratch: ExpertPrefetchScratch,
+-                                      queueDepth: Int = ExpertStore.poolQueueDepth) throws {
++                                      queueDepth: Int = ExpertStore.poolQueueDepth,
++                                      finishReaders: (() -> Void)? = nil) throws {
+         let n = keys.count
+         guard n > 0, slots.count == n, bases.count == 9, pieceRowBytes.count == 9, !supportsRecordReads else {
+             throw CheckpointReadError.invalidRange
+@@ -355,6 +356,39 @@ public final class ExpertStore {
+         // 9n reads spread across worker lanes in the staging path's order.
+         let jobs = n * 9
+         let lanes = min(max(queueDepth, 1), jobs)
++        if let finishReaders {
++            // Diagnostic overlap variant: keep disk reads independent of the
++            // pool until the existing GPU readers have joined. The caller
++            // slices at defaultLoadBatch, so this host staging is bounded.
++            // No staging MLX arrays or GPU scatter are created.
++            guard n <= Self.defaultLoadBatch else { throw CheckpointReadError.invalidRange }
++            let buffers = try allocateStaging(rows: n)
++            defer { buffers.forEach { free($0) } }
++            DispatchQueue.concurrentPerform(iterations: lanes) { lane in
++                var j = lane
++                while j < jobs {
++                    let (record, piece) = (j / 9, j % 9)
++                    let key = keys[record], bytes = rowBytes[piece]
++                    do { try read(into: buffers[piece] + record * bytes, layer: key.layer,
++                                  piece: piece, offset: key.expert * bytes, count: bytes) }
++                    catch { failure.record(error) }
++                    j += lanes
++                }
++            }
++            // On failure the caller's defer still joins its readers. Nothing
++            // has touched the destination, including after a partial read.
++            try failure.finish()
++            finishReaders()
++            DispatchQueue.concurrentPerform(iterations: lanes) { lane in
++                var j = lane
++                while j < jobs {
++                    let (record, piece) = (j / 9, j % 9), bytes = rowBytes[piece]
++                    memcpy(bases[piece] + slots[record] * bytes, buffers[piece] + record * bytes, bytes)
++                    j += lanes
++                }
++            }
++            return
++        }
+         DispatchQueue.concurrentPerform(iterations: lanes) { lane in
+             guard let (buffer, temporary) = scratch.acquire() else {
+                 failure.record(ModelError("out of memory for a demand read buffer"))
+@@ -539,6 +573,13 @@ public final class SlotPool {
+     /// the GPU. It skips one batch of staging arrays, one scatter per piece and
+     /// the GPU sync each scatter cost, per layer that misses.
+     package var directDemandReads = false
++    /// Research-only controls; no CLI/environment setting or changed default.
++    /// Include validated ready slot tickets in the early compute batch and
++    /// retain host copies by joining readers between demand I/O and copying.
++    package var diagnosticOverlapReadyTickets = false
++    package var diagnosticOverlapDirectCopies = false
++    package private(set) var readyTicketPrelaunchRecords = 0
++    package private(set) var overlapDirectBatches = 0
+     /// One piece-sized host buffer per demand lane, plus a few spare.
+     private lazy var demandScratch = ExpertPrefetchScratch(pieceBytes: store.pieceRowBytes.max() ?? 1,
+                                                            count: ExpertStore.poolQueueDepth + 4)
+@@ -770,7 +811,7 @@ public final class SlotPool {
+ 
+     /// Resident GPU work may be submitted after the whole request is pinned.
+     /// Complete those readers after synchronous I/O and before the first write,
+-    /// including the error path. No direct CPU writes or new worker lifetimes.
++    /// including the error path. Diagnostic host copies also join first.
+     package func ensureOverlapping(_ keys: [ExpertKey], reservedHits: @escaping ([Int]) -> Void,
+                                    finishReaders: @escaping () -> Void) throws -> [Int] {
+         try ensureCore(keys, reservedHits: reservedHits, finishReaders: finishReaders)
+@@ -892,6 +933,17 @@ public final class SlotPool {
+                 }
+             }
+             event?.victimSlots = slotIdx
++            if diagnosticOverlapReadyTickets, reservedHits != nil {
++                // Only a successful publish installs a missing key in map.
++                // Reserved demand victims and unfinished/stale tickets must
++                // remain -1; their slotIdx entries are not evidence of bytes.
++                for (i, _) in missPos {
++                    if let slot = map[keys[i]] {
++                        result[i] = slot
++                        readyTicketPrelaunchRecords += 1
++                    }
++                }
++            }
+             reservedHits?(result)
+             var readersPending = reservedHits != nil
+             func finishResidentReaders() {
+@@ -981,7 +1033,7 @@ public final class SlotPool {
+             // while resident GPU readers may still be running (the overlapping
+             // path's contract), while a transfer profile measures the staged
+             // scatter, and under the explicit slot-write experiments.
+-            let direct = directDemandReads && reservedHits == nil && transferProfile == nil
++            let direct = directDemandReads && (reservedHits == nil || diagnosticOverlapDirectCopies) && transferProfile == nil
+                 && !store.supportsRecordReads && !cpuSlotWrites && !wordSlotWrites && !contiguousSlotWrites
+             func readDemand(_ order: [Int]) throws {
+                 var lo = 0
+@@ -1000,7 +1052,8 @@ public final class SlotPool {
+                         laneBudget?.beginDemand()
+                         do {
+                             try store.readIntoSlotsChecked(batchIndices.map { missKeys[$0] }, slots: destinations,
+-                                                           bases: bases, scratch: demandScratch)
++                                                           bases: bases, scratch: demandScratch,
++                                                           finishReaders: readersPending ? finishResidentReaders : nil)
+                         } catch {
+                             laneBudget?.endDemand()
+                             ioSeconds += RuntimeClock.seconds(since: tIO)
+@@ -1015,6 +1068,7 @@ public final class SlotPool {
+                             refBit[s] = true
+                         }
+                         slotDirectBatches += 1
++                        if reservedHits != nil { overlapDirectBatches += 1 }
+                         recordsFetched += hi - lo
+                         lo = hi
+                         continue
+diff --git a/Sources/Slotstream/Layers.swift b/Sources/Slotstream/Layers.swift
+index 7e24ea7..a15d81d 100644
+--- a/Sources/Slotstream/Layers.swift
++++ b/Sources/Slotstream/Layers.swift
+@@ -1684,6 +1684,9 @@ final class MoELayer {
+         guard let ready else { return project(slotIds) }
+         let readySet = Set(readyRanks)
+         let missingRanks = expertIds.indices.filter { !readySet.contains($0) }
++        // Ready slot tickets can complete the entire route before demand I/O.
++        // readyRanks already follows router order; never submit an empty QMM.
++        if missingRanks.isEmpty { return ready }
+         let missing = project(missingRanks.map { slotIds[$0] })
+         let order = readyRanks + missingRanks
+         var inverse = Array(repeating: Int32(0), count: expertIds.count)
+diff --git a/Sources/SlotstreamDiagnostics/Diagnostics+ResidentOverlap.swift b/Sources/SlotstreamDiagnostics/Diagnostics+ResidentOverlap.swift
+index ae9c175..be4eec8 100644
+--- a/Sources/SlotstreamDiagnostics/Diagnostics+ResidentOverlap.swift
++++ b/Sources/SlotstreamDiagnostics/Diagnostics+ResidentOverlap.swift
+@@ -4,10 +4,13 @@ import MLX
+ import Slotstream
+ 
+ extension Diagnostics {
+-    public static func optimizationResidentOverlap(modelDir: URL) throws -> CheckReport {
++    public static func optimizationResidentOverlap(modelDir: URL, readyPrototype: Bool = false) throws -> CheckReport {
+         MLX.Memory.cacheLimit = 64 << 20
+         let model = try Qwen4ExpModel(index: CheckpointIndex(dir: modelDir), poolSlots: 640, runLayers: 4)
+-        var c = CheckBuilder("optimization-resident-overlap")
++        model.pool.diagnosticOverlapReadyTickets = readyPrototype
++        model.pool.diagnosticOverlapDirectCopies = readyPrototype
++        if readyPrototype { model.pool.directDemandReads = true }
++        var c = CheckBuilder(readyPrototype ? "optimization-ready-overlap" : "optimization-resident-overlap")
+         func hash(_ a: MLXArray) -> String {
+             "\(a.dtype):\(a.shape):\(SHA256.hash(data: Data(a.reshaped([-1]).view(dtype: .uint8).asArray(UInt8.self))))"
+         }
+@@ -64,6 +67,91 @@ extension Diagnostics {
+                     let retry = try model.diagnosticResidentExpertOutput(input, layer: 0, overlapping: true)
+                     eval(retry)
+                     c.equal("seed=\(seed): exact retry after joined failure", hash(retry), expected)
++                    if readyPrototype {
++                        // Completed real-weight slot tickets, including a
++                        // wholly prefetched route and invalid base identity.
++                        // Waiting here is fixture setup, never timed inference.
++                        for (warmCount, ticketCount, stale) in [(0, 1, false), (0, unique.count, false),
++                                                               (3, 4, false), (5, 5, false), (0, 4, true)] {
++                            try prepare(Array(unique.prefix(warmCount)))
++                            let wanted = Array(unique.dropFirst(warmCount).prefix(ticketCount))
++                            var config = ExpertPrefetchConfiguration()
++                            config.enabled = true; config.adoption = .slot
++                            let scheduler = ExpertPrefetchScheduler(store: model.pool.expertStore, pool: model.pool,
++                                configuration: config, predictor: nil, layers: model.cfg.numLayers, experts: model.cfg.numExperts)
++                            scheduler.slotProvider = { key in
++                                guard let reservation = model.pool.reserveSpeculativeSlot(for: key) else { return nil }
++                                if !stale { return reservation }
++                                return SpeculativeSlotReservation(slot: reservation.slot,
++                                    destinations: reservation.destinations, pieceBytes: reservation.pieceBytes,
++                                    bases: [], onLeave: { _ in reservation.workerLeft() })
++                            }
++                            scheduler.forecastOverride = { _ in
++                                var forecast = Array(repeating: [Int32](), count: model.cfg.numLayers)
++                                forecast[0] = wanted.map(Int32.init)
++                                return forecast
++                            }
++                            let session = ExpertLookaheadSession()
++                            session.prefetch = scheduler; model.pool.lookahead = session
++                            defer { session.requestFinished(); model.pool.lookahead = nil; model.pool.unpinAll() }
++                            session.beginPass(phase: .mainVerify, tokens: [7], features: [])
++                            let deadline = Date().addingTimeInterval(10)
++                            while wanted.contains(where: { scheduler.diagnosticState(ExpertKey(0, $0)) != .ready }) && Date() < deadline {
++                                usleep(1000)
++                            }
++                            c.expect("ready fixture completed every ticket", wanted.allSatisfy {
++                                scheduler.diagnosticState(ExpertKey(0, $0)) == .ready
++                            })
++                            let early = model.pool.readyTicketPrelaunchRecords, launches = model.residentExpertPrelaunches
++                            let staleBefore = model.pool.speculativeSlotStale
++                            let output = try model.diagnosticResidentExpertOutput(input, layer: 0, overlapping: true)
++                            eval(output)
++                            let label = "seed=\(seed) warm=\(warmCount) tickets=\(ticketCount) stale=\(stale)"
++                            c.equal(label + ": exact MoE output", hash(output), expected)
++                            c.equal(label + ": exact ordered route", routed, route)
++                            c.equal(label + ": only validated tickets launched", model.pool.readyTicketPrelaunchRecords - early,
++                                    stale ? 0 : ticketCount)
++                            c.equal(label + ": prelaunch happened", model.residentExpertPrelaunches - launches, stale ? 0 : 1)
++                            c.equal(label + ": stale tickets refused", model.pool.speculativeSlotStale - staleBefore, stale ? ticketCount : 0)
++                            session.requestFinished(); model.pool.lookahead = nil; model.pool.unpinAll()
++                        }
++                        // An unfinished ticket must remain absent from the
++                        // early view, including duplicate input keys.
++                        try prepare([])
++                        let key = ExpertKey(0, unique[0]), gate = DispatchSemaphore(value: 0)
++                        let entered = DispatchSemaphore(value: 0)
++                        let store = model.pool.expertStore
++                        var config = ExpertPrefetchConfiguration()
++                        config.enabled = true; config.adoption = .slot
++                        let scheduler = ExpertPrefetchScheduler(reader: { key, piece, destination, shouldContinue in
++                            // One completed piece ensures claimSplit promotes
++                            // this ticket instead of cancelling zero progress.
++                            if piece == 1 { entered.signal(); _ = gate.wait(timeout: .now() + 10) }
++                            try store.readPieceChecked(into: destination, key: key, piece: piece, shouldContinue: shouldContinue)
++                        }, isResident: { model.pool.isResident($0) }, pieceBytes: store.pieceRowBytes,
++                           configuration: config, predictor: nil, layers: model.cfg.numLayers, experts: model.cfg.numExperts)
++                        scheduler.slotProvider = { model.pool.reserveSpeculativeSlot(for: $0) }
++                        scheduler.forecastOverride = { _ in
++                            var forecast = Array(repeating: [Int32](), count: model.cfg.numLayers)
++                            forecast[0] = [Int32(key.expert)]; return forecast
++                        }
++                        let session = ExpertLookaheadSession()
++                        session.prefetch = scheduler; model.pool.lookahead = session
++                        defer { gate.signal(); session.requestFinished(); model.pool.lookahead = nil; model.pool.unpinAll() }
++                        session.beginPass(phase: .mainVerify, tokens: [7], features: [])
++                        c.expect("unfinished fixture entered reader", entered.wait(timeout: .now() + 10) == .success)
++                        var joins = 0
++                        let slots = try model.pool.ensureOverlapping([key, key], reservedHits: { early in
++                            c.equal("unfinished duplicate absent from early view", early, [-1, -1])
++                            gate.signal()
++                        }, finishReaders: { joins += 1 })
++                        c.expect("unfinished ticket eventually published", slots[0] >= 0 && slots[0] == slots[1])
++                        c.equal("reader callback joined once", joins, 1)
++                        c.equal("progressing ticket promoted, not reread", scheduler.observation.promoted, 1)
++                        let actual = model.pool.gatherResident([key]), original = try store.readBatchChecked([key])
++                        for piece in 0..<9 { c.equal("joined ticket bytes \(piece)", hash(actual[piece]), hash(original[piece])) }
++                        session.requestFinished(); model.pool.lookahead = nil; model.pool.unpinAll()
++                    }
+                 }
+             }
+         }
+@@ -71,6 +159,45 @@ extension Diagnostics {
+         c.expect("bounded physical footprint", ProcessMemory.residentBytes() < 8_100_000_000)
+         c.measure("resident_expert_prelaunches", Double(model.residentExpertPrelaunches))
+         c.measure("host_join_seconds_not_gpu_duration", model.residentExpertJoinSeconds)
++        if readyPrototype {
++            // The join callback must precede every host pool write. A partial
++            // demand-read failure must not copy even one successful piece.
++            let store = model.pool.expertStore, key = ExpertKey(0, 17)
++            let sizes = store.pieceRowBytes
++            let destinations = sizes.map { UnsafeMutableRawPointer.allocate(byteCount: $0, alignment: 16384) }
++            defer { destinations.forEach { $0.deallocate() } }
++            let scratch = ExpertPrefetchScratch(pieceBytes: sizes.max()!, count: 1)
++            func reset() { for p in 0..<9 { destinations[p].initializeMemory(as: UInt8.self, repeating: 0xCD, count: sizes[p]) } }
++            func untouched() -> Bool {
++                (0..<9).allSatisfy { p in UnsafeRawBufferPointer(start: destinations[p], count: sizes[p]).allSatisfy { $0 == 0xCD } }
++            }
++            reset()
++            var joins = 0
++            try store.readIntoSlotsChecked([key], slots: [0], bases: destinations, scratch: scratch, finishReaders: {
++                joins += 1
++                c.expect("all copies wait for the reader join", untouched())
++            })
++            c.equal("successful demand joins once before copying", joins, 1)
++            let original = try store.readBatchChecked([key])
++            for p in 0..<9 {
++                c.equal("joined CPU copy exact piece \(p)", String(describing: SHA256.hash(data: Data(bytes: destinations[p], count: sizes[p]))),
++                        String(describing: SHA256.hash(data: original[p].asData().data)))
++            }
++            reset(); joins = 0
++            let fault = ReadFault(afterJobs: 4)
++            store.readFault = fault
++            defer { store.readFault = nil }
++            do {
++                try store.readIntoSlotsChecked([key], slots: [0], bases: destinations, scratch: scratch, finishReaders: { joins += 1 })
++                c.expect("partial demand read fails", false)
++            } catch { c.expect("partial demand read fails", fault.hasFired) }
++            store.readFault = nil
++            c.expect("partial read writes no destination bytes", untouched())
++            c.equal("failed helper leaves joining to caller defer", joins, 0)
++            c.expect("joined host-copy path exercised", model.pool.overlapDirectBatches > 0)
++            c.measure("overlap_direct_batches", Double(model.pool.overlapDirectBatches))
++            c.measure("ready_ticket_prelaunch_records", Double(model.pool.readyTicketPrelaunchRecords))
++        }
+         return c.report()
+     }
+ }
+diff --git a/Sources/slotstream-cli/OptimizationCommands.swift b/Sources/slotstream-cli/OptimizationCommands.swift
+index 1c2aed9..9d2155d 100644
+--- a/Sources/slotstream-cli/OptimizationCommands.swift
++++ b/Sources/slotstream-cli/OptimizationCommands.swift
+@@ -93,6 +93,7 @@ struct OptimizationStateCheck: ParsableCommand {
+         else if variant == "vision-prescaled-capacity" { report = Diagnostics.optimizationVisionCapacity(preserveQueryRounding: true) }
+         else if variant == "vision-prescaled-tower" { report = try Diagnostics.optimizationVisionTowerCapacity(modelDir: model.modelURL, preserveQueryRounding: true) }
+         else if variant == "resident-overlap-component" { report = try Diagnostics.optimizationResidentOverlap(modelDir: model.modelURL) }
++        else if variant == "ready-overlap-component" { report = try Diagnostics.optimizationResidentOverlap(modelDir: model.modelURL, readyPrototype: true) }
+         else if variant == "resident-overlap-recovery" || variant == "resident-overlap-recovery-mtp" {
+             report = try Diagnostics.optimizationRequestReadRecovery(modelDir: model.modelURL,
+                 mtp: variant == "resident-overlap-recovery-mtp", residentOverlap: true)
+diff --git a/Tools/routing_handoff_probe.py b/Tools/routing_handoff_probe.py
+index 90b04f3..4be1230 100644
+--- a/Tools/routing_handoff_probe.py
++++ b/Tools/routing_handoff_probe.py
+@@ -216,7 +216,7 @@ def model(out, rounds):
+         "scope": "M5 Pro, fresh native processes, 10 GB fixed target, plain decode, one prompt, 64 output tokens; no GPU-directory implementation"})
+ 
+ 
+-def native(out, observe_model=False):
++def native(out, observe_model=False, compile_only=False):
+     """Compile only the small probe against already-built, inventoried objects.
+ 
+     Object hashes bind this local diagnostic; they do not claim that a cached
+@@ -250,6 +250,8 @@ def native(out, observe_model=False):
+         subprocess.run(command, stdout=stdout, stderr=stderr, check=True, timeout=120)
+     shutil.copy2(release / "mlx.metallib", build / "mlx.metallib")
+     write(out / "executable.json", {"sha256": digest(binary)})
++    if compile_only:
++        return binary
+     preflight(4)
+     with (out / "results.jsonl").open("x") as stdout, (out / "run.stderr.txt").open("x") as stderr:
+         subprocess.run([str(binary)], stdout=stdout, stderr=stderr, check=True, timeout=120)
+diff --git a/Tools/routing_handoff_probe.swift b/Tools/routing_handoff_probe.swift
+index 8e24ac6..b5ecd3e 100644
+--- a/Tools/routing_handoff_probe.swift
++++ b/Tools/routing_handoff_probe.swift
+@@ -212,6 +212,8 @@ struct RoutingHandoffProbe {
+             decodeLookahead: DecodeLookaheadPlanning.environment(modelDirectory: directory))
+         try Planner.validateMemoryBudget(plan, availableGB: plan.availableGB)
+         let engine = try await Engine(modelDir: directory, plan: plan)
++        engine.model.pool.diagnosticOverlapReadyTickets = CommandLine.arguments.contains("--ready-tickets")
++        engine.model.pool.diagnosticOverlapDirectCopies = CommandLine.arguments.contains("--joined-copies")
+         let promptText = CommandLine.arguments.contains("--sky")
+             ? "Explain why the sky is blue, in about 200 words."
+             : "Explain how a hash map works, in about 200 words."
+@@ -226,6 +228,8 @@ struct RoutingHandoffProbe {
+         let stats = try JSONSerialization.jsonObject(with: JSONEncoder().encode(result.stats))
+         let options = try JSONSerialization.jsonObject(with: JSONEncoder().encode(engine.model.optimizations))
+         let record: [String: Any] = ["kind": "model_cell", "prompt": promptText,
++            "ready_ticket_prelaunch_records": engine.model.pool.readyTicketPrelaunchRecords,
++            "overlap_direct_batches": engine.model.pool.overlapDirectBatches,
+             "prompt_ids": prompt, "output_ids": result.ids, "stats": stats, "plan": plan.json(), "optimizations": options,
+             "swapins_delta": after.swapins-before.swapins, "swapouts_delta": after.swapouts-before.swapouts,
+             "thermal_before": conditions.thermalState, "thermal_after": end.thermalState,

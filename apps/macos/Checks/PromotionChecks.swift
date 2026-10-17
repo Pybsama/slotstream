@@ -1,13 +1,13 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 private actor PromotionProbe: Inference {
     nonisolated let simulated = true
     var contexts: [[ChatMessage]] = []
-    var toolAvailability: [Bool] = []
+    var toolAvailability: [[String]] = []
     func turn(history: [ChatMessage], tools: [ToolDefinition], cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
-        contexts.append(history); toolAvailability.append(!tools.isEmpty)
+        contexts.append(history); toolAvailability.append(tools.map(\.name))
         return EngineTurn(text: "Continuation probe reply.")
     }
     func unload() {}
@@ -17,8 +17,8 @@ func seedPromotionUIIfRequested() throws -> Bool {
     let args = CommandLine.arguments
     guard let i = args.firstIndex(of: "--seed-promotion-ui"), args.count > i + 1 else { return false }
     let path = URL(fileURLWithPath: args[i + 1])
-    guard !FileManager.default.fileExists(atPath: path.path) else { throw SevraError.refused("Promotion UI checks require a new disposable Home.") }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    guard !FileManager.default.fileExists(atPath: path.path) else { throw AppRuntimeError.refused("Promotion UI checks require a new disposable Home.") }
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     let store = try HomeStore(root: path, dbmd: dbmd)
     var state = HomeState()
     let runID = UUID().uuidString.lowercased()
@@ -41,7 +41,7 @@ func promotionChecks(root: URL, dbmd: URL) async throws {
     }
     let path = root.appendingPathComponent("promotion")
     let probe = PromotionProbe()
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: path, dbmd: dbmd, inference: probe)
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: path, dbmd: dbmd, inference: probe)
     try await runtime!.changeMode(threadID: "home", mode: .threadOnly)
     try await runtime!.submit(threadID: "home", text: "Unrelated earlier Home exchange", nonce: "older")
     _ = try await terminal(runtime!, "home")
@@ -55,7 +55,7 @@ func promotionChecks(root: URL, dbmd: URL) async throws {
     try await runtime!.attach(threadID: "home", folder: attachment)
     let before = await runtime!.snapshot()
     for invalid in [[], ["missing"], ids + ["missing"]] {
-        do { _ = try await runtime!.promoteHome(messageIDs: invalid); throw SevraError.refused("CHECK FAILED: invalid promotion accepted") }
+        do { _ = try await runtime!.promoteHome(messageIDs: invalid); throw AppRuntimeError.refused("CHECK FAILED: invalid promotion accepted") }
         catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "invalid selection refused") }
     }
     let id = try await runtime!.promoteHome(messageIDs: ids.reversed() + [ids[0]])
@@ -78,7 +78,7 @@ func promotionChecks(root: URL, dbmd: URL) async throws {
     try require(history.dropFirst().map(\.content) == selected.map(\.text) + ["What is the codename?"], "model receives exact selected turns followed by current request")
     try require(history.dropFirst().map(\.role) == ["user", "assistant", "user"], "context roles and chronology retained")
     let tools = await probe.toolAvailability.last!
-    try require(!tools, "quoted history grants no tools")
+    try require(Set(tools) == ["history.search", "memory.search"], "linked history permits recall only, never file, network or action tools")
     try require(replied.run?.state == .completed, "continued response completes")
     try await runtime!.submit(threadID: "home", text: "A later unrelated Home exchange", nonce: "later")
     _ = try await terminal(runtime!, "home")
@@ -89,7 +89,7 @@ func promotionChecks(root: URL, dbmd: URL) async throws {
     let archived = try await runtime!.promoteHome(messageIDs: ids)
     try require(archived == id, "archive does not duplicate continuation")
     try await runtime!.shutdown(); runtime = nil
-    runtime = try SevraRuntime(homeURL: path, dbmd: dbmd, inference: probe)
+    runtime = try SlotstreamRuntime(homeURL: path, dbmd: dbmd, inference: probe)
     let restored = await runtime!.snapshot()
     let restoredWork = restored.home.threads.first { $0.id == id }!
     try require(restoredWork.draft == "Draft to restore" && restoredWork.lifecycle == .archived, "restart restores continuation draft and lifecycle")
@@ -110,19 +110,19 @@ func promotionChecks(root: URL, dbmd: URL) async throws {
     // Incomplete live/proposal responses may not become frozen quotations.
     let activePath = root.appendingPathComponent("promotion-active")
     let delayed = ScriptedInference(turns: [EngineTurn(text: String(repeating: "waiting ", count: 1000))], delayNanoseconds: 1_000_000)
-    let active = try SevraRuntime(homeURL: activePath, dbmd: dbmd, inference: delayed)
+    let active = try SlotstreamRuntime(homeURL: activePath, dbmd: dbmd, inference: delayed)
     try await active.submit(threadID: "home", text: "Still running", nonce: "active")
     let pendingIDs = await active.snapshot().home.threads[0].messages.filter { $0.role == "user" }.map(\.id)
-    do { _ = try await active.promoteHome(messageIDs: pendingIDs); throw SevraError.refused("CHECK FAILED: active promotion accepted") }
+    do { _ = try await active.promoteHome(messageIDs: pendingIDs); throw AppRuntimeError.refused("CHECK FAILED: active promotion accepted") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "active selection refused") }
     try await active.stop(threadID: "home"); _ = try await terminal(active, "home"); try await active.shutdown()
 
     // Even a duplicate/retry must verify the disk baseline before navigating.
-    let conflict = try SevraRuntime(homeURL: path, dbmd: dbmd, inference: probe)
+    let conflict = try SlotstreamRuntime(homeURL: path, dbmd: dbmd, inference: probe)
     let record = path.appendingPathComponent("db/records/threads/home.md")
     let bytes = try Data(contentsOf: record) + Data("\nexternal edit\n".utf8)
     try bytes.write(to: record)
-    do { _ = try await conflict.promoteHome(messageIDs: ids); throw SevraError.refused("CHECK FAILED: stale promotion accepted") }
+    do { _ = try await conflict.promoteHome(messageIDs: ids); throw AppRuntimeError.refused("CHECK FAILED: stale promotion accepted") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "external edit refuses promotion") }
     let remaining = try Data(contentsOf: record)
     try require(remaining == bytes, "external edited bytes preserved")

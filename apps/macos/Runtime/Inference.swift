@@ -15,12 +15,12 @@ public struct EngineTurn: Sendable {
     /// Completion and size gate applied to every turn, before any tool runs.
     public func validateCompletion() throws {
         guard finishReason == "stop" || finishReason == "tool_calls" else {
-            throw SevraError.refused("The model response ended before a successful completion (\(finishReason)). Proposed actions were not executed.")
+            throw AppRuntimeError.refused("The model response ended before a successful completion (\(finishReason)). Proposed actions were not executed.")
         }
         guard text.utf8.count <= 262144, calls.count <= EngineTurn.maxCalls, Set(calls.map(\.id)).count == calls.count else {
-            throw SevraError.refused("The response exceeded its bounds or reused a tool-call ID.")
+            throw AppRuntimeError.refused("The response exceeded its bounds or reused a tool-call ID.")
         }
-        guard finishReason != "tool_calls" || !calls.isEmpty else { throw SevraError.refused("The model declared tool calls but returned none. No actions were executed.") }
+        guard finishReason != "tool_calls" || !calls.isEmpty else { throw AppRuntimeError.refused("The model declared tool calls but returned none. No actions were executed.") }
     }
     /// Staging several files is one reviewed change, so a turn may propose up
     /// to eight calls. Proposal tools still stand alone.
@@ -29,7 +29,7 @@ public struct EngineTurn: Sendable {
     public func validate(offered: [ToolSpec]) throws {
         try validateCompletion()
         if calls.count > 1, let terminal = calls.first(where: { call in offered.first { $0.name == call.name }?.terminal == true }) {
-            throw SevraError.refused(terminal.name == "artifact.propose" ? "Propose one document for review in its own response. No actions from this response were executed." : "Propose \(terminal.name) in its own response. No actions from this response were executed.")
+            throw ToolSchemaError(issue: "Propose \(terminal.name) in its own response.", offered: offered)
         }
         var correction: ToolSchemaError?
         for call in calls {
@@ -142,8 +142,8 @@ public protocol Inference: Sendable {
 }
 public extension Inference {
     func modelSetup(preferences: PerformancePreferences) async throws -> ModelSetup? { nil }
-    func acceptModelSetup(_ setup: ModelSetup) async throws { throw SevraError.refused("This inference owner cannot accept a local model setup.") }
-    func recoverModelActivation() async throws { throw SevraError.refused("This inference owner has no model setup record to repair.") }
+    func acceptModelSetup(_ setup: ModelSetup) async throws { throw AppRuntimeError.refused("This inference owner cannot accept a local model setup.") }
+    func recoverModelActivation() async throws { throw AppRuntimeError.refused("This inference owner has no model setup record to repair.") }
     func recoverModelActivation(preferences: PerformancePreferences) async throws { try await recoverModelActivation() }
     func prepareCache(_ context: InferenceCacheContext) async throws {}
     func prepareAhead() async {}
@@ -170,7 +170,7 @@ public enum ReplyPolicy {
 }
 
 private final class InferenceExecutor: SerialExecutor, @unchecked Sendable {
-    private let queue = DispatchQueue(label: "sevra.inference", qos: .userInitiated, autoreleaseFrequency: .workItem)
+    private let queue = DispatchQueue(label: "slotstream.inference", qos: .userInitiated, autoreleaseFrequency: .workItem)
     func enqueue(_ job: consuming ExecutorJob) {
         let job = UnownedJob(job)
         queue.async { job.runSynchronously(on: self.asUnownedSerialExecutor()) }
@@ -267,17 +267,17 @@ public actor LocalInference: Inference {
     }
     public func acceptModelSetup(_ setup: ModelSetup) async throws {
         guard !inTurn, !maintaining, engine == nil else {
-            throw SevraError.refused("Finish active work and unload the model before accepting setup.")
+            throw AppRuntimeError.refused("Finish active work and unload the model before accepting setup.")
         }
         let status = setup.snapshot()
         let pack = try ModelPackRegistry.resolve(.pack(setup.packID)).pack
         guard status.ready, !status.busy, pack.manifestDigest == setup.pack.manifestDigest,
               try modelDirectory(for: pack).standardizedFileURL.resolvingSymlinksInPath()
                 == setup.modelDirectory.standardizedFileURL.resolvingSymlinksInPath() else {
-            throw SevraError.refused("Complete and verify this model's setup before accepting it.")
+            throw AppRuntimeError.refused("Complete and verify this model's setup before accepting it.")
         }
         guard let journal = try openActivationJournal() else {
-            throw SevraError.refused("This inference owner has no durable model setup record.")
+            throw AppRuntimeError.refused("This inference owner has no durable model setup record.")
         }
         do { try journal.accept(pack) }
         catch {
@@ -293,7 +293,7 @@ public actor LocalInference: Inference {
         guard let managedModelRoot,
               !pack.directoryName.isEmpty, pack.directoryName != ".", pack.directoryName != "..",
               !pack.directoryName.contains("/"), !pack.directoryName.contains("\\"), !pack.directoryName.utf8.contains(0) else {
-            throw SevraError.refused("This model pack needs its own location in the managed model collection.")
+            throw AppRuntimeError.refused("This model pack needs its own location in the managed model collection.")
         }
         return managedModelRoot.appendingPathComponent(pack.directoryName, isDirectory: true)
     }
@@ -342,12 +342,12 @@ public actor LocalInference: Inference {
         if let previous = activationJournal?.state.lastGood,
            previous.selection.packID != decision.pack.id || (try? previous.selection.validatedPack()) == nil,
            accepted[decision.pack.id] != decision.pack.manifestDigest {
-            throw SevraError.refused("The previous model setup no longer matches this version. Review and verify model setup before using the new automatic choice. Your settings and previous record are preserved.")
+            throw AppRuntimeError.refused("The previous model setup no longer matches this version. Review and verify model setup before using the new automatic choice. Your settings and previous record are preserved.")
         }
         return decision
     }
     public func prepareCache(_ context: InferenceCacheContext) async throws {
-        guard !inTurn, !maintaining else { throw SevraError.refused("Cache ownership changes after the current response or model maintenance.") }
+        guard !inTurn, !maintaining else { throw AppRuntimeError.refused("Cache ownership changes after the current response or model maintenance.") }
         guard cacheContext != context || (privateWorkingState && context.directory != nil) else { return }
         // On a privacy/Home transition, clear memory before encoding as well
         // as detaching disk. A promoted or copied history must not splice a
@@ -369,7 +369,7 @@ public actor LocalInference: Inference {
     }
     public func configure(_ preferences: PerformancePreferences) async throws {
         try PerformancePolicy.validateSaved(preferences)
-        guard !inTurn, !maintaining else { throw SevraError.refused("Memory settings apply after the current response or model maintenance.") }
+        guard !inTurn, !maintaining else { throw AppRuntimeError.refused("Memory settings apply after the current response or model maintenance.") }
         maintaining = true
         defer { maintaining = false }
         let relevantChange = self.preferences.quantization != preferences.quantization
@@ -417,7 +417,7 @@ public actor LocalInference: Inference {
     public func recoverModelActivation(preferences: PerformancePreferences) async throws {
         guard !inTurn, !maintaining, engine == nil, activationJournal == nil,
               activationFailure != nil, activationRecoveryAvailable, let activationDirectory else {
-            throw SevraError.refused("Model setup can be repaired only while the damaged record is preventing an unloaded model from starting.")
+            throw AppRuntimeError.refused("Model setup can be repaired only while the damaged record is preventing an unloaded model from starting.")
         }
         let selection = try ModelActivationJournal.Selection(preferences)
         maintaining = true
@@ -439,7 +439,7 @@ public actor LocalInference: Inference {
         try await turn(history: history, tools: tools, thinking: nil, replyTokens: ReplyPolicy.answerTokens, control: ThinkingControl(), cancellation: cancellation, buffer: buffer)
     }
     public func turn(history: [ChatMessage], tools definitions: [ToolDefinition], thinking requested: ThinkingRequest?, replyTokens requestedReply: Int, control: ThinkingControl, cancellation: Cancellation, buffer: TurnBuffer) async throws -> EngineTurn {
-        guard !inTurn, !maintaining else { throw SevraError.refused("The local model is already in use or changing settings.") }
+        guard !inTurn, !maintaining else { throw AppRuntimeError.refused("The local model is already in use or changing settings.") }
         inTurn = true
         let started = ProcessInfo.processInfo.systemUptime
         var prepared = false
@@ -456,7 +456,7 @@ public actor LocalInference: Inference {
             }
         }
         try cancellation.check()
-        if let activationFailure { throw SevraError.refused(activationFailure) }
+        if let activationFailure { throw AppRuntimeError.refused(activationFailure) }
         if engine == nil {
             do { try await loadForTurn(cancellation: cancellation, buffer: buffer) }
             catch {
@@ -473,7 +473,7 @@ public actor LocalInference: Inference {
             metrics.loadSeconds = ProcessInfo.processInfo.systemUptime - started
             try cancellation.check()
         }
-        guard let engine else { throw SevraError.unavailable("Model is unavailable.") }
+        guard let engine else { throw AppRuntimeError.unavailable("Model is unavailable.") }
         // Also protect direct LocalInference callers that did not supply a
         // fresh ownership context before asking for a thought.
         if requested != nil {
@@ -498,7 +498,7 @@ public actor LocalInference: Inference {
         try cancellation.check()
         let room = engine.maxContextTokens - ids.count - (thinking?.budgetTokens ?? 0)
         let replyTokens = ReplyPolicy.replyTokens(thinking: thinking, requested: requestedReply, tools: !definitions.isEmpty, room: room)
-        guard replyTokens >= ReplyPolicy.minimumTokens else { throw SevraError.refused("This request is too large for the current context. Start a new thread or read less of the source at once.") }
+        guard replyTokens >= ReplyPolicy.minimumTokens else { throw AppRuntimeError.refused("This request is too large for the current context. Start a new thread or read less of the source at once.") }
         let splitter = ToolCallSplitter(tools: definitions.map(\.schema))
         var calls: [ProposedTool] = []
         var malformed = false
@@ -540,7 +540,7 @@ public actor LocalInference: Inference {
             // Continue the same turn's active state when the sampler changes.
             // The engine owns the pending token and both phases under one gate.
             let closeIDs = engine.tokenizer.encode(text: ThinkingPolicy.closeTag, addSpecialTokens: false)
-            guard closeIDs.count == 1, let closeID = closeIDs.first else { throw SevraError.unavailable("This model does not expose a single thinking close token.") }
+            guard closeIDs.count == 1, let closeID = closeIDs.first else { throw AppRuntimeError.unavailable("This model does not expose a single thinking close token.") }
             var thoughtParams = SampleParams.thinking; thoughtParams.seed = thinking.seed; thoughtParams.maxTokens = thinking.budgetTokens
             var closed = false, answerNow = false, thoughtTokens = 0
             // The clock starts at the first thought token, after prefill, so the
@@ -560,7 +560,7 @@ public actor LocalInference: Inference {
                 let ending: ThinkingReceipt.Ending = cancellation.isCancelled ? .stopped : closed ? .closed : answerNow ? .answerNow : .budget
                 buffer.endThinking(ending)
                 try cancellation.check()
-                if let error = thought.stats.runtimeError { throw SevraError.refused(error) }
+                if let error = thought.stats.runtimeError { throw AppRuntimeError.refused(error) }
                 metrics.record(thought.stats, thought: true, first: true)
                 lastStats.append(thought.stats)
                 let separator = engine.tokenizer.encode(text: "\n\n", addSpecialTokens: false)
@@ -577,8 +577,8 @@ public actor LocalInference: Inference {
         }
         consume(splitter.flush())
         try cancellation.check()
-        if let error = result.stats.runtimeError { throw SevraError.refused(error) }
-        guard !malformed, !tooLarge else { throw SevraError.refused("The model produced an incomplete or oversized response. No proposed actions were executed.") }
+        if let error = result.stats.runtimeError { throw AppRuntimeError.refused(error) }
+        guard !malformed, !tooLarge else { throw AppRuntimeError.refused("The model produced an incomplete or oversized response. No proposed actions were executed.") }
         metrics.record(result.stats, thought: false, first: thinking == nil)
         lastStats.append(result.stats)
         metrics.firstTokenSeconds = firstToken
@@ -612,7 +612,7 @@ public actor LocalInference: Inference {
         if let id = activationAttempt {
             guard let pending = activationJournal?.state.attempt, pending.id == id,
                   pending.phase == .requested, pending.selection.matchesRequestedConfiguration(preferences) else {
-                throw SevraError.refused("Model settings changed before activation. Retry settings to select the model again.")
+                throw AppRuntimeError.refused("Model settings changed before activation. Retry settings to select the model again.")
             }
             try pending.selection.validate()
             selection = pending.selection
@@ -626,7 +626,7 @@ public actor LocalInference: Inference {
         if let attempt = journal?.state.attempt, attempt.phase == .failed, attempt.failure != "cancelled",
            attempt.selection == selection, !activationRetryRequested {
             activationFailure = Self.activationRecoveryMessage
-            throw SevraError.refused(Self.activationRecoveryMessage)
+            throw AppRuntimeError.refused(Self.activationRecoveryMessage)
         }
         if let journal, activationAttempt == nil {
             activationAttempt = try journal.begin(selection)
@@ -716,7 +716,7 @@ public actor LocalInference: Inference {
                     try store.status(shouldContinue: { !cancellation.isCancelled }).isReady
                 }
         } catch { try cancellation.check(); throw error }
-        guard verified else { throw SevraError.unavailable("The local model is missing or incomplete. Set up the model before sending.") }
+        guard verified else { throw AppRuntimeError.unavailable("The local model is missing or incomplete. Set up the model before sending.") }
         try cancellation.check()
         if let journal, let attempt { try journal.advance(attempt, to: .verified) }
         // XNU caches host_statistics64 for one second. Observe fresh real
@@ -769,12 +769,12 @@ public actor LocalInference: Inference {
         engine.dropPrefixCache()
         defer { engine.dropPrefixCache() }
         let ids = engine.tokenizer.encode(text: "Hello", addSpecialTokens: false)
-        guard !ids.isEmpty, ids.count <= 32 else { throw SevraError.refused("Model health prompt could not be prepared.") }
+        guard !ids.isEmpty, ids.count <= 32 else { throw AppRuntimeError.refused("Model health prompt could not be prepared.") }
         var params = SampleParams.greedy; params.maxTokens = 4
         let result = engine.generate(promptIds: ids, params: params, shouldContinue: continuing, request: request)
         try cancellation.check()
         guard continuing(), result.stats.runtimeError == nil, (1...4).contains(result.ids.count) else {
-            throw SevraError.refused("The new model did not complete its bounded health check.")
+            throw AppRuntimeError.refused("The new model did not complete its bounded health check.")
         }
         return result.ids.count
     }
@@ -903,7 +903,7 @@ public actor ScriptedInference: Inference {
         let thinking = requested
         observedThinking.append(thinking)
         observedReplyTokens.append(replyTokens)
-        guard !turns.isEmpty else { throw SevraError.unavailable("The scripted test has no further responses.") }
+        guard !turns.isEmpty else { throw AppRuntimeError.unavailable("The scripted test has no further responses.") }
         var turn = turns.removeFirst()
         // Measured like the real engine, with one scripted word or character
         // standing for one token. A turn may also carry exact numbers.

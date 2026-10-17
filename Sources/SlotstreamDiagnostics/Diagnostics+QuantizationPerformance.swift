@@ -28,7 +28,6 @@ private struct QuantizationPerformanceProtocol: Decodable {
     let originalCorrectionSha256: String?
     let prefixCache: Bool
     let liveMemory: String
-    let gpuKeepAlive: String
     let maximumSeconds: Int
     let requestSeconds: Int
     let seed: Int
@@ -48,7 +47,7 @@ private struct QuantizationPerformanceProtocol: Decodable {
     static func decode(_ data: Data) throws -> Self {
         var keys: Set<String> = ["schema", "kind", "scope", "artifact", "memory_bytes", "memory_mode",
             "context_limit", "draft_mode", "draft_depth", "draft_placement", "lookahead",
-            "original_correction_sha256", "prefix_cache", "live_memory", "gpu_keep_alive",
+            "original_correction_sha256", "prefix_cache", "live_memory",
             "maximum_seconds", "request_seconds", "seed", "tokenizer_sha256", "cases"]
         let caseKeys: Set<String> = ["id", "work", "prompt_tokens", "output_tokens", "prefix", "minimum_reused_tokens"]
         guard !data.isEmpty, data.count <= 4_000_000,
@@ -106,7 +105,7 @@ private struct QuantizationPerformanceProtocol: Decodable {
               value.originalCorrectionSha256 == nil || ((value.artifact == "original" && ["automatic", "enabled"].contains(value.lookahead)
                 || value.artifact == "affine3-native" && value.lookahead == "attention-corrected")
                 && value.originalCorrectionSha256 == RouterTapCorrection.shippedSHA256),
-              ["automatic", "fixed"].contains(value.liveMemory), ["auto", "on", "off"].contains(value.gpuKeepAlive),
+              ["automatic", "fixed"].contains(value.liveMemory),
               value.liveMemory != "automatic" || value.memoryMode == "ceiling",
               (1...7200).contains(value.maximumSeconds), (1...1800).contains(value.requestSeconds),
               value.requestSeconds <= value.maximumSeconds, value.seed == 7,
@@ -176,7 +175,7 @@ extension Diagnostics {
             "artifact": "original", "memory_bytes": 14_000_000_000, "memory_mode": "ceiling", "context_limit": 8192,
             "draft_mode": "auto", "draft_depth": 2, "draft_placement": "automatic", "lookahead": "automatic",
             "original_correction_sha256": NSNull(), "prefix_cache": true, "live_memory": "automatic",
-            "gpu_keep_alive": "auto", "maximum_seconds": 3600, "request_seconds": 600, "seed": 7,
+            "maximum_seconds": 3600, "request_seconds": 600, "seed": 7,
             "tokenizer_sha256": PinnedModel.files.first(where: { $0.path == "tokenizer.json" })!.sha256!, "cases": [item]]
         func parse(_ value: [String: Any]) throws -> QuantizationPerformanceProtocol {
             try QuantizationPerformanceProtocol.decode(JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]))
@@ -202,7 +201,7 @@ extension Diagnostics {
             ("memory_mode", "simulate"), ("memory_mode", "target"), ("context_limit", 65536),
             ("draft_depth", 0), ("draft_depth", 5), ("draft_mode", "off"), ("draft_placement", "unknown"),
             ("lookahead", "uncorrected"), ("original_correction_sha256", "unreviewed"), ("live_memory", "disabled"),
-            ("gpu_keep_alive", "unknown"), ("maximum_seconds", 7201), ("request_seconds", 1801),
+            ("maximum_seconds", 7201), ("request_seconds", 1801),
             ("seed", 8), ("tokenizer_sha256", "unknown"), ("cases", []), ("cases", [item, item])]
         for (key, value) in edits {
             var changed = original; changed[key] = value
@@ -526,7 +525,6 @@ extension Diagnostics {
                     ? Engine(originalCandidateControl: baseline, plan: plan)
                     : Engine(modelDir: baseline, plan: plan)
             }
-            loaded.gpuKeepAlive = GPUKeepAlive.Policy(rawValue: specification.gpuKeepAlive)!
             loaded.generator.draftDepth = max(1, specification.draftDepth)
             loaded.generator.footprintSampling = true
             loaded.prefixCache.enabled = specification.prefixCache

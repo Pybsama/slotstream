@@ -1,0 +1,7 @@
+id,status,amount_usd
+A,paid,12.50
+B,paid,38.75
+C,refunded,12.50
+D,paid,9.99
+E,pending,100.00
+F,paid,6.10

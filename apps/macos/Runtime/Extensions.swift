@@ -22,17 +22,17 @@ public struct AppCollection: Codable, Sendable, Equatable, Hashable {
         for part in text.split(whereSeparator: { $0 == "," || $0 == "\n" || $0 == ";" }) {
             let pieces = part.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
             guard let name = pieces.first, !name.isEmpty else { continue }
-            guard valid(name) else { throw SevraError.refused("Collection names use lowercase letters, digits and hyphens, such as habits or reading-list.") }
+            guard valid(name) else { throw AppRuntimeError.refused("Collection names use lowercase letters, digits and hyphens, such as habits or reading-list.") }
             let access: Access
             switch pieces.count > 1 ? pieces[1] : "write" {
             case "read", "r", "readonly", "read-only": access = .read
             case "write", "w", "readwrite", "read-write", "rw": access = .write
-            default: throw SevraError.refused("Collection access is read or write.")
+            default: throw AppRuntimeError.refused("Collection access is read or write.")
             }
             guard !result.contains(where: { $0.name == name }) else { continue }
             result.append(AppCollection(name: name, access: access))
         }
-        guard result.count <= 16 else { throw SevraError.refused("An app can use at most 16 collections.") }
+        guard result.count <= 16 else { throw AppRuntimeError.refused("An app can use at most 16 collections.") }
         return result.sorted { $0.name < $1.name }
     }
     public var label: String { name + (access == .write ? " (read and write)" : " (read only)") }
@@ -115,7 +115,7 @@ public struct SkillProposal: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-/// The skill a run followed. Built-in skills ship with Sevra.
+/// The skill a run followed. Built-in skills ship with Slotstream.
 public struct SkillUse: Codable, Sendable, Equatable {
     public var id: String
     public var name: String
@@ -144,8 +144,8 @@ public enum Extensions {
     public static let reservedNames: Set<String> = ["app", "skill", "apps", "skills", "help", "home", "new", "search", "settings"]
 
     public static let builtIns: [BuiltInSkill] = [
-        BuiltInSkill(name: "app", title: "Build a mini-app", description: "Create or change a small app that runs inside Sevra.", tools: [.apps],
-                     instructions: "The person wants a mini-app. Build a focused, polished single-page app that works offline. Use semantic HTML, readable system fonts, clear controls, and styles that follow the Mac's light or dark appearance with prefers-color-scheme. Store data only through the sevra API described below and render records with textContent, never innerHTML. Keep the HTML under 200 KB. If the request names an existing app, call app.read first and propose a revision with its app_id."),
+        BuiltInSkill(name: "app", title: "Build a mini-app", description: "Create or change a small app that runs inside Slotstream.", tools: [.apps],
+                     instructions: "The person wants a mini-app. Build a focused, polished single-page app that works offline. Use semantic HTML, readable system fonts, clear controls, and styles that follow the Mac's light or dark appearance with prefers-color-scheme. Store data only through the slotstream API described below and render records with textContent, never innerHTML. Keep the HTML under 200 KB. If the request names an existing app, call app.read first and propose a revision with its app_id."),
         BuiltInSkill(name: "skill", title: "Save a skill", description: "Turn a repeatable workflow into a skill you can reuse.", tools: [.skills],
                      instructions: "The person wants a reusable skill. Write clear, specific instructions another run can follow: when to use it, the steps, what to produce, and what to avoid. Declare only the tool groups it needs. Propose it with skill.propose."),
     ]
@@ -161,16 +161,16 @@ public enum Extensions {
         var notes: [String] = []
         let lower = html.lowercased()
         if lower.range(of: #"(src|href)\s*=\s*["']?\s*(https?:|//)"#, options: .regularExpression) != nil || lower.contains("url(http") || lower.contains("@import") {
-            notes.append("It refers to web resources. Sevra blocks all network access, so those parts will not load.")
+            notes.append("It refers to web resources. Slotstream blocks all network access, so those parts will not load.")
         }
         if lower.contains("fetch(") || lower.contains("xmlhttprequest") || lower.contains("websocket") || lower.contains("eventsource") {
             notes.append("It tries to use the network. Those requests are blocked.")
         }
         if lower.contains("localstorage") || lower.contains("indexeddb") || lower.contains("document.cookie") {
-            notes.append("It uses browser storage, which Sevra clears when the app closes. Only data saved through Sevra is kept.")
+            notes.append("It uses browser storage, which Slotstream clears when the app closes. Only data saved through Slotstream is kept.")
         }
-        if !collections.isEmpty && !lower.contains("sevra.") { notes.append("It asks for data access but does not appear to use Sevra's data API.") }
-        if collections.isEmpty && lower.contains("sevra.") { notes.append("It uses Sevra's data API without declaring a collection, so saving will be refused.") }
+        if !collections.isEmpty && !(lower.contains("slotstream.") || lower.contains("sevra.")) { notes.append("It asks for data access but does not appear to use Slotstream's data API.") }
+        if collections.isEmpty && (lower.contains("slotstream.") || lower.contains("sevra.")) { notes.append("It uses Slotstream's data API without declaring a collection, so saving will be refused.") }
         if lower.contains(".innerhtml") { notes.append("It builds HTML from text. Saved content could change how the app looks, but it cannot reach anything beyond this app's own data.") }
         return notes
     }
@@ -179,14 +179,14 @@ public enum Extensions {
         let name = try call.string("name").trimmingCharacters(in: .whitespacesAndNewlines)
         let description = try call.string("description").trimmingCharacters(in: .whitespacesAndNewlines)
         let html = try call.string("html")
-        guard !name.isEmpty, name.count <= 48, !name.contains("\n") else { throw SevraError.refused("Give the app a short one-line name.") }
-        guard description.count <= 240 else { throw SevraError.refused("Keep the app description to one sentence.") }
-        guard html.utf8.count <= appBytes, html.lowercased().contains("<") else { throw SevraError.refused("The app must be one HTML document under 256 KB.") }
+        guard !name.isEmpty, name.count <= 48, !name.contains("\n") else { throw AppRuntimeError.refused("Give the app a short one-line name.") }
+        guard description.count <= 240 else { throw AppRuntimeError.refused("Keep the app description to one sentence.") }
+        guard html.utf8.count <= appBytes, html.lowercased().contains("<") else { throw AppRuntimeError.refused("The app must be one HTML document under 256 KB.") }
         let collections = try AppCollection.parse(try call.optionalString("data") ?? "")
         var appID = try call.optionalString("app_id")?.trimmingCharacters(in: .whitespaces)
         if let requested = appID, !requested.isEmpty {
             guard let existing = apps.first(where: { !$0.removed && ($0.id == requested || $0.name.caseInsensitiveCompare(requested) == .orderedSame) }) else {
-                throw SevraError.refused("No app matches \(String(requested.prefix(60))). Use app.read to find it, or omit app_id for a new app.")
+                throw AppRuntimeError.refused("No app matches \(String(requested.prefix(60))). Use app.read to find it, or omit app_id for a new app.")
             }
             appID = existing.id
         } else { appID = nil }
@@ -197,9 +197,9 @@ public enum Extensions {
         let name = try call.string("name").trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: " ", with: "-")
         let description = try call.string("description").trimmingCharacters(in: .whitespacesAndNewlines)
         let instructions = try call.string("instructions")
-        guard validName(name) else { throw SevraError.refused("Skill names use 2 to 32 lowercase letters, digits and hyphens, and cannot be app or skill.") }
-        guard !description.isEmpty, description.count <= 240, !description.contains("\n") else { throw SevraError.refused("Give the skill a one-sentence description.") }
-        guard !instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, instructions.utf8.count <= skillBytes else { throw SevraError.refused("Skill instructions must be nonempty and under 16 KB.") }
+        guard validName(name) else { throw AppRuntimeError.refused("Skill names use 2 to 32 lowercase letters, digits and hyphens, and cannot be app or skill.") }
+        guard !description.isEmpty, description.count <= 240, !description.contains("\n") else { throw AppRuntimeError.refused("Give the skill a one-sentence description.") }
+        guard !instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, instructions.utf8.count <= skillBytes else { throw AppRuntimeError.refused("Skill instructions must be nonempty and under 16 KB.") }
         var tools: [ToolGroup] = []
         for part in (try call.optionalString("tools") ?? "").split(whereSeparator: { $0 == "," || $0 == " " }) {
             switch part.lowercased() {
@@ -208,12 +208,12 @@ public enum Extensions {
             case "knowledge", "kb": tools.append(.knowledge)
             case "apps", "app": tools.append(.apps)
             case "": break
-            default: throw SevraError.refused("Skill tool groups are read, change, knowledge and apps.")
+            default: throw AppRuntimeError.refused("Skill tool groups are read, change, knowledge and apps.")
             }
         }
         var skillID = try call.optionalString("skill_id")
         if let requested = skillID, !requested.isEmpty {
-            guard let existing = skills.first(where: { !$0.removed && ($0.id == requested || $0.name == requested) }) else { throw SevraError.refused("No skill matches \(String(requested.prefix(60))).") }
+            guard let existing = skills.first(where: { !$0.removed && ($0.id == requested || $0.name == requested) }) else { throw AppRuntimeError.refused("No skill matches \(String(requested.prefix(60))).") }
             skillID = existing.id
         } else if let existing = skills.first(where: { !$0.removed && $0.name == name }) {
             skillID = existing.id
@@ -280,15 +280,15 @@ public struct AppRecord: Sendable, Equatable {
 
     /// Accepts a JSON object of bounded size and depth from an app.
     static func validatedData(_ value: Any) throws -> Data {
-        guard let object = value as? [String: Any] else { throw SevraError.refused("Record data must be an object.") }
+        guard let object = value as? [String: Any] else { throw AppRuntimeError.refused("Record data must be an object.") }
         func depth(_ value: Any, _ level: Int) throws {
-            guard level <= 16 else { throw SevraError.refused("Record data is nested too deeply.") }
-            if let dictionary = value as? [String: Any] { guard dictionary.count <= 512 else { throw SevraError.refused("Record data has too many fields.") }; try dictionary.values.forEach { try depth($0, level + 1) } }
-            if let array = value as? [Any] { guard array.count <= 4096 else { throw SevraError.refused("Record data has too many items.") }; try array.forEach { try depth($0, level + 1) } }
+            guard level <= 16 else { throw AppRuntimeError.refused("Record data is nested too deeply.") }
+            if let dictionary = value as? [String: Any] { guard dictionary.count <= 512 else { throw AppRuntimeError.refused("Record data has too many fields.") }; try dictionary.values.forEach { try depth($0, level + 1) } }
+            if let array = value as? [Any] { guard array.count <= 4096 else { throw AppRuntimeError.refused("Record data has too many items.") }; try array.forEach { try depth($0, level + 1) } }
         }
         try depth(object, 0)
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
-        guard data.count <= 64 * 1024 else { throw SevraError.refused("A record can hold at most 64 KB of data.") }
+        guard data.count <= 64 * 1024 else { throw AppRuntimeError.refused("A record can hold at most 64 KB of data.") }
         return data
     }
 }
@@ -313,7 +313,7 @@ enum AppData {
     enum Outcome { case reply(Any), failure(String, String), save(AppRecord, Any) }
     static let recordLimit = 5000
     static let writes: Set<String> = ["create", "update", "archive", "restore"]
-    static let busy = "This app is saving too often, so Sevra paused its saves for a moment."
+    static let busy = "This app is saving too often, so Slotstream paused its saves for a moment."
 
     static func handle(op: String, body: [String: Any], name: String, version: Int, collections: [AppCollection], appID: String, now: Date,
                        records load: (String) throws -> [String: AppRecord]) throws -> Outcome {

@@ -1,0 +1,1 @@
+engine ready in 1.1s: expert cache ~21/512 per layer (1013 global slots = 2.8 GB), eos [248044, 248046]

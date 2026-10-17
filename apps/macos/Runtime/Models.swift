@@ -12,13 +12,13 @@ public struct DraftConflict: Error, LocalizedError {
     public init(current: DraftState) { self.current = current }
 }
 
-public enum SevraError: Error, LocalizedError {
+public enum AppRuntimeError: Error, LocalizedError {
     case refused(String), conflict(String), unavailable(String), ownerBusy, cancelled
     public var errorDescription: String? {
         switch self {
         case .refused(let s), .conflict(let s), .unavailable(let s): return s
         case .cancelled: return "Stopped. No further actions will run."
-        case .ownerBusy: return "This Home is already open in another Sevra process. Attach to its local endpoint or use its window."
+        case .ownerBusy: return "This Home is already open in another Slotstream process. Attach to its local endpoint or use its window."
         }
     }
 }
@@ -195,7 +195,7 @@ public struct RuntimeSnapshot: Sendable, Equatable {
     /// The current thought, if one is running or just finished in this run.
     public var thinking: ThinkingObservation? = nil
     /// Recent thoughts by run id, one entry per thought in the run, kept in
-    /// memory while Sevra is open.
+    /// memory while Slotstream is open.
     public var thinkingTraces: [String: [String]] = [:]
     /// Live writing speed of the response that is running. Memory only.
     public var generation: GenerationObservation? = nil
@@ -251,5 +251,5 @@ public final class Cancellation: @unchecked Sendable {
     public init() {}
     public var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return value }
     public func cancel() { lock.lock(); value = true; lock.unlock() }
-    public func check() throws { if isCancelled { throw SevraError.cancelled } }
+    public func check() throws { if isCancelled { throw AppRuntimeError.cancelled } }
 }

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
-import SevraRuntime
-import SevraPresentation
+import SlotstreamRuntime
+import SlotstreamPresentation
 
 /// One popover at a time for a response's details. It closes when the person
 /// clicks elsewhere or presses Escape, and returns focus where it was.
@@ -51,7 +51,7 @@ struct DetailsAnchor: NSViewRepresentable {
 }
 
 /// The last lines of a running thought, fading at the top once they
-/// overflow, so a person can see what Sevra is working through without
+/// overflow, so a person can see what Slotstream is working through without
 /// opening anything. The full notes are one click away.
 struct ThoughtPreview: View {
     let text: String
@@ -145,7 +145,7 @@ struct ResponseDetailsView: View {
                     .font(.callout).foregroundStyle(palette.secondary).monospacedDigit()
             }
             if notes.isEmpty {
-                Text(live?.active == true ? "Working notes appear here as Sevra thinks." : "Working notes are kept only while Sevra is open, so these are no longer available.")
+                Text(live?.active == true ? "Working notes appear here as Slotstream thinks." : "Working notes are kept only while Slotstream is open, so these are no longer available.")
                     .font(.callout).foregroundStyle(palette.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
                 ScrollView {
@@ -161,7 +161,7 @@ struct ResponseDetailsView: View {
                 .defaultScrollAnchor(live?.active == true ? .bottom : .top)
                 .frame(maxHeight: 220).background(palette.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
                 .accessibilityLabel("Working notes").accessibilityIdentifier("working-notes")
-                Text("Working notes are not saved or remembered. They stay only while Sevra is open.").font(.caption).foregroundStyle(palette.secondary).fixedSize(horizontal: false, vertical: true)
+                Text("Working notes are not saved or remembered. They stay only while Slotstream is open.").font(.caption).foregroundStyle(palette.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -219,6 +219,9 @@ struct ResponseDetailsView: View {
                 Spacer()
                 Button("Inspect") { model.inspectContext(threadID: threadID, runID: runID) }.controlSize(.small)
                     .help("See the history and memories this response started from")
+            }
+            if !(context.searchedMessageIDs ?? []).isEmpty || !(context.searchedMemoryIDs ?? []).isEmpty {
+                Text("Also retrieved \(context.searchedMessageIDs?.count ?? 0) earlier messages and \(context.searchedMemoryIDs?.count ?? 0) saved memories.").font(.callout)
             }
         }
     }

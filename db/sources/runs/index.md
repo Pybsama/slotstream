@@ -2,11 +2,25 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-10T12:26:13.613293Z
+updated: 2026-10-14T21:37:00.798994Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-14-sevra-capability-fixes]] — Native capability fixes pass deterministic and app checks; real-model replay refused before loading for insufficient headroom
+- [[sources/runs/2026/10/2026-10-14-sevra-capability-audit]] — Real native capability audit: successful narrow jobs, failed reviewed edit, JSON and citation mismatch, and stale app artifacts
+- [[sources/runs/2026/10/2026-10-14-issue54-full-model]] — Six full-model requests complete without the reported 32k cliff on M5 across deployment, portable and automatic lookahead configurations; one interrupted prefill preserved
+- [[sources/runs/2026/10/2026-10-13-issue54-native-boundary]] — Native trained-weight boundary probes pass on both local deployment and portable rotation paths; full model still cannot launch safely
+- [[sources/runs/2026/10/2026-10-13-issue54-boundary-followup]] — Expanded issue 54 path audit, bounded component probe and explicit full-model headroom refusal
+- [[sources/runs/2026/10/2026-10-13-ready-overlap-prototype]] — Ready-ticket overlap prototype: exact trained-weight and model outputs, no qualified speed gain
+- [[sources/runs/2026/10/2026-10-13-routing-handoff-followup]] — Mixed-readiness native probes and twenty controlled real-model requests; no variant passes the fixed improvement screen
+- [[sources/runs/2026/10/2026-10-13-routing-handoff-pilot]] — Bounded native routing handoff probes, excluded real-model overlap pairs and readiness observations
+- [[sources/runs/2026/10/2026-10-12-release-0-2-29-published-and-installed]] — v0.2.29 published, installed and followed up with affected reporters
+- [[sources/runs/2026/10/2026-10-12-release-0-2-29-prepublication]] — GPU keepalive removal candidate: local checks, corrected disk fixture and release headroom refusal
+- [[sources/runs/2026/10/2026-10-12-issue54-attention-triage]] — Issue 54 report capture and bounded MLX attention-boundary probe
+- [[sources/runs/2026/10/2026-10-12-issue55-model-repeat]] — Repeated installed-binary comparison: five clean on/off pairs, exact tokens, no consistent gain at the 8.1 GB floor
+- [[sources/runs/2026/10/2026-10-12-issue55-metal-probes]] — Production keepalive latency, bounded scheduling controls and candidate variants on M5 Pro
+- [[sources/runs/2026/10/2026-10-12-issue55-model-first]] — Initial real-model comparison: preserve refusals and paging-contaminated pairs; no clean timing claim
 - [[sources/runs/2026/10/2026-10-10-sevra-home-switcher]] — Native Home switching, exact draft persistence, isolation and offscreen UI acceptance with the final development bundle
 - [[sources/runs/2026/10/2026-10-07-release-0-2-28-published-and-installed]] — v0.2.28 published and accepted through an isolated public installation
 - [[sources/runs/2026/10/2026-10-06-focused-continuation-acceptance]] — Final engine, app, coverage and context CI pass; local selection and rendered controls pass; practical speed target remains unmet
@@ -493,22 +507,8 @@ updated: 2026-10-10T12:26:13.613293Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-component-control-and-vision-override-preparation]] — Final comparison controls preserve original workloads and draft explicit vision override compatibility
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-public-planner-cohort-freeze]] — Three original public-planner cohorts rebound to the exact seven-case-qualified candidate
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-seven-native-pass]] — All seven smaller-group native cases pass with complete prior coverage
-- [[sources/runs/2026/09/2026-09-09-optimization-qualified-scope-decode-observations]] — Qualified scope cohort retains decode work and lowers end memory while short I/O time rises
-- [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-build-pure-and-native-freeze]] — Smaller-group sizing compiles, preserves all prior pure and CLI checks, and freezes seven exact native cases
-- [[sources/runs/2026/09/2026-09-09-optimization-quiet-scope-complete-pass]] — Full original read-scope cohort qualifies startup and request benefit under the unchanged process cap
-- [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-qualification-executors]] — Prepared execution code for exact smaller-scope build, pure checks and all seven native cases
-- [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-sizing-source]] — Automatic prefill smaller-group sizing draft with preserved original schedule and guards
-- [[sources/runs/2026/09/2026-09-09-optimization-scope-short-decode-observations]] — Scope short-decode observation: identical read work with higher reported I/O time; sustained behavior remains unmeasured
-- [[sources/runs/2026/09/2026-09-09-optimization-vision-mechanism-complete-pass]] — Complete large-image vision mechanism qualifies: exact responses, reduced process peak and lower latency
-- [[sources/runs/2026/09/2026-09-09-optimization-quiet-resource-scope-cohort-freeze]] — Fresh complete scope cohort frozen after material resource recovery, preserving the V467 startup failure
-- [[sources/runs/2026/09/2026-09-09-optimization-explicit-scope-complete-startup-inconclusive]] — Complete explicit-scope cohort: exact outputs and 10 GB cap pass; request gate passes but startup pair count fails
-- [[sources/runs/2026/09/2026-09-08-optimization-public-planner-threshold-cohort-freeze]] — Three original full public planner threshold cohorts frozen with exact current native proof
-- [[sources/runs/2026/09/2026-09-08-optimization-public-planner-serving-driver-preparation]] — Public planner serving measurement driver prepared and model-free checked
-- [[sources/runs/2026/09/2026-09-08-optimization-all-current-native-pass-and-scope-freeze]] — All seven current native cases pass and original full scope cohort freezes
-- [[sources/runs/2026/09/2026-09-08-optimization-resumed-recovery-and-scope-preparation]] — Current recovery integration passes and complete explicit-scope successor is prepared
-- [[sources/runs/2026/09/2026-09-08-optimization-vision-resource-resumption-preparation]] — Full vision mechanism successor frozen after verified memory recovery
 
 ## More
 
-This folder has 900 files. The 500 most recent are listed above.
+This folder has 914 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

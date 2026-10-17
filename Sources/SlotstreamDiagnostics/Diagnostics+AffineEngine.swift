@@ -129,7 +129,6 @@ extension Diagnostics {
             } else {
                 engine = try await Engine(modelDir: engineDirectory, affineSource: source, plan: plan(800))
             }
-            engine.gpuKeepAlive = .off
             engine.generator.footprintSampling = true
             engine.generator.draftDepth = 2
             func fixturePrompt(_ count: Int) -> [Int] {

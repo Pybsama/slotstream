@@ -2,13 +2,13 @@
 type: measurement
 id: 01m2c7d1zgbg0575xyywc4bqms
 created: 2026-09-13T01:51:40.016195+00:00
-updated: 2026-09-13T01:51:40.016195+00:00
+updated: 2026-10-13T14:00:59.503553+00:00
 summary: 'Prefetch coverage: top above ten is inert under the margin threshold, an A/A spread of 0.991 to 1.022; stride 1, stride union and no threshold cut demand reads but run slower'
 date: 2026-09-12
 doc: measurements
 level: '3'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
-note: Exploration sweep on three prompts at 256 outputs over two rounds; the B0 coverage setting stays; composition, draft depth and router weights follow; no public claim.
+note: 'Exploration sweep on three prompts at 256 outputs over two rounds; the B0 coverage setting stays; composition, draft depth and router weights follow; no public claim. October 13 correction: layersComplete counts pool-map hits before ready prefetch adoption, not all layers avoiding reads; see [[records/measurements/routing-handoff-pilot-2026-10-13]]. Historical body and timings retained.'
 order: '1270'
 runs: '[[sources/runs/2026/09/2026-09-12-decode-path-serialization-round-2]]'
 title: 'Decode path serialization, round 2: the B0 prefetch coverage is already the best point; closer or wider forecasts trade demand reads for waits'

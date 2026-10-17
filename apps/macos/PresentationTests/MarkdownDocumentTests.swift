@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
-import SevraPresentation
+import SlotstreamPresentation
+import SlotstreamText
 
 final class MarkdownDocumentTests {
     func render(_ source: String, citations: Set<String> = []) -> RenderedDocument {
@@ -47,8 +48,24 @@ final class MarkdownDocumentTests {
         let result = render("A claim [S1], an invented claim [S2].", citations: ["S1"])
         let valid = (result.text.string as NSString).range(of: "[S1]")
         let invalid = (result.text.string as NSString).range(of: "[S2]")
-        checkEqual((result.text.attribute(.link, at: valid.location, effectiveRange: nil) as? URL)?.scheme, "sevra-citation")
+        checkEqual((result.text.attribute(.link, at: valid.location, effectiveRange: nil) as? URL)?.scheme, "slotstream-citation")
         checkNil(result.text.attribute(.link, at: invalid.location, effectiveRange: nil))
+        let variants = render("Budget [S1, page 2]. Both [S1; S2, pp. 3-4]. Unknown [S3, page 7]. `Code [S1]`. [A link [S1]](https://example.com).", citations: ["S1", "S2"])
+        var urls: [URL] = []
+        variants.text.enumerateAttribute(.link, in: NSRange(location: 0, length: variants.text.length)) { value, _, _ in if let url = value as? URL, url.scheme == "slotstream-citation" { urls.append(url) } }
+        checkEqual(urls.count, 3)
+        checkEqual(Set(urls.map { $0.lastPathComponent }), ["S1", "S2"])
+        checkTrue(CitationReferences.inText("[S1" + String(repeating: " ", count: 80_000) + "broken]").isEmpty)
+        checkEqual(CitationReferences.inMarkdown("Claim [S1, page 2], [S2; S3]. `Code [S4]` [link [S5]](https://example.com)\n\n```text\n[S6]\n```"), ["S1", "S2", "S3"])
+        let json = "{\"merchant\":\"Café\",\"total\":47.350,\"literal\":\"[S1]\"}"
+        checkEqual(StructuredReply.finalized("```json\n" + json + "\n```"), json)
+        for unchanged in ["```json\n{broken}\n```", "Here it is:\n```json\n" + json + "\n```", "```python\nx = 1\n```", "```json\n" + json] { checkEqual(StructuredReply.finalized(unchanged), unchanged) }
+        let structured = render(json, citations: ["S1"])
+        checkEqual(structured.regions.first?.copyText, json)
+        checkEqual(structured.regions.first?.source, 0..<json.utf8.count)
+        checkEqual(structured.regions.first?.title, "json")
+        let literal = (structured.text.string as NSString).range(of: "[S1]")
+        checkNil(structured.text.attribute(.link, at: literal.location, effectiveRange: nil))
     }
     func testSectionReuseAndLateReferences() {
         let renderer = MarkdownDocumentRenderer(), style = DocumentStyle()
@@ -84,8 +101,8 @@ final class MarkdownDocumentTests {
         checkTrue(table.text.string.contains("---|"))
     }
     func testAnnotationsStayOutsideTheMessage() {
-        let link = URL(string: "sevra-response://run/thread/run")!
-        let section = DocumentSection(id: "reply", speaker: "Sevra", source: "The answer is **42**.",
+        let link = URL(string: "slotstream-response://run/thread/run")!
+        let section = DocumentSection(id: "reply", speaker: "Slotstream", source: "The answer is **42**.",
             lead: DocumentAnnotation(text: "Thought for 8 s ›", link: link, help: "Show details"),
             trail: DocumentAnnotation(text: "14.2 tok/s · 318 tokens", link: link), details: link)
         let result = MarkdownDocumentRenderer().render([section], style: DocumentStyle())
@@ -113,8 +130,8 @@ final class MarkdownDocumentTests {
     func testStreamingKeepsUnchangedText() {
         let renderer = MarkdownDocumentRenderer(), style = DocumentStyle()
         let emoji = DocumentSection(id: "a", speaker: "You", source: "Plans for the trip 👩🏽‍💻 🇨🇴 café")
-        let table = DocumentSection(id: "b", speaker: "Sevra", source: "| City | Days |\n| --- | ---: |\n| Popayán | 3 |\n")
-        var reply = DocumentSection(id: "c", speaker: "Sevra", source: "First paragraph stays.\n\nSecond grows")
+        let table = DocumentSection(id: "b", speaker: "Slotstream", source: "| City | Days |\n| --- | ---: |\n| Popayán | 3 |\n")
+        var reply = DocumentSection(id: "c", speaker: "Slotstream", source: "First paragraph stays.\n\nSecond grows")
         let first = renderer.render([emoji, table, reply], style: style)
         reply.source += " with more words"
         let second = renderer.render([emoji, table, reply], style: style)
@@ -161,7 +178,7 @@ final class MarkdownDocumentTests {
     func testBoundedHistoryRenderSamples() {
         let renderer = MarkdownDocumentRenderer()
         let source = "## Update\n\nA **clear** paragraph with a [source](https://example.com).\n\n- Read\n- Review\n- Save\n\n```swift\nlet value = 42\n```\n"
-        let page = (0..<80).map { DocumentSection(id: "m\($0)", speaker: "Sevra", source: source) }
+        let page = (0..<80).map { DocumentSection(id: "m\($0)", speaker: "Slotstream", source: source) }
         var samples: [Double] = []
         for i in 0..<20 {
             var updated = page; updated[79].source += "\nStreaming update \(i)"

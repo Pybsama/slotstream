@@ -2,13 +2,14 @@
 type: decision
 id: 01m3a7k67genw60ya71cwjsb74
 created: 2026-09-24T17:32:13.936108+00:00
-updated: 2026-09-24T17:32:13.936108+00:00
+updated: 2026-10-12T16:21:20.229941+00:00
 summary: 'A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%'
 decided_on: 2026-09-24
 evidence: '[[records/measurements/decode-perf-2026-09-24]]'
+note: Reversed by [[records/decisions/remove-gpu-keepalive]] on 2026-10-12; historical measurements and original wording preserved.
 reversible_if: A paired comparison on another Mac shows no decode gain, a fanless Mac throttles with it on AC power, or macOS stops lowering an idle GPU's clock between short command buffers
 title: The GPU stays awake while a request generates, on AC power by default
-status: standing
+status: reversed
 ---
 Carlos approved landing the tested decode changes on September 24, 2026: "yes, land them in Slotstream". The proposal he accepted named a power setting for the keepalive; this records that setting.
 

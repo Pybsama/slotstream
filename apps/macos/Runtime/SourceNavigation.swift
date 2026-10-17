@@ -54,7 +54,7 @@ private enum SourceDirectoryBudget {
         frames.removeAll { $0.value == nil || $0.value?.leased == false }
         while frames.count >= SourceLimits.directoryStreams {
             guard let index = frames.firstIndex(where: { $0.value?.inUse == false }) else {
-                throw SevraError.refused("Other source operations are using the directory budget. Retry this operation with a narrower folder scope.")
+                throw AppRuntimeError.refused("Other source operations are using the directory budget. Retry this operation with a narrower folder scope.")
             }
             frames.remove(at: index).value?.closeStream(expire: true)
         }
@@ -84,19 +84,19 @@ final class SourceDirectory {
         if expire { expired = true }
     }
     func open(in session: SourceSession) throws {
-        guard !expired else { throw SevraError.refused("This directory cursor expired to release resources. Restart without a cursor.") }
+        guard !expired else { throw AppRuntimeError.refused("This directory cursor expired to release resources. Restart without a cursor.") }
         if stream != nil { return }
         try SourceDirectoryBudget.acquire(self)
         let fd: Int32
         do { fd = try session.openPath(attachment: attachment, path: path, directory: true) }
         catch { closeStream(); throw error }
         var value = stat()
-        guard fstat(fd, &value) == 0 else { close(fd); closeStream(); throw SevraError.refused("Cannot inspect this directory.") }
-        guard let opened = fdopendir(fd) else { close(fd); closeStream(); throw SevraError.refused("Cannot list this directory.") }
+        guard fstat(fd, &value) == 0 else { close(fd); closeStream(); throw AppRuntimeError.refused("Cannot inspect this directory.") }
+        guard let opened = fdopendir(fd) else { close(fd); closeStream(); throw AppRuntimeError.refused("Cannot list this directory.") }
         stamp = SourceStamp(value); stream = opened
     }
     func verify(in session: SourceSession? = nil) throws {
-        guard !expired else { throw SevraError.refused("This directory cursor expired to release resources. Restart without a cursor.") }
+        guard !expired else { throw AppRuntimeError.refused("This directory cursor expired to release resources. Restart without a cursor.") }
         guard let stream else { return }
         var value = stat()
         guard fstat(dirfd(stream), &value) == 0, stamp == SourceStamp(value) else { throw changed() }
@@ -105,8 +105,8 @@ final class SourceDirectory {
             guard fstat(fd, &value) == 0, stamp == SourceStamp(value) else { throw changed() }
         }
     }
-    private func changed() -> SevraError {
-        SevraError.refused("The directory changed during navigation. Restart this listing or search without a cursor to see its current contents.")
+    private func changed() -> AppRuntimeError {
+        AppRuntimeError.refused("The directory changed during navigation. Restart this listing or search without a cursor to see its current contents.")
     }
 }
 
@@ -166,7 +166,7 @@ final class SourceWalk {
             }
             errno = 0
             guard let entry = readdir(frame.stream) else {
-                guard errno == 0 else { throw SevraError.refused("Directory reading failed. Restart this listing or search.") }
+                guard errno == 0 else { throw AppRuntimeError.refused("Directory reading failed. Restart this listing or search.") }
                 try frame.verify(); stack.removeLast(); continue
             }
             work.entries += 1
@@ -212,35 +212,35 @@ extension SourceSession {
         let parts = path.split(separator: "/", omittingEmptySubsequences: false)
         guard !path.isEmpty, path.utf8.count <= SourceLimits.pathBytes, !path.hasPrefix("/"), !path.contains("\0"),
               parts.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
-            throw SevraError.refused("Use a relative path inside an attached folder, without parent components.")
+            throw AppRuntimeError.refused("Use a relative path inside an attached folder, without parent components.")
         }
         return path
     }
 
     func openPath(attachment index: Int, path: String, directory: Bool) throws -> Int32 {
-        guard attachments.indices.contains(index) else { throw SevraError.refused("That attachment is no longer available.") }
+        guard attachments.indices.contains(index) else { throw AppRuntimeError.refused("That attachment is no longer available.") }
         let attachment = attachments[index]
         let path = try Self.relativePath(path, directory: directory)
         if attachment.kind == .file {
-            guard !directory, path == attachment.name else { throw SevraError.refused("This attachment grants only the selected file, not its siblings.") }
+            guard !directory, path == attachment.name else { throw AppRuntimeError.refused("This attachment grants only the selected file, not its siblings.") }
         } else if path.split(separator: "/").contains(where: { $0.hasPrefix(".") }) {
-            throw SevraError.refused("Hidden files are excluded from folder access. Attach that file explicitly to read it.")
+            throw AppRuntimeError.refused("Hidden files are excluded from folder access. Attach that file explicitly to read it.")
         }
         // openat(".") gives each traversal an independent directory offset;
         // dup alone would share the root's readdir position across requests.
         var fd = openat(attachment.descriptor, ".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard fd >= 0 else { throw SevraError.refused("The attached folder is no longer readable.") }
+        guard fd >= 0 else { throw AppRuntimeError.refused("The attached folder is no longer readable.") }
         let parts = path.split(separator: "/")
         for (position, component) in parts.enumerated() {
             let flags = O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC | (directory || position < parts.count - 1 ? O_DIRECTORY : 0)
             let next = openat(fd, String(component), flags)
             close(fd)
-            guard next >= 0 else { throw SevraError.refused("\(path) is missing, unreadable or a symbolic link. List the folder again to see current names.") }
+            guard next >= 0 else { throw AppRuntimeError.refused("\(path) is missing, unreadable or a symbolic link. List the folder again to see current names.") }
             fd = next
         }
         var value = stat()
         guard fstat(fd, &value) == 0, value.st_mode & S_IFMT == (directory ? S_IFDIR : S_IFREG) else {
-            close(fd); throw SevraError.refused("\(path) is no longer an ordinary \(directory ? "folder" : "file").")
+            close(fd); throw AppRuntimeError.refused("\(path) is no longer an ordinary \(directory ? "folder" : "file").")
         }
         return fd
     }
@@ -249,14 +249,22 @@ extension SourceSession {
         let path = try Self.relativePath(path, directory: false)
         let fd = try openPath(attachment: index, path: path, directory: false); defer { close(fd) }
         var value = stat()
-        guard fstat(fd, &value) == 0 else { throw SevraError.refused("Cannot inspect the selected file.") }
+        guard fstat(fd, &value) == 0 else { throw AppRuntimeError.refused("Cannot inspect the selected file.") }
         return SourceItem(id: attachments[index].id + ":" + path, attachment: index, path: path,
                           size: value.st_size, device: value.st_dev, inode: value.st_ino, kind: Self.kind(of: path))
     }
 
     func item(_ id: String) throws -> SourceItem {
+        // A selected file is itself a readable source. Its attachment ID is
+        // sufficient, with exactly the same single-file scope as its full ID.
+        if let index = attachments.firstIndex(where: { $0.id == id }) {
+            guard attachments[index].kind == .file else {
+                throw AppRuntimeError.refused("That ID names a folder. Use source.list or source.find to select a file inside it.")
+            }
+            return try inspect(attachment: index, path: attachments[index].name)
+        }
         guard let separator = id.firstIndex(of: ":"), let index = attachments.firstIndex(where: { $0.id == id[..<separator] }) else {
-            throw SevraError.refused("Unknown file ID. Use source.list, source.find or a search result.")
+            throw AppRuntimeError.refused("Unknown file ID. Use source.list, source.find or a search result.")
         }
         return try inspect(attachment: index, path: String(id[id.index(after: separator)...]))
     }
@@ -264,18 +272,21 @@ extension SourceSession {
     func attachmentIndex(_ id: String?) throws -> Int {
         if let id, let index = attachments.firstIndex(where: { $0.id == id }) { return index }
         if id == nil && attachments.count == 1 { return 0 }
-        throw SevraError.refused("Choose an attachment ID from source.list or the attachment list, such as a1.")
+        throw AppRuntimeError.refused("Choose an attachment ID from source.list or the attachment list, such as a1.")
     }
 
     func resolve(_ call: ProposedTool) throws -> SourceItem {
         if let id = try call.optionalString("id") {
             guard try call.optionalString("path") == nil, try call.optionalString("attachment") == nil else {
-                throw SevraError.refused("Read by id, or by attachment and path, not both.")
+                throw AppRuntimeError.refused("Read by id, or by attachment and path, not both.")
             }
             return try item(id)
         }
         let index = try attachmentIndex(call.optionalString("attachment"))
-        return try inspect(attachment: index, path: call.string("path"))
+        let path = try call.optionalString("path")
+        if path == nil, attachments[index].kind == .file { return try item(attachments[index].id) }
+        guard let path else { throw AppRuntimeError.refused("Choose a file inside this folder with source.list or source.find, then read its id or path.") }
+        return try inspect(attachment: index, path: path)
     }
 
     func navigation(_ call: ProposedTool, recursive: Bool) throws -> SourceCursor {
@@ -283,16 +294,16 @@ extension SourceSession {
         let path = try Self.relativePath(call.optionalString("path") ?? "", directory: true)
         let query = try call.optionalString("query")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let match = try call.optionalString("match") ?? "phrase"
-        guard ["phrase", "words"].contains(match) else { throw SevraError.refused("Search match must be phrase or words.") }
+        guard ["phrase", "words"].contains(match) else { throw AppRuntimeError.refused("Search match must be phrase or words.") }
         if call.name != "source.list" {
-            guard !query.isEmpty, query.utf8.count <= 256 else { throw SevraError.refused("Use a short nonempty search query.") }
+            guard !query.isEmpty, query.utf8.count <= 256 else { throw AppRuntimeError.refused("Use a short nonempty search query.") }
         }
         let signature = json(["tool": call.name, "attachment": attachment ?? "", "path": path, "query": query, "match": match])
         let now = ProcessInfo.processInfo.systemUptime
         cursors = cursors.filter { now - $0.value.touched < SourceLimits.cursorLifetime }
         if let token = try call.optionalString("cursor") {
             guard let cursor = cursors[token], cursor.signature == signature else {
-                throw SevraError.refused("This cursor expired or belongs to another query or scope. Restart without a cursor, or reuse the original query and scope.")
+                throw AppRuntimeError.refused("This cursor expired or belongs to another query or scope. Restart without a cursor, or reuse the original query and scope.")
             }
             cursors.removeValue(forKey: token)
             return cursor
@@ -301,7 +312,7 @@ extension SourceSession {
         if attachment != nil || !path.isEmpty { indices = [try attachmentIndex(attachment)] }
         else { indices = Array(attachments.indices) }
         guard path.isEmpty || !indices.contains(where: { attachments[$0].kind == .file }) else {
-            throw SevraError.refused("A selected file is not a folder. Omit path to list that file.")
+            throw AppRuntimeError.refused("A selected file is not a folder. Omit path to list that file.")
         }
         return SourceCursor(signature: signature, walk: SourceWalk(roots: indices.map { ($0, path) }, recursive: recursive))
     }
@@ -398,9 +409,9 @@ extension SourceSession {
             }
             let content: (text: String, hash: String, document: ExtractedDocument?)
             do { content = try text(item, cancellation: cancellation) }
-            catch SevraError.cancelled { throw SevraError.cancelled }
+            catch AppRuntimeError.cancelled { throw AppRuntimeError.cancelled }
             catch {
-                if position.hash != nil { throw SevraError.refused("A search result file changed or became unreadable. Restart the search without a cursor.") }
+                if position.hash != nil { throw AppRuntimeError.refused("A search result file changed or became unreadable. Restart the search without a cursor.") }
                 cursor.walk.skip("unreadable"); if unreadable.count < 5 { unreadable.append(display(item)) }
                 cursor.file = nil; continue
             }
@@ -409,12 +420,12 @@ extension SourceSession {
             // OCR may add text without changing the original PDF.
             let hash = content.hash + ":" + digestText(content.text)
             if let previous = position.hash, previous != hash {
-                throw SevraError.refused("The file changed during this search. Restart without a cursor to search its current contents.")
+                throw AppRuntimeError.refused("The file changed during this search. Restart without a cursor to search its current contents.")
             }
             position.hash = hash
             if let doc = content.document, !doc.textless.subtracting(doc.recognized).isEmpty, scans.count < 10 { scans.append(item.id) }
             let utf8 = content.text.utf8
-            guard position.offset <= utf8.count else { throw SevraError.refused("The search position is no longer valid. Restart without a cursor.") }
+            guard position.offset <= utf8.count else { throw AppRuntimeError.refused("The search position is no longer valid. Restart without a cursor.") }
             var start = utf8.index(utf8.startIndex, offsetBy: position.offset)
             while start < utf8.endIndex {
                 if !(try work.available()) { cursor.file = position; break loop }

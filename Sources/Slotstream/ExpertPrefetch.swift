@@ -522,12 +522,12 @@ public struct ExpertPrefetchObservation: Codable, Equatable {
     /// "piece" or "record": how speculative workers read. Whole-record reads
     /// issue one call per record instead of nine.
     public var readShape = "piece"
-    /// Layer events that needed no demand read: every routed expert was already
-    /// resident. A complete layer pays no read, no scatter and, once the barrier
-    /// is deferrable, no drain. The fraction of complete layers bounds what any
-    /// layer-completeness objective or residency speculation could ever win.
+    /// Layer events whose routed experts were all in the pool map when ensure
+    /// began, before claiming/publishing prefetched tickets. Ready tickets can
+    /// avoid demand reads without counting here, so this is not the fraction
+    /// of layers with every weight ready or an upper bound on skipped waits.
     public var layersComplete = 0
-    /// Layer events that still had at least one demand miss.
+    /// Layer events with at least one map miss before prefetch adoption.
     public var layersWithMisses = 0
     /// Workers launched with a whole-record reader (one read per record).
     public var recordReads = 0

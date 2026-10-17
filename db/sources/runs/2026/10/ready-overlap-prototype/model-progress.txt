@@ -1,0 +1,12 @@
+{"round": 0, "arm": "reference", "eligible": true, "ready_ticket_prelaunch_records": 0, "overlap_direct_batches": 0, "decode_seconds": 10.9680475, "request_seconds": 15.94912025, "decode_records": 19322}
+{"round": 0, "arm": "resident_staged", "eligible": true, "ready_ticket_prelaunch_records": 0, "overlap_direct_batches": 0, "decode_seconds": 11.669157125, "request_seconds": 13.318561292, "decode_records": 19322}
+Traceback (most recent call last):
+  File "/Users/carlos/Projects/slotstream/Tools/ready_overlap_probe.py", line 109, in <module>
+    main()
+  File "/Users/carlos/Projects/slotstream/Tools/ready_overlap_probe.py", line 103, in main
+    else: run(args.out, args.binary.resolve())
+  File "/Users/carlos/Projects/slotstream/Tools/ready_overlap_probe.py", line 47, in run
+    result = invoke(binary, arguments, out, f'r{round_id}-{arm}', env, 12.5)
+  File "/Users/carlos/Projects/slotstream/Tools/routing_handoff_followup.py", line 28, in invoke
+    raise RuntimeError(f'{name} exited {result.returncode}; raw failure preserved')
+RuntimeError: r0-ready_staged exited -5; raw failure preserved

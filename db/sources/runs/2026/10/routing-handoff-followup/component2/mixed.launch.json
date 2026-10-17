@@ -1,0 +1,14 @@
+{
+  "before": {
+    "page_bytes": 16384,
+    "raw": "Mach Virtual Memory Statistics: (page size of 16384 bytes)\nPages free:                                    43835.\nPages active:                                1174023.\nPages inactive:                              1164249.\nPages speculative:                             12413.\nPages throttled:                                   0.\nPages wired down:                             239432.\nPages purgeable:                                8091.\n\"Translation faults\":                     6324166938.\nPages copy-on-write:                       500640419.\nPages zero filled:                       22978699204.\nPages reactivated:                         884795016.\nPages purged:                               26477400.\nFile-backed pages:                            828245.\nAnonymous pages:                             1522440.\nPages stored in compressor:                   977973.\nPages occupied by compressor:                 451637.\nDecompressions:                            244572988.\nCompressions:                              288105145.\nPageins:                                  7680916835.\nPageouts:                                    3318980.\nSwapins:                                      156439.\nSwapouts:                                     387126.\nPages tagged:                                 161541.\nPages tagged resident:                        133702.\nPages tagged compressed:                       27839.\nPages tag-storage:                             98304.\nPages tag-storage holding tags:                 8121.\nPages tag-storage free:                          185.\nPages tag-storage non-tag pageable:            89990.\nPages tag-storage non-tag wired:                   8.\nBytes of compressed tags:                    3739328.\nTagged compressions:                         3075787.\nTagged decompressions:                       2840823.\n",
+    "reclaimable_bytes": 14420721664,
+    "swapins": 156439,
+    "swapouts": 387126
+  },
+  "command": [
+    "/Users/carlos/Projects/slotstream/.build/routing-handoff-component2/routing-handoff-native",
+    "--mixed-lookup"
+  ],
+  "environment": {}
+}

@@ -2,13 +2,13 @@
 type: measurement
 id: 01m2c4qtcbz652bba8qgpekyyz
 created: 2026-09-13T01:05:06.955204+00:00
-updated: 2026-09-13T12:12:32.644783+00:00
+updated: 2026-10-13T14:00:59.476084+00:00
 summary: Deferring the per-layer GPU drain with multi-generation pins gains 3.8% to 5.1% with exact outputs; record reads and nine flags are null; profiles close compilation
 date: 2026-09-12
 doc: measurements
 level: '3'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
-note: Exploration sweeps on three prompts at 256 outputs; barrier measured with prefetch off; composition with prefetch, coverage and depth pending; no public claim.
+note: 'Exploration sweeps on three prompts at 256 outputs; barrier measured with prefetch off; composition with prefetch, coverage and depth pending; no public claim. October 13 correction: layersComplete counts pool-map hits before ready prefetch adoption, not all layers avoiding reads; see [[records/measurements/routing-handoff-pilot-2026-10-13]]. Historical body and timings retained.'
 order: '1260'
 runs: '[[sources/runs/2026/09/2026-09-12-decode-path-serialization-round-1]]'
 title: 'Decode path serialization, round 1: deferring the per-layer GPU drain buys 3.8% to 5.1%; host time is waiting, not compute'

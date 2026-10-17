@@ -51,7 +51,7 @@ class PerformanceCampaignChecks(unittest.TestCase):
                   'memory_bytes': 14_000_000_000, 'memory_mode': 'ceiling', 'context_limit': 32768,
                   'draft_mode': 'on', 'draft_depth': 2, 'draft_placement': 'streamed', 'lookahead': 'off',
                   'original_correction_sha256': None, 'prefix_cache': True, 'live_memory': 'automatic',
-                  'gpu_keep_alive': 'auto', 'maximum_seconds': 1800, 'request_seconds': 600, 'seed': 7,
+                  'maximum_seconds': 1800, 'request_seconds': 600, 'seed': 7,
                   'tokenizer_sha256': 'fixture-tokenizer', 'cases': cases}
         declared = []
         for index in range(profiles):

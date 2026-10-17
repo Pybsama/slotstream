@@ -1,0 +1,3412 @@
+{
+  "items" : [
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=0\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=0\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=0\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=0\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=1\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=1\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=1\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=1\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=2\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=2\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=2\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=2\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=3\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=3\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=3\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=3\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=4\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=4\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=4\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=4\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=5\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=5\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=5\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=5\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=6\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=6\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=6\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=6\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=7\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=7\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=7\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=7\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=8\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=8\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=8\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=8\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=9\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=9\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=9\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=9\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=10\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=10\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=10\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=7 resident=10\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7: actual mixed read failure",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7: failed read submitted resident GPU work",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7: failed read joined resident GPU work",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7: failed read releases all temporary pins",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7: exact retry after joined failure",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=1 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=1 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=1 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=1 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=1 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=10 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=10 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=10 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=10 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=10 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=3 tickets=4 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=3 tickets=4 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=3 tickets=4 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=3 tickets=4 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=3 tickets=4 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=5 tickets=5 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=5 tickets=5 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=5 tickets=5 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=5 tickets=5 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=5 tickets=5 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=4 stale=true: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=4 stale=true: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=4 stale=true: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=4 stale=true: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=7 warm=0 tickets=4 stale=true: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "unfinished fixture entered reader",
+      "passed" : true
+    },
+    {
+      "name" : "unfinished duplicate absent from early view",
+      "passed" : true
+    },
+    {
+      "name" : "unfinished ticket eventually published",
+      "passed" : true
+    },
+    {
+      "name" : "reader callback joined once",
+      "passed" : true
+    },
+    {
+      "name" : "progressing ticket promoted, not reread",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 0",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 1",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 2",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 3",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 4",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 5",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 6",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 7",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 8",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=0\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=0\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=0\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=0\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=1\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=1\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=1\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=1\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=2\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=2\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=2\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=2\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=3\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=3\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=3\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=3\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=4\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=4\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=4\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=4\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=5\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=5\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=5\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=5\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=6\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=6\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=6\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=6\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=7\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=7\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=7\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=7\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=8\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=8\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=8\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=8\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=9\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=9\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=9\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=9\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=10\/10: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=10\/10: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=10\/10: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=1 seed=31 resident=10\/10: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31: actual mixed read failure",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31: failed read submitted resident GPU work",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31: failed read joined resident GPU work",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31: failed read releases all temporary pins",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31: exact retry after joined failure",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=1 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=1 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=1 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=1 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=1 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=10 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=10 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=10 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=10 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=10 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=3 tickets=4 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=3 tickets=4 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=3 tickets=4 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=3 tickets=4 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=3 tickets=4 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=5 tickets=5 stale=false: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=5 tickets=5 stale=false: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=5 tickets=5 stale=false: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=5 tickets=5 stale=false: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=5 tickets=5 stale=false: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "ready fixture completed every ticket",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=4 stale=true: exact MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=4 stale=true: exact ordered route",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=4 stale=true: only validated tickets launched",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=4 stale=true: prelaunch happened",
+      "passed" : true
+    },
+    {
+      "name" : "seed=31 warm=0 tickets=4 stale=true: stale tickets refused",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=1 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "unfinished fixture entered reader",
+      "passed" : true
+    },
+    {
+      "name" : "unfinished duplicate absent from early view",
+      "passed" : true
+    },
+    {
+      "name" : "unfinished ticket eventually published",
+      "passed" : true
+    },
+    {
+      "name" : "reader callback joined once",
+      "passed" : true
+    },
+    {
+      "name" : "progressing ticket promoted, not reread",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 0",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 1",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 2",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 3",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 4",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 5",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 6",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 7",
+      "passed" : true
+    },
+    {
+      "name" : "joined ticket bytes 8",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=140",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=290",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=328",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=368",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=427",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=468",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=481",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=503",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=0\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=0\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=0\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=0\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=140",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=290",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=328",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=368",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=427",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=468",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=481",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=503",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=10\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=10\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=10\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=10\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=140",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=290",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=328",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=368",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=427",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=468",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=481",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=7 expert=503",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=20\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=20\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=20\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=7 resident=20\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=27",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=57",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=84",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=151",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=155",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=322",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=390",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=447",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=460",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=0\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=0\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=0\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=0\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=27",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=57",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=84",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=151",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=155",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=322",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=390",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=447",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=460",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=10\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=10\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=10\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=10\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=27",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=57",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=84",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=151",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=155",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=322",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=390",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=447",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=460",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=2 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=20\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=20\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=20\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=2 seed=31 resident=20\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=140",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=290",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=328",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=368",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=427",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=468",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=481",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=503",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=0\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=0\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=0\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=0\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=140",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=290",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=328",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=368",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=427",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=468",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=481",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=503",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=10\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=10\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=10\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=10\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=15",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=36",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=37",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=39",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=98",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=140",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=290",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=316",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=328",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=368",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=401",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=403",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=426",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=427",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=468",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=481",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=7 expert=503",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=20\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=20\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=20\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=7 resident=20\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=27",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=57",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=84",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=151",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=155",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=322",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=390",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=447",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=460",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=0\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=0\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=0\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=0\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=27",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=57",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=84",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=151",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=155",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=322",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=390",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=447",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=460",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=10\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=10\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=10\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=10\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=0",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=10",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=27",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=57",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=84",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=90",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=97",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=151",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=155",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=163",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=176",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=270",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=284",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=322",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=325",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=374",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=390",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=447",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=460",
+      "passed" : true
+    },
+    {
+      "name" : "explicit resident set rows=8 seed=31 expert=488",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=20\/20: exact complete MoE output",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=20\/20: ordered router IDs",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=20\/20: actual prelaunch",
+      "passed" : true
+    },
+    {
+      "name" : "rows=8 seed=31 resident=20\/20: finite output",
+      "passed" : true
+    },
+    {
+      "name" : "bounded physical footprint",
+      "passed" : true
+    },
+    {
+      "name" : "all copies wait for the reader join",
+      "passed" : true
+    },
+    {
+      "name" : "successful demand joins once before copying",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 0",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 1",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 2",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 3",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 4",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 5",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 6",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 7",
+      "passed" : true
+    },
+    {
+      "name" : "joined CPU copy exact piece 8",
+      "passed" : true
+    },
+    {
+      "name" : "partial demand read fails",
+      "passed" : true
+    },
+    {
+      "name" : "partial read writes no destination bytes",
+      "passed" : true
+    },
+    {
+      "name" : "failed helper leaves joining to caller defer",
+      "passed" : true
+    },
+    {
+      "name" : "joined host-copy path exercised",
+      "passed" : true
+    }
+  ],
+  "measurements" : {
+    "host_join_seconds_not_gpu_duration" : 0.0033195419999999995,
+    "overlap_direct_batches" : 28,
+    "ready_ticket_prelaunch_records" : 40,
+    "resident_expert_prelaunches" : 30
+  },
+  "name" : "optimization-ready-overlap",
+  "passed" : true
+}

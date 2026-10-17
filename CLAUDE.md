@@ -5,10 +5,40 @@ experts and a slot cache. Read [PLAN.md](PLAN.md) for design, [MEASUREMENTS.md](
 for every measured number and its method, `Tools/verify.sh` for the acceptance
 battery. Work lands directly on `main`.
 
-## Sevra integration direction (September 8, 2026)
+## Optimize useful work (October 12, 2026)
+
+Follow the [GPU keepalive removal decision](db/records/decisions/remove-gpu-keepalive.md).
+Do not manufacture GPU work to influence power states or undocumented scheduling.
+Prefer bounded reductions in real work, reads, dispatches and waits. Qualify the
+whole user experience and adverse outcomes across the intended hardware and
+power envelope before adopting a default. Exact output and a one-Mac speedup
+are insufficient; an optional knob does not repair an unreliable optimization.
+Preserve historical evidence, distinguish hypotheses from verified causes, read
+prior replies before posting, and close only issues a verified release resolves.
+
+## Qualify complete native workflows
+
+Follow the [native workflow qualification decision](db/records/decisions/qualify-complete-native-workflows.md).
+Test the person's complete job through the production model, tools, renderer,
+review and delivered app. Preserve failing prompts and inputs. Prefer bounded,
+schema-derived recovery and deterministic computation over special spellings or
+model arithmetic. Keep citation ownership, exact output, privacy and review
+boundaries intact. Verify the app's embedded engine and build identity separately
+from the CLI. Missing capabilities and disclosed limitations are not implemented
+features; maintain the task map and remaining gates alongside code.
+
+## App identity (October 16, 2026)
+
+Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).
+The native app is Slotstream. Keep the app and the independent engine interfaces;
+remove separate-product promotion from current repository surfaces. Leave the
+separate website unchanged. Preserve historical evidence and compatibility names
+needed for existing Homes, backups and saved mini-apps.
+
+## Slotstream integration direction (September 8, 2026)
 
 Read [the canonical engineering integration record](db/records/design/sevra-maintained-model-integration.md),
-also projected into PLAN.md. Sevra selects and maintains a few qualified models
+also projected into PLAN.md. Slotstream selects and maintains a few qualified models
 for actual hardware profiles and optimizes the whole stack around them. The
 product is not permanently tied to one flagship; the current engine's exact
 checkpoint, measured gates and independent CLI/API/Swift behavior remain intact.
@@ -116,11 +146,14 @@ Every rule here is one this project already got wrong. They share a root:
   README's tier table ended up claiming a 32 GB Mac is faster than a 48 GB one.
   Regenerate the whole family — and prefer generating tables *from the tool*
   (`doctor --sim-ram N`) so they cannot drift from the code again.
-- **A failing test is a bug in the test until proven otherwise.** Three "product
+- **Investigate a failed check before attributing it.** Separate product,
+  fixture and environment failures with a small reproduction. Three "product
   failures" in one run were nested python-inside-shell quoting mangling the
   JSON; another two were a hardcoded version literal reporting a release bump as
-  a regression. Reproduce by hand before believing a failure, and never pin a
-  value a release will change.
+  a regression. Do not dismiss a failure or blame the product before isolating
+  it, and never pin a value a release will change. Keep resource fixtures
+  bounded and prove they reach the branch they claim to test; see the
+  [disk-space fixture lesson](db/records/decisions/remove-gpu-keepalive.md#release-test-lesson-from-the-removal).
 - **`set -e` makes cleanup lethal.** `wait $PID` returns 143 after a `kill` and
   silently truncated the whole battery — it looked like a hang. Always
   `kill ... || true; wait ... || true`, or use a `trap ... EXIT` like
@@ -570,8 +603,8 @@ still quoted in commit history and both are wrong.
   the prebuilt `mlx.metallib` next to the binary. `swift test` is unavailable
   (no XCTest in CLT) — `Tools/verify.sh` is the acceptance suite.
 - CI is split by product. `ci.yml` builds and checks the engine and skips pushes
-  that change only docs, the brain or `apps/`. `sevra-mac.yml` runs
-  `Tools/check_sevra_mac.sh` and the Xcode build (`Tools/build_sevra_xcode.sh`)
+  that change only docs, the brain or `apps/`. `slotstream-mac.yml` runs
+  `Tools/check_slotstream_mac.sh` and the Xcode build (`Tools/build_slotstream_xcode.sh`)
   when `apps/macos` or the engine it builds on changes. The app's real-model
   checks need the weights and stay on a development Mac.
 - Coverage percentages are advisory review feedback. Build, instrumented-test

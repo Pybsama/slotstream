@@ -1,0 +1,7 @@
+/Users/carlos/Projects/slotstream/Tools/routing_handoff_probe.swift:12:13: error: cannot find 'ModelProcessGuard' in scope
+ 10 | struct RoutingHandoffProbe {
+ 11 |     static func main() throws {
+ 12 |         try ModelProcessGuard.acquire()
+    |             `- error: cannot find 'ModelProcessGuard' in scope
+ 13 |         guard let vm = ProcessMemory.vmActivity(), vm.reclaimableBytes >= 4_000_000_000 else {
+ 14 |             throw ModelError("probe needs 4 GB real reclaimable headroom")

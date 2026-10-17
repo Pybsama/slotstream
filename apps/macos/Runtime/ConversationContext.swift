@@ -13,6 +13,8 @@ public struct ContextReceipt: Codable, Equatable, Sendable {
     public var earlierExcerpts: [ContextExcerpt]
     public var omittedMessages: Int
     public var omittedMemories: Int
+    public var searchedMessageIDs: [String]?
+    public var searchedMemoryIDs: [String]?
 }
 struct SelectedContext {
     var messages: [Message]
@@ -34,7 +36,7 @@ enum ConversationContext {
     static func select(home: HomeState, thread: WorkThread) throws -> SelectedContext {
         let excluded = Set(home.memories.filter(\.forgotten).map(\.messageID))
         let quotes = home.quotedHomeMessages(for: thread)
-        guard quotes.count == Set(thread.promotedMessageIDs).count else { throw SevraError.refused("The Home exchange linked to this thread is incomplete. Restore the missing history before continuing.") }
+        guard quotes.count == Set(thread.promotedMessageIDs).count else { throw AppRuntimeError.refused("The Home exchange linked to this thread is incomplete. Restore the missing history before continuing.") }
         let allowed: (Message) -> Bool = { !excluded.contains($0.id) && !($0.role == "assistant" && $0.text.isEmpty) }
         let pinned = quotes.filter(allowed)
         let own = thread.messages.filter(allowed)
@@ -55,7 +57,7 @@ enum ConversationContext {
         }
         guard pinnedBytes <= historyBytes,
               (groups.last?.reduce(0, { $0 + $1.text.utf8.count }) ?? 0) + pinnedBytes <= historyBytes else {
-            throw SevraError.refused("This request or its pinned Home exchange is too large. Attach the long text as a source or select a smaller exchange. Your history is preserved.")
+            throw AppRuntimeError.refused("This request or its pinned Home exchange is too large. Attach the long text as a source or select a smaller exchange. Your history is preserved.")
         }
         var tail = recent(budget: historyBytes - pinnedBytes)
         if tail.count < own.count {
@@ -76,9 +78,7 @@ enum ConversationContext {
                 if rendered.utf8.count <= spare { excerpts = candidate; earlierText = rendered }
             }
         }
-        let candidates = thread.mode == .incognito ? [] : home.memories.filter {
-            $0.admitted && !$0.forgotten && ($0.threadID == thread.id || (($0.scope ?? .shared) == .shared && (thread.mode == .shared || thread.readsSharedMemory == true)))
-        }
+        let candidates = permittedMemories(home: home, thread: thread)
         let query = terms(own.last(where: { $0.role == "user" })?.text ?? "")
         let ranked = candidates.sorted { a, b in
             let aa = terms(a.text).intersection(query).count, bb = terms(b.text).intersection(query).count
@@ -95,5 +95,10 @@ enum ConversationContext {
         let selected = pinned + tail
         return SelectedContext(messages: selected, memories: memories,
             receipt: ContextReceipt(messageIDs: selected.map(\.id), memoryIDs: memories.map(\.id), earlierExcerpts: excerpts, omittedMessages: omitted.count, omittedMemories: candidates.count - memories.count), earlierText: earlierText)
+    }
+    static func permittedMemories(home: HomeState, thread: WorkThread) -> [MemoryRecord] {
+        thread.mode == .incognito ? [] : home.memories.filter {
+            $0.admitted && !$0.forgotten && ($0.threadID == thread.id || (($0.scope ?? .shared) == .shared && (thread.mode == .shared || thread.readsSharedMemory == true)))
+        }
     }
 }
