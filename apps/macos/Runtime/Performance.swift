@@ -116,7 +116,7 @@ public enum PerformancePolicy {
     package static func validate(_ preferences: PerformancePreferences, on machine: Machine, pack: ModelPack) throws {
         try validateSaved(preferences)
         if case .pack(let requested) = preferences.quantization, requested != pack.id {
-            throw SevraError.refused("The planned model does not match your saved quantization choice.")
+            throw AppRuntimeError.refused("The planned model does not match your saved quantization choice.")
         }
         guard preferences.budget == .custom else { return }
         let range: ModelPackMemoryRange
@@ -125,20 +125,20 @@ public enum PerformancePolicy {
             // their download. Actual startup separately checks their presence.
             range = try pack.startupMemoryRange(on: machine, mtpAvailable: true)
         } catch {
-            throw SevraError.refused("This Mac cannot fit the selected model and context within its supported memory range. Your saved limit is preserved.")
+            throw AppRuntimeError.refused("This Mac cannot fit the selected model and context within its supported memory range. Your saved limit is preserved.")
         }
         guard preferences.customGB >= range.minimumGB else {
-            throw SevraError.refused("Choose a memory limit within the supported range.")
+            throw AppRuntimeError.refused("Choose a memory limit within the supported range.")
         }
         if preferences.customGB > range.maximumGB {
-            throw SevraError.refused("This memory limit exceeds the supported budget on this Mac. Choose Automatic or a lower limit.")
+            throw AppRuntimeError.refused("This memory limit exceeds the supported budget on this Mac. Choose Automatic or a lower limit.")
         }
     }
     /// A preference can be saved even when a new pack or another Mac cannot
     /// apply it. Feasibility belongs to activation, never silent migration.
     public static func validateSaved(_ preferences: PerformancePreferences) throws {
         guard preferences.customGB.isFinite, preferences.customGB > 0 else {
-            throw SevraError.refused("Choose a positive, finite memory limit.")
+            throw AppRuntimeError.refused("Choose a positive, finite memory limit.")
         }
     }
     public static func ceilingGB(_ preferences: PerformancePreferences, on machine: Machine) -> Double {
@@ -159,12 +159,12 @@ public enum PerformancePolicy {
     package static func plan(_ preferences: PerformancePreferences, pack: ModelPack, on machine: Machine,
                              mtpAvailable: Bool, decodeLookahead: DecodeLookaheadPlanning = .automatic) throws -> MemoryPlan {
         guard pack.startupDefaults.draftMode != .on || mtpAvailable else {
-            throw SevraError.unavailable("A required model component is missing. Finish model setup before sending.")
+            throw AppRuntimeError.unavailable("A required model component is missing. Finish model setup before sending.")
         }
         try validate(preferences, on: machine, pack: pack)
         guard let available = machine.availableGB, available.isFinite, available > 0,
               machine.ramGB.isFinite, machine.ramGB > 0, machine.workingSetGB.isFinite else {
-            throw SevraError.unavailable("Sevra cannot read available memory right now. Try again in a moment.")
+            throw AppRuntimeError.unavailable("Slotstream cannot read available memory right now. Try again in a moment.")
         }
         // Preserve the selected ceiling independently of the budget available
         // now, so pressure recovery does not fall back to the automatic default.
@@ -181,7 +181,7 @@ public enum PerformancePolicy {
             plan = try pack.startupPlan(customMemoryGB: preferences.budget == .custom ? preferences.customGB : nil,
                 on: machine, mtpAvailable: mtpAvailable, originalLookahead: decodeLookahead)
         } catch {
-            throw SevraError.refused("There isn’t enough memory available for this model. Close a large app and try again. Your conversation is preserved.")
+            throw AppRuntimeError.refused("There isn’t enough memory available for this model. Close a large app and try again. Your conversation is preserved.")
         }
         let limit = ceiling
         let feasible = min(limit, machine.workingSetGB - 2,
@@ -190,7 +190,7 @@ public enum PerformancePolicy {
         // to load a profile that cannot fit. Never force it or shorten context.
         guard let target = plan.targetGB, target <= feasible + 0.0001,
               plan.expectedPeakGB <= feasible + 0.0001 else {
-            throw SevraError.refused("There isn’t enough memory available for this model. Close a large app and try again. Your conversation is preserved.")
+            throw AppRuntimeError.refused("There isn’t enough memory available for this model. Close a large app and try again. Your conversation is preserved.")
         }
         return plan
     }
@@ -297,7 +297,7 @@ public final class PerformanceTelemetry: @unchecked Sendable {
     private var cachedRange: (key: RangeKey, value: ModelPackMemoryRange?)?
     public init() {
         let source = DispatchSource.makeMemoryPressureSource(eventMask: [.normal, .warning, .critical],
-            queue: DispatchQueue(label: "sevra.memory-status", qos: .utility))
+            queue: DispatchQueue(label: "slotstream.memory-status", qos: .utility))
         source.setEventHandler { [weak self, weak source] in
             guard let self, let source else { return }
             self.lock.lock(); self.pressure = !source.data.contains(.normal); self.lock.unlock()
@@ -354,7 +354,7 @@ public final class PerformanceTelemetry: @unchecked Sendable {
             selectedConfiguration = self.selectedConfiguration, confirmedProfile = self.confirmedProfile
         lock.unlock()
         let machine = Machine.current()
-        // Credit only Sevra's physical footprint, never RSS plus GPU memory.
+        // Credit only Slotstream's physical footprint, never RSS plus GPU memory.
         let bytes = ProcessMemory.residentBytes()
         var credited = machine
         if let available = machine.availableGB { credited.availableGB = min(machine.ramGB, available + Double(bytes) / 1e9) }

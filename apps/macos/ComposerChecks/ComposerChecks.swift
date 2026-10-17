@@ -1,6 +1,6 @@
 import Foundation
-import SevraPresentation
-import SevraRuntime
+import SlotstreamPresentation
+import SlotstreamRuntime
 
 private struct Failure: Error, LocalizedError {
     let errorDescription: String?
@@ -426,11 +426,11 @@ private func check(_ condition: Bool, _ label: String, line: Int = #line) throws
     }
 
     @MainActor private static func runtimeChecks() async throws {
-        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-composer-" + UUID().uuidString)
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("slotstream-composer-" + UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
-        let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+        let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
         do {
-        let runtimeRef = try SevraRuntime(homeURL: root, dbmd: dbmd, inference: ScriptedInference(turns: [EngineTurn(text: "OK")]))
+        let runtimeRef = try SlotstreamRuntime(homeURL: root, dbmd: dbmd, inference: ScriptedInference(turns: [EngineTurn(text: "OK")]))
         let session = ComposerSession(store: .init(
             read: { id in let v = try await runtimeRef.draftState(threadID: id); return .init(text: v.text, revision: v.revision) },
             write: { id, text, revision in
@@ -475,11 +475,11 @@ private func check(_ condition: Bool, _ label: String, line: Int = #line) throws
         print("PASS: real dbmd persistence, atomic Send, stale-save refusal, external-edit/no-op refusal, exact reopen and Incognito exclusion")
     }
     @MainActor private static func journalChecks() async throws {
-        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-journal-" + UUID().uuidString)
+        let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("slotstream-journal-" + UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
-        let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+        let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
         do {
-            let runtime = try SevraRuntime(homeURL: root, dbmd: dbmd, inference: ScriptedInference(turns: []))
+            let runtime = try SlotstreamRuntime(homeURL: root, dbmd: dbmd, inference: ScriptedInference(turns: []))
             let gate = Gate()
             var loseReceipt = true
             let session = ComposerSession(store: .init(

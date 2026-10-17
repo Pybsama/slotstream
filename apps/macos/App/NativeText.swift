@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import SevraPresentation
+import SlotstreamPresentation
 
 enum Appearance: String, CaseIterable { case system = "System", light = "Light", dark = "Dark" }
 
@@ -221,7 +221,7 @@ struct Transcript: NSViewRepresentable {
             applied = shown.document
             outline = shown.document.regions.filter { $0.kind != .paragraph }
         }
-        let queue = DispatchQueue(label: "Sevra.Markdown", qos: .userInitiated)
+        let queue = DispatchQueue(label: "Slotstream.Markdown", qos: .userInitiated)
         let renderer = MarkdownDocumentRenderer()
         var pending: DispatchWorkItem?
         var onLink: (URL) -> Void = { _ in }
@@ -258,7 +258,7 @@ struct Transcript: NSViewRepresentable {
         deinit { viewportObservers.forEach(NotificationCenter.default.removeObserver) }
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
             if let url = link as? URL {
-                if url.scheme == "sevra-copy", let view = textView as? DocumentTextView {
+                if url.scheme == "slotstream-copy", let view = textView as? DocumentTextView {
                     // Only a generated link at this exact code region can copy it.
                     if let region = view.regions.first(where: { $0.kind == .code && NSLocationInRange(charIndex, $0.display) }),
                        url == MarkdownDocumentRenderer.codeCopyURL(sectionID: region.sectionID, sourceOffset: region.source.lowerBound), let code = region.copyText { view.put(code); view.onOversizeCopy("Code copied.") }

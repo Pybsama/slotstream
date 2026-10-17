@@ -3,7 +3,7 @@ type: decision
 meta-type: conclusion
 id: 01m3137p9t37ymrdtykjyzkw11
 created: 2026-09-21T04:22:52.986026+00:00
-updated: 2026-09-21T15:39:18.469892+00:00
+updated: 2026-10-16T06:32:39.323261+00:00
 summary: Custom process ceilings remain adaptive above the automatic default; hardware headroom, diagnostics and startup agree.
 decided_on: 2026-09-20
 reversible_if: Measured allocation or completed-work failures invalidate the supported margins, or user testing shows the ceiling semantics are misleading.
@@ -24,7 +24,7 @@ Existing `--memory-gb`, `--pool-gb` and `--experts-per-layer` remain fixed-cache
 
 Diagnostics and budgeted startup share `Planner.validateMemoryBudget`, including ordinary context sizes. The engine checks again using live memory before allocation. Legacy raw cache knobs keep their documented advisory Metal behavior and live allocation checks; they are not a shortcut into the adaptive mode.
 
-`Tools/context_proxy.swift` covers ceiling propagation, growth, physical bounds, preserved defaults and startup/diagnostic parity. `Tools/memory_override_gate.py` exercises the public CLI across hardware sizes, limits and availability. The native performance checks cover larger limits, preference migration, first use, persistence, deferred changes and recovery; `Tools/check_sevra_memory_ui.sh` renders production settings in both appearances without loading a model. These are software and UX gates, not new hardware speed measurements.
+`Tools/context_proxy.swift` covers ceiling propagation, growth, physical bounds, preserved defaults and startup/diagnostic parity. `Tools/memory_override_gate.py` exercises the public CLI across hardware sizes, limits and availability. The native performance checks cover larger limits, preference migration, first use, persistence, deferred changes and recovery; `Tools/check_slotstream_memory_ui.sh` renders production settings in both appearances without loading a model. These are software and UX gates, not new hardware speed measurements.
 
 Retain the current automatic default until comparable workloads justify changing it. Expanding the supported Metal margin or hardware envelope needs bounded real allocation and completed-work evidence; a larger input control alone does not qualify hardware. See [[records/design/measured-operating-policies]] and [[records/decisions/auto-target-is-the-33-gb-knee-not-70-percent-of-ram]].
 

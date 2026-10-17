@@ -1,13 +1,13 @@
 import AppKit
 import Markdown
-import SevraText
+import SlotstreamText
 
 public struct DocumentSection: Equatable, Sendable {
     public var id: String
     public var speaker: String?
     public var source: String
     public var citationIDs: Set<String>
-    /// A quiet line under the speaker, before the text: how long Sevra thought.
+    /// A quiet line under the speaker, before the text: how long Slotstream thought.
     public var lead: DocumentAnnotation?
     /// A quiet line after the text: what the reply cost.
     public var trail: DocumentAnnotation?
@@ -21,7 +21,7 @@ public struct DocumentSection: Equatable, Sendable {
 /// Links from the conversation to one response's details, beside the
 /// document's other generated links: copying code and opening citations.
 public enum ResponseDetailsLink {
-    public static let scheme = "sevra-response"
+    public static let scheme = "slotstream-response"
     public static func url(threadID: String, runID: String) -> URL? {
         var url = URLComponents(); url.scheme = scheme; url.host = "run"; url.path = "/" + threadID + "/" + runID; return url.url
     }
@@ -215,7 +215,7 @@ public final class MarkdownDocumentRenderer {
     }
     public func clear() { cache.removeAll() }
     public static func codeCopyURL(sectionID: String, sourceOffset: Int) -> URL? {
-        var url = URLComponents(); url.scheme = "sevra-copy"; url.host = "code"; url.path = "/" + sectionID + "/" + String(sourceOffset); return url.url
+        var url = URLComponents(); url.scheme = "slotstream-copy"; url.host = "code"; url.path = "/" + sectionID + "/" + String(sourceOffset); return url.url
     }
     public static func externalURL(_ destination: String) -> URL? {
         guard let u = URL(string: destination), ["https", "http"].contains(u.scheme?.lowercased() ?? ""),
@@ -390,7 +390,7 @@ private final class SectionRenderer {
         guard !section.citationIDs.isEmpty, text.contains("[S") else { return }
         for match in CitationReferences.inText(text) {
             let id = match.id; guard section.citationIDs.contains(id) else { continue }
-            var url = URLComponents(); url.scheme = "sevra-citation"; url.host = "evidence"; url.path = "/" + section.id + "/" + id
+            var url = URLComponents(); url.scheme = "slotstream-citation"; url.host = "evidence"; url.path = "/" + section.id + "/" + id
             if let target = url.url { output.addAttributes([.link: target, .foregroundColor: style.link, .underlineStyle: NSUnderlineStyle.single.rawValue], range: NSRange(location: start + match.range.location, length: match.range.length)) }
         }
     }

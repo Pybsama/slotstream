@@ -19,7 +19,7 @@ public final class HomeStore {
     private var expectedHash: String?
     private var documentHashes: [String: String] = [:]
     private var persisted: HomeState?
-    /// The Home opened while drafts it can adopt were edited outside Sevra.
+    /// The Home opened while drafts it can adopt were edited outside Slotstream.
     public private(set) var openedWithExternalDrafts = false
     private let allowsExternalDraftReview: Bool
     private let fm = FileManager.default
@@ -73,10 +73,10 @@ public final class HomeStore {
         let fm = FileManager.default
         let requested = URL(fileURLWithPath: requestedRoot.path)
         guard requested.standardizedFileURL.path == requested.resolvingSymlinksInPath().path else {
-            throw SevraError.refused("Home must not contain symbolic links.")
+            throw AppRuntimeError.refused("Home must not contain symbolic links.")
         }
         guard dbmd.path.hasPrefix("/"), fm.isExecutableFile(atPath: dbmd.path) else {
-            throw SevraError.unavailable("The bundled db.md tool is missing.")
+            throw AppRuntimeError.unavailable("The bundled db.md tool is missing.")
         }
         try fm.createDirectory(at: requested, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         // Foundation folds macOS's system aliases (such as /private/tmp)
@@ -87,17 +87,17 @@ public final class HomeStore {
         for child in [".sevra", "db", "artifacts", "sevra.toml"] { try checkPlainPath(root.appendingPathComponent(child)) }
         let marker = root.appendingPathComponent("sevra.toml")
         if fm.fileExists(atPath: root.appendingPathComponent("db/DB.md").path), !fm.fileExists(atPath: record.path), !fm.fileExists(atPath: marker.path) {
-            throw SevraError.refused("This folder already contains a db.md store. Attach it as a source instead; using it as Home requires an explicit migration.")
+            throw AppRuntimeError.refused("This folder already contains a db.md store. Attach it as a source instead; using it as Home requires an explicit migration.")
         }
-        if !fm.fileExists(atPath: marker.path) { try durable(Data("schema = 1\nproduct = \"Sevra Mac development\"\n".utf8), at: marker) }
+        if !fm.fileExists(atPath: marker.path) { try durable(Data("schema = 1\nproduct = \"Slotstream Mac development\"\n".utf8), at: marker) }
         try fm.createDirectory(at: root.appendingPathComponent(".sevra"), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         lockFD = open(root.appendingPathComponent(".sevra/owner.lock").path, O_RDWR | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0o600)
         guard lockFD >= 0, flock(lockFD, LOCK_EX | LOCK_NB) == 0 else {
             if lockFD >= 0 { close(lockFD); lockFD = -1 }
-            throw SevraError.ownerBusy
+            throw AppRuntimeError.ownerBusy
         }
         if !fm.fileExists(atPath: root.appendingPathComponent("db/DB.md").path) {
-            guard !fm.fileExists(atPath: record.path) else { throw SevraError.conflict("Home configuration is missing; restore a complete backup.") }
+            guard !fm.fileExists(atPath: record.path) else { throw AppRuntimeError.conflict("Home configuration is missing; restore a complete backup.") }
             try fm.createDirectory(at: root.appendingPathComponent("db/records"), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             let config = root.appendingPathComponent("db/DB.md")
             // Exact versioned configuration, composed by dbmd at development
@@ -113,7 +113,7 @@ public final class HomeStore {
         if fm.fileExists(atPath: integrity.path) {
             expectedHash = try decoded(String.self, Data(contentsOf: integrity))
         } else if fm.fileExists(atPath: record.path) {
-            throw SevraError.conflict("Home integrity state is missing. Open a complete recovery copy; existing history has been preserved.")
+            throw AppRuntimeError.conflict("Home integrity state is missing. Open a complete recovery copy; existing history has been preserved.")
         }
         try verifyForLoading()
         if fm.fileExists(atPath: restoration.path) {
@@ -134,18 +134,18 @@ public final class HomeStore {
         var state = try decoded(HomeState.self, Data(try recordBody().utf8))
         try Self.validateIdentities(state)
         if state.storageLayout == 2 {
-            guard !documentHashes.isEmpty else { throw SevraError.conflict("Home document integrity state is missing. Restore a complete recovery copy.") }
+            guard !documentHashes.isEmpty else { throw AppRuntimeError.conflict("Home document integrity state is missing. Restore a complete recovery copy.") }
             for i in state.threads.indices {
                 let id = state.threads[i].id
                 // A draft-only save updates the index, not the thread record,
                 // so the index can hold the newer draft revision.
                 let indexedRevision = state.threads[i].draftRevision
                 state.threads[i] = try decoded(WorkThread.self, Data(try loadedBody("records/threads/\(id).md").utf8))
-                guard state.threads[i].id == id, state.threads[i].mode != .incognito else { throw SevraError.conflict("A thread record has an invalid owner or privacy mode.") }
+                guard state.threads[i].id == id, state.threads[i].mode != .incognito else { throw AppRuntimeError.conflict("A thread record has an invalid owner or privacy mode.") }
                 state.threads[i].draft = try decoded(String.self, Data(try loadedBody("records/drafts/\(id).md", draft: true).utf8))
                 if let indexedRevision, indexedRevision > (state.threads[i].draftRevision ?? 0) { state.threads[i].draftRevision = indexedRevision }
             }
-        } else if state.storageLayout != nil { throw SevraError.unavailable("This Home's storage layout is unsupported.") }
+        } else if state.storageLayout != nil { throw AppRuntimeError.unavailable("This Home's storage layout is unsupported.") }
         persisted = state
         return state
     }
@@ -154,18 +154,18 @@ public final class HomeStore {
     /// dbmd. An unrecognized layout falls back to dbmd's own parser.
     private func recordBody() throws -> String {
         let data = try Data(contentsOf: record)
-        guard digestBytes(data) == expectedHash else { throw SevraError.conflict("Home records changed outside Sevra. Writes and AI context are paused; the changed files have been preserved.") }
+        guard digestBytes(data) == expectedHash else { throw AppRuntimeError.conflict("Home records changed outside Slotstream. Writes and AI context are paused; the changed files have been preserved.") }
         let body = RecordText.body(of: String(decoding: data, as: UTF8.self))
         return body.isEmpty ? try self.body(record) : body.trimmingCharacters(in: .newlines)
     }
     /// A thread or draft record's body, bound to the integrity ledger. Opening
     /// reads these directly instead of launching dbmd twice per thread. A draft
-    /// edited outside Sevra, which opening allowed for review, is read through
+    /// edited outside Slotstream, which opening allowed for review, is read through
     /// dbmd exactly as before.
     private func loadedBody(_ path: String, draft: Bool = false) throws -> String {
         do { return try trackedBody(path) }
-        catch SevraError.conflict(let message) {
-            guard draft, openedWithExternalDrafts else { throw SevraError.conflict(message) }
+        catch AppRuntimeError.conflict(let message) {
+            guard draft, openedWithExternalDrafts else { throw AppRuntimeError.conflict(message) }
             return try body(root.appendingPathComponent("db/" + path))
         }
     }
@@ -202,7 +202,7 @@ public final class HomeStore {
             if hash == expected { continue }
             var change = ExternalHomeChange(path: path, digest: hash, previousDraft: nil, externalDraft: nil, reason: "This is conversation evidence, configuration or runtime state. It cannot be adopted as a draft. Its bytes are preserved; use a complete backup for recovery.")
             if let id = drafts[path] {
-                change.reason = "The edited draft is not a valid bounded Sevra draft record. Preserve its text and restore the original record structure."
+                change.reason = "The edited draft is not a valid bounded Slotstream draft record. Preserve its text and restore the original record structure."
                 if data.count <= 128 * 1024,
                    let json = try? JSONSerialization.jsonObject(with: command(["show", url.path, "--json"])) as? [String: Any],
                    json["type"] as? String == "sevra-draft", let body = json["body"] as? String,
@@ -221,21 +221,21 @@ public final class HomeStore {
         let changes = try inspectExternalChanges()
         guard !changes.isEmpty, changes.allSatisfy(\.canAdopt),
               Dictionary(uniqueKeysWithValues: changes.map { ($0.path, $0.digest) }) == reviewed,
-              !fm.fileExists(atPath: recovery.path) else { throw SevraError.conflict("Home changed again or contains a change that cannot be adopted. Inspect the current files before continuing.") }
-        guard var next = persisted else { throw SevraError.conflict("Open the Home before reviewing its draft changes.") }
+              !fm.fileExists(atPath: recovery.path) else { throw AppRuntimeError.conflict("Home changed again or contains a change that cannot be adopted. Inspect the current files before continuing.") }
+        guard var next = persisted else { throw AppRuntimeError.conflict("Open the Home before reviewing its draft changes.") }
         var accepted = documentHashes, versions: [Document] = []
         for change in changes {
             let id = URL(fileURLWithPath: change.path).deletingPathExtension().lastPathComponent
-            guard let i = next.threads.firstIndex(where: { $0.id == id }), let draft = change.externalDraft else { throw SevraError.refused("Draft owner is missing.") }
+            guard let i = next.threads.firstIndex(where: { $0.id == id }), let draft = change.externalDraft else { throw AppRuntimeError.refused("Draft owner is missing.") }
             let raw = try Data(contentsOf: root.appendingPathComponent("db/" + change.path))
-            guard digestBytes(raw) == change.digest else { throw SevraError.conflict("The reviewed draft changed again. Inspect it again.") }
+            guard digestBytes(raw) == change.digest else { throw AppRuntimeError.conflict("The reviewed draft changed again. Inspect it again.") }
             accepted[change.path] = change.digest
             let preserved = storedJSON(["path": change.path, "external_sha256": change.digest, "external_file_base64": raw.base64EncodedString(), "previous_known": change.previousDraft != nil, "previous_draft": change.previousDraft ?? "", "adopted_draft": draft])
             versions.append(Document(path: "records/drafts/conflicts/" + UUID().uuidString + ".md", type: "sevra-draft-conflict", body: preserved, immutable: true))
             next.threads[i].draft = draft; next.threads[i].draftRevision = (next.threads[i].draftRevision ?? 0) + 1
         }
         // A second complete inspection binds the review to every changed file.
-        guard try inspectExternalChanges() == changes else { throw SevraError.conflict("Home changed during review. Inspect the current files again.") }
+        guard try inspectExternalChanges() == changes else { throw AppRuntimeError.conflict("Home changed during review. Inspect the current files again.") }
         next.revision += 1
         let documents = try prepareDocuments(next) + versions
         let intent = Intent(state: next, previousHash: expectedHash, artifact: nil, documents: documents, previousDocuments: accepted)
@@ -245,21 +245,21 @@ public final class HomeStore {
         return next
     }
     private static func validateIdentities(_ state: HomeState) throws {
-        guard state.schema == 1 else { throw SevraError.unavailable("This Home uses an unsupported schema. Update Sevra before opening it.") }
+        guard state.schema == 1 else { throw AppRuntimeError.unavailable("This Home uses an unsupported schema. Update Slotstream before opening it.") }
         guard UUID(uuidString: state.id) != nil, state.revision >= 0,
               state.threads.filter({ $0.id == "home" }).count == 1,
               Set(state.threads.map { $0.id.lowercased() }).count == state.threads.count,
               state.threads.allSatisfy({ $0.id == "home" || UUID(uuidString: $0.id) != nil }) else {
-            throw SevraError.refused("Home contains invalid or colliding record identities.")
+            throw AppRuntimeError.refused("Home contains invalid or colliding record identities.")
         }
     }
     public func exportHome(to destination: URL) throws -> HomeArchiveResult {
-        guard !fm.fileExists(atPath: recovery.path) else { throw SevraError.conflict("Resolve the interrupted save before creating a backup.") }
+        guard !fm.fileExists(atPath: recovery.path) else { throw AppRuntimeError.conflict("Resolve the interrupted save before creating a backup.") }
         return try HomeArchive.export(root: root, state: load(), to: destination, verify: verify)
     }
     public func acknowledgeRestore(archiveDigest: String) throws {
         try verify()
-        guard var review = restoreReview, review.archiveDigest == archiveDigest else { throw SevraError.refused("This restore review is no longer current.") }
+        guard var review = restoreReview, review.archiveDigest == archiveDigest else { throw AppRuntimeError.refused("This restore review is no longer current.") }
         review.reviewed = true
         try durable(try encoded(review), at: restoration)
         restoreReview = review
@@ -283,7 +283,7 @@ public final class HomeStore {
         try durable(try encoded(initialReview), at: control.appendingPathComponent("restoration.json"))
         let store = try HomeStore(root: root, dbmd: dbmd)
         var state = try store.load()
-        guard state.id == manifest.homeID, state.revision == manifest.revision else { throw SevraError.refused("Backup state does not match its Home manifest.") }
+        guard state.id == manifest.homeID, state.revision == manifest.revision else { throw AppRuntimeError.refused("Backup state does not match its Home manifest.") }
         let config = root.appendingPathComponent("db/DB.md")
         if try Data(contentsOf: config) == Data(legacyHomeTemplate.utf8) {
             _ = try store.command(["fm", "set", config.path, "owner=Local user", "--json"])
@@ -314,7 +314,7 @@ public final class HomeStore {
         try checkPlainPath(record)
         let actual = try currentHash()
         guard actual == expectedHash else {
-            throw SevraError.conflict("Home records changed outside Sevra. Writes and AI context are paused; the changed files have been preserved.")
+            throw AppRuntimeError.conflict("Home records changed outside Slotstream. Writes and AI context are paused; the changed files have been preserved.")
         }
         let db = root.path + "/db/"
         var folders = Set<Substring>()
@@ -323,15 +323,15 @@ public final class HomeStore {
             if folders.insert(folder).inserted { try checkPlainPath(root.appendingPathComponent("db/" + folder)) }
             var info = stat()
             guard lstat(db + path, &info) == 0 else {
-                throw SevraError.conflict("A Home document changed outside Sevra: \(path). Writes and AI context are paused; its bytes are preserved.")
+                throw AppRuntimeError.conflict("A Home document changed outside Slotstream: \(path). Writes and AI context are paused; its bytes are preserved.")
             }
-            guard info.st_mode & S_IFMT == S_IFREG else { throw SevraError.refused("Home storage requires ordinary files and folders; symbolic links and special files are refused.") }
+            guard info.st_mode & S_IFMT == S_IFREG else { throw AppRuntimeError.refused("Home storage requires ordinary files and folders; symbolic links and special files are refused.") }
             if let known = verified[path], known.hash == expected, known.size == info.st_size, known.ino == info.st_ino,
                known.mtime.tv_sec == info.st_mtimespec.tv_sec, known.mtime.tv_nsec == info.st_mtimespec.tv_nsec,
                known.ctime.tv_sec == info.st_ctimespec.tv_sec, known.ctime.tv_nsec == info.st_ctimespec.tv_nsec { continue }
             guard digestBytes(try Data(contentsOf: URL(fileURLWithPath: db + path))) == expected else {
                 verified.removeValue(forKey: path)
-                throw SevraError.conflict("A Home document changed outside Sevra: \(path). Writes and AI context are paused; its bytes are preserved.")
+                throw AppRuntimeError.conflict("A Home document changed outside Slotstream: \(path). Writes and AI context are paused; its bytes are preserved.")
             }
             verified[path] = (info.st_size, info.st_mtimespec, info.st_ctimespec, info.st_ino, expected)
         }
@@ -354,38 +354,38 @@ public final class HomeStore {
     /// The same read by Home folder alone, so it never waits behind a save.
     public static func readArtifact(_ path: String, at root: URL) throws -> String {
         let parts = path.split(separator: "/", omittingEmptySubsequences: false)
-        guard parts.count == 2, parts[0] == "artifacts" else { throw SevraError.refused("Invalid saved document path.") }
+        guard parts.count == 2, parts[0] == "artifacts" else { throw AppRuntimeError.refused("Invalid saved document path.") }
         try Self.validateFilename(String(parts[1]))
         let homeFD = open(root.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard homeFD >= 0 else { throw SevraError.refused("Home is no longer accessible.") }
+        guard homeFD >= 0 else { throw AppRuntimeError.refused("Home is no longer accessible.") }
         defer { close(homeFD) }
         let directory = openat(homeFD, "artifacts", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard directory >= 0 else { throw SevraError.refused("The saved document folder is missing or changed.") }
+        guard directory >= 0 else { throw AppRuntimeError.refused("The saved document folder is missing or changed.") }
         defer { close(directory) }
         let fd = openat(directory, String(parts[1]), O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
-        guard fd >= 0 else { throw SevraError.refused("The saved document is missing or is a symbolic link.") }
+        guard fd >= 0 else { throw AppRuntimeError.refused("The saved document is missing or is a symbolic link.") }
         defer { close(fd) }
         var before = stat()
         // UI read budget, matching the initial bounded UTF-8 source reader.
         let limit = 1_048_576
         guard fstat(fd, &before) == 0, before.st_mode & S_IFMT == S_IFREG, before.st_size <= limit else {
-            throw SevraError.refused("Preview supports ordinary UTF-8 documents up to one megabyte. Reveal this file in Finder to inspect it.")
+            throw AppRuntimeError.refused("Preview supports ordinary UTF-8 documents up to one megabyte. Reveal this file in Finder to inspect it.")
         }
         var data = Data(), buffer = [UInt8](repeating: 0, count: 16384)
         while true {
             let n = read(fd, &buffer, buffer.count)
             if n < 0 && errno == EINTR { continue }
-            guard n >= 0 else { throw SevraError.refused("Could not read the saved document.") }
+            guard n >= 0 else { throw AppRuntimeError.refused("Could not read the saved document.") }
             if n == 0 { break }
             data.append(contentsOf: buffer.prefix(n))
-            guard data.count <= limit else { throw SevraError.refused("The document grew beyond the preview limit.") }
+            guard data.count <= limit else { throw AppRuntimeError.refused("The document grew beyond the preview limit.") }
         }
         var after = stat()
         guard fstat(fd, &after) == 0, data.count == before.st_size,
               before.st_mtimespec.tv_sec == after.st_mtimespec.tv_sec, before.st_mtimespec.tv_nsec == after.st_mtimespec.tv_nsec,
               before.st_ctimespec.tv_sec == after.st_ctimespec.tv_sec, before.st_ctimespec.tv_nsec == after.st_ctimespec.tv_nsec,
               let text = String(data: data, encoding: .utf8) else {
-            throw SevraError.conflict("The saved document changed during reading or is not UTF-8. Open it again after editing finishes.")
+            throw AppRuntimeError.conflict("The saved document changed during reading or is not UTF-8. Open it again after editing finishes.")
         }
         return text
     }
@@ -406,16 +406,16 @@ public final class HomeStore {
         for artifact in artifacts {
             try Self.validateFilename(artifact.filename)
             guard !artifact.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                  artifact.content.utf8.count <= 65536 else { throw SevraError.refused("The proposed document is empty or too large.") }
+                  artifact.content.utf8.count <= 65536 else { throw AppRuntimeError.refused("The proposed document is empty or too large.") }
         }
-        guard Set(artifacts.map(\.filename)).count == artifacts.count else { throw SevraError.refused("Two documents in one save cannot share a filename.") }
+        guard Set(artifacts.map(\.filename)).count == artifacts.count else { throw AppRuntimeError.refused("Two documents in one save cannot share a filename.") }
         // Incognito is removed at this final serializer boundary as well as by
         // the caller. Its drafts, messages, proposals and receipts never enter disk.
         var persistent = state
         persistent.threads.removeAll { $0.mode == .incognito }
         let ids = Set(persistent.threads.map(\.id))
         guard persistent.schema == 1, persistent.threads.filter({ $0.id == "home" }).count == 1, ids.count == persistent.threads.count else {
-            throw SevraError.refused("Home must have a supported schema, one Home stream and unique thread identities.")
+            throw AppRuntimeError.refused("Home must have a supported schema, one Home stream and unique thread identities.")
         }
         persistent.submissions = persistent.submissions?.filter { ids.contains($0.threadID) }
         persistent.storageLayout = 2
@@ -459,7 +459,7 @@ public final class HomeStore {
         for thread in persisted?.threads ?? [] { previous[thread.id] = thread }
         let layout = persisted?.storageLayout == 2
         for thread in state.threads {
-            guard thread.id == "home" || UUID(uuidString: thread.id) != nil else { throw SevraError.refused("Invalid stored thread identity.") }
+            guard thread.id == "home" || UUID(uuidString: thread.id) != nil else { throw AppRuntimeError.refused("Invalid stored thread identity.") }
             var record = thread; record.draft = ""
             let old = previous[thread.id]
             var oldRecord = old; oldRecord?.draft = ""
@@ -511,14 +511,14 @@ public final class HomeStore {
         else if let state = intent.state {
             if intent.documents != nil { text = try Self.indexText(state) }
             else { text = String(decoding: try encoded(state), as: UTF8.self) }
-        } else { throw SevraError.conflict("An interrupted save could not be read. Recovery preserved the existing files.") }
+        } else { throw AppRuntimeError.conflict("An interrupted save could not be read. Recovery preserved the existing files.") }
         let current = try currentHash()
         // A restart can find the exact next body already written by dbmd but
         // no completion receipt. It may finish this intent, never overwrite a
         // different external revision with the cached predecessor.
         let alreadyWritten = try current != intent.previousHash && fm.fileExists(atPath: record.path) && body(record) == text
         guard current == intent.previousHash || alreadyWritten else {
-            throw SevraError.conflict("An interrupted save conflicts with external edits. Recovery preserved both versions.")
+            throw AppRuntimeError.conflict("An interrupted save conflicts with external edits. Recovery preserved both versions.")
         }
         var nextHashes = intent.previousDocuments ?? documentHashes
         if nextHashes["DB.md"] == nil { nextHashes["DB.md"] = digestBytes(try Data(contentsOf: root.appendingPathComponent("db/DB.md"))) }
@@ -530,7 +530,7 @@ public final class HomeStore {
                 if !document.immutable, let previous, digestBytes(try Data(contentsOf: url)) == previous {
                     try writeDocument(document, existing: true)
                 } else if try body(url) != document.body {
-                    throw SevraError.conflict("Recovery found a different document at \(document.path). Both versions are preserved.")
+                    throw AppRuntimeError.conflict("Recovery found a different document at \(document.path). Both versions are preserved.")
                 }
                 // Otherwise an interrupted attempt already wrote this body.
             } else {
@@ -546,13 +546,13 @@ public final class HomeStore {
             try checkPlainPath(target)
             if fm.fileExists(atPath: target.path) {
                 guard digestBytes(try Data(contentsOf: target)) == digestBytes(file.content) else {
-                    throw SevraError.conflict("An extension file already exists with different content: \(file.path).")
+                    throw AppRuntimeError.conflict("An extension file already exists with different content: \(file.path).")
                 }
                 continue
             }
             let stage = root.appendingPathComponent(".sevra/owned-stage")
             try durable(file.content, at: stage, .pushed)
-            guard link(stage.path, target.path) == 0 else { throw SevraError.conflict("Could not publish \(file.path) without replacing a file.") }
+            guard link(stage.path, target.path) == 0 else { throw AppRuntimeError.conflict("Could not publish \(file.path) without replacing a file.") }
             try syncDirectory(target.deletingLastPathComponent())
             try fm.removeItem(at: stage)
         }
@@ -563,13 +563,13 @@ public final class HomeStore {
             try checkPlainPath(target)
             if fm.fileExists(atPath: target.path) {
                 guard digestBytes(try Data(contentsOf: target)) == digestText(artifact.content) else {
-                    throw SevraError.conflict("The artifact destination already contains different content.")
+                    throw AppRuntimeError.conflict("The artifact destination already contains different content.")
                 }
             } else {
                 let stage = root.appendingPathComponent(".sevra/artifact-stage")
                 try durable(Data(artifact.content.utf8), at: stage, .pushed)
                 // link is create-only publication on this same filesystem.
-                guard link(stage.path, target.path) == 0 else { throw SevraError.conflict("Could not create the artifact without replacing a file.") }
+                guard link(stage.path, target.path) == 0 else { throw AppRuntimeError.conflict("Could not create the artifact without replacing a file.") }
                 try syncDirectory(target.deletingLastPathComponent())
                 try fm.removeItem(at: stage)
             }
@@ -582,7 +582,7 @@ public final class HomeStore {
             try durable(Data(text.utf8), at: temp, .none)
             defer { try? fm.removeItem(at: temp) }
             if current == nil {
-                _ = try command(["write", "records/state/home.md", "--dir", root.appendingPathComponent("db").path, "--type", "sevra-home", "--summary", "Sevra Home state and conversation history", "--fm", "meta-type=operational", "--body-file", temp.path, "--json"])
+                _ = try command(["write", "records/state/home.md", "--dir", root.appendingPathComponent("db").path, "--type", "sevra-home", "--summary", "Slotstream Home state and conversation history", "--fm", "meta-type=operational", "--body-file", temp.path, "--json"])
             } else {
                 _ = try command(["body", "set", record.path, "--body-file", temp.path, "--json"])
             }
@@ -591,7 +591,7 @@ public final class HomeStore {
         }
         try fault?("record")
         expectedHash = try currentHash()
-        guard let expectedHash else { throw SevraError.conflict("Saved record is missing.") }
+        guard let expectedHash else { throw AppRuntimeError.conflict("Saved record is missing.") }
         try durable(try encoded(expectedHash), at: integrity, .pushed)
         // The one full flush: it empties the drive cache, which now holds every
         // write above, so the save is durable before the intent goes.
@@ -607,7 +607,7 @@ public final class HomeStore {
             cursor.appendPathComponent(String(component))
             var s = stat()
             if lstat(cursor.path, &s) == 0 {
-                guard s.st_mode & S_IFMT == S_IFREG || s.st_mode & S_IFMT == S_IFDIR else { throw SevraError.refused("Home storage requires ordinary files and folders; symbolic links and special files are refused.") }
+                guard s.st_mode & S_IFMT == S_IFREG || s.st_mode & S_IFMT == S_IFDIR else { throw AppRuntimeError.refused("Home storage requires ordinary files and folders; symbolic links and special files are refused.") }
             }
         }
     }
@@ -619,7 +619,7 @@ public final class HomeStore {
         let url = root.appendingPathComponent("db/" + doc.path)
         if existing { _ = try command(["body", "set", url.path, "--body-file", temp.path, "--json"]) }
         else {
-            let result = try command(["write", doc.path, "--dir", root.appendingPathComponent("db").path, "--type", doc.type, "--summary", doc.summary ?? (doc.immutable ? "Immutable conversation event" : "Sevra thread or unsent draft"), "--body-file", temp.path, "--json"])
+            let result = try command(["write", doc.path, "--dir", root.appendingPathComponent("db").path, "--type", doc.type, "--summary", doc.summary ?? (doc.immutable ? "Immutable conversation event" : "Slotstream thread or unsent draft"), "--body-file", temp.path, "--json"])
             if let object = try JSONSerialization.jsonObject(with: result) as? [String: Any], let actual = object["written"] as? String, actual != doc.path {
                 _ = try command(["rename", actual, doc.path, "--json"])
             }
@@ -631,19 +631,19 @@ public final class HomeStore {
         let parts = path.split(separator: "/", omittingEmptySubsequences: false)
         guard parts.count >= 3, parts[0] == "extensions", ["miniapps", "skills"].contains(parts[1]),
               parts.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." && !$0.hasPrefix(".") && $0.utf8.count <= 128 }) else {
-            throw SevraError.refused("Invalid extension file path.")
+            throw AppRuntimeError.refused("Invalid extension file path.")
         }
     }
-    /// The documents Sevra tracks under a prefix, such as app records.
+    /// The documents Slotstream tracks under a prefix, such as app records.
     func documents(under prefix: String) -> [String] { documentHashes.keys.filter { $0.hasPrefix(prefix) }.sorted() }
     /// Reads a tracked record's body. The bytes must match the integrity
-    /// ledger, which proves they are exactly what dbmd wrote for Sevra.
+    /// ledger, which proves they are exactly what dbmd wrote for Slotstream.
     func trackedBody(_ path: String) throws -> String {
-        guard let expected = documentHashes[path] else { throw SevraError.refused("Unknown Home record.") }
+        guard let expected = documentHashes[path] else { throw AppRuntimeError.refused("Unknown Home record.") }
         let url = root.appendingPathComponent("db/" + path)
         try checkPlainPath(url)
         let data = try Data(contentsOf: url)
-        guard digestBytes(data) == expected else { throw SevraError.conflict("A Home record changed outside Sevra: \(path). Writes and AI context are paused; its bytes are preserved.") }
+        guard digestBytes(data) == expected else { throw AppRuntimeError.conflict("A Home record changed outside Slotstream: \(path). Writes and AI context are paused; its bytes are preserved.") }
         let text = String(decoding: data, as: UTF8.self)
         let body = RecordText.body(of: text)
         return body.isEmpty ? try self.body(url) : body.trimmingCharacters(in: .newlines)
@@ -672,7 +672,7 @@ public final class HomeStore {
     public static func validateFilename(_ name: String) throws {
         guard !name.hasPrefix("."), name.hasSuffix(".md"), name.utf8.count <= 100,
               !name.isEmpty, name.unicodeScalars.allSatisfy({ CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.").contains($0) }) else {
-            throw SevraError.refused("Use a simple Markdown filename without folders, such as briefing.md.")
+            throw AppRuntimeError.refused("Use a simple Markdown filename without folders, such as briefing.md.")
         }
     }
     private func body(_ path: URL) throws -> String {
@@ -680,10 +680,10 @@ public final class HomeStore {
         let object = try JSONSerialization.jsonObject(with: result)
         if let text = object as? String { return text.trimmingCharacters(in: .newlines) }
         if let d = object as? [String: Any], let text = d["body"] as? String { return text.trimmingCharacters(in: .newlines) }
-        throw SevraError.unavailable("Unexpected db.md response for a record body.")
+        throw AppRuntimeError.unavailable("Unexpected db.md response for a record body.")
     }
     @discardableResult private func command(_ arguments: [String]) throws -> Data {
-        guard lockFD >= 0 else { throw SevraError.refused("This Home is closed.") }
+        guard lockFD >= 0 else { throw AppRuntimeError.refused("This Home is closed.") }
         let p = Process(); p.executableURL = dbmd; p.arguments = arguments; p.currentDirectoryURL = root.appendingPathComponent("db")
         p.environment = ["HOME": NSHomeDirectory(), "PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8"]
         let output = Pipe(); p.standardOutput = output; p.standardError = output
@@ -695,11 +695,11 @@ public final class HomeStore {
         defer { timeout.cancel(); hardTimeout.cancel() }
         var result = Data()
         while let next = try output.fileHandleForReading.read(upToCount: 65536), !next.isEmpty {
-            guard result.count + next.count <= 16 * 1024 * 1024 else { kill(p.processIdentifier, SIGKILL); p.waitUntilExit(); throw SevraError.refused("db.md returned more than the response budget.") }
+            guard result.count + next.count <= 16 * 1024 * 1024 else { kill(p.processIdentifier, SIGKILL); p.waitUntilExit(); throw AppRuntimeError.refused("db.md returned more than the response budget.") }
             result.append(next)
         }
         p.waitUntilExit()
-        guard p.terminationStatus == 0 else { throw SevraError.refused("db.md could not complete the operation: " + String(decoding: result.prefix(2048), as: UTF8.self)) }
+        guard p.terminationStatus == 0 else { throw AppRuntimeError.refused("db.md could not complete the operation: " + String(decoding: result.prefix(2048), as: UTF8.self)) }
         return result
     }
 }
@@ -708,9 +708,9 @@ public final class HomeStore {
 /// data is pushed to the device, and a later full flush makes it durable.
 func syncFile(_ url: URL, full: Bool = true) throws {
     let fd = open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
-    guard fd >= 0 else { throw SevraError.refused("Cannot open saved file for synchronization.") }
+    guard fd >= 0 else { throw AppRuntimeError.refused("Cannot open saved file for synchronization.") }
     defer { close(fd) }
-    guard (full ? fcntl(fd, F_FULLFSYNC) : fsync(fd)) == 0 else { throw SevraError.refused("Storage did not acknowledge a durable save.") }
+    guard (full ? fcntl(fd, F_FULLFSYNC) : fsync(fd)) == 0 else { throw AppRuntimeError.refused("Storage did not acknowledge a durable save.") }
 }
 /// How far `durable` carries a write before it returns.
 enum Durability {
@@ -723,21 +723,21 @@ enum Durability {
 }
 func syncDirectory(_ url: URL) throws {
     let fd = open(url.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-    guard fd >= 0 else { throw SevraError.refused("Cannot open the save directory.") }
+    guard fd >= 0 else { throw AppRuntimeError.refused("Cannot open the save directory.") }
     defer { close(fd) }
-    guard fsync(fd) == 0 else { throw SevraError.refused("Could not synchronize the save directory.") }
+    guard fsync(fd) == 0 else { throw AppRuntimeError.refused("Could not synchronize the save directory.") }
 }
 func durable(_ data: Data, at url: URL, _ level: Durability = .flushed) throws {
     let temp = url.deletingLastPathComponent().appendingPathComponent(".write-" + UUID().uuidString)
     let fd = open(temp.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
-    guard fd >= 0 else { throw SevraError.refused("Cannot stage a save. Check free space and folder access.") }
+    guard fd >= 0 else { throw AppRuntimeError.refused("Cannot stage a save. Check free space and folder access.") }
     defer { close(fd); unlink(temp.path) }
     try data.withUnsafeBytes { bytes in
         var offset = 0
         while offset < bytes.count {
             let count = Darwin.write(fd, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
             if count < 0 && errno == EINTR { continue }
-            guard count > 0 else { throw SevraError.refused("Storage failed during save. Your previous revision is preserved.") }
+            guard count > 0 else { throw AppRuntimeError.refused("Storage failed during save. Your previous revision is preserved.") }
             offset += count
         }
     }
@@ -747,6 +747,6 @@ func durable(_ data: Data, at url: URL, _ level: Durability = .flushed) throws {
     case .pushed: synced = fsync(fd)
     case .flushed: synced = fcntl(fd, F_FULLFSYNC)
     }
-    guard synced == 0, rename(temp.path, url.path) == 0 else { throw SevraError.refused("Storage did not confirm the save.") }
+    guard synced == 0, rename(temp.path, url.path) == 0 else { throw AppRuntimeError.refused("Storage did not confirm the save.") }
     if level != .none { try syncDirectory(url.deletingLastPathComponent()) }
 }

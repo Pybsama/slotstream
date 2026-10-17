@@ -1,11 +1,11 @@
 .DS_Store
 .build/
 *.xcodeproj
-!apps/macos/Sevra.xcodeproj/
-apps/macos/Sevra.xcodeproj/xcuserdata/
-# Xcode's own copy of the package pins. Tools/build_sevra_xcode.sh seeds it from
+!apps/macos/Slotstream.xcodeproj/
+apps/macos/Slotstream.xcodeproj/xcuserdata/
+# Xcode's own copy of the package pins. Tools/build_slotstream_xcode.sh seeds it from
 # apps/macos/Package.resolved, the one place the app's versions are pinned.
-apps/macos/Sevra.xcodeproj/project.xcworkspace/
+apps/macos/Slotstream.xcodeproj/project.xcworkspace/
 .swiftpm/
 models/
 *.ssmodel/

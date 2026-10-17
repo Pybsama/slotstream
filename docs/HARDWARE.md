@@ -39,7 +39,7 @@ process your question. Long conversations take longer to process.
 Your chip, SSD, and other running apps affect speed. A memory size alone
 isn't enough to predict it.
 
-Sevra Desktop's current development build keeps Original 4-bit in Auto,
+Slotstream Desktop's current development build keeps Original 4-bit in Auto,
 based on the comparisons so far. It selects a memory budget when the model
 loads. Separate runtime management adjusts the cache as available memory
 changes. Quantization, the memory ceiling and runtime adjustment have

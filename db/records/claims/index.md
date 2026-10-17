@@ -2,11 +2,18 @@
 type: index
 scope: type-folder
 folder: records/claims
-updated: 2026-10-12T16:34:40.245311Z
+updated: 2026-10-16T06:32:39.206486Z
 ---
 
 # records/claims
 
+- [[records/claims/sevra-mac-recognition-40-pages]] — Slotstream recognizes text on at most 40 pages per request
+- [[records/claims/sevra-mac-working-notes-eight-responses]] — Slotstream keeps working notes in memory for the eight most recent responses
+- [[records/claims/continued-turn-prefill-cost]] — A continued turn pays one partial prefill pass: 2.47 s against 8.56 s of follow-up prefill, against 26.3 s cold
+- [[records/claims/sevra-mac-eight-attachments]] — A Slotstream thread holds up to eight attachments
+- [[records/claims/sevra-mac-text-files-8-mb]] — Slotstream reads text and code files up to 8 MB each
+- [[records/claims/sevra-mac-documents-64-mb]] — Slotstream reads rich documents up to 64 MB
+- [[records/claims/sevra-mac-folders-2000-files]] — Slotstream reads folders of up to 2,000 files
 - [[records/claims/keepalive-and-direct-reads-1-22x-at-22-gb]] — The GPU keepalive and direct demand reads made decode 1.22x faster at 22 GB with the draft head and lookahead
 - [[records/claims/keepalive-and-direct-reads-1-28x-at-10-gb]] — The GPU keepalive and direct demand reads made decode 1.28x faster at a 10 GB target without the draft head
 - [[records/claims/gpu-keepalive-energy-7-percent-at-16-gb]] — The GPU keepalive raised energy per generated token 7% at 16 GB
@@ -36,14 +43,12 @@ updated: 2026-10-12T16:34:40.245311Z
 - [[records/claims/warm-decode-m4-max-64gb-external-ssd-community]] — M4 Max 64 GB from a 10 Gb/s external SSD: 2.98 tok/s
 - [[records/claims/warm-decode-m4-max-64gb-community]] — M4 Max 64 GB community report: 15.93 tok/s
 - [[records/claims/warm-decode-m2-16gb-0-2-3-rerun-community]] — M2 mini 0.2.3 re-run: 1.48 tok/s
-- [[records/claims/sevra-mac-folders-2000-files]] — Sevra reads folders of up to 2,000 files
 - [[records/claims/release-2k-prose-current-timing]] — Installed-release prose first-read range and ordinary exact-repeat latency at the measured small-budget profile.
 - [[records/claims/release-2k-code-current-timing]] — Installed-release code first-read range and ordinary exact-repeat latency at the measured small-budget profile.
 - [[records/claims/tier-estimate-10-tok-s-at-32-gb]] — A 32 GB Mac is estimated at about 10 tok/s with speculative decoding
 - [[records/claims/warm-decode-0-2-19-at-22-gb]] — Warm decode is 15.86 tok/s with the 0.2.19 corrected forecast at a 22 GB target on the development Mac
 - [[records/claims/prose-prefix-reuse-public-timing]] — Exact prose prefix reuse reduces follow-up request time
 - [[records/claims/mtp-prefill-policy-public-timing]] — Qualified long MTP prefill policy reduces paired prefill time
-- [[records/claims/sevra-mac-working-notes-eight-responses]] — Sevra keeps working notes in memory for the eight most recent responses
 - [[records/claims/context-opt-in-65536]] — --max-context 65536 fixes a 65,536-token window
 - [[records/claims/context-cap-32768-tokens]] — Auto keeps a 32,768-token window through 32 GB of RAM
 - [[records/claims/automatic-context-at-36-gb]] — Automatic context at the simulated 36 GB tier
@@ -52,7 +57,6 @@ updated: 2026-10-12T16:34:40.245311Z
 - [[records/claims/recommended-context-65536-from-36-gb]] — Auto picks a 65,536-token window from 36 GB and 32,768 below
 - [[records/claims/malformed-tool-call-token-scores]] — The token a continued turn flipped: a fresh read scored > at 0.9576 and ] at 0.0421
 - [[records/claims/continued-turn-logit-movement]] — Before the resume rule a continued turn moved the prompt logits 3.7% to 5.9% of their spread
-- [[records/claims/continued-turn-prefill-cost]] — A continued turn pays one partial prefill pass: 2.47 s against 8.56 s of follow-up prefill, against 26.3 s cold
 - [[records/claims/verify-split-16k-decode-second-prompt-x1-085]] — Speculative decode with the split verify attention measured x1.085 on a second 16,356-token prompt
 - [[records/claims/verify-split-32k-decode-x1-29]] — Speculative decode with the split verify attention measured x1.29 against the dense pass with a 32,740-token prompt
 - [[records/claims/verify-split-16k-decode-11-82-tok-s]] — Speculative decode with the split verify attention measured 11.82 against 11.67 tok/s (x1.013) at a 22 GB target with a 16,356-token prompt
@@ -74,10 +78,6 @@ updated: 2026-10-12T16:34:40.245311Z
 - [[records/claims/claude-code-instructions-about-15000-tokens]] — Claude Code's instructions and tool descriptions take about 15,000 tokens
 - [[records/claims/coding-agents-verified-versions]] — The coding agents guide names the agent versions that were verified
 - [[records/claims/claude-code-guide-verified-version]] — The Claude Code guide was verified with Claude Code 2.1.270
-- [[records/claims/sevra-mac-recognition-40-pages]] — Sevra recognizes text on at most 40 pages per request
-- [[records/claims/sevra-mac-documents-64-mb]] — Sevra reads rich documents up to 64 MB
-- [[records/claims/sevra-mac-text-files-8-mb]] — Sevra reads text and code files up to 8 MB each
-- [[records/claims/sevra-mac-eight-attachments]] — A Sevra thread holds up to eight attachments
 - [[records/claims/responses-default-output-budget]] — The API reference caps the default Responses reply budget at 8,192 tokens
 - [[records/claims/responses-progress-event-interval]] — The API reference says streamed Responses replies carry a progress event every 10 seconds during a prompt read
 - [[records/claims/codex-guide-progress-event-interval]] — The Codex guide says a progress event arrives every ten seconds during a prompt read

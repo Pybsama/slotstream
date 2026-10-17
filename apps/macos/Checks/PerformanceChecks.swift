@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 private func verifyPerformance(_ value: Bool, _ message: String) throws { try require(value, message) }
@@ -27,9 +27,9 @@ private actor PerformanceProbe: Inference {
         while holdConfiguration { try? await Task.sleep(nanoseconds: 5_000_000) }
         if remainingConfigurationFailures > 0 {
             remainingConfigurationFailures -= 1
-            throw SevraError.refused("Injected obsolete configuration failure")
+            throw AppRuntimeError.refused("Injected obsolete configuration failure")
         }
-        if failConfiguration { throw SevraError.refused("Injected configuration failure") }
+        if failConfiguration { throw AppRuntimeError.refused("Injected configuration failure") }
         changes.append(value); configuring = false
     }
     func unload() { releases += 1 }
@@ -46,7 +46,7 @@ private func eventually(_ predicate: () async -> Bool) async throws {
         if await predicate() { return }
         try await Task.sleep(nanoseconds: 10_000_000)
     }
-    throw SevraError.refused("CHECK FAILED: lifecycle did not settle")
+    throw AppRuntimeError.refused("CHECK FAILED: lifecycle did not settle")
 }
 func performanceChecks(root: URL, dbmd: URL) async throws {
     try performanceProfileBindingChecks()
@@ -170,7 +170,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try PerformancePolicy.validateSaved(restoredRemoved)
     do {
         try PerformancePolicy.validate(restoredRemoved, on: roomy)
-        throw SevraError.refused("CHECK FAILED: removed pack silently fell back")
+        throw AppRuntimeError.refused("CHECK FAILED: removed pack silently fell back")
     } catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "unavailable pack blocks activation") }
     let recovering = LocalInference(preferences: removed)
     try await recovering.configure(.init())
@@ -184,11 +184,11 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try verifyPerformance(savedLegacy.selectingBudget(.custom, currentGB: 24, maximumGB: 33).customGB == 10, "old explicit custom budget retained")
     let machine = Machine.simulated(ramGB: 48, availableGB: 30)
     for invalid in [Double.nan, .infinity, -1, 0, 1, 1000] {
-        do { _ = try PerformancePolicy.plan(.init(budget: .custom, customGB: invalid), on: machine); throw SevraError.refused("CHECK FAILED: invalid custom accepted") }
+        do { _ = try PerformancePolicy.plan(.init(budget: .custom, customGB: invalid), on: machine); throw AppRuntimeError.refused("CHECK FAILED: invalid custom accepted") }
         catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "invalid custom refused") }
     }
     for available: Double? in [nil, .nan, .infinity, -1] {
-        do { _ = try PerformancePolicy.plan(.init(), on: .simulated(ramGB: 48, availableGB: available)); throw SevraError.refused("CHECK FAILED: unreadable availability accepted") }
+        do { _ = try PerformancePolicy.plan(.init(), on: .simulated(ramGB: 48, availableGB: available)); throw AppRuntimeError.refused("CHECK FAILED: unreadable availability accepted") }
         catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "unreadable availability fails closed") }
     }
     try verifyPerformance(PerformancePolicy.maximumGB(on: machine) == PerformancePolicy.maximumGB(on: .simulated(ramGB: 48, availableGB: 3)), "slider hardware range does not move with other apps")
@@ -211,7 +211,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     print("PASS: memory plans \(plans) accepted / \(refused) safely refused; custom ceilings, unavailable readings, persistence, stable ranges and idle/pressure policy")
 
     let probe = PerformanceProbe()
-    let runtime = try SevraRuntime(homeURL: root.appendingPathComponent("performance-home"), dbmd: dbmd, inference: probe)
+    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("performance-home"), dbmd: dbmd, inference: probe)
     try await runtime.saveDraft(threadID: "home", text: "Draft survives resource changes")
     _ = try await runtime.submit(threadID: "home", text: "A bounded question", nonce: "perf-1")
     try await eventually { await probe.calls == 1 }
@@ -224,7 +224,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try await runtime.setPerformancePreferences(.init(budget: budget, customGB: 9))
     let earlyChanges = await probe.changes
     try verifyPerformance(earlyChanges.isEmpty, "budget change never interrupts current response")
-    do { try await runtime.unload(); throw SevraError.refused("CHECK FAILED: released active model") }
+    do { try await runtime.unload(); throw AppRuntimeError.refused("CHECK FAILED: released active model") }
     catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "active release refused") }
     await probe.release()
     try await eventually { await probe.changes.last?.customGB == 9 }
@@ -246,7 +246,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try await eventually { await probe.configuring }
     _ = try await runtime.submit(threadID: "home", text: "Wait for requested settings", nonce: "perf-3")
     await probe.holdSettings(false)
-    do { try await failing.value; throw SevraError.refused("CHECK FAILED: injected settings failure succeeded") }
+    do { try await failing.value; throw AppRuntimeError.refused("CHECK FAILED: injected settings failure succeeded") }
     catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "configuration failure surfaced") }
     let failedAttempts = await probe.configurationAttempts
     await runtime.maintainPerformance()
@@ -290,17 +290,17 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     // The real LocalInference refuses the unchecked setup in activation checks.
     let setupProbe = PerformanceProbe()
     await setupProbe.release()
-    let setupRuntime = try SevraRuntime(homeURL: root.appendingPathComponent("setup-performance-home"), dbmd: dbmd, inference: setupProbe)
+    let setupRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("setup-performance-home"), dbmd: dbmd, inference: setupProbe)
     let setup = ModelSetup(model: root.appendingPathComponent("setup-probe-no-weights"))
-    do { try await setupRuntime.acceptModelSetup(setup); throw SevraError.refused("CHECK FAILED: accepted setup outside maintenance") }
+    do { try await setupRuntime.acceptModelSetup(setup); throw AppRuntimeError.refused("CHECK FAILED: accepted setup outside maintenance") }
     catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "setup acceptance requires stopped local work") }
     try verifyPerformance(await setupProbe.setupAcceptances == 0, "an invalid setup boundary never reaches inference")
     try await setupRuntime.beginModelMaintenance()
     let proposedOwner = LocalInference(model: root.appendingPathComponent("setup-proposal-no-weights"))
     guard let staleSetup = try await proposedOwner.modelSetup(preferences: .init(liveMemory: .fixed)) else {
-        throw SevraError.refused("CHECK FAILED: missing local setup proposal")
+        throw AppRuntimeError.refused("CHECK FAILED: missing local setup proposal")
     }
-    do { try await setupRuntime.acceptModelSetup(staleSetup); throw SevraError.refused("CHECK FAILED: accepted stale setup settings") }
+    do { try await setupRuntime.acceptModelSetup(staleSetup); throw AppRuntimeError.refused("CHECK FAILED: accepted stale setup settings") }
     catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "changed settings refuse stale setup acceptance") }
     try verifyPerformance(await setupProbe.setupAcceptances == 0, "a stale setup never reaches the accepting inference owner")
     try await setupRuntime.acceptModelSetup(setup)
@@ -318,7 +318,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     print("PASS: accepted setup remains inside maintenance and forces the next configuration boundary")
 
     let sleeper = PerformanceProbe()
-    let sleepRuntime = try SevraRuntime(homeURL: root.appendingPathComponent("sleep-home"), dbmd: dbmd, inference: sleeper)
+    let sleepRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("sleep-home"), dbmd: dbmd, inference: sleeper)
     _ = try await sleepRuntime.submit(threadID: "home", text: "Active work", nonce: "sleep-1")
     try await eventually { await sleeper.calls == 1 }
     let queued = try await sleepRuntime.newThread()
@@ -326,7 +326,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try await sleepRuntime.prepareForSleep()
     let asleep = await sleepRuntime.snapshot()
     try verifyPerformance(asleep.home.threads[0].run?.state == .stopped && asleep.home.threads[1].run?.state == .interrupted, "sleep stops active and queued work")
-    do { _ = try await sleepRuntime.submit(threadID: queued, text: "No asleep submission", nonce: "sleep-3"); throw SevraError.refused("CHECK FAILED: accepted asleep") }
+    do { _ = try await sleepRuntime.submit(threadID: queued, text: "No asleep submission", nonce: "sleep-3"); throw AppRuntimeError.refused("CHECK FAILED: accepted asleep") }
     catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "asleep admission refused") }
     await sleepRuntime.wake()
     try verifyPerformance(await sleeper.calls == 1, "wake never replays interrupted work")
@@ -337,7 +337,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     print("PASS: sleep cancellation, queued interruption, unload, admission guard, wake without replay and explicit recovery")
 
     let contextProbe = PerformanceProbe()
-    let contextRuntime = try SevraRuntime(homeURL: root.appendingPathComponent("context-home"), dbmd: dbmd, inference: contextProbe)
+    let contextRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("context-home"), dbmd: dbmd, inference: contextProbe)
     let oversized = String(repeating: "x", count: 16001)
     _ = try await contextRuntime.submit(threadID: "home", text: oversized, nonce: "long-1")
     try await eventually { await contextRuntime.snapshot().home.threads[0].run?.state == .failed }
@@ -361,7 +361,7 @@ private func performanceProfileBindingChecks() throws {
     let plan = try pack.startupPlan(customMemoryGB: 14, on: machine, mtpAvailable: true)
     let observation = ModelPackStartupObservation(pack: pack, hardware: originalHardware, mtpAvailable: true)
     guard let candidate = try pack.startupCandidate(plan: plan, liveMemory: .automatic, observation: observation) else {
-        throw SevraError.refused("CHECK FAILED: fixture needs a complete startup proposal")
+        throw AppRuntimeError.refused("CHECK FAILED: fixture needs a complete startup proposal")
     }
     let binding = PerformanceProfileBinding(generation: generation, pack: pack, candidate: candidate,
         hardware: originalHardware, preferences: preferences)
@@ -420,15 +420,15 @@ func realPerformanceCheckIfRequested() async throws -> Bool {
     if try await realActivationCheckIfRequested() { return true }
     guard CommandLine.arguments.contains("--performance-real") else { return false }
     let args = CommandLine.arguments
-    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw SevraError.refused("Pass a new disposable --home.") }
+    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw AppRuntimeError.refused("Pass a new disposable --home.") }
     let root = URL(fileURLWithPath: args[i + 1])
     guard !FileManager.default.fileExists(atPath: root.path), (Machine.current().availableGB ?? 0) >= 13 else {
-        throw SevraError.refused("Requires a new Home and 13 GB real reclaimable memory.")
+        throw AppRuntimeError.refused("Requires a new Home and 13 GB real reclaimable memory.")
     }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     let preferences = PerformancePreferences(budget: .custom, customGB: 10)
     let inference = LocalInference(preferences: preferences)
-    let runtime = try SevraRuntime(homeURL: root, dbmd: dbmd, inference: inference, performancePreferences: preferences)
+    let runtime = try SlotstreamRuntime(homeURL: root, dbmd: dbmd, inference: inference, performancePreferences: preferences)
     await runtime.maintainPerformance()
     try verifyPerformance(await runtime.snapshot().performance?.loaded == false, "lazy startup")
     let vmBefore = ProcessMemory.vmActivity()
@@ -452,7 +452,7 @@ func realPerformanceCheckIfRequested() async throws -> Bool {
             if let run = snapshot.home.threads[0].run, run.state.terminal {
                 try verifyPerformance(run.state == .completed, "real turn completed: " + run.status)
                 guard let configuration = run.metrics?.configurations?.first else {
-                    throw SevraError.refused("CHECK FAILED: response has no applied configuration")
+                    throw AppRuntimeError.refused("CHECK FAILED: response has no applied configuration")
                 }
                 try verifyPerformance(run.metrics?.configurations?.count == 1
                     && configuration.packID == ModelPackRegistry.baseline.id
@@ -471,7 +471,7 @@ func realPerformanceCheckIfRequested() async throws -> Bool {
             }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
-        throw SevraError.refused("CHECK FAILED: real turn timed out")
+        throw AppRuntimeError.refused("CHECK FAILED: real turn timed out")
     }
     do {
         try await runtime.saveDraft(threadID: "home", text: "Resource QA draft")
@@ -488,7 +488,7 @@ func realPerformanceCheckIfRequested() async throws -> Bool {
         try verifyPerformance((await runtime.snapshot().performance?.budgetGB ?? 100) <= 9.0001, "new live budget respects custom ceiling")
         do {
             try await runtime.setPerformancePreferences(.init(budget: .custom, customGB: 7))
-            throw SevraError.refused("CHECK FAILED: unsupported setting applied")
+            throw AppRuntimeError.refused("CHECK FAILED: unsupported setting applied")
         } catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "unsupported saved setting refused") }
         try verifyPerformance(inference.performanceTelemetry?.isLoaded == true, "invalid request preserves loaded configuration until release")
         let idleStart = ProcessInfo.processInfo.systemUptime

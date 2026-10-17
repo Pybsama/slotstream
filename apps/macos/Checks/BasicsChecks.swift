@@ -3,7 +3,7 @@ import AppKit
 import CoreText
 import ImageIO
 import UniformTypeIdentifiers
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 // Scripted checks for the basics: reading documents and images, reviewed file
@@ -141,12 +141,12 @@ enum Fixture {
 }
 
 func object(_ text: String) throws -> [String: Any] {
-    guard let value = try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] else { throw SevraError.refused("CHECK FAILED: tool result is not an object: " + text.prefix(200)) }
+    guard let value = try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any] else { throw AppRuntimeError.refused("CHECK FAILED: tool result is not an object: " + text.prefix(200)) }
     return value
 }
 
 func object(_ data: Data) throws -> [String: Any] {
-    guard let value = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw SevraError.refused("CHECK FAILED: response is not an object") }
+    guard let value = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw AppRuntimeError.refused("CHECK FAILED: response is not an object") }
     return value
 }
 
@@ -158,16 +158,16 @@ func refuses(_ label: String, containing fragment: String? = nil, _ body: () asy
         if let fragment { try require(message.localizedCaseInsensitiveContains(fragment), label + " (message: " + message + ")") }
         return
     }
-    throw SevraError.refused("CHECK FAILED: " + label)
+    throw AppRuntimeError.refused("CHECK FAILED: " + label)
 }
 
 /// Like require, for conditions that need try or await to compute.
-func check(_ value: Bool, _ message: String) throws { if !value { throw SevraError.refused("CHECK FAILED: " + message) } }
+func check(_ value: Bool, _ message: String) throws { if !value { throw AppRuntimeError.refused("CHECK FAILED: " + message) } }
 
 func tool(_ name: String, _ arguments: [String: JSONValue] = [:]) -> ProposedTool { ProposedTool(name: name, arguments: arguments) }
 
 func basicsChecks(root: URL, dbmd: URL) async throws {
-    guard let helper = DocumentReader.locateHelper() else { throw SevraError.refused("CHECK FAILED: sevra-extract is missing. Build it beside the checks or set SEVRA_EXTRACT.") }
+    guard let helper = DocumentReader.locateHelper() else { throw AppRuntimeError.refused("CHECK FAILED: slotstream-extract is missing. Build it beside the checks or set SLOTSTREAM_EXTRACT.") }
     let base = root.appendingPathComponent("basics")
     try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
     try sandboxChecks(helper: helper, base: base)
@@ -185,7 +185,7 @@ func basicsChecks(root: URL, dbmd: URL) async throws {
     try await appChecks(base: base, dbmd: dbmd, helper: helper)
 }
 
-/// The limits docs/SEVRA-MAC.md states. Each one has a claim record in the
+/// The limits docs/SLOTSTREAM-MAC.md states. Each one has a claim record in the
 /// store that names this check as its gate. The 64 MB document refusal and
 /// live folder navigation are exercised in the source and navigation checks.
 func documentedLimitChecks(reader: DocumentReader, base: URL) async throws {
@@ -212,7 +212,7 @@ func documentedLimitChecks(reader: DocumentReader, base: URL) async throws {
     let single = SourceSession(reader: reader)
     try single.attach(url: large, access: .read)
     let listing = try object(single.execute(tool("source.list"), cancellation: Cancellation()))
-    guard let largeID = (listing["files"] as? [[String: Any]])?.first?["id"] as? String else { throw SevraError.refused("CHECK FAILED: the large file is not listed") }
+    guard let largeID = (listing["files"] as? [[String: Any]])?.first?["id"] as? String else { throw AppRuntimeError.refused("CHECK FAILED: the large file is not listed") }
     try await refuses("a text file over 8 MB is refused", containing: "(8 MB)") {
         _ = try single.execute(tool("source.read", ["id": .string(largeID)]), cancellation: Cancellation())
     }
@@ -224,7 +224,7 @@ func documentedLimitChecks(reader: DocumentReader, base: URL) async throws {
 func sandboxChecks(helper: URL, base: URL) throws {
     // A file directly in the per-user temporary folder: the parsers must not
     // read it or list its folder, even though their own work folder is there.
-    let probe = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("sevra-probe-\(UUID().uuidString).txt")
+    let probe = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().appendingPathComponent("slotstream-probe-\(UUID().uuidString).txt")
     try Data("private".utf8).write(to: probe)
     defer { try? FileManager.default.removeItem(at: probe) }
     let listener = socket(AF_INET, SOCK_STREAM, 0)
@@ -326,7 +326,7 @@ func sourceChecks(reader: DocumentReader, base: URL) async throws {
     let paths = files.compactMap { $0["path"] as? String }
     try check(paths.contains("Project Files/docs/cedar.pdf") && paths.contains("single-note.txt") && !paths.contains { $0.contains(".env") || $0.contains("node_modules") }, "listing names each attachment and hides private files")
     func id(_ suffix: String) throws -> String {
-        guard let row = files.first(where: { ($0["path"] as? String)?.hasSuffix(suffix) == true }), let value = row["id"] as? String else { throw SevraError.refused("CHECK FAILED: no listed file \(suffix)") }
+        guard let row = files.first(where: { ($0["path"] as? String)?.hasSuffix(suffix) == true }), let value = row["id"] as? String else { throw AppRuntimeError.refused("CHECK FAILED: no listed file \(suffix)") }
         return value
     }
 
@@ -363,13 +363,13 @@ func sourceChecks(reader: DocumentReader, base: URL) async throws {
     // Images and scanned pages are recognized on read. The helper first proves that
     // Vision works inside its sandbox. On GitHub's macOS runners it does not, although
     // Vision works outside the sandbox there, and the read fails with the helper's own
-    // error. CI sets SEVRA_CHECKS_OCR_OPTIONAL to accept exactly that error; everywhere
+    // error. CI sets SLOTSTREAM_CHECKS_OCR_OPTIONAL to accept exactly that error; everywhere
     // else recognition must work.
     var recognized = true
     do {
         let invoice = try object(session.execute(tool("source.read", ["id": .string(try id("invoice.png"))]), cancellation: cancel))
         try check((invoice["content"] as? String)?.contains("482") == true && session.citations.last?.method == "ocr", "image text is recognized and marked")
-    } catch where ProcessInfo.processInfo.environment["SEVRA_CHECKS_OCR_OPTIONAL"] == "1"
+    } catch where ProcessInfo.processInfo.environment["SLOTSTREAM_CHECKS_OCR_OPTIONAL"] == "1"
                     && error.localizedDescription == "Text recognition is unavailable on this Mac right now." {
         recognized = false
         print("SKIP: image and scan recognition; the document helper reports text recognition unavailable on this Mac")
@@ -430,7 +430,7 @@ func sourceChecks(reader: DocumentReader, base: URL) async throws {
 
 // MARK: reviewed changes
 
-func waitFor(_ runtime: SevraRuntime, _ id: String) async throws -> WorkThread { try await terminal(runtime, id) }
+func waitFor(_ runtime: SlotstreamRuntime, _ id: String) async throws -> WorkThread { try await terminal(runtime, id) }
 
 /// A proposal the host refuses for a reason the model can fix used to end the
 /// job. A real-model run hit it by passing an app id that matches nothing,
@@ -438,7 +438,7 @@ func waitFor(_ runtime: SevraRuntime, _ id: String) async throws -> WorkThread {
 func refusedProposalChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let html = """
     <!doctype html><html><head><meta charset="utf-8"><title>Counter</title></head><body><button id="plus">+</button>
-    <script>async function load(){const items=await sevra.list('counter');}load();</script></body></html>
+    <script>async function load(){const items=await slotstream.list('counter');}load();</script></body></html>
     """
     func propose(_ arguments: [String: JSONValue]) -> EngineTurn {
         var all: [String: JSONValue] = ["name": .string("Counter"), "description": .string("Count things."),
@@ -447,7 +447,7 @@ func refusedProposalChecks(base: URL, dbmd: URL, helper: URL) async throws {
         return EngineTurn(text: "Here it is.", calls: [tool("app.propose", all)])
     }
     let corrected = ScriptedInference(turns: [propose(["app_id": .string("counter")]), propose([:])])
-    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Refused Home"), dbmd: dbmd, inference: corrected, helper: helper)
+    let runtime = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Refused Home"), dbmd: dbmd, inference: corrected, helper: helper)
     let thread = try await runtime.newThread(title: "Counter")
     try await runtime.submit(threadID: thread, text: "/app build a counter", nonce: "refused")
     let state = try await waitFor(runtime, thread)
@@ -461,12 +461,12 @@ func refusedProposalChecks(base: URL, dbmd: URL, helper: URL) async throws {
 
     // A model that keeps proposing an invalid app still stops, with nothing staged.
     let stubborn = ScriptedInference(turns: Array(repeating: propose(["app_id": .string("counter")]), count: 4))
-    let second = try SevraRuntime(homeURL: base.appendingPathComponent("Stubborn Home"), dbmd: dbmd, inference: stubborn, helper: helper)
+    let second = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Stubborn Home"), dbmd: dbmd, inference: stubborn, helper: helper)
     let other = try await second.newThread(title: "Counter again")
     try await second.submit(threadID: other, text: "/app build a counter", nonce: "stubborn")
     let stopped = try await waitFor(second, other)
     let attempts = (stopped.run?.trace ?? []).filter { $0.hasPrefix("app.propose: refused.") }.count
-    try check(stopped.run?.state == .failed && stopped.run?.appProposal == nil && attempts == SevraRuntime.proposalRetries,
+    try check(stopped.run?.state == .failed && stopped.run?.appProposal == nil && attempts == SlotstreamRuntime.proposalRetries,
               "a job that keeps being refused stops after its corrections, with nothing staged (\(attempts), \(stopped.run?.state.rawValue ?? ""))")
     try await second.shutdown()
     print("PASS: a refused proposal is corrected once, and a job that keeps being refused still stops")
@@ -483,7 +483,7 @@ func attachmentReferenceChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let odd = folder.appendingPathComponent("notes \"final\".md")
     try Data("# Notes\n".utf8).write(to: odd)
     let script = ScriptedInference(turns: [EngineTurn(text: "A pitch deck."), EngineTurn(text: "Still a pitch deck."), EngineTurn(text: "Hello.")])
-    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Reference Home"), dbmd: dbmd, inference: script, helper: helper)
+    let runtime = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Reference Home"), dbmd: dbmd, inference: script, helper: helper)
     func system() async -> String { await script.observedContexts.last?.first?.content ?? "" }
 
     let thread = try await runtime.newThread(title: "Deck")
@@ -529,7 +529,7 @@ func narrationChecks(base: URL, dbmd: URL, helper: URL) async throws {
         EngineTurn(text: "", calls: [tool("source.list")]),
         EngineTurn(text: "Listed."),
     ])
-    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Narration Home"), dbmd: dbmd, inference: script, helper: helper)
+    let runtime = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Narration Home"), dbmd: dbmd, inference: script, helper: helper)
     let thread = try await runtime.newThread(title: "Budget")
     _ = try await runtime.attach(threadID: thread, folder: folder, access: .read)
     func answer(_ t: WorkThread) -> String { t.messages.last { $0.role == "assistant" && $0.runID == t.run?.id }?.text ?? "" }
@@ -552,7 +552,7 @@ func narrationChecks(base: URL, dbmd: URL, helper: URL) async throws {
     state = try await waitFor(runtime, thread)
     let notes = (state.run?.trace ?? []).filter { $0.hasPrefix("Model: ") }
     try check(state.run?.state == .completed && answer(state) == "Listed." && notes.count == 1
-              && notes[0].count == "Model: ".count + SevraRuntime.narrationLimit && notes[0].hasSuffix("…"),
+              && notes[0].count == "Model: ".count + SlotstreamRuntime.narrationLimit && notes[0].hasSuffix("…"),
               "long words are bounded to one line and a silent round adds no note (\(notes))")
     try check(!state.messages.contains { $0.role == "assistant" && ($0.text.contains("checking") || $0.text.contains("look through")) },
               "no tool round's words reach any answer")
@@ -569,7 +569,7 @@ func changeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     try Data(original.utf8).write(to: plan)
     chmod(plan.path, 0o640)
     let tagName = "com.apple.metadata:_kMDItemUserTags"
-    let tagValue = Data("sevra-check".utf8)
+    let tagValue = Data("slotstream-check".utf8)
     _ = tagValue.withUnsafeBytes { setxattr(plan.path, tagName, $0.baseAddress, tagValue.count, 0, 0) }
     func read(_ url: URL) throws -> String { try String(contentsOf: url, encoding: .utf8) }
     let edit: [String: JSONValue] = ["id": .string("a1:plan.md"), "old": .string("Status: draft"), "new": .string("Status: approved")]
@@ -586,7 +586,7 @@ func changeChecks(base: URL, dbmd: URL, helper: URL) async throws {
         readPlan, EngineTurn(text: "", calls: [tool("file.edit", edit)]), EngineTurn(text: "Staged."),
     ])
     let home = base.appendingPathComponent("Change Home")
-    var runtime: SevraRuntime! = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
+    var runtime: SlotstreamRuntime! = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
     let thread = try await runtime.newThread(title: "Edits")
     let attached = try await runtime.attach(threadID: thread, folder: folder, access: .read)
     try await runtime.submit(threadID: thread, text: "What does the plan say?", nonce: "look")
@@ -599,7 +599,7 @@ func changeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     state = try await waitFor(runtime, thread)
     tools = await script.observedTools
     try check(tools[1].contains("file.edit") && tools[1].contains("file.create"), "changeable folder offers change tools")
-    guard let set = state.run?.changes else { throw SevraError.refused("CHECK FAILED: no staged changes (\(state.run?.status ?? ""))") }
+    guard let set = state.run?.changes else { throw AppRuntimeError.refused("CHECK FAILED: no staged changes (\(state.run?.status ?? ""))") }
     try check(state.run?.state == .needsYou && state.lifecycle == .needsYou && set.state == .proposed && set.changes.count == 2, "staged changes wait for review")
     try check(state.run?.trace.first?.contains("file.edit: refused") == true, "an edit before reading is refused")
     try check(set.changes[0].operation == .update && set.changes[0].preview.contains { $0.kind == .added && $0.text == "Status: approved" }
@@ -625,7 +625,7 @@ func changeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let undone = try await runtime.undoChanges(threadID: thread, changeSetID: set.id)
     try check(undone.state == .undone && read(plan) == original, "undo restores the previous bytes")
     try check(!fm.fileExists(atPath: folder.appendingPathComponent("notes").path), "undo removes the created file and its new folder")
-    guard let trashed = undone.changes[1].trashedPath else { throw SevraError.refused("CHECK FAILED: created file was not moved to the Trash") }
+    guard let trashed = undone.changes[1].trashedPath else { throw AppRuntimeError.refused("CHECK FAILED: created file was not moved to the Trash") }
     try check(try read(URL(fileURLWithPath: trashed)) == "# Summary\n\nApproved.\n", "created file is recoverable from the Trash")
     try fm.removeItem(atPath: trashed) // This check's own fixture.
     try await refuses("undo happens once", containing: "Only written changes") { _ = try await runtime.undoChanges(threadID: thread, changeSetID: set.id) }
@@ -637,7 +637,7 @@ func changeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     var pending = state.run!.changes!
     let external = "# Plan\n\nOwner: Ana\nStatus: draft\n"
     try Data(external.utf8).write(to: plan)
-    try await refuses("a changed base is refused", containing: "changed after Sevra read it") { _ = try await runtime.approveChanges(threadID: thread, changeSetID: pending.id, digest: pending.digest) }
+    try await refuses("a changed base is refused", containing: "changed after Slotstream read it") { _ = try await runtime.approveChanges(threadID: thread, changeSetID: pending.id, digest: pending.digest) }
     state = await runtime.snapshot().home.threads.first { $0.id == thread }!
     try check(try read(plan) == external && state.run?.state == .needsYou && state.run?.changes?.state == .proposed, "external edit is kept and review stays open")
     try await runtime.discardChanges(threadID: thread, changeSetID: pending.id)
@@ -673,7 +673,7 @@ func changeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     pending = try await waitFor(runtime, thread).run!.changes!
     try await runtime.shutdown()
     runtime = nil
-    runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
+    runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
     state = await runtime.snapshot().home.threads.first { $0.id == thread }!
     try check(state.run?.state == .needsYou && state.run?.changes?.id == pending.id && state.run?.changes?.changes.first?.content.contains("Status: approved") == true, "a pending review survives restart")
     try await refuses("approval needs the folder attached", containing: "Attach") { _ = try await runtime.approveChanges(threadID: thread, changeSetID: pending.id, digest: pending.digest) }
@@ -701,7 +701,7 @@ func crashApplyChildIfRequested() async throws -> Bool {
                                      tool("file.write", ["id": .string("a1:b.txt"), "content": .string("second changed\n")])]),
         EngineTurn(text: "Two changes staged."),
     ]
-    let runtime = try SevraRuntime(homeURL: URL(fileURLWithPath: args[2]), dbmd: URL(fileURLWithPath: args[4]), inference: ScriptedInference(turns: turns), helper: URL(fileURLWithPath: args[5]))
+    let runtime = try SlotstreamRuntime(homeURL: URL(fileURLWithPath: args[2]), dbmd: URL(fileURLWithPath: args[4]), inference: ScriptedInference(turns: turns), helper: URL(fileURLWithPath: args[5]))
     let thread = try await runtime.newThread(title: "Crash")
     try await runtime.attach(threadID: thread, folder: URL(fileURLWithPath: args[3]), access: .change)
     try await runtime.submit(threadID: thread, text: "Change both files", nonce: "crash")
@@ -721,7 +721,7 @@ func crashRecoveryChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let child = try Fixture.run(Bundle.main.executableURL!, ["--crash-apply", home.path, folder.path, dbmd.path, helper.path])
     try check(child.status == 77, "child stopped after the first write (status \(child.status)): " + String(decoding: child.error, as: UTF8.self))
     try check(try String(contentsOf: a, encoding: .utf8) == "first changed\n" && String(contentsOf: b, encoding: .utf8) == "second\n", "exactly one file was written before the crash")
-    let runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
+    let runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
     let thread = await runtime.snapshot().home.threads.first { $0.title == "Crash" }!
     let set = thread.run!.changes!
     try check(set.state == .partial && set.changes[0].status == .applied && set.changes[1].status == .pending && set.note?.contains("closed while applying") == true
@@ -770,7 +770,7 @@ func knowledgeChecks(base: URL, dbmd: URL, helper: URL) async throws {
         ]),
         EngineTurn(text: "I staged two more updates."),
     ])
-    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Knowledge Home"), dbmd: dbmd, inference: script, helper: helper)
+    let runtime = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Knowledge Home"), dbmd: dbmd, inference: script, helper: helper)
     let reader = try await runtime.newThread(title: "Ask the KB")
     let info = try await runtime.attach(threadID: reader, folder: kb, access: .read)
     try check(info.kind == .knowledge, "a folder with DB.md attaches as a knowledge base")
@@ -788,7 +788,7 @@ func knowledgeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     state = try await waitFor(runtime, writer)
     tools = await script.observedTools
     try check(tools[2].contains("kb.create") && tools[2].contains("kb.append") && !tools[2].contains("file.create"), "changeable knowledge base offers record tools only")
-    guard let set = state.run?.changes else { throw SevraError.refused("CHECK FAILED: no staged records (\(state.run?.status ?? ""))") }
+    guard let set = state.run?.changes else { throw AppRuntimeError.refused("CHECK FAILED: no staged records (\(state.run?.status ?? ""))") }
     let refusals = state.run?.trace.filter { $0.contains(": refused.") }.count ?? 0
     try check(refusals == 3, "frontmatter, store contract and path escapes are refused (\(state.run?.trace ?? []))")
     try check(set.changes.map(\.operation) == [.recordUpdate, .recordCreate] && set.changes[1].recordType == "decision", "record changes are staged for review")
@@ -806,7 +806,7 @@ func knowledgeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     // A person edits a record while earlier records in the set are written.
     try await runtime.submit(threadID: writer, text: "Add a review record and mark Juniper reviewed", nonce: "kb-race")
     state = try await waitFor(runtime, writer)
-    guard let race = state.run?.changes, race.changes.map(\.operation) == [.recordCreate, .recordUpdate] else { throw SevraError.refused("CHECK FAILED: no second record set (\(state.run?.status ?? ""))") }
+    guard let race = state.run?.changes, race.changes.map(\.operation) == [.recordCreate, .recordUpdate] else { throw AppRuntimeError.refused("CHECK FAILED: no second record set (\(state.run?.status ?? ""))") }
     let edited = Data(String(decoding: originalRecord, as: UTF8.self).replacingOccurrences(of: "October 12", with: "October 19").utf8)
     await runtime.setChangeFault { stage in if stage == "applied-1" { try? edited.write(to: record) } }
     let raced = try await runtime.approveChanges(threadID: writer, changeSetID: race.id, digest: race.digest)
@@ -816,7 +816,7 @@ func knowledgeChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let reverted = try await runtime.undoChanges(threadID: writer, changeSetID: race.id)
     if let trashed = reverted.changes[0].trashedPath { try fm.removeItem(atPath: trashed) } // This check's own fixture.
     try check(reverted.state == .undone && (try Data(contentsOf: record)) == edited && (try decisions()) == ["records/decisions/juniper.md"] && (validates()),
-              "undoing the partial set removes only what Sevra wrote")
+              "undoing the partial set removes only what Slotstream wrote")
     try await runtime.shutdown()
     print("PASS: knowledge base search and query, record-only tools, protected frontmatter/contract/paths, db.md writes, index and validation, undo with index rebuild, mid-write record edits kept")
 }
@@ -836,18 +836,18 @@ func skillChecks(base: URL, dbmd: URL, helper: URL) async throws {
         EngineTurn(text: "A plain answer."),
     ])
     let home = base.appendingPathComponent("Skill Home")
-    var runtime: SevraRuntime! = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
+    var runtime: SlotstreamRuntime! = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
     let thread = try await runtime.newThread(title: "Skills")
     try await runtime.submit(threadID: thread, text: "/skill Save a skill named app", nonce: "reserved")
     var state = try await waitFor(runtime, thread)
     let tools = await script.observedTools
     try check(state.run?.state == .failed && state.run?.status.contains("cannot be app or skill") == true
-              && (state.run?.trace ?? []).filter { $0.hasPrefix("skill.propose: refused.") }.count == SevraRuntime.proposalRetries,
+              && (state.run?.trace ?? []).filter { $0.hasPrefix("skill.propose: refused.") }.count == SlotstreamRuntime.proposalRetries,
               "a reserved skill name is refused, corrected up to the bound, and then the job stops")
     try check(tools[0] == ["skill.propose"] && state.run?.skill?.builtIn == true, "the built-in /skill offers only skill.propose")
     try await runtime.submit(threadID: thread, text: "/skill Save my weekly review steps as a skill", nonce: "propose")
     state = try await waitFor(runtime, thread)
-    guard let proposal = state.run?.skillProposal else { throw SevraError.refused("CHECK FAILED: no skill proposal") }
+    guard let proposal = state.run?.skillProposal else { throw AppRuntimeError.refused("CHECK FAILED: no skill proposal") }
     try check(proposal.name == "weekly-review" && proposal.tools == [.read] && state.run?.state == .needsYou, "skill proposal is normalized and waits for review")
     try await refuses("a stale skill digest is refused", containing: "no longer awaiting") { _ = try await runtime.approveSkill(threadID: thread, proposalID: proposal.id, digest: "wrong") }
     let skillID = try await runtime.approveSkill(threadID: thread, proposalID: proposal.id, digest: proposal.digest)
@@ -867,7 +867,7 @@ func skillChecks(base: URL, dbmd: URL, helper: URL) async throws {
     try await runtime.submit(threadID: thread, text: "/weekly-review Again", nonce: "tampered")
     state = try await waitFor(runtime, thread)
     let callCount = await script.calls
-    try check(state.run?.state == .failed && state.run?.status.contains("changed outside Sevra") == true && callCount == 5, "a changed skill file is refused before inference")
+    try check(state.run?.state == .failed && state.run?.status.contains("changed outside Slotstream") == true && callCount == 5, "a changed skill file is refused before inference")
     try approved.write(to: file)
     try await runtime.setSkill(skillID: skillID, active: nil)
     try await runtime.submit(threadID: thread, text: "/weekly-review Once more", nonce: "inactive")
@@ -877,7 +877,7 @@ func skillChecks(base: URL, dbmd: URL, helper: URL) async throws {
     try await runtime.setSkill(skillID: skillID, active: 1)
     try await runtime.shutdown()
     runtime = nil
-    runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
+    runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
     snapshot = await runtime.snapshot()
     try check(snapshot.home.skills?.first?.active == 1 && snapshot.home.skills?.first?.versions.count == 1, "skills persist across restart")
     try await runtime.shutdown()
@@ -886,7 +886,7 @@ func skillChecks(base: URL, dbmd: URL, helper: URL) async throws {
 
 // MARK: mini-apps
 
-func appCall(_ runtime: SevraRuntime, _ app: String, _ version: Int, _ body: [String: Any]) async throws -> [String: Any] {
+func appCall(_ runtime: SlotstreamRuntime, _ app: String, _ version: Int, _ body: [String: Any]) async throws -> [String: Any] {
     try object(await runtime.appRequest(appID: app, version: version, request: try JSONSerialization.data(withJSONObject: body)))
 }
 
@@ -894,8 +894,8 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let fm = FileManager.default
     let v1 = """
     <!doctype html><html><head><meta charset="utf-8"><title>Habits</title></head><body><h1>Habits</h1><ul id="list"></ul>
-    <script>async function load(){const items=await sevra.list('habits');document.getElementById('list').replaceChildren(...items.map(i=>{const li=document.createElement('li');li.textContent=i.data.name;return li;}));}
-    window.addEventListener('sevra-change',load);load();</script></body></html>
+    <script>async function load(){const items=await slotstream.list('habits');document.getElementById('list').replaceChildren(...items.map(i=>{const li=document.createElement('li');li.textContent=i.data.name;return li;}));}
+    window.addEventListener('slotstream-change',load);load();</script></body></html>
     """
     let v2 = v1.replacingOccurrences(of: "<h1>Habits</h1>", with: "<h1>Habits and streaks</h1>")
     let script = ScriptedInference(turns: [
@@ -906,13 +906,13 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
         EngineTurn(text: "A private answer."),
     ])
     let home = base.appendingPathComponent("App Home")
-    var runtime: SevraRuntime! = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
+    var runtime: SlotstreamRuntime! = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: script, helper: helper)
     let thread = try await runtime.newThread(title: "Apps")
     try await runtime.submit(threadID: thread, text: "Build a habit tracker mini-app", nonce: "app-1")
     var state = try await waitFor(runtime, thread)
     let tools = await script.observedTools
     try check(tools[0].contains("app.propose") && tools[0].contains("app.read"), "an app request offers app tools")
-    guard let proposal = state.run?.appProposal else { throw SevraError.refused("CHECK FAILED: no app proposal (\(state.run?.status ?? ""))") }
+    guard let proposal = state.run?.appProposal else { throw AppRuntimeError.refused("CHECK FAILED: no app proposal (\(state.run?.status ?? ""))") }
     try check(proposal.collections == [AppCollection(name: "habits", access: .write), AppCollection(name: "notes", access: .read)] && proposal.appID == nil
                 && state.run?.state == .needsYou && !fm.fileExists(atPath: home.appendingPathComponent("extensions/miniapps").path), "the app waits for review and nothing is published")
     try await refuses("a stale app digest is refused", containing: "no longer awaiting") { _ = try await runtime.approveApp(threadID: thread, proposalID: proposal.id, digest: "wrong") }
@@ -931,7 +931,7 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
     try check(reply["ok"] as? Bool == true && ((reply["result"] as? [String: Any])?["collections"] as? [[String: Any]])?.count == 2, "info reports the granted collections")
     reply = try await appCall(runtime, appID, 1, ["op": "create", "collection": "habits", "data": ["name": "Walk", "days": 3]])
     let created = reply["result"] as? [String: Any] ?? [:]
-    guard let recordID = created["id"] as? String, created["revision"] as? Int == 1 else { throw SevraError.refused("CHECK FAILED: create failed: \(reply)") }
+    guard let recordID = created["id"] as? String, created["revision"] as? Int == 1 else { throw AppRuntimeError.refused("CHECK FAILED: create failed: \(reply)") }
     let recordFile = home.appendingPathComponent("db/records/app-data/habits/\(recordID).md")
     let recordText = try String(contentsOf: recordFile, encoding: .utf8)
     try check(recordText.contains("type: sevra-app-record") && recordText.contains("\"Walk\""), "records are db.md files in Home")
@@ -972,7 +972,7 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
     state = try await waitFor(runtime, thread)
     let contexts = await script.observedContexts
     try check(contexts[2].contains { $0.role == "tool" && $0.content.contains("Habits</h1>") && $0.content.contains(appID) }, "app.read returns the current source")
-    guard let revision = state.run?.appProposal, revision.appID == appID else { throw SevraError.refused("CHECK FAILED: no revision proposal") }
+    guard let revision = state.run?.appProposal, revision.appID == appID else { throw AppRuntimeError.refused("CHECK FAILED: no revision proposal") }
     _ = try await runtime.approveApp(threadID: thread, proposalID: revision.id, digest: revision.digest)
     snapshot = await runtime.snapshot()
     try check(snapshot.home.apps?.first?.versions.count == 2 && snapshot.home.apps?.first?.active == 2 && snapshot.grants[appID]?.version == 2, "the revision becomes the active version")
@@ -984,7 +984,7 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
     try await check(try runtime.appDocument(appID: appID).html == v1, "an earlier version can be turned on again")
     let v1File = folder.appendingPathComponent("index.html")
     try Data("<p>changed</p>".utf8).write(to: v1File)
-    try await refuses("a changed app file is refused", containing: "changed outside Sevra") { _ = try await runtime.appDocument(appID: appID) }
+    try await refuses("a changed app file is refused", containing: "changed outside Slotstream") { _ = try await runtime.appDocument(appID: appID) }
     try Data(v1.utf8).write(to: v1File)
     try await runtime.deactivateApp(appID: appID, remove: true)
     reply = try await appCall(runtime, appID, 1, ["op": "list", "collection": "habits"])
@@ -1003,7 +1003,7 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
     // Restart, then backup and restore: apps come back inert.
     try await runtime.shutdown()
     runtime = nil
-    runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
+    runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
     reply = try await appCall(runtime, appID, 2, ["op": "list", "collection": "habits"])
     try check((reply["result"] as? [Any])?.count == 1, "apps, grants and data persist across restart")
     // A runaway app is slowed down; invalid writes spend the budget too.
@@ -1017,14 +1017,14 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
     let busy = outcomes.filter { $0 == "busy" }.count
     try check(busy >= 1 && outcomes.count - busy <= Extensions.appWriteBurst + refilled && !outcomes.contains("ok"),
               "an app that saves too often is slowed down (\(busy) of \(outcomes.count) refused)")
-    let archive = base.appendingPathComponent("apps.sevrahome")
+    let archive = base.appendingPathComponent("apps.slotstreamhome")
     let exported = try await runtime.exportHome(to: archive)
     try check(exported.manifest.files.contains { $0.path.hasPrefix("extensions/miniapps/\(appID)/2/") } && exported.manifest.files.contains { $0.path.hasPrefix("db/records/app-data/habits/") }
                 && !exported.manifest.files.contains { $0.path.contains("app-grants") }, "backups carry app versions and data, never grants")
     try await runtime.shutdown()
     let restoredHome = base.appendingPathComponent("Restored App Home")
     _ = try HomeArchive.restore(archive, to: restoredHome, dbmd: dbmd)
-    let restored = try SevraRuntime(homeURL: restoredHome, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
+    let restored = try SlotstreamRuntime(homeURL: restoredHome, dbmd: dbmd, inference: ScriptedInference(turns: []), helper: helper)
     reply = try await appCall(restored, appID, 2, ["op": "list", "collection": "habits"])
     try check((reply["error"] as? [String: Any])?["code"] as? String == "paused", "a restored Home keeps apps paused until reviewed")
     try await restored.acknowledgeRestore(archiveDigest: exported.digest)
@@ -1039,6 +1039,6 @@ func appChecks(base: URL, dbmd: URL, helper: URL) async throws {
     reply = try await appCall(restored, appID, 2, ["op": "update", "collection": "habits", "id": recordID, "revision": 4, "data": ["name": "Bike"]])
     let after = try await appCall(restored, appID, 2, ["op": "list", "collection": "habits"])
     try check(reply["ok"] as? Bool == false && (after["error"] as? [String: Any])?["code"] as? String == "paused" && (String(contentsOf: restoredRecord, encoding: .utf8)).contains("Swim"), "an outside edit to app data pauses saving and keeps the edit")
-    try await refuses("closing reports the outside edit instead of overwriting it", containing: "changed outside Sevra") { try await restored.shutdown() }
+    try await refuses("closing reports the outside edit instead of overwriting it", containing: "changed outside Slotstream") { try await restored.shutdown() }
     print("PASS: app revision with shared data, version switching, tamper refusal, removal keeps data, Incognito, restart, write budget, inert restore, outside-edit pause")
 }

@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-/// One staged change to a file in an attachment the person allowed Sevra to
+/// One staged change to a file in an attachment the person allowed Slotstream to
 /// change. Nothing is written until the person approves the whole set.
 public struct FileChange: Codable, Sendable, Equatable, Identifiable {
     public enum Operation: String, Codable, Sendable { case create, update, recordCreate, recordUpdate }
@@ -142,11 +142,11 @@ struct ChangeApplier {
     var folder: URL { home.appendingPathComponent("changes") }
 
     func attachment(for change: FileChange, in set: ChangeSet) throws -> Attachment {
-        guard let root = set.roots[change.attachment] else { throw SevraError.refused("This change set is missing its folder identity.") }
+        guard let root = set.roots[change.attachment] else { throw AppRuntimeError.refused("This change set is missing its folder identity.") }
         guard let attachment = session.attachments.first(where: { Int64($0.device) == root.device && UInt64($0.inode) == root.inode }) else {
-            throw SevraError.refused("Attach \(root.name) again to change it. Sevra keeps folder access only while the folder is attached.")
+            throw AppRuntimeError.refused("Attach \(root.name) again to change it. Slotstream keeps folder access only while the folder is attached.")
         }
-        guard attachment.access == .change else { throw SevraError.refused("\(root.name) is attached read-only now. Allow changes to it first.") }
+        guard attachment.access == .change else { throw AppRuntimeError.refused("\(root.name) is attached read-only now. Allow changes to it first.") }
         return attachment
     }
 
@@ -154,19 +154,19 @@ struct ChangeApplier {
     /// missing folders when asked. Returns the parent descriptor and name.
     func parent(of path: String, in attachment: Attachment, create: Bool, created: inout [String]) throws -> (Int32, String) {
         let parts = path.split(separator: "/").map(String.init)
-        guard let name = parts.last else { throw SevraError.refused("Invalid path.") }
+        guard let name = parts.last else { throw AppRuntimeError.refused("Invalid path.") }
         var fd = dup(attachment.descriptor)
         var walked = ""
         for component in parts.dropLast() {
             walked += (walked.isEmpty ? "" : "/") + component
             var next = openat(fd, component, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
             if next < 0 && errno == ENOENT && create {
-                guard mkdirat(fd, component, 0o755) == 0 || errno == EEXIST else { close(fd); throw SevraError.refused("Could not create the folder \(walked).") }
+                guard mkdirat(fd, component, 0o755) == 0 || errno == EEXIST else { close(fd); throw AppRuntimeError.refused("Could not create the folder \(walked).") }
                 created.append(walked)
                 next = openat(fd, component, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
             }
             close(fd)
-            guard next >= 0 else { throw SevraError.refused("\(attachment.name)/\(walked) is missing or is not an ordinary folder.") }
+            guard next >= 0 else { throw AppRuntimeError.refused("\(attachment.name)/\(walked) is missing or is not an ordinary folder.") }
             fd = next
         }
         return (fd, name)
@@ -174,15 +174,15 @@ struct ChangeApplier {
 
     func readFile(_ directory: Int32, _ name: String) throws -> (Data, stat) {
         let fd = openat(directory, name, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
-        guard fd >= 0 else { throw SevraError.conflict("\(name) is missing or is not an ordinary file.") }
+        guard fd >= 0 else { throw AppRuntimeError.conflict("\(name) is missing or is not an ordinary file.") }
         defer { close(fd) }
         var info = stat()
-        guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG, info.st_size <= Int64(SourceLimits.textBytes) else { throw SevraError.conflict("\(name) is not an ordinary text file.") }
+        guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG, info.st_size <= Int64(SourceLimits.textBytes) else { throw AppRuntimeError.conflict("\(name) is not an ordinary text file.") }
         var data = Data(), buffer = [UInt8](repeating: 0, count: 65536)
         while true {
             let n = read(fd, &buffer, buffer.count)
             if n < 0 && errno == EINTR { continue }
-            guard n >= 0 else { throw SevraError.conflict("Could not read \(name).") }
+            guard n >= 0 else { throw AppRuntimeError.conflict("Could not read \(name).") }
             if n == 0 { break }
             data.append(contentsOf: buffer.prefix(n))
         }
@@ -193,11 +193,11 @@ struct ChangeApplier {
     /// With `replace`, the old file is swapped out, verified and removed; a
     /// mismatch swaps it back so a concurrent edit is never lost.
     func place(_ data: Data, directory: Int32, name: String, replace: (hash: String, info: stat)?, tag: String) throws {
-        let temporary = ".sevra-\(tag).tmp"
+        let temporary = ".slotstream-\(tag).tmp"
         unlinkat(directory, temporary, 0)
         let mode: mode_t = replace.map { $0.info.st_mode & 0o7777 } ?? 0o644
         let fd = openat(directory, temporary, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, mode)
-        guard fd >= 0 else { throw SevraError.refused("Could not stage the new file next to \(name).") }
+        guard fd >= 0 else { throw AppRuntimeError.refused("Could not stage the new file next to \(name).") }
         var closed = false
         defer { if !closed { close(fd) } }
         if let replace {
@@ -211,16 +211,16 @@ struct ChangeApplier {
             while offset < raw.count {
                 let n = write(fd, raw.baseAddress!.advanced(by: offset), raw.count - offset)
                 if n < 0 && errno == EINTR { continue }
-                guard n > 0 else { unlinkat(directory, temporary, 0); throw SevraError.refused("Storage failed while writing \(name).") }
+                guard n > 0 else { unlinkat(directory, temporary, 0); throw AppRuntimeError.refused("Storage failed while writing \(name).") }
                 offset += n
             }
         }
-        guard fcntl(fd, F_FULLFSYNC) == 0 else { unlinkat(directory, temporary, 0); throw SevraError.refused("Storage did not confirm \(name).") }
+        guard fcntl(fd, F_FULLFSYNC) == 0 else { unlinkat(directory, temporary, 0); throw AppRuntimeError.refused("Storage did not confirm \(name).") }
         close(fd); closed = true
         if let replace {
-            guard replace.info.st_nlink <= 1 else { unlinkat(directory, temporary, 0); throw SevraError.refused("\(name) has other hard links, so Sevra will not replace it.") }
+            guard replace.info.st_nlink <= 1 else { unlinkat(directory, temporary, 0); throw AppRuntimeError.refused("\(name) has other hard links, so Slotstream will not replace it.") }
             guard renameatx_np(directory, temporary, directory, name, UInt32(RENAME_SWAP)) == 0 else {
-                unlinkat(directory, temporary, 0); throw SevraError.conflict("\(name) changed or disappeared. Nothing was replaced.")
+                unlinkat(directory, temporary, 0); throw AppRuntimeError.conflict("\(name) changed or disappeared. Nothing was replaced.")
             }
             // The old file now has the temporary name. Confirm it is exactly
             // the reviewed base before discarding it.
@@ -228,12 +228,12 @@ struct ChangeApplier {
             guard let old, digestBytes(old.0) == replace.hash, old.1.st_ino == replace.info.st_ino else {
                 renameatx_np(directory, temporary, directory, name, UInt32(RENAME_SWAP))
                 unlinkat(directory, temporary, 0)
-                throw SevraError.conflict("\(name) changed while Sevra was saving. Your version was kept.")
+                throw AppRuntimeError.conflict("\(name) changed while Slotstream was saving. Your version was kept.")
             }
             unlinkat(directory, temporary, 0)
         } else {
             guard renameatx_np(directory, temporary, directory, name, UInt32(RENAME_EXCL)) == 0 else {
-                unlinkat(directory, temporary, 0); throw SevraError.conflict("\(name) already exists. Nothing was replaced.")
+                unlinkat(directory, temporary, 0); throw AppRuntimeError.conflict("\(name) already exists. Nothing was replaced.")
             }
         }
         fsync(directory)
@@ -258,7 +258,7 @@ struct ChangeApplier {
 
     func loadBefore(set: ChangeSet, change: FileChange) throws -> Data {
         let data = try HomeArchive.read("changes/\(set.id)/\(change.id).before", at: home)
-        guard digestBytes(data) == change.baseHash else { throw SevraError.conflict("The saved previous version of \(change.display) is damaged.") }
+        guard digestBytes(data) == change.baseHash else { throw AppRuntimeError.conflict("The saved previous version of \(change.display) is damaged.") }
         return data
     }
 
@@ -275,13 +275,13 @@ struct ChangeApplier {
                     var info = stat()
                     let exists = fstatat(fd, name, &info, AT_SYMLINK_NOFOLLOW) == 0
                     close(fd)
-                    guard !exists else { throw SevraError.conflict("\(change.display) now exists. Nothing was changed.") }
+                    guard !exists else { throw AppRuntimeError.conflict("\(change.display) now exists. Nothing was changed.") }
                 }
             } else {
                 let (fd, name) = try parent(of: change.path, in: attachment, create: false, created: &none)
                 defer { close(fd) }
                 let (data, _) = try readFile(fd, name)
-                guard digestBytes(data) == change.baseHash else { throw SevraError.conflict("\(change.display) changed after Sevra read it. Nothing was changed. Ask again to work from the current text.") }
+                guard digestBytes(data) == change.baseHash else { throw AppRuntimeError.conflict("\(change.display) changed after Slotstream read it. Nothing was changed. Ask again to work from the current text.") }
                 try saveBefore(data, set: set, change: change)
             }
         }
@@ -309,7 +309,7 @@ struct ChangeApplier {
                         let (fd, name) = try parent(of: change.path, in: attachment, create: false, created: &walked)
                         let current = Result { try readFile(fd, name).0 }
                         close(fd)
-                        guard digestBytes(try current.get()) == change.baseHash else { throw SevraError.conflict("\(change.display) changed after Sevra read it. Your version was kept.") }
+                        guard digestBytes(try current.get()) == change.baseHash else { throw AppRuntimeError.conflict("\(change.display) changed after Slotstream read it. Your version was kept.") }
                         _ = try tool.run(["body", "set", change.path, "--body-file", "@BODY"], write: true, input: Data(RecordText.body(of: change.content).utf8), cancellation: nil)
                         set.changes[i].appliedPath = change.path
                     }
@@ -326,7 +326,7 @@ struct ChangeApplier {
                         try place(data, directory: fd, name: name, replace: nil, tag: "\(set.id)-\(change.id)")
                     } else {
                         let (current, info) = try readFile(fd, name)
-                        guard digestBytes(current) == change.baseHash else { throw SevraError.conflict("\(change.display) changed after Sevra read it.") }
+                        guard digestBytes(current) == change.baseHash else { throw AppRuntimeError.conflict("\(change.display) changed after Slotstream read it.") }
                         try place(data, directory: fd, name: name, replace: (change.baseHash!, info), tag: "\(set.id)-\(change.id)")
                     }
                     set.changes[i].appliedHash = digestBytes(data)
@@ -364,7 +364,7 @@ struct ChangeApplier {
                 let (fd, name) = try parent(of: path, in: attachment, create: false, created: &none)
                 defer { close(fd) }
                 let (current, info) = try readFile(fd, name)
-                guard digestBytes(current) == change.appliedHash else { throw SevraError.conflict("\(change.display) was edited after Sevra changed it, so it was left as is.") }
+                guard digestBytes(current) == change.appliedHash else { throw AppRuntimeError.conflict("\(change.display) was edited after Slotstream changed it, so it was left as is.") }
                 if change.isCreation {
                     set.changes[i].trashedPath = try trash(directory: fd, name: name, expected: change.appliedHash!, identity: info, tag: "\(set.id)-\(change.id)")
                     for folder in (change.createdFolders ?? []).reversed() { unlinkat(attachment.descriptor, folder, AT_REMOVEDIR) }
@@ -387,27 +387,27 @@ struct ChangeApplier {
         return set
     }
 
-    /// Moves a file Sevra created to the Trash without following a changed
+    /// Moves a file Slotstream created to the Trash without following a changed
     /// path: it first moves the file by handle into a private folder beside
     /// it, confirms it is the same verified file, then trashes that folder's
     /// entry. The file keeps its name in the Trash.
     func trash(directory: Int32, name: String, expected: String, identity: stat, tag: String) throws -> String? {
-        let holder = ".sevra-undo-\(tag)"
-        guard mkdirat(directory, holder, 0o700) == 0 else { throw SevraError.refused("Could not prepare to move \(name) to the Trash.") }
+        let holder = ".slotstream-undo-\(tag)"
+        guard mkdirat(directory, holder, 0o700) == 0 else { throw AppRuntimeError.refused("Could not prepare to move \(name) to the Trash.") }
         let folder = openat(directory, holder, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard folder >= 0 else { unlinkat(directory, holder, AT_REMOVEDIR); throw SevraError.refused("Could not prepare to move \(name) to the Trash.") }
+        guard folder >= 0 else { unlinkat(directory, holder, AT_REMOVEDIR); throw AppRuntimeError.refused("Could not prepare to move \(name) to the Trash.") }
         defer { close(folder); unlinkat(directory, holder, AT_REMOVEDIR) }
-        guard renameatx_np(directory, name, folder, name, UInt32(RENAME_EXCL)) == 0 else { throw SevraError.conflict("\(name) changed or disappeared, so it was left as is.") }
+        guard renameatx_np(directory, name, folder, name, UInt32(RENAME_EXCL)) == 0 else { throw AppRuntimeError.conflict("\(name) changed or disappeared, so it was left as is.") }
         func putBack() { _ = renameatx_np(folder, name, directory, name, UInt32(RENAME_EXCL)) }
         guard let moved = try? readFile(folder, name), moved.1.st_ino == identity.st_ino, moved.1.st_dev == identity.st_dev, digestBytes(moved.0) == expected else {
-            putBack(); throw SevraError.conflict("\(name) was edited after Sevra created it, so it was left as is.")
+            putBack(); throw AppRuntimeError.conflict("\(name) was edited after Slotstream created it, so it was left as is.")
         }
         var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
-        guard fcntl(folder, F_GETPATH, &buffer) == 0 else { putBack(); throw SevraError.refused("Could not locate \(name) to move it to the Trash.") }
+        guard fcntl(folder, F_GETPATH, &buffer) == 0 else { putBack(); throw AppRuntimeError.refused("Could not locate \(name) to move it to the Trash.") }
         let url = URL(fileURLWithPath: String(cString: buffer)).appendingPathComponent(name)
         var result: NSURL?
         do { try FileManager.default.trashItem(at: url, resultingItemURL: &result) }
-        catch { putBack(); throw SevraError.refused("Could not move \(name) to the Trash. It was left in place.") }
+        catch { putBack(); throw AppRuntimeError.refused("Could not move \(name) to the Trash. It was left in place.") }
         return result?.path
     }
 

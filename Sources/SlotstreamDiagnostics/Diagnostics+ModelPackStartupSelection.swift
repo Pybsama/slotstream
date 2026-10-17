@@ -95,12 +95,16 @@ extension Diagnostics {
         let fusedProposal = try pack.startupCandidate(plan: originalPlan, liveMemory: .automatic, observation: fusedObservation)
         c.expect("resolved platform execution defaults change the complete policy identity",
             fusedProposal?.executionPolicyID != proposal.executionPolicyID)
-        for environment in [[:], ["PATH": "/fixture", "SEVRA_MODEL": "/fixture/model"],
+        for environment in [[:], ["PATH": "/fixture", "SLOTSTREAM_MODEL": "/fixture/model"],
+                            ["SLOTSTREAM_HOME": "/fixture/home", "SLOTSTREAM_DBMD": "/fixture/dbmd",
+                             "SLOTSTREAM_EXTRACT": "/fixture/extract"],
                             ["SLOTSTREAM_TEST_BINARY": "/fixture/cli", "SLOTSTREAM_METALLIB_MACOS": "26"]] {
             c.expect("ordinary paths and build-tool selectors do not change loaded execution evidence",
                 Engine.admitsStartupEvidence(environment: environment, build: .release))
         }
         for environment in [["SLOTSTREAM_OPT_ROUTER_WEIGHTS": "1"], ["SLOTSTREAM_FUTURE_OVERRIDE": "fixture"],
+                            ["SLOTSTREAM_MODEL": "/fixture/model", "SLOTSTREAM_OPT_ROUTER_WEIGHTS": "1"],
+                            ["SLOTSTREAM_MODEL_FUTURE_OVERRIDE": "fixture"],
                             ["MLX_FIXTURE_OPTION": "fixture"]] {
             c.expect("explicit or unknown runtime tuning cannot inherit default measurements",
                 !Engine.admitsStartupEvidence(environment: environment, build: .release))
