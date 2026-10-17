@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import SevraPresentation
+import SlotstreamPresentation
 
 @MainActor private final class ScrollFixture: ObservableObject {
     @Published var id = "first:latest"

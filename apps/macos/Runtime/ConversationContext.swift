@@ -36,7 +36,7 @@ enum ConversationContext {
     static func select(home: HomeState, thread: WorkThread) throws -> SelectedContext {
         let excluded = Set(home.memories.filter(\.forgotten).map(\.messageID))
         let quotes = home.quotedHomeMessages(for: thread)
-        guard quotes.count == Set(thread.promotedMessageIDs).count else { throw SevraError.refused("The Home exchange linked to this thread is incomplete. Restore the missing history before continuing.") }
+        guard quotes.count == Set(thread.promotedMessageIDs).count else { throw AppRuntimeError.refused("The Home exchange linked to this thread is incomplete. Restore the missing history before continuing.") }
         let allowed: (Message) -> Bool = { !excluded.contains($0.id) && !($0.role == "assistant" && $0.text.isEmpty) }
         let pinned = quotes.filter(allowed)
         let own = thread.messages.filter(allowed)
@@ -57,7 +57,7 @@ enum ConversationContext {
         }
         guard pinnedBytes <= historyBytes,
               (groups.last?.reduce(0, { $0 + $1.text.utf8.count }) ?? 0) + pinnedBytes <= historyBytes else {
-            throw SevraError.refused("This request or its pinned Home exchange is too large. Attach the long text as a source or select a smaller exchange. Your history is preserved.")
+            throw AppRuntimeError.refused("This request or its pinned Home exchange is too large. Attach the long text as a source or select a smaller exchange. Your history is preserved.")
         }
         var tail = recent(budget: historyBytes - pinnedBytes)
         if tail.count < own.count {

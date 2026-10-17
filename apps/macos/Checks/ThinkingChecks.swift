@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 /// Thinking: sticky per thread, off by default, applied to tool turns too,
@@ -16,7 +16,7 @@ func thinkingChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "", calls: [ProposedTool(name: "source.list", arguments: [:])]),
         EngineTurn(text: "Tool answer."),
     ], delayNanoseconds: 1_000_000, thinkingTraces: [short, long])
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: engine)
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: engine)
     let thread = try await runtime!.newThread(title: "Thinking")
 
     // Off by default: the engine receives no request and the run has no receipt.
@@ -54,7 +54,7 @@ func thinkingChecks(root: URL, dbmd: URL) async throws {
         "different Homes have different cache ownership")
     let request = await engine.observedThinking.last ?? nil
     try require(request?.level == ThinkingPolicy.level && request?.budgetTokens == ThinkingPolicy.budgetTokens, "the request carries the app's level and budget")
-    guard let receipt = considered.run?.thinking else { throw SevraError.refused("CHECK FAILED: thinking receipt missing") }
+    guard let receipt = considered.run?.thinking else { throw AppRuntimeError.refused("CHECK FAILED: thinking receipt missing") }
     try require(receipt.ending == .closed && receipt.tokens == short.split(separator: " ").count && receipt.seconds >= 0, "closed thought records its token count")
     try require(considered.messages.last?.text == "Considered answer.", "the answer excludes the thought")
     let afterThought = await runtime!.snapshot()
@@ -108,7 +108,7 @@ func thinkingChecks(root: URL, dbmd: URL) async throws {
 
     // Incognito: thinks in memory, leaves nothing behind when closed.
     let incognitoEngine = ScriptedInference(turns: [EngineTurn(text: "Private answer.")], delayNanoseconds: 1_000_000, thinkingTraces: [short])
-    let again = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: incognitoEngine)
+    let again = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: incognitoEngine)
     let privateThread = try await again.newThread(mode: .incognito)
     try await again.setThinking(threadID: privateThread, enabled: true)
     let privateRun = try await again.submit(threadID: privateThread, text: "private", nonce: "private")
@@ -133,7 +133,7 @@ func thinkingChecks(root: URL, dbmd: URL) async throws {
     _ = try client.request(LocalRequest(operation: "think", threadID: thread, text: "on"))
     let switchedOn = await again.snapshot()
     try require(switchedOn.home.threads.first { $0.id == thread }?.thinking == true, "endpoint turns thinking on")
-    do { _ = try client.request(LocalRequest(operation: "think", threadID: thread, text: "maybe")); throw SevraError.refused("CHECK FAILED: invalid thinking value accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "endpoint rejects an unknown thinking value") }
+    do { _ = try client.request(LocalRequest(operation: "think", threadID: thread, text: "maybe")); throw AppRuntimeError.refused("CHECK FAILED: invalid thinking value accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "endpoint rejects an unknown thinking value") }
     _ = try client.request(LocalRequest(operation: "answer-now", threadID: thread))
     endpoint.stop()
     try await again.shutdown()

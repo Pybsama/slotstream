@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import SevraRuntime
+import SlotstreamRuntime
 
 /// Device-local navigation, separate from the contents and authority of a Home.
 @MainActor final class HomeNavigation: ObservableObject {
@@ -15,11 +15,11 @@ import SevraRuntime
     weak var model: AppModel?
     var didOpen: ((AppModel) -> Void)?
     /// Native checks replace inference only; storage and switching stay real.
-    var makeRuntime: ((URL) async throws -> SevraRuntime)?
+    var makeRuntime: ((URL) async throws -> SlotstreamRuntime)?
 
     init(defaults: UserDefaults = .standard, environment: [String: String] = ProcessInfo.processInfo.environment) {
         self.defaults = defaults
-        if let explicit = environment["SEVRA_HOME"] {
+        if let explicit = environment["SLOTSTREAM_HOME"] {
             current = URL(fileURLWithPath: explicit, isDirectory: true).standardizedFileURL
             initialIntent = .initial
             remembersSelection = false
@@ -70,7 +70,7 @@ import SevraRuntime
         showing = false
         let picker = NSOpenPanel()
         picker.title = "Open Home"
-        picker.message = "Choose a Sevra Home folder. Its conversations and memory stay separate from your other Homes."
+        picker.message = "Choose a Slotstream Home folder. Its conversations and memory stay separate from your other Homes."
         picker.canChooseFiles = false; picker.canChooseDirectories = true; picker.allowsMultipleSelection = false
         picker.directoryURL = current.deletingLastPathComponent(); picker.prompt = "Open Home"
         guard picker.runModal() == .OK, let url = picker.url else { return }
@@ -91,7 +91,7 @@ import SevraRuntime
             let url = try HomeLocation.validate(requested, intent: intent)
             guard !previous.openingHome, !previous.preparingModel, !previous.transferringHome, !previous.applyingChanges,
                   !previous.approving, !previous.attaching, !previous.preparingForSleep else {
-                throw SevraError.refused("Finish the current setup, transfer or file operation before switching Homes.")
+                throw AppRuntimeError.refused("Finish the current setup, transfer or file operation before switching Homes.")
             }
             let state = await previous.runtime?.snapshot()
             let working = state?.home.threads.contains { $0.run?.state.terminal == false && $0.run?.state != .needsYou } == true
@@ -112,17 +112,17 @@ import SevraRuntime
             }
             // A failed or conflicting draft save leaves the current session intact.
             guard await previous.prepareHomeSwitch() else {
-                throw SevraError.refused("Your draft could not be saved. Resolve the draft message before switching Homes.")
+                throw AppRuntimeError.refused("Your draft could not be saved. Resolve the draft message before switching Homes.")
             }
             // Reserve and verify the destination before closing the current owner.
             // Constructing an inference adapter neither loads nor runs a model.
-            let nextRuntime: SevraRuntime
+            let nextRuntime: SlotstreamRuntime
             if let makeRuntime { nextRuntime = try await makeRuntime(url) }
             else { nextRuntime = try await previous.makeHomeRuntime(at: url) }
             previous.closePreview(); previous.closeApp()
             guard await previous.quit() else {
                 try? await nextRuntime.shutdown()
-                throw SevraError.refused(previous.error ?? "This Home could not finish saving. It is still open.")
+                throw AppRuntimeError.refused(previous.error ?? "This Home could not finish saving. It is still open.")
             }
             previous.releaseHomeSession()
             let next = AppModel(homeURL: url, homes: self)
@@ -196,4 +196,23 @@ struct HomeChooser: View {
     }
 }
 
-extension Notification.Name { static let sevraShowHomes = Notification.Name("sevra.showHomes") }
+extension Notification.Name { static let slotstreamShowHomes = Notification.Name("slotstream.showHomes") }
+
+/// Copy only device preferences once. Existing Homes, grants and saved content
+/// keep their original bytes; the previous application's domain stays intact.
+enum AppPreferences {
+    static func migrateLegacy(defaults: UserDefaults = .standard, legacy: [String: Any]? = nil) {
+        let marker = "slotstream.brandMigration.v1"
+        guard !defaults.bool(forKey: marker) else { return }
+        let values = legacy ?? defaults.persistentDomain(forName: "com.sevra.mac.development") ?? [:]
+        let keys: Set<String> = ["homes.selected.v1", "homes.recent.v1", "appearance", "sidebarVisible", "sidebarWidth", "contentFontSize", "performance.preferences.v1", "responseDetails.visible"]
+        for (key, value) in values where keys.contains(key) || key.hasPrefix("selectedThread.") {
+            if defaults.object(forKey: key) == nil { defaults.set(value, forKey: key) }
+        }
+        if defaults.object(forKey: "NSWindow Frame SlotstreamMain") == nil,
+           let frame = values["NSWindow Frame SevraMain"] {
+            defaults.set(frame, forKey: "NSWindow Frame SlotstreamMain")
+        }
+        defaults.set(true, forKey: marker)
+    }
+}

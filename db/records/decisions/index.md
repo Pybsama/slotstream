@@ -2,11 +2,17 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-14T21:37:16.792295Z
+updated: 2026-10-16T21:28:28.545818Z
 ---
 
 # records/decisions
 
+- [[records/decisions/slotstream-app-identity]] — Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
+- [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
+- [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
+- [[records/decisions/adaptive-memory-limits]] — Custom process ceilings remain adaptive above the automatic default; hardware headroom, diagnostics and startup agree.
+- [[records/decisions/native-stack-stated-on-every-surface]] — Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
+- [[records/decisions/vq-weights-behind-qualification-gates]] — Support the VQ builds of the same model as a second weight format, behind qualification gates
 - [[records/decisions/qualify-complete-native-workflows]] — Qualify useful native jobs across model, tools, evidence, reviewed effects and delivered bundle identity
 - [[records/decisions/residency-speculation-waits-for-layer-completeness]] — Residency speculation remains unqualified; the earlier completeness ceiling omitted ready prefetch tickets, as corrected on October 13
 - [[records/decisions/remove-gpu-keepalive]] — Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
@@ -21,7 +27,6 @@ updated: 2026-10-14T21:37:16.792295Z
 - [[records/decisions/hold-unconstrained-affine-refit]] — Hold the unconstrained affine-three-bit refit
 - [[records/decisions/same-model-automatic-quantization-with-overrides]] — Default to automatic same-model quantization selection while preserving independent user pack and memory-ceiling overrides.
 - [[records/decisions/single-mac-quantization-validation]] — Complete quantization and Auto work with the available 48 GB Mac; other-Mac physical validation is not a completion requirement.
-- [[records/decisions/vq-weights-behind-qualification-gates]] — Support the VQ builds of the same model as a second weight format, behind qualification gates
 - [[records/decisions/automatic-context-window-per-machine]] — Auto picks the largest of 32,768, 65,536, 131,072 and 262,144 tokens that keeps speculative decoding, retains one conversation and adds at most 10% to a typical request
 - [[records/decisions/decode-lookahead-default-with-the-draft-head]] — Router-reuse prefetch, FP32 router weights and a four-layer GPU barrier run wherever the draft head does, charged 373 MiB; held out at 1.114 with identical output
 - [[records/decisions/draft-head-auto-floor-76-per-layer]] — Auto enables the draft head when the cache keeps 76 experts per layer after its charge, a 21 GB target, so 32 GB Macs and up; the former floor was 120
@@ -38,13 +43,9 @@ updated: 2026-10-14T21:37:16.792295Z
 - [[records/decisions/prompt-speed-qualified-paths]] — Promote qualified prompt reuse and read scopes; hold the fused-attention upgrade
 - [[records/decisions/kernel-upgrade-fidelity-and-cache-equivalence]] — Separate kernel-upgrade fidelity from warm/cold cache equivalence
 - [[records/decisions/coverage-as-review-feedback]] — Coverage as review feedback
-- [[records/decisions/adaptive-memory-limits]] — Custom process ceilings remain adaptive above the automatic default; hardware headroom, diagnostics and startup agree.
 - [[records/decisions/automatic-context-preserves-unmeasured-cache]] — Automatic context preserves cache whose loss is unmeasured
 - [[records/decisions/a-continued-conversation-computes-what-a-cold-one-computes]] — A turn resumes only its own prefill pass boundaries, so a continued conversation is exact against a cold read, at one partial pass per turn
 - [[records/decisions/verify-pass-split-attention-default]] — The speculative verify pass splits its attention from 6,144 tokens by default; the exact mode stays opt-in
-- [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
-- [[records/decisions/native-stack-stated-on-every-surface]] — Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
-- [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
 - [[records/decisions/corrected-decode-forecast-default-with-the-sidecar]] — The lookahead forecasts from the previous layer's attention output with a rank-128 correction shipped as a pinned sidecar; 1.111 over the previous configuration, identical output, 409 MiB
 - [[records/decisions/draft-depth-defaults-to-one-and-auto-floor-120-per-layer]] — Speculative decode drafts one token by default and auto enables it only at 120 experts per layer and up
 - [[records/decisions/draft-depth-defaults-to-two]] — Two draft tokens are the adopted operating default; activation and memory policies remain separate

@@ -52,11 +52,11 @@ package final class ModelActivationJournal {
             case .pack(let id): matchesOverride = id == packID
             }
             guard matchesOverride, pack.manifestDigest == manifest else {
-                throw SevraError.refused("This model activation belongs to a different supported pack. Choose model settings again.")
+                throw AppRuntimeError.refused("This model activation belongs to a different supported pack. Choose model settings again.")
             }
             guard effectiveStartupPolicyID == pack.startupDefaults.id,
                   effectiveStartupRecipeIdentity == pack.startupDefaults.recipeIdentity else {
-                throw SevraError.refused("This model activation uses different startup settings. Choose model settings again; your saved preference is preserved.")
+                throw AppRuntimeError.refused("This model activation uses different startup settings. Choose model settings again; your saved preference is preserved.")
             }
             return pack
         }
@@ -135,7 +135,7 @@ package final class ModelActivationJournal {
         let key = SHA256.hash(data: Data(model.standardizedFileURL.resolvingSymlinksInPath().path.utf8))
             .map { String(format: "%02x", $0) }.joined()
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Sevra/ModelActivation/" + key, isDirectory: true)
+            .appendingPathComponent("Slotstream/ModelActivation/" + key, isDirectory: true)
     }
 
     package init(directory url: URL, fault: ((WritePoint) throws -> Void)? = nil,
@@ -143,17 +143,17 @@ package final class ModelActivationJournal {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true,
             attributes: [.posixPermissions: 0o700])
         let dir = open(url.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard dir >= 0 else { throw SevraError.refused("Cannot open local model activation history.") }
+        guard dir >= 0 else { throw AppRuntimeError.refused("Cannot open local model activation history.") }
         var info = stat()
         guard fstat(dir, &info) == 0, info.st_uid == getuid() else {
-            close(dir); throw SevraError.refused("Model activation history has a different owner.")
+            close(dir); throw AppRuntimeError.refused("Model activation history has a different owner.")
         }
         let lock = openat(dir, "owner.lock", O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0o600)
-        guard lock >= 0 else { close(dir); throw SevraError.refused("Cannot lock model activation history.") }
+        guard lock >= 0 else { close(dir); throw AppRuntimeError.refused("Cannot lock model activation history.") }
         guard fstat(lock, &info) == 0, info.st_mode & S_IFMT == S_IFREG,
               info.st_uid == getuid(), info.st_nlink == 1, flock(lock, LOCK_EX | LOCK_NB) == 0 else {
             close(lock); close(dir)
-            throw SevraError.refused("Another Sevra instance owns this model configuration. Close it before changing the model.")
+            throw AppRuntimeError.refused("Another Slotstream instance owns this model configuration. Close it before changing the model.")
         }
         var loaded = State(), archived: String?
         do {
@@ -168,7 +168,7 @@ package final class ModelActivationJournal {
                       item.st_mode & S_IFMT == S_IFREG, item.st_uid == getuid(), item.st_nlink == 1 else { throw error }
                 guard archiveInvalidState else { throw RecoverableHistory(message: error.localizedDescription) }
                 guard (try? Self.read(dir)) == nil else {
-                    throw SevraError.refused("The model setup record has changed. Retry settings to check it again.")
+                    throw AppRuntimeError.refused("The model setup record has changed. Retry settings to check it again.")
                 }
                 try fault?(.beforeArchive)
                 var current = stat()
@@ -180,20 +180,20 @@ package final class ModelActivationJournal {
                       current.st_mtimespec.tv_nsec == item.st_mtimespec.tv_nsec,
                       current.st_ctimespec.tv_sec == item.st_ctimespec.tv_sec,
                       current.st_ctimespec.tv_nsec == item.st_ctimespec.tv_nsec else {
-                    throw SevraError.refused("The model setup record has changed. Retry settings to check it again.")
+                    throw AppRuntimeError.refused("The model setup record has changed. Retry settings to check it again.")
                 }
                 let name = "preserved-state-" + UUID().uuidString + ".json"
                 guard renameatx_np(dir, "state.json", dir, name, UInt32(RENAME_EXCL)) == 0 else {
-                    throw SevraError.refused("Cannot preserve the damaged model setup record. Its contents have not been replaced.")
+                    throw AppRuntimeError.refused("Cannot preserve the damaged model setup record. Its contents have not been replaced.")
                 }
                 try fault?(.afterArchive)
                 guard fsync(dir) == 0 else {
-                    throw SevraError.refused("Storage did not confirm the preserved model setup record. Retry settings to check it again.")
+                    throw AppRuntimeError.refused("Storage did not confirm the preserved model setup record. Retry settings to check it again.")
                 }
                 archived = name
             }
             guard !archiveInvalidState || archived != nil else {
-                throw SevraError.refused("The model setup record is valid or has already been repaired. Retry settings to verify the model.")
+                throw AppRuntimeError.refused("The model setup record is valid or has already been repaired. Retry settings to verify the model.")
             }
         } catch {
             flock(lock, LOCK_UN); close(lock); close(dir); throw error
@@ -206,34 +206,34 @@ package final class ModelActivationJournal {
     private static func read(_ directory: Int32) throws -> State {
         let fd = openat(directory, "state.json", O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
         if fd < 0, errno == ENOENT { return State() }
-        guard fd >= 0 else { throw SevraError.refused("Cannot read model activation history. Its previous contents have been preserved.") }
+        guard fd >= 0 else { throw AppRuntimeError.refused("Cannot read model activation history. Its previous contents have been preserved.") }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         defer { try? handle.close() }
         var info = stat()
         guard fstat(fd, &info) == 0, info.st_mode & S_IFMT == S_IFREG, info.st_uid == getuid(),
               info.st_nlink == 1, (1...Int64(maximumBytes)).contains(info.st_size),
               let data = try handle.read(upToCount: maximumBytes + 1), data.count == Int(info.st_size) else {
-            throw SevraError.refused("Model activation history is invalid. Its previous contents have been preserved.")
+            throw AppRuntimeError.refused("Model activation history is invalid. Its previous contents have been preserved.")
         }
         let value: State
         do { value = try JSONDecoder().decode(State.self, from: data) }
-        catch { throw SevraError.refused("Model activation history is unreadable. Its previous contents have been preserved.") }
-        guard value.schema == 1 else { throw SevraError.refused("This model activation history needs a compatible Sevra version.") }
+        catch { throw AppRuntimeError.refused("Model activation history is unreadable. Its previous contents have been preserved.") }
+        guard value.schema == 1 else { throw AppRuntimeError.refused("This model activation history needs a compatible Slotstream version.") }
         if let accepted = value.acceptedPacks {
             guard accepted.count <= maximumAcceptedPacks, accepted.allSatisfy(\.structurallyValid),
                   Set(accepted.map(\.key)).count == accepted.count else {
-                throw SevraError.refused("The accepted model setup record is invalid. Its previous contents have been preserved.")
+                throw AppRuntimeError.refused("The accepted model setup record is invalid. Its previous contents have been preserved.")
             }
         }
         if let good = value.lastGood {
             guard good.arithmeticIdentity.count == 64, good.arithmeticIdentity.allSatisfy({ $0.isHexDigit }),
-                  (1...4).contains(good.healthTokens) else { throw SevraError.refused("Invalid model health receipt.") }
+                  (1...4).contains(good.healthTokens) else { throw AppRuntimeError.refused("Invalid model health receipt.") }
         }
         if let attempt = value.attempt {
             guard (attempt.phase == .failed) == (attempt.failure != nil),
                   attempt.failure == nil || ["interrupted", "activation", "cancelled"].contains(attempt.failure!),
                   attempt.phase != .committed || value.lastGood?.selection == attempt.selection else {
-                throw SevraError.refused("Invalid model activation transition.")
+                throw AppRuntimeError.refused("Invalid model activation transition.")
             }
         }
         // Do not erase old receipts if a build no longer supports that pack.
@@ -244,11 +244,11 @@ package final class ModelActivationJournal {
     private func save(_ value: State) throws {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         let data = try encoder.encode(value)
-        guard data.count <= Self.maximumBytes else { throw SevraError.refused("Model activation history exceeds its storage bound.") }
+        guard data.count <= Self.maximumBytes else { throw AppRuntimeError.refused("Model activation history exceeds its storage bound.") }
         try fault?(.beforeWrite)
         let temporary = ".state-" + UUID().uuidString
         let fd = openat(directory, temporary, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
-        guard fd >= 0 else { throw SevraError.refused("Cannot save model activation. Check free disk space.") }
+        guard fd >= 0 else { throw AppRuntimeError.refused("Cannot save model activation. Check free disk space.") }
         defer { close(fd); unlinkat(directory, temporary, 0) }
         do {
             try data.withUnsafeBytes { bytes in
@@ -256,17 +256,17 @@ package final class ModelActivationJournal {
                 while offset < bytes.count {
                     let count = Darwin.write(fd, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
                     if count < 0, errno == EINTR { continue }
-                    guard count > 0 else { throw SevraError.refused("Model activation could not be saved.") }
+                    guard count > 0 else { throw AppRuntimeError.refused("Model activation could not be saved.") }
                     offset += count
                 }
             }
-            guard fcntl(fd, F_FULLFSYNC) == 0 else { throw SevraError.refused("Storage did not confirm model activation.") }
+            guard fcntl(fd, F_FULLFSYNC) == 0 else { throw AppRuntimeError.refused("Storage did not confirm model activation.") }
             try fault?(.beforeRename)
             guard renameat(directory, temporary, directory, "state.json") == 0 else {
-                throw SevraError.refused("Cannot commit model activation.")
+                throw AppRuntimeError.refused("Cannot commit model activation.")
             }
             try fault?(.afterRename)
-            guard fsync(directory) == 0 else { throw SevraError.refused("Storage did not confirm the activation directory.") }
+            guard fsync(directory) == 0 else { throw AppRuntimeError.refused("Storage did not confirm the activation directory.") }
             state = value
         } catch {
             // rename may have succeeded before a directory flush failed. Read
@@ -289,11 +289,11 @@ package final class ModelActivationJournal {
         let record = AcceptedPack(pack)
         guard registered.manifestDigest == pack.manifestDigest,
               registered.startupDefaults.recipeIdentity == pack.startupDefaults.recipeIdentity,
-              record.structurallyValid else { throw SevraError.refused("This model setup is no longer supported.") }
+              record.structurallyValid else { throw AppRuntimeError.refused("This model setup is no longer supported.") }
         var accepted = state.acceptedPacks ?? []
         guard !accepted.contains(record) else { return }
         guard accepted.count < Self.maximumAcceptedPacks else {
-            throw SevraError.refused("The accepted model setup history is full. Your installed models and previous settings are preserved.")
+            throw AppRuntimeError.refused("The accepted model setup history is full. Your installed models and previous settings are preserved.")
         }
         accepted.append(record)
         var next = state; next.acceptedPacks = accepted
@@ -311,7 +311,7 @@ package final class ModelActivationJournal {
     }
     package func begin(_ selection: Selection) throws -> UUID {
         try selection.validate()
-        guard state.attempt?.phase.unfinished != true else { throw SevraError.refused("A model activation is already in progress.") }
+        guard state.attempt?.phase.unfinished != true else { throw AppRuntimeError.refused("A model activation is already in progress.") }
         let id = UUID()
         var next = state; next.attempt = Attempt(id: id, selection: selection, previous: state.lastGood,
             phase: .requested, failure: nil)
@@ -320,7 +320,7 @@ package final class ModelActivationJournal {
     package func advance(_ id: UUID, to phase: Phase) throws {
         guard var attempt = state.attempt, attempt.id == id,
               [.requested: Phase.verified, .verified: .loading, .loading: .checking][attempt.phase] == phase else {
-            throw SevraError.refused("Stale or out-of-order model activation.")
+            throw AppRuntimeError.refused("Stale or out-of-order model activation.")
         }
         attempt.phase = phase
         var next = state; next.attempt = attempt; try save(next)
@@ -329,7 +329,7 @@ package final class ModelActivationJournal {
         guard var attempt = state.attempt, attempt.id == id, attempt.phase == .checking,
               attempt.selection == receipt.selection, (1...4).contains(receipt.healthTokens),
               receipt.arithmeticIdentity.count == 64, receipt.arithmeticIdentity.allSatisfy({ $0.isHexDigit }) else {
-            throw SevraError.refused("A model can activate only after its own completed health check.")
+            throw AppRuntimeError.refused("A model can activate only after its own completed health check.")
         }
         try receipt.selection.validate()
         attempt.phase = .committed
@@ -347,7 +347,7 @@ package final class ModelActivationJournal {
         guard let attempt = state.attempt, attempt.id == id, attempt.phase == .failed,
               receipt.selection == attempt.previous?.selection, (1...4).contains(receipt.healthTokens),
               receipt.arithmeticIdentity.count == 64, receipt.arithmeticIdentity.allSatisfy({ $0.isHexDigit }) else {
-            throw SevraError.refused("A rollback must restore the prior verified selection.")
+            throw AppRuntimeError.refused("A rollback must restore the prior verified selection.")
         }
         try receipt.selection.validate()
         var next = state; next.lastGood = receipt; try save(next)

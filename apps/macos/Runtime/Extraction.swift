@@ -17,9 +17,9 @@ struct BoundedProcess {
 
     func run() throws -> Output {
         var inPipe: [Int32] = [0, 0], outPipe: [Int32] = [0, 0], errPipe: [Int32] = [0, 0]
-        guard pipe(&inPipe) == 0 else { throw SevraError.unavailable("Could not start the document reader.") }
-        guard pipe(&outPipe) == 0 else { close(inPipe[0]); close(inPipe[1]); throw SevraError.unavailable("Could not start the document reader.") }
-        guard pipe(&errPipe) == 0 else { [inPipe[0], inPipe[1], outPipe[0], outPipe[1]].forEach { close($0) }; throw SevraError.unavailable("Could not start the document reader.") }
+        guard pipe(&inPipe) == 0 else { throw AppRuntimeError.unavailable("Could not start the document reader.") }
+        guard pipe(&outPipe) == 0 else { close(inPipe[0]); close(inPipe[1]); throw AppRuntimeError.unavailable("Could not start the document reader.") }
+        guard pipe(&errPipe) == 0 else { [inPipe[0], inPipe[1], outPipe[0], outPipe[1]].forEach { close($0) }; throw AppRuntimeError.unavailable("Could not start the document reader.") }
         for fd in [inPipe[1], outPipe[0], errPipe[0]] { _ = fcntl(fd, F_SETFD, FD_CLOEXEC) }
         var actions: posix_spawn_file_actions_t?
         posix_spawn_file_actions_init(&actions)
@@ -44,7 +44,7 @@ struct BoundedProcess {
         close(inPipe[0]); close(outPipe[1]); close(errPipe[1])
         guard spawned == 0 else {
             close(inPipe[1]); close(outPipe[0]); close(errPipe[0])
-            throw SevraError.unavailable("The document reader is missing from this build.")
+            throw AppRuntimeError.unavailable("The document reader is missing from this build.")
         }
         let group = DispatchGroup()
         let lock = NSLock()
@@ -53,7 +53,7 @@ struct BoundedProcess {
         group.enter()
         DispatchQueue.global(qos: .userInitiated).async {
             defer { close(inPipe[1]); group.leave() }
-            // A child that exits early must not deliver SIGPIPE to Sevra.
+            // A child that exits early must not deliver SIGPIPE to Slotstream.
             _ = fcntl(inPipe[1], F_SETNOSIGPIPE, 1)
             input.withUnsafeBytes { raw in
                 var offset = 0
@@ -100,15 +100,15 @@ struct BoundedProcess {
             usleep(20_000)
         }
         // Anything the helper left behind in its group stops now; the pipes
-        // then close. A process that escaped the group cannot hold Sevra.
+        // then close. A process that escaped the group cannot hold Slotstream.
         kill(-pid, SIGKILL)
         let drained = group.wait(timeout: .now() + 5) == .success
         while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
-        if cancellation?.isCancelled == true { throw SevraError.cancelled }
-        guard drained else { throw SevraError.refused("The document reader did not finish cleanly, so Sevra stopped it.") }
+        if cancellation?.isCancelled == true { throw AppRuntimeError.cancelled }
+        guard drained else { throw AppRuntimeError.refused("The document reader did not finish cleanly, so Slotstream stopped it.") }
         lock.lock(); defer { lock.unlock() }
-        if exceeded { throw SevraError.refused("This document produced more text than Sevra reads from one file.") }
-        if let reason { throw SevraError.refused("Reading this document \(reason), so Sevra stopped it.") }
+        if exceeded { throw AppRuntimeError.refused("This document produced more text than Slotstream reads from one file.") }
+        if let reason { throw AppRuntimeError.refused("Reading this document \(reason), so Slotstream stopped it.") }
         let signaled = (status & 0x7f) != 0
         return Output(stdout: stdout, stderr: stderr, status: signaled ? -1 : (status >> 8) & 0xff, signaled: signaled)
     }
@@ -128,7 +128,7 @@ struct BoundedProcess {
     }
 }
 
-/// Text Sevra extracted from one rich document. Pages hold text in reading
+/// Text Slotstream extracted from one rich document. Pages hold text in reading
 /// order; for formats without pages there is one section. `joined` is the
 /// deterministic text that citation byte ranges refer to.
 public struct ExtractedDocument: Sendable, Equatable {
@@ -171,16 +171,16 @@ public struct DocumentReader: Sendable {
 
     func decode(_ output: BoundedProcess.Output) throws -> [String: Any] {
         guard let object = try? JSONSerialization.jsonObject(with: output.stdout) as? [String: Any] else {
-            throw SevraError.refused(output.signaled ? "The document reader stopped unexpectedly. The file may be damaged." : "The document reader returned no usable text.")
+            throw AppRuntimeError.refused(output.signaled ? "The document reader stopped unexpectedly. The file may be damaged." : "The document reader returned no usable text.")
         }
         if let error = object["error"] as? [String: Any] {
-            throw SevraError.refused(error["message"] as? String ?? "This document could not be read.")
+            throw AppRuntimeError.refused(error["message"] as? String ?? "This document could not be read.")
         }
         return object
     }
 
     public func extract(_ data: Data, kind: String, cancellation: Cancellation?) throws -> ExtractedDocument {
-        guard data.count <= Self.inputLimit else { throw SevraError.refused("This document is larger than the 64 MB reading limit.") }
+        guard data.count <= Self.inputLimit else { throw AppRuntimeError.refused("This document is larger than the 64 MB reading limit.") }
         if Self.imageKinds.contains(kind) {
             let text = try recognize(data, kind: "image", pages: [], cancellation: cancellation)
             return ExtractedDocument(format: kind, method: "ocr", pages: [text.first ?? ""], textless: [], recognized: [0])
@@ -188,11 +188,11 @@ public struct DocumentReader: Sendable {
         let arguments: [String]
         if Self.nativeKinds.contains(kind) { arguments = ["document", "--kind", kind] }
         else if Self.dbmdKinds.contains(kind) || kind == "html" || kind == "htm" { arguments = ["dbmd", "--kind", kind == "htm" ? "html" : kind, "--dbmd", dbmd.path] }
-        else { throw SevraError.refused("Sevra cannot read this file type yet.") }
+        else { throw AppRuntimeError.refused("Slotstream cannot read this file type yet.") }
         let output = try BoundedProcess(executable: helper, arguments: arguments, input: data, timeout: 60,
                                         outputLimit: 20 * 1024 * 1024, footprintLimit: Self.footprint, cancellation: cancellation).run()
         let object = try decode(output)
-        guard let pages = object["pages"] as? [String] else { throw SevraError.refused("The document reader returned no usable text.") }
+        guard let pages = object["pages"] as? [String] else { throw AppRuntimeError.refused("The document reader returned no usable text.") }
         let textless = Set((object["textless"] as? [Int]) ?? [])
         return ExtractedDocument(format: object["format"] as? String ?? kind, method: kind == "pdf" ? "pdfkit" : Self.dbmdKinds.contains(kind) || kind.hasPrefix("htm") ? "dbmd" : "appkit", pages: pages, textless: textless)
     }
@@ -205,11 +205,11 @@ public struct DocumentReader: Sendable {
                                         input: data, timeout: 60, outputLimit: Self.recognitionPagesPerRequest * (1600 * 1600 + 12),
                                         footprintLimit: Self.footprint, cancellation: cancellation).run()
         if render.status != 0 { _ = try decode(render) }
-        guard try Self.validFrames(render.stdout) else { throw SevraError.refused("This file could not be prepared for text recognition.") }
+        guard try Self.validFrames(render.stdout) else { throw AppRuntimeError.refused("This file could not be prepared for text recognition.") }
         let ocr = try BoundedProcess(executable: helper, arguments: ["ocr"], input: render.stdout, timeout: 120,
                                      outputLimit: 16 * 1024 * 1024, footprintLimit: Self.footprint, cancellation: cancellation).run()
         let object = try decode(ocr)
-        guard let texts = object["pages"] as? [String] else { throw SevraError.refused("Text recognition returned no result.") }
+        guard let texts = object["pages"] as? [String] else { throw AppRuntimeError.refused("Text recognition returned no result.") }
         return texts
     }
 
@@ -247,10 +247,10 @@ public struct KnowledgeTool: Sendable {
         if output.status != 0 || output.signaled {
             let detail = (try? JSONSerialization.jsonObject(with: output.stderr) as? [String: Any]).flatMap { ($0["error"] as? [String: Any])?["message"] as? String }
                 ?? (try? JSONSerialization.jsonObject(with: output.stdout) as? [String: Any]).flatMap { ($0["error"] as? [String: Any])?["message"] as? String }
-            throw SevraError.refused("The knowledge base refused this operation" + (detail.map { ": " + String($0.prefix(300)) } ?? "."))
+            throw AppRuntimeError.refused("The knowledge base refused this operation" + (detail.map { ": " + String($0.prefix(300)) } ?? "."))
         }
         guard let object = try? JSONSerialization.jsonObject(with: output.stdout, options: [.fragmentsAllowed]) else {
-            throw SevraError.refused("The knowledge base returned an unexpected response: " + String(text.prefix(120)))
+            throw AppRuntimeError.refused("The knowledge base returned an unexpected response: " + String(text.prefix(120)))
         }
         return object
     }

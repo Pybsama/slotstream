@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import WebKit
 import Network
-import SevraRuntime
+import SlotstreamRuntime
 
 /// One mini-app to show: an approved version backed by Home data, or a draft
 /// under review backed by scratch data.
@@ -17,11 +17,11 @@ struct MiniAppSession: Equatable {
 
 /// Runs one mini-app in its own web view with no network, no navigation, no
 /// new windows, no downloads and no storage that outlives it. The page gets
-/// one capability: `window.sevra`, whose requests the host answers for this
+/// one capability: `window.slotstream`, whose requests the host answers for this
 /// app and version only. Isolation never depends on reviewing the app's code.
 @MainActor final class MiniAppController: NSObject, WKNavigationDelegate, WKUIDelegate {
-    static let scheme = "sevra-app"
-    static let origin = "sevra-app://app/"
+    static let scheme = "slotstream-app"
+    static let origin = "slotstream-app://app/"
     /// Content security for the one document the host serves.
     static let policy = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'"
 
@@ -47,19 +47,19 @@ struct MiniAppSession: Equatable {
     /// Blocks every load that is not the app's own document. Compiled once.
     static func rules() async throws -> WKContentRuleList {
         if let compiledRules { return compiledRules }
-        let source = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}},{"trigger":{"url-filter":"^sevra-app:"},"action":{"type":"ignore-previous-rules"}}]"#
+        let source = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block"}},{"trigger":{"url-filter":"^slotstream-app:"},"action":{"type":"ignore-previous-rules"}}]"#
         let list: WKContentRuleList = try await withCheckedThrowingContinuation { continuation in
-            WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "sevra-app-offline-1", encodedContentRuleList: source) { list, error in
+            WKContentRuleListStore.default().compileContentRuleList(forIdentifier: "slotstream-app-offline-1", encodedContentRuleList: source) { list, error in
                 if let list { continuation.resume(returning: list) }
-                else { continuation.resume(throwing: error ?? SevraError.unavailable("The app sandbox rules could not be prepared.")) }
+                else { continuation.resume(throwing: error ?? AppRuntimeError.unavailable("The app sandbox rules could not be prepared.")) }
             }
         }
         compiledRules = list
         return list
     }
 
-    /// A loopback port Sevra holds without listening. Every connection to it
-    /// is refused, and no other process can take it while Sevra runs.
+    /// A loopback port Slotstream holds without listening. Every connection to it
+    /// is refused, and no other process can take it while Slotstream runs.
     private static let blackHole: UInt16? = {
         let fd = socket(AF_INET, SOCK_STREAM, 0)
         guard fd >= 0 else { return nil }
@@ -121,11 +121,11 @@ struct MiniAppSession: Equatable {
         return peer && preconnect && lookups
     }
 
-    /// The bridge script. It defines `window.sevra` and removes peer
+    /// The bridge script. It defines `window.slotstream` and removes peer
     /// connections, the one web API that could reach a network without a load.
     static let bridge = """
     (() => {
-      const handler = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.sevra;
+      const handler = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.slotstream;
       const call = (op, fields) => handler.postMessage(JSON.stringify(Object.assign({ op }, fields))).then((text) => {
         const reply = JSON.parse(text);
         if (reply.ok) return reply.result;
@@ -142,6 +142,8 @@ struct MiniAppSession: Equatable {
         archive: (collection, id, revision) => call('archive', { collection, id, revision }),
         restore: (collection, id, revision) => call('restore', { collection, id, revision }),
       });
+      Object.defineProperty(window, 'slotstream', { value: api, writable: false, configurable: false, enumerable: false });
+      // Existing saved apps keep the same scoped capability after the rename.
       Object.defineProperty(window, 'sevra', { value: api, writable: false, configurable: false, enumerable: false });
       for (const name of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel', 'RTCSessionDescription', 'RTCIceCandidate']) {
         try { Object.defineProperty(window, name, { value: undefined, writable: false, configurable: false }); } catch (error) {}
@@ -175,7 +177,7 @@ struct MiniAppSession: Equatable {
         Self.disable(configuration.preferences, "peerConnectionEnabled")
         Self.disable(configuration.preferences, "DNSPrefetchingEnabled")
         guard Self.networkSwitchesOff(configuration.preferences, disabled: disabled) else {
-            fail("This app cannot run because this version of macOS does not let Sevra keep it offline.")
+            fail("This app cannot run because this version of macOS does not let Slotstream keep it offline.")
             return
         }
         configuration.setURLSchemeHandler(SchemeHandler(owner: self), forURLScheme: Self.scheme)
@@ -184,10 +186,10 @@ struct MiniAppSession: Equatable {
         configuration.preferences.isElementFullscreenEnabled = false
         configuration.allowsAirPlayForMediaPlayback = false
         configuration.mediaTypesRequiringUserActionForPlayback = .all
-        configuration.applicationNameForUserAgent = "SevraApp"
+        configuration.applicationNameForUserAgent = "SlotstreamApp"
         let content = WKUserContentController()
         content.add(rules)
-        content.addScriptMessageHandler(MessageHandler(owner: self), contentWorld: .page, name: "sevra")
+        content.addScriptMessageHandler(MessageHandler(owner: self), contentWorld: .page, name: "slotstream")
         content.addUserScript(WKUserScript(source: Self.bridge, injectionTime: .atDocumentStart, forMainFrameOnly: false, in: .page))
         configuration.userContentController = content
         let view = WKWebView(frame: .zero, configuration: configuration)
@@ -220,7 +222,7 @@ struct MiniAppSession: Equatable {
         guard session.collections.contains(where: { $0.name == collection }), let webView else { return }
         let name = collection.unicodeScalars.allSatisfy { CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789-").contains($0) } ? collection : ""
         guard !name.isEmpty else { return }
-        webView.evaluateJavaScript("window.dispatchEvent(new CustomEvent('sevra-change', { detail: { collection: '\(name)' } }))", in: nil, in: .page) { _ in }
+        webView.evaluateJavaScript("for (const type of ['slotstream-change', 'sevra-change']) window.dispatchEvent(new CustomEvent(type, { detail: { collection: '\(name)' } }))", in: nil, in: .page) { _ in }
     }
 
     private func fail(_ message: String) {

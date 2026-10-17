@@ -36,7 +36,7 @@ For a command-line build, place a prebuilt `mlx.metallib` **next to the
 running executable**. MLX looks there for its Metal shaders. SwiftPM doesn't
 compile them in the Command Line Tools setup.
 
-- **Sevra's Xcode project**: its build phase bundles the pinned library.
+- **Slotstream's Xcode project**: its build phase bundles the pinned library.
   Other app targets must also include the matching MLX shaders at runtime.
 - **A command-line build** (`swift build`): copy the matching library beside
   each executable after building.

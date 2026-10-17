@@ -2,11 +2,11 @@
 type: decision
 id: 01m3mx4yz4cfmdh8fj253p1n9z
 created: 2026-09-28T21:01:20.740899+00:00
-updated: 2026-10-02T18:46:22.278918+00:00
+updated: 2026-10-16T06:32:39.256928+00:00
 summary: Support the VQ builds of the same model as a second weight format, behind qualification gates
 decided_on: 2026-09-28
 evidence: '[[records/decisions/decode-host-time-is-waiting-not-graph-construction]], [[records/decisions/target-range-macs-that-cannot-hold-the-model]], [[records/measurements/behavioural-quality-probe-2026-08-30-and-what-it-is-not]], [[records/decisions/a-continued-conversation-computes-what-a-cold-one-computes]]'
-reversible_if: A VQ build misses exact parity with its pinned reference, measures worse than the 4-bit checkpoint against the 4.4-bit reference or fails sevra-mac-checks --real-basics, or is not faster end to end than the 4-bit configuration on the Macs it would serve
+reversible_if: A VQ build misses exact parity with its pinned reference, measures worse than the 4-bit checkpoint against the 4.4-bit reference or fails slotstream-mac-checks --real-basics, or is not faster end to end than the 4-bit configuration on the Macs it would serve
 title: Support the VQ builds of the same model as a second weight format, behind qualification gates
 status: standing
 ---
@@ -86,7 +86,7 @@ layers, and pins, reservations and the planner still count slots.
   Measure each candidate and the 4-bit checkpoint against the 4.4-bit VQ
   build, the build the card puts closest to bf16 that we can run locally, by
   KL divergence and top-1 agreement on our own prompts, including agent turns
-  with tool calls, and require `sevra-mac-checks --real-basics` to pass.
+  with tool calls, and require `slotstream-mac-checks --real-basics` to pass.
 - Speed. Time to first token and decode, end to end, on each hardware class
   a build would be the default for, against the configuration those Macs run
   today, including the draft head where it runs. Measured bytes read and peak

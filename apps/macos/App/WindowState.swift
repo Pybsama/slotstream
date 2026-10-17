@@ -1,6 +1,6 @@
 import SwiftUI
-import SevraRuntime
-import SevraPresentation
+import SlotstreamRuntime
+import SlotstreamPresentation
 
 /// What the sidebar shows. It publishes only when a row, a count or the
 /// selection changes, so streaming text, typing and idle ticks never redraw
@@ -122,8 +122,8 @@ struct SidebarView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 ObserverMark().fill(.primary).frame(width: 32, height: 32).accessibilityHidden(true)
-                Text("sevra").font(.custom("Poppins-Medium", size: 26)).tracking(-0.65)
-            }.padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 8).accessibilityLabel("Sevra")
+                Text("slotstream").font(.custom("Poppins-Medium", size: 26)).tracking(-0.65)
+            }.padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 8).accessibilityLabel("Slotstream")
             HomeSwitcher(homes: model.homes).padding(.horizontal, 4).padding(.bottom, 6)
             railButton("Home", symbol: "house", selected: state.selectedID == "home" && state.panel.isEmpty) { model.navigate("home") }
             Button { model.panel = "Needs you" } label: {

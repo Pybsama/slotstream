@@ -1,6 +1,6 @@
 import Darwin
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 func modelActivationChecks(root: URL, dbmd: URL) async throws {
@@ -12,7 +12,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
         .init(selection: selection, generation: UUID(), arithmeticIdentity: String(repeating: "a", count: 64), healthTokens: 4)
     }
     func expectFailure(_ label: String, _ action: () throws -> Void) throws {
-        do { try action(); throw SevraError.refused("CHECK FAILED: " + label) }
+        do { try action(); throw AppRuntimeError.refused("CHECK FAILED: " + label) }
         catch { try check(!error.localizedDescription.contains("CHECK FAILED"), label) }
     }
     func advanceToCheck(_ journal: Journal, _ id: UUID) throws {
@@ -135,7 +135,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
         let good = try seed(directory)
         var armed = true
         var journal: Journal? = try Journal(directory: directory, fault: { observed in
-            if armed, observed == point { armed = false; throw SevraError.refused("Injected acceptance interruption") }
+            if armed, observed == point { armed = false; throw AppRuntimeError.refused("Injected acceptance interruption") }
         })
         try expectFailure("failed acceptance persistence is not acknowledged") { try journal!.accept(ModelPackRegistry.baseline) }
         try check(journal!.state.lastGood == good && journal!.state.attempt?.phase == .committed,
@@ -150,12 +150,12 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     let absentSetup = ModelSetup(model: root.appendingPathComponent("not-installed-model"))
     let absentHistory = root.appendingPathComponent("unaccepted-model-history")
     let absentOwner = LocalInference(model: absentSetup.modelDirectory, activationDirectory: absentHistory)
-    do { try await absentOwner.acceptModelSetup(absentSetup); throw SevraError.refused("CHECK FAILED: accepted unchecked setup") }
+    do { try await absentOwner.acceptModelSetup(absentSetup); throw AppRuntimeError.refused("CHECK FAILED: accepted unchecked setup") }
     catch { try check(!error.localizedDescription.contains("CHECK FAILED"), "an unchecked setup never grants acceptance") }
     try check(!FileManager.default.fileExists(atPath: absentHistory.path),
         "unchecked setup creates no acceptance history or model")
     let offered = try await absentOwner.modelSetup(preferences: .init())
-    guard let offered else { throw SevraError.refused("CHECK FAILED: local setup offer absent") }
+    guard let offered else { throw AppRuntimeError.refused("CHECK FAILED: local setup offer absent") }
     try check(offered.packID == ModelPackRegistry.baseline.id && offered.offer?.automatic == true
         && !offered.snapshot().ready && !offered.snapshot().busy,
         "an unloaded owner offers the supported setup without verifying or accepting it")
@@ -178,7 +178,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     try check(explicitSetup?.matches(setupPreferences) == false, "an edited active ceiling invalidates a prior setup offer")
     do {
         _ = try await absentOwner.modelSetup(preferences: .init(quantization: .pack("unavailable-saved-choice")))
-        throw SevraError.refused("CHECK FAILED: setup replaced an unavailable explicit choice")
+        throw AppRuntimeError.refused("CHECK FAILED: setup replaced an unavailable explicit choice")
     } catch { try check(!error.localizedDescription.contains("CHECK FAILED"), "setup preserves an unavailable explicit choice") }
     let managedOriginal = root.appendingPathComponent("managed/original")
     try check(LocalInference.managedRoot(model: managedOriginal, defaultModel: managedOriginal)
@@ -230,7 +230,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
         let good = try seed(directory)
         var armed = false
         var journal: Journal? = try Journal(directory: directory, fault: { observed in
-            if armed, observed == point { armed = false; throw SevraError.refused("Injected storage interruption") }
+            if armed, observed == point { armed = false; throw AppRuntimeError.refused("Injected storage interruption") }
         })
         let id = try journal!.begin(requested)
         try advanceToCheck(journal!, id)
@@ -272,7 +272,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
         try check(try Data(contentsOf: directory.appendingPathComponent("state.json")) == invalid,
             "unreadable activation history is not erased")
         let repaired = try Journal(directory: directory, archiveInvalidState: true)
-        guard let name = repaired.archivedRecordName else { throw SevraError.refused("CHECK FAILED: repair has no preserved record") }
+        guard let name = repaired.archivedRecordName else { throw AppRuntimeError.refused("CHECK FAILED: repair has no preserved record") }
         try check(try Data(contentsOf: directory.appendingPathComponent(name)) == invalid,
             "explicit repair preserves every damaged byte")
         try check(repaired.state.lastGood == nil && repaired.state.attempt == nil,
@@ -289,7 +289,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
         try invalid.write(to: directory.appendingPathComponent("state.json"))
         try expectFailure("interrupted repair is not acknowledged") {
             _ = try Journal(directory: directory, fault: { observed in
-                if observed == point { throw SevraError.refused("Injected repair interruption") }
+                if observed == point { throw AppRuntimeError.refused("Injected repair interruption") }
             }, archiveInvalidState: true)
         }
         let names = try FileManager.default.contentsOfDirectory(atPath: directory.path)
@@ -342,7 +342,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
         do {
             _ = try await inference.turn(history: [.init(role: "user", content: "Hello")], tools: [],
                 cancellation: Cancellation(), buffer: TurnBuffer())
-            throw SevraError.refused("CHECK FAILED: missing model produced a response")
+            throw AppRuntimeError.refused("CHECK FAILED: missing model produced a response")
         } catch { try check(error.localizedDescription.contains(expected), "missing pack and blocked retry remain distinct") }
     }
     try await inference.configure(.init())
@@ -350,7 +350,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     do {
         _ = try await inference.turn(history: [.init(role: "user", content: "Hello")], tools: [],
             cancellation: Cancellation(), buffer: TurnBuffer())
-        throw SevraError.refused("CHECK FAILED: retry used a different model")
+        throw AppRuntimeError.refused("CHECK FAILED: retry used a different model")
     } catch { try check(error.localizedDescription.contains("missing or incomplete"), "explicit settings permit one new verified attempt") }
     await inference.unload()
     try check(inference.performanceTelemetry?.isLoaded == false, "failed activation owns no model")
@@ -365,14 +365,14 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     let corruptInference = LocalInference(model: missing, activationDirectory: corruptDirectory)
     let writeFailureInference = LocalInference(model: missing, preferences: .init(),
         activationDirectory: root.appendingPathComponent("activation-bootstrap-write"), activationWriteFault: { point in
-            if point == .beforeWrite { throw SevraError.refused("Injected initial intent failure") }
+            if point == .beforeWrite { throw AppRuntimeError.refused("Injected initial intent failure") }
         })
     for (owner, initialError) in [(corruptInference, "unreadable"), (writeFailureInference, "Injected initial intent failure")] {
         for expected in [initialError, "did not activate"] {
             do {
                 _ = try await owner.turn(history: [.init(role: "user", content: "Hello")], tools: [],
                     cancellation: Cancellation(), buffer: TurnBuffer())
-                throw SevraError.refused("CHECK FAILED: activation bootstrap failure admitted work")
+                throw AppRuntimeError.refused("CHECK FAILED: activation bootstrap failure admitted work")
             } catch { try check(error.localizedDescription.contains(expected), "bootstrap failure blocks another request") }
             try check(owner.performanceTelemetry?.activationFailureMessage != nil,
                 "bootstrap failure is visible to queue admission")
@@ -380,12 +380,12 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     }
     do {
         try await corruptInference.configure(.init())
-        throw SevraError.refused("CHECK FAILED: settings retry ignored corrupt history")
+        throw AppRuntimeError.refused("CHECK FAILED: settings retry ignored corrupt history")
     } catch { try check(error.localizedDescription.contains("unreadable"), "settings retry now checks accepted-version history before selection") }
     do {
         _ = try await corruptInference.turn(history: [.init(role: "user", content: "Hello")], tools: [],
             cancellation: Cancellation(), buffer: TurnBuffer())
-        throw SevraError.refused("CHECK FAILED: explicit retry erased corrupt history")
+        throw AppRuntimeError.refused("CHECK FAILED: explicit retry erased corrupt history")
     } catch { try check(error.localizedDescription.contains("did not activate"), "a failed settings retry retains the admission failure") }
     try check(try Data(contentsOf: corruptDirectory.appendingPathComponent("state.json")) == corruptState,
         "retry preserves unreadable activation bytes")
@@ -400,15 +400,15 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     do {
         _ = try await corruptInference.turn(history: [.init(role: "user", content: "Hello")], tools: [],
             cancellation: Cancellation(), buffer: TurnBuffer())
-        throw SevraError.refused("CHECK FAILED: repair bypassed model verification")
+        throw AppRuntimeError.refused("CHECK FAILED: repair bypassed model verification")
     } catch { try check(error.localizedDescription.contains("missing or incomplete"), "repaired setup still verifies its complete model") }
     try check(corruptInference.performanceTelemetry?.snapshot(preferences: .init(), pending: false, busy: false).activationRecoveryAvailable == false,
         "a missing model does not offer destructive setup repair")
-    do { try await corruptInference.recoverModelActivation(); throw SevraError.refused("CHECK FAILED: valid setup reset again") }
+    do { try await corruptInference.recoverModelActivation(); throw AppRuntimeError.refused("CHECK FAILED: valid setup reset again") }
     catch { try check(!error.localizedDescription.contains("CHECK FAILED"), "repeat repair refuses valid setup") }
 
     let queuedInference = LocalInference(model: missing, activationDirectory: root.appendingPathComponent("queue-activation"))
-    let runtime = try SevraRuntime(homeURL: root.appendingPathComponent("activation-queue-home"), dbmd: dbmd,
+    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("activation-queue-home"), dbmd: dbmd,
         inference: queuedInference)
     let second = try await runtime.newThread(mode: .shared)
     _ = try await runtime.submit(threadID: "home", text: "First request", nonce: "activation-first")
@@ -429,7 +429,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     try FileManager.default.createDirectory(at: repairDirectory, withIntermediateDirectories: true)
     try corruptState.write(to: repairDirectory.appendingPathComponent("state.json"))
     let repairOwner = LocalInference(model: missing, activationDirectory: repairDirectory)
-    let repairing = try SevraRuntime(homeURL: root.appendingPathComponent("activation-repair-home"), dbmd: dbmd, inference: repairOwner)
+    let repairing = try SlotstreamRuntime(homeURL: root.appendingPathComponent("activation-repair-home"), dbmd: dbmd, inference: repairOwner)
     let waiting = try await repairing.newThread(mode: .shared)
     _ = try await repairing.submit(threadID: "home", text: "Preserve my first request", nonce: "repair-first")
     _ = try await repairing.submit(threadID: waiting, text: "Preserve my queued request", nonce: "repair-queued")
@@ -443,7 +443,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     let correctedPreferences = PerformancePreferences(liveMemory: .fixed)
     do {
         try await repairing.setPerformancePreferences(correctedPreferences)
-        throw SevraError.refused("CHECK FAILED: queued settings ignored corrupt history")
+        throw AppRuntimeError.refused("CHECK FAILED: queued settings ignored corrupt history")
     } catch { try check(error.localizedDescription.contains("unreadable"), "pending settings retain a failed accepted-version read") }
     await repairing.maintainPerformance()
     let failedPending = await repairing.snapshot().performance
@@ -476,11 +476,11 @@ func realActivationCheckIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--activation-real") else { return false }
     let args = CommandLine.arguments
     guard let index = args.firstIndex(of: "--home"), index + 1 < args.count else {
-        throw SevraError.refused("Pass a new disposable --home for activation evidence.")
+        throw AppRuntimeError.refused("Pass a new disposable --home for activation evidence.")
     }
     let root = URL(fileURLWithPath: args[index + 1])
     guard !FileManager.default.fileExists(atPath: root.path), (Machine.current().availableGB ?? 0) >= 13 else {
-        throw SevraError.refused("Activation check requires a new directory and 13 GB real reclaimable memory.")
+        throw AppRuntimeError.refused("Activation check requires a new directory and 13 GB real reclaimable memory.")
     }
     let original = PerformancePreferences(budget: .custom, customGB: 10)
     let requested = PerformancePreferences(budget: .custom, customGB: 9, liveMemory: .fixed)
@@ -495,7 +495,7 @@ func realActivationCheckIfRequested() async throws -> Bool {
         }
         guard point == .beforeRename, remainingWrites > 0 else { return }
         remainingWrites -= 1
-        if remainingWrites == 0 { throw SevraError.refused("Injected activation storage failure") }
+        if remainingWrites == 0 { throw AppRuntimeError.refused("Injected activation storage failure") }
     }
     var inference: LocalInference? = LocalInference(model: model, preferences: original, activationDirectory: root,
         activationWriteFault: activationFault)
@@ -537,7 +537,7 @@ func realActivationCheckIfRequested() async throws -> Bool {
         // transition after the replacement Engine exists, before health/commit.
         remainingWrites = 4
         try await inference!.configure(requested)
-        do { _ = try await run(); throw SevraError.refused("CHECK FAILED: injected change completed") }
+        do { _ = try await run(); throw AppRuntimeError.refused("CHECK FAILED: injected change completed") }
         catch { try check(error.localizedDescription.contains("Injected activation storage failure"), "real change fails at the frozen transition") }
         let failed = try state()
         let telemetry = inference!.performanceTelemetry!.snapshot(preferences: requested, pending: false, busy: false)
@@ -552,7 +552,7 @@ func realActivationCheckIfRequested() async throws -> Bool {
             "a restored load cannot inherit speed evidence from the failed selection")
         try check(failed.lastGood?.generation != initial.lastGood?.generation,
             "rollback is a fresh runtime, never two resident engines")
-        do { _ = try await run(); throw SevraError.refused("CHECK FAILED: failed-selection work ran against rollback") }
+        do { _ = try await run(); throw AppRuntimeError.refused("CHECK FAILED: failed-selection work ran against rollback") }
         catch { try check(error.localizedDescription.contains("did not activate"), "failed-selection work stays blocked") }
         try check(await inference!.lastStats.isEmpty, "blocked work executes no generation")
         try await inference!.configure(requested)
@@ -575,7 +575,7 @@ func realActivationCheckIfRequested() async throws -> Bool {
         commitCancellation = Cancellation()
         do {
             _ = try await run(cancellation: commitCancellation!)
-            throw SevraError.refused("CHECK FAILED: cancellation during commit published a runtime")
+            throw AppRuntimeError.refused("CHECK FAILED: cancellation during commit published a runtime")
         } catch {
             try check(commitCancellation!.isCancelled && !error.localizedDescription.contains("CHECK FAILED"),
                 "cancellation during durable commit returns without publication")
@@ -588,7 +588,7 @@ func realActivationCheckIfRequested() async throws -> Bool {
         let afterCancellation = try await run()
         try check(afterCancellation.text.trimmingCharacters(in: .whitespacesAndNewlines) == "OK",
             "a new request can retry a user-cancelled activation")
-        do { try await inference!.recoverModelActivation(); throw SevraError.refused("CHECK FAILED: repair reset a loaded model") }
+        do { try await inference!.recoverModelActivation(); throw AppRuntimeError.refused("CHECK FAILED: repair reset a loaded model") }
         catch { try check(!error.localizedDescription.contains("CHECK FAILED"), "repair cannot touch a healthy loaded owner") }
         await inference!.unload(); inference = nil
         // Only this invocation's new disposable history is damaged. The
@@ -598,7 +598,7 @@ func realActivationCheckIfRequested() async throws -> Bool {
         let damaged = Data("{damaged activation fixture".utf8)
         try damaged.write(to: root.appendingPathComponent("state.json"))
         inference = LocalInference(model: model, preferences: requested, activationDirectory: root)
-        do { _ = try await run(); throw SevraError.refused("CHECK FAILED: damaged setup loaded the model") }
+        do { _ = try await run(); throw AppRuntimeError.refused("CHECK FAILED: damaged setup loaded the model") }
         catch { try check(error.localizedDescription.contains("unreadable"), "damaged real setup refuses before model allocation") }
         try check(inference!.performanceTelemetry?.isLoaded == false, "damaged setup leaves the real model unloaded")
         try await inference!.recoverModelActivation()
