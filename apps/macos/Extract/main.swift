@@ -1,12 +1,12 @@
 import AppKit
-import CSevraSandbox
+import CSlotstreamSandbox
 import Darwin
 import Foundation
 import ImageIO
 import PDFKit
 import Vision
 
-// sevra-extract: the only place Sevra parses untrusted rich documents.
+// slotstream-extract: the only place Slotstream parses untrusted rich documents.
 //
 // The runtime starts one short-lived process per request and passes the file's
 // bytes on stdin; this process never receives a path to the user's files. It
@@ -105,7 +105,7 @@ func privateTemporaryFolder() throws -> String {
           let base = realpath(String(cString: buffer), nil) else { throw Failure(code: "io", message: "No temporary folder is available.") }
     defer { free(base) }
     sweepStaleFolders(in: String(cString: base))
-    var template = Array((String(cString: base) + "/sevra-extract.XXXXXXXX").utf8CString)
+    var template = Array((String(cString: base) + "/slotstream-extract.XXXXXXXX").utf8CString)
     guard let made = template.withUnsafeMutableBufferPointer({ mkdtemp($0.baseAddress!) }) else {
         throw Failure(code: "io", message: "Could not create a private temporary folder.")
     }
@@ -125,7 +125,7 @@ func sweepStaleFolders(in base: String) {
     var stale: [String] = []
     while let entry = readdir(dir), stale.count < 64 {
         let name = entryName(entry)
-        guard name.hasPrefix("sevra-extract.") else { continue }
+        guard name.hasPrefix("slotstream-extract.") else { continue }
         var info = stat()
         guard lstat(base + "/" + name, &info) == 0, info.st_mode & S_IFMT == S_IFDIR, info.st_uid == getuid(), info.st_mtimespec.tv_sec < cutoff else { continue }
         stale.append(base + "/" + name)
@@ -223,7 +223,7 @@ func enterSandbox(_ kind: Profile, temporary: String, extraExec: String? = nil, 
     setenv("TMPDIR", temporary + "/", 1)
     setenv("HOME", temporary, 1)
     var message = [CChar](repeating: 0, count: 512)
-    guard sevra_sandbox_apply(profile(kind, temporary: temporary, extraExec: extraExec, store: store, storeWritable: storeWritable), &message, UInt(message.count)) == 0 else {
+    guard slotstream_sandbox_apply(profile(kind, temporary: temporary, extraExec: extraExec, store: store, storeWritable: storeWritable), &message, UInt(message.count)) == 0 else {
         throw Failure(code: "sandbox", message: "The document reader could not isolate itself: " + String(cString: message))
     }
 }
@@ -251,7 +251,7 @@ func extractDocument(kind: String, data: Data) throws -> [String: Any] {
         for index in 0..<document.pageCount {
             let text = autoreleasepool { normalized(document.page(at: index)?.string ?? "") }
             total += text.utf8.count
-            guard total <= Limit.text else { throw Failure(code: "text-limit", message: "This PDF contains more text than Sevra reads from one file.") }
+            guard total <= Limit.text else { throw Failure(code: "text-limit", message: "This PDF contains more text than Slotstream reads from one file.") }
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { textless.append(index) }
             pages.append(text)
         }
@@ -261,7 +261,7 @@ func extractDocument(kind: String, data: Data) throws -> [String: Any] {
         let text: String
         do { text = try NSAttributedString(data: data, options: [.documentType: type], documentAttributes: nil).string }
         catch { throw Failure(code: "unreadable", message: "This document could not be read. It may be damaged or use an unsupported format.") }
-        guard text.utf8.count <= Limit.text else { throw Failure(code: "text-limit", message: "This document contains more text than Sevra reads from one file.") }
+        guard text.utf8.count <= Limit.text else { throw Failure(code: "text-limit", message: "This document contains more text than Slotstream reads from one file.") }
         return ["format": kind, "pages": [normalized(text)], "textless": []]
     default:
         throw Failure(code: "unsupported", message: "This document type is not supported.")
@@ -314,7 +314,7 @@ func runDbmd(kind: String, data: Data, dbmd: String, temporary: String) throws -
     var status: Int32 = 0
     while waitpid(pid, &status, 0) < 0 && errno == EINTR {}
     unlink(input)
-    guard !overflow else { throw Failure(code: "text-limit", message: "This document contains more text than Sevra reads from one file.") }
+    guard !overflow else { throw Failure(code: "text-limit", message: "This document contains more text than Slotstream reads from one file.") }
     let object = try? JSONSerialization.jsonObject(with: result) as? [String: Any]
     if let error = object?["error"] as? [String: Any] {
         let code = error["code"] as? String ?? ""
@@ -324,7 +324,7 @@ func runDbmd(kind: String, data: Data, dbmd: String, temporary: String) throws -
     guard (status & 0x7f) == 0, (status >> 8) & 0xff == 0, let text = object?["text"] as? String else {
         throw Failure(code: "unreadable", message: "This document could not be read. It may be damaged or use an unsupported format.")
     }
-    guard text.utf8.count <= Limit.text else { throw Failure(code: "text-limit", message: "This document contains more text than Sevra reads from one file.") }
+    guard text.utf8.count <= Limit.text else { throw Failure(code: "text-limit", message: "This document contains more text than Slotstream reads from one file.") }
     return ["format": kind, "pages": [normalized(text)], "textless": []]
 }
 
@@ -383,7 +383,7 @@ func render(kind: String, data: Data, pages requested: [Int]) throws -> [Frame] 
         throw Failure(code: "unreadable", message: "This image could not be read.")
     }
     // Refuse decompression bombs before decoding anything.
-    guard width > 0, height > 0, width * height <= Limit.imagePixels else { throw Failure(code: "too-large", message: "This image has more pixels than Sevra reads.") }
+    guard width > 0, height > 0, width * height <= Limit.imagePixels else { throw Failure(code: "too-large", message: "This image has more pixels than Slotstream reads.") }
     let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true,
                                     kCGImageSourceThumbnailMaxPixelSize: Limit.renderDimension, kCGImageSourceShouldCacheImmediately: true]
     guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { throw Failure(code: "unreadable", message: "This image could not be decoded.") }
@@ -434,7 +434,7 @@ func recognize(_ frame: Frame) throws -> String {
 func canary() throws {
     let context = try grayContext(width: 480, height: 96)
     context.setFillColor(gray: 0, alpha: 1)
-    let text = NSAttributedString(string: "Sevra reads 42", attributes: [.font: NSFont.systemFont(ofSize: 36), .foregroundColor: NSColor.black])
+    let text = NSAttributedString(string: "Slotstream reads 42", attributes: [.font: NSFont.systemFont(ofSize: 36), .foregroundColor: NSColor.black])
     let line = CTLineCreateWithAttributedString(text)
     context.textPosition = CGPoint(x: 16, y: 30)
     CTLineDraw(line, context)
@@ -460,7 +460,7 @@ func selftest(probe: String, port: UInt16) -> [String: Any] {
     var pid: pid_t = 0
     let argv: [UnsafeMutablePointer<CChar>?] = [strdup("/bin/echo"), nil]
     result["spawn_process"] = posix_spawn(&pid, "/bin/echo", nil, nil, argv, nil) == 0
-    result["window_server"] = sevra_can_look_up("com.apple.windowserver.active") == 1
+    result["window_server"] = slotstream_can_look_up("com.apple.windowserver.active") == 1
     result["read_home"] = open(NSHomeDirectoryForUser(NSUserName()).map { $0 + "/.zshrc" } ?? "/Users", O_RDONLY) >= 0
     return result
 }

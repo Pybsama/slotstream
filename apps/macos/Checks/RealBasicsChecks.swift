@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 /// Real model, 10 GB plan, four basic jobs in one disposable Home:
@@ -10,16 +10,16 @@ func realBasicsCheckIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--real-basics") else { return false }
     let args = CommandLine.arguments
     func option(_ name: String) -> String? { guard let i = args.firstIndex(of: name), i + 1 < args.count else { return nil }; return args[i + 1] }
-    guard let destination = option("--home") else { throw SevraError.refused("A real basics check requires a new --home directory.") }
+    guard let destination = option("--home") else { throw AppRuntimeError.refused("A real basics check requires a new --home directory.") }
     // `--think` turns the thread switch on for every job, which is how the
     // thinking-with-tools combination is measured against the plain runs.
     let thinking = args.contains("--think")
     let base = URL(fileURLWithPath: destination).standardizedFileURL
-    guard !FileManager.default.fileExists(atPath: base.path) else { throw SevraError.refused("Real checks require a new disposable directory.") }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
-    guard let helper = DocumentReader.locateHelper() else { throw SevraError.refused("sevra-extract is missing. Set SEVRA_EXTRACT.") }
+    guard !FileManager.default.fileExists(atPath: base.path) else { throw AppRuntimeError.refused("Real checks require a new disposable directory.") }
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    guard let helper = DocumentReader.locateHelper() else { throw AppRuntimeError.refused("slotstream-extract is missing. Set SLOTSTREAM_EXTRACT.") }
     let machine = Machine.current()
-    guard (machine.availableGB ?? 0) >= 13 else { throw SevraError.refused("The real check requires the 10 GB plan plus at least 3 GB headroom.") }
+    guard (machine.availableGB ?? 0) >= 13 else { throw AppRuntimeError.refused("The real check requires the 10 GB plan plus at least 3 GB headroom.") }
 
     let reports = base.appendingPathComponent("Reports"), project = base.appendingPathComponent("Project")
     try FileManager.default.createDirectory(at: reports, withIntermediateDirectories: true)
@@ -32,7 +32,7 @@ func realBasicsCheckIfRequested() async throws -> Bool {
     try Data("# Notes\n\nKeep the launch calm.\n".utf8).write(to: project.appendingPathComponent("notes.md"))
 
     let started = Date()
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: base.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: 10), helper: helper)
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: 10), helper: helper)
     var receipt: [String: Any] = ["model_plan_gb": 10, "thinking": thinking]
     func start(_ title: String) async throws -> String {
         let id = try await runtime!.newThread(title: title)
@@ -53,7 +53,7 @@ func realBasicsCheckIfRequested() async throws -> Bool {
             if current.run?.state == .needsYou || current.run?.state.terminal == true { return current }
             try await Task.sleep(nanoseconds: 1_000_000_000)
         }
-        throw SevraError.refused("The real job did not finish in time.")
+        throw AppRuntimeError.refused("The real job did not finish in time.")
     }
     var failures: [String] = []
     func expect(_ condition: Bool, _ label: String) { print((condition ? "PASS: " : "FAIL: ") + label); if !condition { failures.append(label) } }
@@ -107,7 +107,7 @@ func realBasicsCheckIfRequested() async throws -> Bool {
     if let proposal {
         let html = proposal.html.lowercased()
         expect(proposal.collections.contains(AppCollection(name: "counter", access: .write)), "the app declares the counter collection for writing")
-        expect(html.contains("sevra.") && html.contains("<button"), "the app uses the Sevra data API and has buttons")
+        expect(html.contains("slotstream.") && html.contains("<button"), "the app uses the Slotstream data API and has buttons")
         // The host's own review notes, not a raw string search: an SVG
         // namespace or a comment is not a web resource.
         expect(!proposal.notes.contains { $0.contains("web resources") || $0.contains("network") }, "the app loads no web resources and uses no network API")
@@ -134,7 +134,7 @@ func realBasicsCheckIfRequested() async throws -> Bool {
     receipt["seconds"] = Int(Date().timeIntervalSince(started))
     receipt["failures"] = failures
     print(String(decoding: try JSONSerialization.data(withJSONObject: receipt, options: [.sortedKeys, .prettyPrinted]), as: UTF8.self)); fflush(stdout)
-    guard failures.isEmpty else { throw SevraError.refused("CHECK FAILED: real basics: " + failures.joined(separator: "; ")) }
+    guard failures.isEmpty else { throw AppRuntimeError.refused("CHECK FAILED: real basics: " + failures.joined(separator: "; ")) }
     print("PASS: real local model answered from a PDF, proposed an exact reviewed edit and an app that passed its review checks, and read an attached file it was asked about as \"this\"")
     return true
 }

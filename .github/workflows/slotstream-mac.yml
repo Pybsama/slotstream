@@ -1,5 +1,5 @@
-name: sevra-mac
-# The Sevra Mac app in apps/macos, built against the engine in this repository.
+name: slotstream-mac
+# The Slotstream Mac app in apps/macos, built against the engine in this repository.
 # `checks` runs the command a development Mac runs: scripted inference in
 # disposable Homes, the sandboxed document helper and offscreen checks of the
 # production views, with no model weights. `xcode` builds the Xcode project,
@@ -13,15 +13,16 @@ on:
       - "Sources/**"
       - "Package.swift"
       - "Package.resolved"
-      - "Tools/check_sevra*.sh"
-      - "Tools/build_sevra_xcode.sh"
-      - "Tools/build_sevra_mac.sh"
+      - "Tools/check_slotstream*.sh"
+      - "Tools/build_slotstream_xcode.sh"
+      - "Tools/build_slotstream_mac.sh"
       - "Tools/mac_build_inputs.py"
-      - "Tools/prepare_sevra_build.py"
-      - "Tools/test_prepare_sevra_build.py"
+      - "Tools/check_mac_package_products.py"
+      - "Tools/prepare_slotstream_build.py"
+      - "Tools/test_prepare_slotstream_build.py"
       - "Tools/dbmd_install.sh"
       - "Tools/fetch_metallib.sh"
-      - ".github/workflows/sevra-mac.yml"
+      - ".github/workflows/slotstream-mac.yml"
   push:
     branches: [main]
     paths:
@@ -29,15 +30,16 @@ on:
       - "Sources/**"
       - "Package.swift"
       - "Package.resolved"
-      - "Tools/check_sevra*.sh"
-      - "Tools/build_sevra_xcode.sh"
-      - "Tools/build_sevra_mac.sh"
+      - "Tools/check_slotstream*.sh"
+      - "Tools/build_slotstream_xcode.sh"
+      - "Tools/build_slotstream_mac.sh"
       - "Tools/mac_build_inputs.py"
-      - "Tools/prepare_sevra_build.py"
-      - "Tools/test_prepare_sevra_build.py"
+      - "Tools/check_mac_package_products.py"
+      - "Tools/prepare_slotstream_build.py"
+      - "Tools/test_prepare_slotstream_build.py"
       - "Tools/dbmd_install.sh"
       - "Tools/fetch_metallib.sh"
-      - ".github/workflows/sevra-mac.yml"
+      - ".github/workflows/slotstream-mac.yml"
   workflow_dispatch:
 permissions:
   contents: read
@@ -57,17 +59,17 @@ jobs:
         # suite then accepts the helper's own "unavailable" error for images
         # and scanned pages; a development Mac must still recognize them.
         env:
-          SEVRA_CHECKS_OCR_OPTIONAL: "1"
-        run: bash Tools/check_sevra_mac.sh
+          SLOTSTREAM_CHECKS_OCR_OPTIONAL: "1"
+        run: bash Tools/check_slotstream_mac.sh
       - name: offscreen view snapshots, light and dark
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sevra-mac-ui-snapshots
+          name: slotstream-mac-ui-snapshots
           path: |
-            .build/sevra-thinking-ui/
-            .build/sevra-apps-ui/
-            .build/sevra-memory-ui/
+            .build/slotstream-thinking-ui/
+            .build/slotstream-apps-ui/
+            .build/slotstream-memory-ui/
           if-no-files-found: ignore
   xcode:
     runs-on: macos-26
@@ -81,4 +83,4 @@ jobs:
           Tools/dbmd_install.sh
           SLOTSTREAM_METALLIB_MACOS=26 Tools/fetch_metallib.sh
       - name: Xcode project build, ad hoc signed
-        run: bash Tools/build_sevra_xcode.sh
+        run: bash Tools/build_slotstream_xcode.sh
