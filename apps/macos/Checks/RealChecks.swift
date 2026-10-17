@@ -1,19 +1,19 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 func realCheckIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--real") else { return false }
     let args = CommandLine.arguments
     func option(_ name: String) -> String? { guard let i = args.firstIndex(of: name), i + 1 < args.count else { return nil }; return args[i + 1] }
-    guard let source = option("--source"), let destination = option("--home") else { throw SevraError.refused("A real check requires explicit --source and a new --home directory.") }
+    guard let source = option("--source"), let destination = option("--home") else { throw AppRuntimeError.refused("A real check requires explicit --source and a new --home directory.") }
     let home = URL(fileURLWithPath: destination).standardizedFileURL
-    guard !FileManager.default.fileExists(atPath: home.path) else { throw SevraError.refused("Real checks require a new disposable Home.") }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    guard !FileManager.default.fileExists(atPath: home.path) else { throw AppRuntimeError.refused("Real checks require a new disposable Home.") }
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     let machine = Machine.current()
     let budget = try realCheckBudget()
-    guard (machine.availableGB ?? 0) >= budget + 3 else { throw SevraError.refused("The real check requires the selected plan plus at least 3 GB headroom.") }
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: LocalInference(memoryGB: budget))
+    guard (machine.availableGB ?? 0) >= budget + 3 else { throw AppRuntimeError.refused("The real check requires the selected plan plus at least 3 GB headroom.") }
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: LocalInference(memoryGB: budget))
     try await runtime!.attach(threadID: "home", folder: URL(fileURLWithPath: source))
     let prompt = "Read both Cedar pilot documents in the attached folder. Use your source tools, then propose cedar-briefing.md with a short cited briefing: launch date, owners, budget, prerequisites and main risk. Keep it under 150 words."
     let runID = try await runtime!.submit(threadID: "home", text: prompt, nonce: "real-workspace-brief")
@@ -28,7 +28,7 @@ func realCheckIfRequested() async throws -> Bool {
         try await Task.sleep(nanoseconds: 1_000_000_000)
     }
     guard let current = thread, current.run?.state == .needsYou, let proposal = current.run?.proposal else {
-        try? await runtime?.shutdown(); throw SevraError.refused("Real workflow did not reach review: " + (thread?.run?.status ?? "timeout"))
+        try? await runtime?.shutdown(); throw AppRuntimeError.refused("Real workflow did not reach review: " + (thread?.run?.status ?? "timeout"))
     }
     let receipt: [String: Any] = ["run_id": runID, "phase": "needsYou", "prompt": prompt, "content": proposal.content, "proposal_digest": proposal.digest,
                                  "trace": current.run?.trace ?? [], "citations": proposal.citations.map { ["id": $0.id, "path": $0.path, "source_sha256": $0.hash, "start": $0.start, "length": $0.length, "excerpt": $0.content ?? ""] as [String: Any] },
@@ -61,16 +61,16 @@ func realThinkingCheckIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--real-thinking") else { return false }
     let args = CommandLine.arguments
     func option(_ name: String) -> String? { guard let i = args.firstIndex(of: name), i + 1 < args.count else { return nil }; return args[i + 1] }
-    guard let destination = option("--home") else { throw SevraError.refused("A real thinking check requires a new --home directory.") }
+    guard let destination = option("--home") else { throw AppRuntimeError.refused("A real thinking check requires a new --home directory.") }
     let home = URL(fileURLWithPath: destination).standardizedFileURL
-    guard !FileManager.default.fileExists(atPath: home.path) else { throw SevraError.refused("Real checks require a new disposable Home.") }
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    guard !FileManager.default.fileExists(atPath: home.path) else { throw AppRuntimeError.refused("Real checks require a new disposable Home.") }
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     let machine = Machine.current()
     let budget = try realCheckBudget()
-    guard (machine.availableGB ?? 0) >= budget + 3 else { throw SevraError.refused("The real check requires the selected plan plus at least 3 GB headroom.") }
+    guard (machine.availableGB ?? 0) >= budget + 3 else { throw AppRuntimeError.refused("The real check requires the selected plan plus at least 3 GB headroom.") }
     let forcedBudget = Int(option("--budget") ?? "") ?? 96
     let answerAfter = Double(option("--answer-after") ?? "") ?? 8
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: LocalInference(memoryGB: budget))
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: LocalInference(memoryGB: budget))
     let thread = try await runtime!.newThread(title: "Thinking")
     try await runtime!.setThinking(threadID: thread, enabled: true)
     var receipts: [[String: Any]] = []
@@ -80,7 +80,7 @@ func realThinkingCheckIfRequested() async throws -> Bool {
         let started = Date()
         for _ in 0..<1800 {
             let s = await runtime!.snapshot()
-            guard let t = s.home.threads.first(where: { $0.id == thread }) else { throw SevraError.unavailable("thread vanished") }
+            guard let t = s.home.threads.first(where: { $0.id == thread }) else { throw AppRuntimeError.unavailable("thread vanished") }
             let status = t.run?.status ?? ""
             if status != previous, !status.hasPrefix("Thinking"), !status.hasPrefix("Finishing") { print(status); fflush(stdout); previous = status }
             if let after = answerNowAfter, !requested, let live = s.thinking, live.runID == runID, live.active, live.seconds >= after {
@@ -90,7 +90,7 @@ func realThinkingCheckIfRequested() async throws -> Bool {
             if t.run?.id == runID, t.run?.state.terminal == true { return t }
             try await Task.sleep(nanoseconds: 500_000_000)
         }
-        throw SevraError.refused("CHECK FAILED: run did not finish within \(Int(Date().timeIntervalSince(started))) s")
+        throw AppRuntimeError.refused("CHECK FAILED: run did not finish within \(Int(Date().timeIntervalSince(started))) s")
     }
     func record(_ phase: String, _ t: WorkThread, _ live: String?) {
         let run = t.run!

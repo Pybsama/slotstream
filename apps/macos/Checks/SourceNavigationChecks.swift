@@ -1,6 +1,6 @@
 import Foundation
 import Darwin
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 private func sourceRequire(_ value: @autoclosure () throws -> Bool, _ message: String) throws {
@@ -194,7 +194,7 @@ func sourceNavigationChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "", calls: [ProposedTool(name: "source.find", arguments: ["query": .string("target.txt")])]),
         EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["path": .string(deep + "/target.txt")])]),
         EngineTurn(text: "The file says deep target. [S1]")])
-    let runtime = try SevraRuntime(homeURL: base.appendingPathComponent("Home"), dbmd: dbmd, inference: probe)
+    let runtime = try SlotstreamRuntime(homeURL: base.appendingPathComponent("Home"), dbmd: dbmd, inference: probe)
     let thread = try await runtime.newThread(mode: .threadOnly)
     try await runtime.submit(threadID: thread, text: "Can you access files on my Mac?", nonce: "capabilities")
     _ = try await terminal(runtime, thread)
