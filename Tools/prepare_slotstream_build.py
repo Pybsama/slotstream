@@ -13,12 +13,12 @@ import shutil
 import subprocess
 
 
-TARGETS = ('SevraText', 'SevraRuntime', 'SevraPresentation', 'SevraMac', 'SevraLocal',
-           'SevraMacChecks', 'SevraComposerChecks', 'SevraPresentationChecks')
+TARGETS = ('SlotstreamText', 'SlotstreamRuntime', 'SlotstreamPresentation', 'SlotstreamMac', 'SlotstreamLocal',
+           'SlotstreamMacChecks', 'SlotstreamComposerChecks', 'SlotstreamPresentationChecks')
 
 
 def prepare(binary_dir, fingerprint):
-    stamp = binary_dir / '.sevra-native-inputs'
+    stamp = binary_dir / '.slotstream-native-inputs'
     if stamp.is_file() and stamp.read_text() == fingerprint:
         return False
     for target in TARGETS:
@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--check', action='store_true', help='Fail if inputs changed since preparation; do not invalidate anything.')
     args = parser.parse_args()
     root = pathlib.Path(__file__).resolve().parent.parent
-    paths = [root / p for p in ['Package.swift', 'Package.resolved', 'apps/macos/Package.swift', 'apps/macos/Package.resolved', 'Tools/prepare_sevra_build.py']]
+    paths = [root / p for p in ['Package.swift', 'Package.resolved', 'apps/macos/Package.swift', 'apps/macos/Package.resolved', 'Tools/prepare_slotstream_build.py']]
     for base in ['Sources', 'apps/macos/Runtime', 'apps/macos/Presentation', 'apps/macos/Text', 'apps/macos/App', 'apps/macos/CLI', 'apps/macos/Checks', 'apps/macos/ComposerChecks', 'apps/macos/PresentationTests']:
         paths.extend(p for p in (root / base).rglob('*') if p.is_file())
     identity = hashlib.sha256()
@@ -52,7 +52,7 @@ def main():
         identity.update(subprocess.check_output(command))
     binary_dir = pathlib.Path(subprocess.check_output(['swift', 'build', '--package-path', str(root / 'apps/macos'), '-c', args.configuration, '--show-bin-path'], text=True).strip())
     if args.check:
-        stamp = binary_dir / '.sevra-native-inputs'
+        stamp = binary_dir / '.slotstream-native-inputs'
         if not stamp.is_file() or stamp.read_text() != identity.hexdigest():
             parser.exit(1, 'Native inputs changed during verification. Repeat with stable sources.\n')
     elif prepare(binary_dir, identity.hexdigest()):

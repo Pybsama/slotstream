@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
-import SevraRuntime
-import SevraPresentation
+import SlotstreamRuntime
+import SlotstreamPresentation
 import Slotstream
 
 struct ContentView: View {
@@ -47,7 +47,7 @@ struct ContentView: View {
     private var palette: Palette { Palette(scheme: scheme, contrast: contrast) }
     private var messages: [Message] { model.conversationMessages }
     private func speaker(_ message: Message) -> String {
-        (message.role == "user" ? "You" : "Sevra") + ((model.thread?.promotedMessageIDs.contains(message.id) ?? false) ? " · From Home" : "")
+        (message.role == "user" ? "You" : "Slotstream") + ((model.thread?.promotedMessageIDs.contains(message.id) ?? false) ? " · From Home" : "")
     }
     private var allSource: String { messages.map { "## " + speaker($0) + "\n\n" + $0.text }.joined(separator: "\n\n") }
     private var artifactOpen: Bool { model.panel == "Artifact" }
@@ -101,11 +101,11 @@ struct ContentView: View {
                 }
             }.background(canvas)
                 .disabled(homes.switching)
-                .onReceive(NotificationCenter.default.publisher(for: .sevraShowHomes)) { _ in
+                .onReceive(NotificationCenter.default.publisher(for: .slotstreamShowHomes)) { _ in
                     if wide && !split { rail = true } else { overlayRail = true }
                     DispatchQueue.main.async { homes.showing = true }
                 }
-                .onReceive(NotificationCenter.default.publisher(for: .sevraToggleSidebar)) { _ in
+                .onReceive(NotificationCenter.default.publisher(for: .slotstreamToggleSidebar)) { _ in
                     if !wide || split {
                         if overlayRail { dismissNavigation() }
                         else { model.textSession.rememberFocus(); overlayRail = true }
@@ -127,8 +127,8 @@ struct ContentView: View {
             if value == "Rename" { renameText = model.thread?.title ?? "" }
         }
         .onExitCommand(perform: escape)
-        .onReceive(NotificationCenter.default.publisher(for: .sevraEscape)) { _ in escape() }
-        .onReceive(NotificationCenter.default.publisher(for: .sevraJumpToLatest)) { notification in
+        .onReceive(NotificationCenter.default.publisher(for: .slotstreamEscape)) { _ in escape() }
+        .onReceive(NotificationCenter.default.publisher(for: .slotstreamJumpToLatest)) { notification in
             guard model.panel.isEmpty || artifactOpen, !messages.isEmpty else { return }
             jumpToLatest(focus: notification.userInfo?["focus"] as? Bool ?? true)
         }
@@ -242,7 +242,7 @@ struct ContentView: View {
                     HStack(spacing: 12) {
                         Button { model.attach() } label: { Label("Attach files or folders", systemImage: "paperclip") }.disabled(!ready || model.working || model.attaching || model.aiPaused).help(attachHelp)
                         if model.thread?.mode != .incognito {
-                            Button { model.useSkill("app") } label: { Label("Build an app", systemImage: "square.grid.2x2") }.disabled(!ready || model.aiPaused).help("Start a request for a mini-app that runs inside Sevra")
+                            Button { model.useSkill("app") } label: { Label("Build an app", systemImage: "square.grid.2x2") }.disabled(!ready || model.aiPaused).help("Start a request for a mini-app that runs inside Slotstream")
                         }
                     }.padding(.top, 4)
                     Text("Try: Summarize this PDF with citations, fix the dates in my notes, or search my knowledge base.").font(.callout).foregroundStyle(secondaryInk)
@@ -400,7 +400,7 @@ struct ContentView: View {
             if !model.attachments.isEmpty { AttachmentBar(model: model, palette: palette).padding(.horizontal, 4) }
             VStack(spacing: 0) {
                 ZStack(alignment: .topLeading) {
-                    if model.draft.isEmpty { Text(model.busy ? "Draft your next message…" : "Message Sevra…").font(.custom("Inter-Regular", size: fontSize)).foregroundStyle(secondaryInk).padding(.leading, 15).padding(.top, 10).allowsHitTesting(false).accessibilityHidden(true) }
+                    if model.draft.isEmpty { Text(model.busy ? "Draft your next message…" : "Message Slotstream…").font(.custom("Inter-Regular", size: fontSize)).foregroundStyle(secondaryInk).padding(.leading, 15).padding(.top, 10).allowsHitTesting(false).accessibilityHidden(true) }
                     Composer(text: Binding(get: { model.draft }, set: model.edited), documentID: model.selectedID, session: model.textSession, fontSize: fontSize,
                         canSend: model.composer.canSend && !model.busy && !model.attaching && !model.aiPaused, focusRevision: model.focusRevision,
                         onHeight: { if composerHeight != $0 { composerHeight = $0 } }, onFocus: { composerFocused = $0 }, onFiles: model.attachFiles, send: model.send)
@@ -435,7 +435,7 @@ struct ContentView: View {
                     if model.busy {
                         if model.liveThinking?.active == true {
                             Button("Answer now", action: model.answerNow).accessibilityIdentifier("answer-now")
-                                .help("End the thought now and answer from what Sevra has so far")
+                                .help("End the thought now and answer from what Slotstream has so far")
                         }
                         Button(model.thread?.run?.state == .stopping ? "Stopping…" : model.thread?.run?.state == .queued ? "Cancel" : model.thread?.run?.state == .needsYou ? "Cancel review" : "Stop", action: model.stop)
                             .disabled(model.thread?.run?.state == .stopping).accessibilityIdentifier("stop-response").help(model.thread?.run?.state == .queued ? "Remove this message from the queue" : model.thread?.run?.state == .needsYou ? "Cancel this review. Nothing waiting for review is saved or written" : "Stop the current response and further tool actions")
@@ -453,15 +453,15 @@ struct ContentView: View {
         }.padding(.top, 8).padding(.bottom, 16).readingColumn()
     }
     private var attachHelp: String {
-        model.aiPaused ? "Review Home changes before attaching a source" : model.working ? "Attach sources after this response finishes" : "Attach files, folders or a db.md knowledge base. Sevra reads them; changes need your permission and review."
+        model.aiPaused ? "Review Home changes before attaching a source" : model.working ? "Attach sources after this response finishes" : "Attach files, folders or a db.md knowledge base. Slotstream reads them; changes need your permission and review."
     }
     private var typicalThinking: String? { model.typicalThinkingSeconds.map { "Recently about " + ThinkingPolicy.describe($0) + " extra." } }
     private var thinkHelp: String {
         if model.aiPaused { return "Review Home changes before changing thinking" }
         if model.thinkingEnabled {
             return model.snapshot?.attachmentNames[model.selectedID] != nil
-                ? "Sevra thinks before each answer in this thread, including while it reads your sources. Turn off for faster replies."
-                : "Sevra thinks before each answer in this thread. Turn off for faster replies."
+                ? "Slotstream thinks before each answer in this thread, including while it reads your sources. Turn off for faster replies."
+                : "Slotstream thinks before each answer in this thread. Turn off for faster replies."
         }
         return "Take more time before answering. " + (typicalThinking ?? "Adds time on this Mac.") + " You can press Answer now at any point."
     }
@@ -563,7 +563,7 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(context.messageIDs, id: \.self) { id in
                                 if let message = model.snapshot?.home.threads.flatMap(\.messages).first(where: { $0.id == id }) {
-                                    Text(message.role == "user" ? "You" : "Sevra").font(.caption).foregroundStyle(secondaryInk)
+                                    Text(message.role == "user" ? "You" : "Slotstream").font(.caption).foregroundStyle(secondaryInk)
                                     Text(message.text).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                                 } else { Text("This message is no longer available in the current Home.").foregroundStyle(secondaryInk) }
                             }
@@ -583,7 +583,7 @@ struct ContentView: View {
                         Text("Earlier conversation excerpts").font(.headline)
                         Text("Partial source text, not a complete summary.").font(.callout).foregroundStyle(secondaryInk)
                         ForEach(context.earlierExcerpts, id: \.messageID) { excerpt in
-                            Text(excerpt.role == "user" ? "You" : "Sevra").font(.caption).foregroundStyle(secondaryInk)
+                            Text(excerpt.role == "user" ? "You" : "Slotstream").font(.caption).foregroundStyle(secondaryInk)
                             Text(excerpt.text + (excerpt.truncated ? "…" : "")).textSelection(.enabled)
                         }
                     }
@@ -722,7 +722,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Open this link?").font(.title2.bold())
             Text(model.pendingLink?.absoluteString ?? "").textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-            Text("This opens your browser and may connect to the website. Sevra has not loaded a preview.").foregroundStyle(secondaryInk)
+            Text("This opens your browser and may connect to the website. Slotstream has not loaded a preview.").foregroundStyle(secondaryInk)
             HStack { Button("Cancel") { model.pendingLink = nil }.keyboardShortcut(.cancelAction); Spacer(); Button("Open in browser") { if let url = model.pendingLink { NSWorkspace.shared.open(url) }; model.pendingLink = nil }.buttonStyle(.borderedProminent) }
         }.padding(24).frame(width: 460).background(canvas)
     }
@@ -737,8 +737,8 @@ struct ContentView: View {
     private func saveRename() { let id = model.selectedID, title = renameText; model.perform { try await $0.rename(threadID: id, title: title); model.closePanel() } }
     private var knowledge: some View {
         ScrollView { VStack(alignment: .leading, spacing: 20) {
-            Text("You decide what Sevra remembers.").font(.title2.bold())
-            Text("Save messages you want Sevra to use again. Forget stops using a memory and its source in future replies; the conversation stays in your history.").foregroundStyle(secondaryInk)
+            Text("You decide what Slotstream remembers.").font(.title2.bold())
+            Text("Save messages you want Slotstream to use again. Forget stops using a memory and its source in future replies; the conversation stays in your history.").foregroundStyle(secondaryInk)
             Text("The current local context uses the latest eligible memories, with their complete saved text.").font(.caption).foregroundStyle(secondaryInk)
             if model.snapshot?.home.memories.isEmpty != false { emptyState("No saved memories yet", detail: model.thread?.mode == .incognito ? "Incognito messages stay out of memory." : "Choose a message from a saved conversation to remember it.") }
             ForEach(model.snapshot?.home.memories ?? []) { m in
@@ -826,10 +826,10 @@ private extension View {
     }
 }
 extension Notification.Name {
-    static let sevraEscape = Notification.Name("SevraEscape")
-    static let sevraJumpToLatest = Notification.Name("SevraJumpToLatest")
-    static let sevraFind = Notification.Name("SevraFindDocument")
-    static let sevraToggleSidebar = Notification.Name("SevraToggleSidebar")
+    static let slotstreamEscape = Notification.Name("SlotstreamEscape")
+    static let slotstreamJumpToLatest = Notification.Name("SlotstreamJumpToLatest")
+    static let slotstreamFind = Notification.Name("SlotstreamFindDocument")
+    static let slotstreamToggleSidebar = Notification.Name("SlotstreamToggleSidebar")
 }
 
 struct ModelFilesSettings: View {
@@ -937,7 +937,7 @@ struct PerformanceSettings: View {
             })) {
                 Text("Automatic (Recommended)").tag(PerformancePreferences.Budget.automatic)
                 Text("Custom limit").tag(PerformancePreferences.Budget.custom)
-            }.disabled(!rangeAvailable).help("Let Sevra adjust its memory budget, or set your own maximum")
+            }.disabled(!rangeAvailable).help("Let Slotstream adjust its memory budget, or set your own maximum")
             if model.performancePreferences.budget == .custom {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 12) {
@@ -948,7 +948,7 @@ struct PerformanceSettings: View {
                                 commitLimit()
                             }
                         }) { Text("Maximum memory") }
-                            .accessibilityValue(MemoryLimitText.number(limitGB) + " GB").help("Set the maximum memory budget; Sevra can use less when needed")
+                            .accessibilityValue(MemoryLimitText.number(limitGB) + " GB").help("Set the maximum memory budget; Slotstream can use less when needed")
                         TextField("Limit", text: $limitText).labelsHidden()
                             .textFieldStyle(.roundedBorder).frame(width: 64).multilineTextAlignment(.trailing)
                             .focused($editingNumber).onSubmit(commitLimit)
@@ -957,7 +957,7 @@ struct PerformanceSettings: View {
                     }
                     if let limitError { Text(limitError).foregroundStyle(.red).font(.callout) }
                     Text(model.performancePreferences.liveMemory == .automatic
-                         ? "Use up to this amount. Sevra gives memory back when other apps need it and can use more again when it is available. Your limit stays saved."
+                         ? "Use up to this amount. Slotstream gives memory back when other apps need it and can use more again when it is available. Your limit stays saved."
                          : "Use up to this amount when loading, then keep the cache capacity fixed. Your limit stays saved.")
                         .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     if rangeAvailable {
@@ -1013,9 +1013,9 @@ struct PerformanceSettings: View {
             })) {
                 Text("Automatic").tag(PerformancePreferences.Readiness.automatic)
                 Text("While app is open").tag(PerformancePreferences.Readiness.keepReady)
-            }.disabled(status == nil).help("Automatic keeps the model ready while you use Sevra and releases it after idle time in the background")
+            }.disabled(status == nil).help("Automatic keeps the model ready while you use Slotstream and releases it after idle time in the background")
             Text(model.performancePreferences.readiness == .automatic
-                 ? "Keeps the model ready while you use Sevra. In the background, releases it after about \(status?.idleMinutes ?? 10) idle minutes. Memory pressure, power saving and sleep can release it sooner."
+                 ? "Keeps the model ready while you use Slotstream. In the background, releases it after about \(status?.idleMinutes ?? 10) idle minutes. Memory pressure, power saving and sleep can release it sooner."
                  : "Keeps the model ready after your first message for faster follow-ups. Memory pressure and sleep can still release it.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let status {

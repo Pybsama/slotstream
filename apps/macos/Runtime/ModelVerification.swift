@@ -56,18 +56,18 @@ package final class ModelVerificationCache: @unchecked Sendable {
     package func check(manifestDigest: String, files: [URL], shouldContinue: () -> Bool,
                        verify: () throws -> Bool) throws -> Bool {
         lock.lock(); defer { lock.unlock() }
-        guard shouldContinue() else { throw SevraError.cancelled }
+        guard shouldContinue() else { throw AppRuntimeError.cancelled }
         let before = versions(files)
         if let before, Proof(manifestDigest: manifestDigest, versions: before) == verified {
-            guard shouldContinue() else { throw SevraError.cancelled }
+            guard shouldContinue() else { throw AppRuntimeError.cancelled }
             return true
         }
         verified = nil
         guard try verify() else { return false }
-        guard shouldContinue() else { throw SevraError.cancelled }
+        guard shouldContinue() else { throw AppRuntimeError.cancelled }
         if let before {
             guard versions(files) == before else {
-                throw SevraError.unavailable("The model files changed while being verified. Try again after the files finish changing.")
+                throw AppRuntimeError.unavailable("The model files changed while being verified. Try again after the files finish changing.")
             }
             verified = Proof(manifestDigest: manifestDigest, versions: before)
         }

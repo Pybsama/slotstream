@@ -1,6 +1,6 @@
 import Darwin
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 
 private func checkModelVerification(_ value: Bool, _ message: String) throws { try require(value, message) }
 
@@ -78,14 +78,14 @@ func modelVerificationChecks(root: URL) throws {
     try checkModelVerification(try check(), "symlink target is verified")
     try checkModelVerification(hashes > beforeLink, "symlink retarget invalidates the proof")
     do {
-        _ = try cache.check(manifestDigest: manifest, files: [file, optional], shouldContinue: { false }) { throw SevraError.refused("CHECK FAILED: cancelled verification ran") }
-        throw SevraError.refused("CHECK FAILED: cancelled cache hit accepted")
+        _ = try cache.check(manifestDigest: manifest, files: [file, optional], shouldContinue: { false }) { throw AppRuntimeError.refused("CHECK FAILED: cancelled verification ran") }
+        throw AppRuntimeError.refused("CHECK FAILED: cancelled cache hit accepted")
     } catch { try checkModelVerification(!error.localizedDescription.contains("CHECK FAILED"), "cached proof still respects cancellation") }
     if reusable {
         let changed = ModelVerificationCache()
         do {
             _ = try changed.check(manifestDigest: manifest, files: [file], shouldContinue: { true }) { try Data("changed contents".utf8).write(to: target); return true }
-            throw SevraError.refused("CHECK FAILED: mutation during verification accepted")
+            throw AppRuntimeError.refused("CHECK FAILED: mutation during verification accepted")
         } catch { try checkModelVerification(!error.localizedDescription.contains("CHECK FAILED"), "mutation while hashing fails closed") }
     }
     print("PASS: manifest-bound session verification, same-size corruption, restored mtime, repair, optional arrival, replacement, symlink, cancellation and verification mutation; cached=\(reusable)")

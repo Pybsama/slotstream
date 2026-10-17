@@ -1,6 +1,6 @@
 # Cedar release notes
 
-Synthetic source for the Sevra native application acceptance workflow.
+Synthetic source for the Slotstream native application acceptance workflow.
 
 The Cedar pilot starts on October 12. Maya owns the documentation. Leo owns
 the installer. The pilot budget is 400 dollars. The team must finish keyboard
