@@ -57,19 +57,23 @@ extension Diagnostics {
         }
 
         let unequal = MirrorRouter(replicaCount: 2, now: { time })
-        c.equal("large first probe", unequal.claim(byteCount: 1000), 0)
-        c.equal("idle unknown gets next probe", unequal.claim(byteCount: 100), 1)
-        c.equal("unknown backlog is balanced by bytes", unequal.claim(byteCount: 100), 1)
+        let large = unequal.claim(byteCount: 1000)
+        c.equal("large first probe", large, 0)
+        let small = unequal.claim(byteCount: 100)
+        c.equal("idle unknown gets next probe", small, 1)
+        let pending = unequal.claim(byteCount: 100)
+        c.equal("unknown backlog is balanced by bytes", pending, 1)
         time += 100
-        unequal.release(1, byteCount: 100, completed: true)
-        c.equal("pending unknown probe does not beat a measured replica",
-            unequal.claim(byteCount: 100), 1)
-        unequal.release(0, byteCount: 1000, completed: false)
-        c.equal("failed probe releases its reservation for retry", unequal.claim(byteCount: 50), 0)
+        unequal.release(small, byteCount: 100, completed: true)
+        let measured = unequal.claim(byteCount: 100)
+        c.equal("pending unknown probe does not beat a measured replica", measured, 1)
+        unequal.release(large, byteCount: 1000, completed: false)
+        let retry = unequal.claim(byteCount: 50)
+        c.equal("failed probe releases its reservation for retry", retry, 0)
         time += 100
-        unequal.release(0, byteCount: 50, completed: true)
-        unequal.release(1, byteCount: 100, completed: true)
-        unequal.release(1, byteCount: 100, completed: true)
+        unequal.release(retry, byteCount: 50, completed: true)
+        unequal.release(pending, byteCount: 100, completed: true)
+        unequal.release(measured, byteCount: 100, completed: true)
         c.equal("failed probe does not contribute bytes", unequal.servedBytes(), [50, 300])
 
         // Many callers exercise the production clock-under-lock and accounting.
