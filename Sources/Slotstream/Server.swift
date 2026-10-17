@@ -1101,7 +1101,7 @@ public final class Server {
 
     /// Sampling, stop and stream settings shared by the OpenAI handler and value checks.
     package static func openAIParameterError(_ json: [String: Any]) -> String? {
-        for key in ["temperature", "top_p", "presence_penalty"]
+        for key in ["temperature", "top_p", "min_p", "presence_penalty"]
         where json[key] != nil && Self.num(json[key]) == nil {
             return "\(key) must be a number"
         }
