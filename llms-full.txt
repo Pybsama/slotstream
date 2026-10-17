@@ -2450,7 +2450,10 @@ memory to a particular request and can miss allocations between samples.
 
 `--mirror` spreads checkpoint reads across identical copies on different disks.
 Each read chooses the copy estimated to finish first from its recent throughput
-and queued bytes. The run report shows the bytes served by each copy.
+and queued bytes. An unmeasured idle copy receives a probe; while all copies
+are being probed, reads are balanced by pending bytes. Once a copy has a
+measurement, pending probes wait for completion before attracting more work.
+The run report shows the bytes served by each copy.
 
 Verify every copy, including the primary, before using mirrors:
 
@@ -2463,7 +2466,12 @@ slotstream run --model /Volumes/external/model --mirror /Volumes/internal/model 
 Startup checks shard sizes and safetensors headers, not tensor payload hashes.
 Repeat `--mirror` for additional copies. The original pack supports mirrors with
 or without explicit `--quantization`; packed expert layouts and authenticated
-affine packs reject mirrors.
+affine packs reject mirrors. Commands that load weights directly, including
+`prefix-exact-check` (with or without `--plan`), `vision-parity`, `parity`,
+`ngram-golden`, `dequant-golden`, and `mtp-fixture-inputs`, pass mirrors to
+the checkpoint loader. `doctor`, `template-check`, `mtp-parity`,
+`optimization-state-check`, `decode-overlap-check`, and `draft-stream-check`
+do not support mirror routing and reject `--mirror` explicitly.
 
 ## Optimization defaults
 

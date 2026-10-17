@@ -70,7 +70,7 @@ struct PrefixExactCheck: ParsableCommand {
                 if let planned {
                     engine = try await model.loadEngine(plan: planned)
                 } else {
-                    engine = try await Engine(modelDir: model.modelURL, poolSlots: poolSlots)
+                    engine = try await Engine(modelDir: model.modelURL, mirrors: model.mirrorURLs, poolSlots: poolSlots)
                 }
                 var p = SampleParams.greedy
                 p.maxTokens = tokens

@@ -25,12 +25,16 @@ package final class MirrorRouter {
         var busySince: UInt64 = 0
         var touchedAt: UInt64 = 0
 
-        /// Seconds until a read of `bytes` submitted now would finish here. A
-        /// replica with no usable reading answers zero, which reads as
-        /// "finishes instantly" and is what gets it probed.
+        /// Seconds until a read of `bytes` submitted now would finish here.
+        /// An idle, unmeasured replica gets one probe. Until that probe returns,
+        /// prefer replicas with measured throughput; more queued work is not a
+        /// new measurement. If all replicas are still probing, `claim` balances
+        /// their pending bytes instead of treating them as instantly available.
         func finishEstimate(adding bytes: Int, now: UInt64) -> Double {
             let elapsed = Double(measuredNanos + (queuedReads > 0 ? now - busySince : 0)) / 1e9
-            guard measuredBytes > 0, elapsed > 0 else { return 0 }
+            guard measuredBytes > 0, elapsed > 0 else {
+                return queuedReads == 0 ? 0 : .infinity
+            }
             return Double(queuedBytes + bytes) * elapsed / Double(measuredBytes)
         }
 
@@ -76,7 +80,8 @@ package final class MirrorRouter {
                 replicas[index].measuredNanos = 0
             }
             let finish = replicas[index].finishEstimate(adding: byteCount, now: now)
-            if finish < soonest {
+            if finish < soonest || (finish == soonest
+                && replicas[index].queuedBytes < replicas[chosen].queuedBytes) {
                 soonest = finish
                 chosen = index
             }

@@ -232,6 +232,14 @@ struct ModelOptions: ParsableArguments {
     /// Keep the chosen resource contract attached to serving. Registration of
     /// another representation must provide its authenticated loader here; a
     /// different pack cannot fall through to the original checkpoint loader.
+    /// Diagnostics that bypass the routed loader must reject the shared option
+    /// before opening weights, so a mirror check cannot silently use one copy.
+    func rejectMirrors() throws {
+        guard mirror.isEmpty else {
+            throw ValidationError("--mirror is not supported by this command")
+        }
+    }
+
     func loadEngine(plan: MemoryPlan) async throws -> Engine {
         if let pack = try selectedPack {
             return try await Engine(modelDir: modelURL, mirrors: mirrorURLs, pack: pack, plan: plan)
@@ -892,7 +900,7 @@ struct Parity: ParsableCommand {
             throw ValidationError("--tokens must be a non-empty comma-separated list of integers")
         }
         let ids = parsed.compactMap { $0 }
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         guard ids.allSatisfy({ $0 >= 0 && $0 < index.config.vocabSize }) else {
             throw ValidationError("--tokens contains an id outside 0..<\(index.config.vocabSize)")
         }
@@ -1032,6 +1040,7 @@ struct Doctor: ParsableCommand {
     }
 
     func run() throws {
+        try model.rejectMirrors()
         _ = try ContextConfiguration(maxContextTokens: self.maxContext.tokens ?? ContextPolicy.defaultTokens,
             maxPrefillWaitMinutes: maxPrefillWait)
         let resources = try model.resources
@@ -2004,7 +2013,7 @@ struct NgramGolden: ParsableCommand {
             throw ValidationError("--tokens must be a non-empty comma-separated list of integers")
         }
         let ids = parsed.compactMap { $0 }
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         guard ids.allSatisfy({ $0 >= 0 && $0 < Int64(index.config.vocabSize) }) else {
             throw ValidationError("--tokens contains an id outside 0..<\(index.config.vocabSize)")
         }
@@ -2029,7 +2038,7 @@ struct DequantGolden: ParsableCommand {
     func run() throws {
         try model.rejectAdaptiveLimitForFixedDiagnostic()
         guard gid >= 0 else { throw ValidationError("--gid must not be negative") }
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         let resident = try ResidentWeights(index: index)
         let store = NgramStore(index: index, resident: resident)
         guard gid >= 0, gid < Int64(store.rowCapacity) else {
@@ -2100,6 +2109,7 @@ struct TemplateCheck: ParsableCommand {
     @Flag var think = false
 
     func run() throws {
+        try model.rejectMirrors()
         try model.rejectAdaptiveLimitForFixedDiagnostic()
         let sem = DispatchSemaphore(value: 0)
         var out: [Int] = []

@@ -40,6 +40,38 @@ extension Diagnostics {
         router.release(0, byteCount: 10, completed: true)
         c.equal("cancelled reprobe is not reported as throughput", router.servedBytes(), [1110, 200])
 
+        // Submit a whole burst before any completion. Sequential claim/release
+        // pairs never exercise the cold-start failure or the post-idle reset.
+        for copies in [2, 3] {
+            let burst = MirrorRouter(replicaCount: copies, now: { time })
+            for phase in ["cold", "post-idle"] {
+                let choices = (0 ..< 12).map { _ in burst.claim(byteCount: 100) }
+                c.equal("\(copies)-copy \(phase) burst spreads pending reads",
+                    choices, (0 ..< 12).map { $0 % copies })
+                time += 100
+                for replica in choices { burst.release(replica, byteCount: 100, completed: true) }
+                time += 1_000_000_001
+            }
+            c.equal("\(copies)-copy bursts preserve byte accounting",
+                burst.servedBytes(), Array(repeating: 2400 / copies, count: copies))
+        }
+
+        let unequal = MirrorRouter(replicaCount: 2, now: { time })
+        c.equal("large first probe", unequal.claim(byteCount: 1000), 0)
+        c.equal("idle unknown gets next probe", unequal.claim(byteCount: 100), 1)
+        c.equal("unknown backlog is balanced by bytes", unequal.claim(byteCount: 100), 1)
+        time += 100
+        unequal.release(1, byteCount: 100, completed: true)
+        c.equal("pending unknown probe does not beat a measured replica",
+            unequal.claim(byteCount: 100), 1)
+        unequal.release(0, byteCount: 1000, completed: false)
+        c.equal("failed probe releases its reservation for retry", unequal.claim(byteCount: 50), 0)
+        time += 100
+        unequal.release(0, byteCount: 50, completed: true)
+        unequal.release(1, byteCount: 100, completed: true)
+        unequal.release(1, byteCount: 100, completed: true)
+        c.equal("failed probe does not contribute bytes", unequal.servedBytes(), [50, 300])
+
         // Many callers exercise the production clock-under-lock and accounting.
         let concurrent = MirrorRouter(replicaCount: 3)
         DispatchQueue.concurrentPerform(iterations: 1000) { i in

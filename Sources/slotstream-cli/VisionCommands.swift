@@ -32,7 +32,7 @@ struct VisionParity: ParsableCommand {
     func run() throws {
         try model.rejectAdaptiveLimitForFixedDiagnostic()
         let path = try VisionAssets.resolve(image)
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         guard VisionTower.present(index: index) else {
             throw PlanError("this checkpoint has no vision tower")
         }
