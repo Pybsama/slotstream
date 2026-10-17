@@ -1,6 +1,6 @@
 import Foundation
-import SevraRuntime
-import SevraText
+import SlotstreamRuntime
+import SlotstreamText
 import Slotstream
 
 /// Real user-workflow regression fixtures from the October capability audit.
@@ -9,30 +9,30 @@ import Slotstream
 func realCapabilitiesIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--real-capabilities") else { return false }
     let args = CommandLine.arguments
-    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw SevraError.refused("Use --home with a new disposable directory.") }
+    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw AppRuntimeError.refused("Use --home with a new disposable directory.") }
     let root = URL(fileURLWithPath: args[i + 1]).standardizedFileURL
-    guard !FileManager.default.fileExists(atPath: root.path) else { throw SevraError.refused("Capability checks require a new directory.") }
+    guard !FileManager.default.fileExists(atPath: root.path) else { throw AppRuntimeError.refused("Capability checks require a new directory.") }
     var budget = 9.0
     if let i = args.firstIndex(of: "--memory-gb") {
         guard i + 1 < args.count, let value = Double(args[i + 1]), (8.1...10).contains(value) else {
-            throw SevraError.refused("Use a test memory budget between 8.1 and 10 GB.")
+            throw AppRuntimeError.refused("Use a test memory budget between 8.1 and 10 GB.")
         }
         budget = value
     }
     let available = Machine.current().availableGB ?? 0
-    guard available >= budget + 3 else { throw SevraError.refused("The \(budget) GB test requires 3 GB additional headroom.") }
-    guard let helper = DocumentReader.locateHelper() else { throw SevraError.refused("The document helper is missing.") }
+    guard available >= budget + 3 else { throw AppRuntimeError.refused("The \(budget) GB test requires 3 GB additional headroom.") }
+    guard let helper = DocumentReader.locateHelper() else { throw AppRuntimeError.refused("The document helper is missing.") }
     let fixtures = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Fixtures/capabilities")
     let sources = root.appendingPathComponent("Sources")
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     try FileManager.default.copyItem(at: fixtures, to: sources)
     let code = try String(contentsOf: sources.appendingPathComponent("sum_to.py"), encoding: .utf8)
-    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+    let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
     var seed = HomeState()
     seed.threads[0].messages = [Message(role: "user", text: "The workshop storage code is ORCHARD-9157.")]
     for n in 0..<60 { seed.threads[0].messages.append(Message(role: n % 2 == 0 ? "assistant" : "user", text: String(repeating: "Unrelated later conversation \(n). ", count: 20))) }
     do { let store = try HomeStore(root: root.appendingPathComponent("Home"), dbmd: dbmd); try store.save(seed) }
-    let runtime = try SevraRuntime(homeURL: root.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: budget), helper: helper)
+    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: budget), helper: helper)
     var rows: [[String: Any]] = [], failures: [String] = []
     func expect(_ passed: Bool, _ label: String) {
         print((passed ? "PASS: " : "FAIL: ") + label); fflush(stdout)
@@ -86,7 +86,7 @@ func realCapabilitiesIfRequested() async throws -> Bool {
             try await Task.sleep(nanoseconds: 500_000_000)
         }
         try await runtime.stop(threadID: id)
-        throw SevraError.refused("Capability deadline exceeded: " + name)
+        throw AppRuntimeError.refused("Capability deadline exceeded: " + name)
     }
     do {
         let writing = try await run("writing", "Rewrite this as a polite email under 50 words. Preserve the facts and do not invent any: 'Lina, send the Naranjo pilot report by October 18 at 3 pm. The project code is NARANJO-4826. I need the figures checked.'")
@@ -121,7 +121,7 @@ func realCapabilitiesIfRequested() async throws -> Bool {
         try save()
         try await runtime.shutdown()
     } catch { try? await runtime.shutdown(); throw error }
-    guard failures.isEmpty else { throw SevraError.refused("Capability failures: " + failures.joined(separator: "; ")) }
+    guard failures.isEmpty else { throw AppRuntimeError.refused("Capability failures: " + failures.joined(separator: "; ")) }
     print("PASS: real capability fixtures completed; outputs retained for prose-quality review")
     return true
 }

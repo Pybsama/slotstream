@@ -27,10 +27,18 @@ boundaries intact. Verify the app's embedded engine and build identity separatel
 from the CLI. Missing capabilities and disclosed limitations are not implemented
 features; maintain the task map and remaining gates alongside code.
 
-## Sevra integration direction (September 8, 2026)
+## App identity (October 16, 2026)
+
+Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).
+The native app is Slotstream. Keep the app and the independent engine interfaces;
+remove separate-product promotion from current repository surfaces. Leave the
+separate website unchanged. Preserve historical evidence and compatibility names
+needed for existing Homes, backups and saved mini-apps.
+
+## Slotstream integration direction (September 8, 2026)
 
 Read [the canonical engineering integration record](db/records/design/sevra-maintained-model-integration.md),
-also projected into PLAN.md. Sevra selects and maintains a few qualified models
+also projected into PLAN.md. Slotstream selects and maintains a few qualified models
 for actual hardware profiles and optimizes the whole stack around them. The
 product is not permanently tied to one flagship; the current engine's exact
 checkpoint, measured gates and independent CLI/API/Swift behavior remain intact.
@@ -595,8 +603,8 @@ still quoted in commit history and both are wrong.
   the prebuilt `mlx.metallib` next to the binary. `swift test` is unavailable
   (no XCTest in CLT) — `Tools/verify.sh` is the acceptance suite.
 - CI is split by product. `ci.yml` builds and checks the engine and skips pushes
-  that change only docs, the brain or `apps/`. `sevra-mac.yml` runs
-  `Tools/check_sevra_mac.sh` and the Xcode build (`Tools/build_sevra_xcode.sh`)
+  that change only docs, the brain or `apps/`. `slotstream-mac.yml` runs
+  `Tools/check_slotstream_mac.sh` and the Xcode build (`Tools/build_slotstream_xcode.sh`)
   when `apps/macos` or the engine it builds on changes. The app's real-model
   checks need the weights and stay on a development Mac.
 - Coverage percentages are advisory review feedback. Build, instrumented-test

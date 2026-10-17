@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-07T18:31:40.530556+00:00
+updated: 2026-10-16T06:32:38.418822+00:00
 summary: 'Closed October 7: automatic controls and research delivered; retain original four-bit, with the full 16–64 GB speed target unmet.'
 closed_on: 2026-10-07
 date: 2026-10-02
@@ -388,7 +388,7 @@ Before full conversion or reference generation, write a local resource budget co
 
 **Quality comparison:** measure current 4-bit and each candidate against the VQ 4.4 reference on identical frozen token contexts, including realistic tool and continuation states. Preserve the decision's KL/top-1 gate. VQ 4.4 remains a proxy; results against it are not a proof of BF16 equivalence. Full-vocabulary KL and a top-k approximation are different metrics. If reference storage is bounded with top-k logits, define residual mass handling and call the result an approximation; do not compare it numerically with an incompatible publisher scorer.
 
-Add held-out complete-task evaluation: instruction following, tool schema validity and successful execution, coding fixes with tests, factual tasks, multilingual use, long-context retrieval/continuation and the product's ordinary workflows. Freeze prompts, environment, seeds/settings, graders and task-family weights. Keep calibration, pilot and final evaluation examples disjoint. Grade final outcomes and tool traces, not just the assistant's claims of success. Run `sevra-mac-checks --real-basics`; qualify vision separately before a profile can advertise images.
+Add held-out complete-task evaluation: instruction following, tool schema validity and successful execution, coding fixes with tests, factual tasks, multilingual use, long-context retrieval/continuation and the product's ordinary workflows. Freeze prompts, environment, seeds/settings, graders and task-family weights. Keep calibration, pilot and final evaluation examples disjoint. Grade final outcomes and tool traces, not just the assistant's claims of success. Run `slotstream-mac-checks --real-basics`; qualify vision separately before a profile can advertise images.
 
 Proposed noninferiority margins for discussion are no more than two percentage points loss overall and five within a task family, with a predeclared one-sided paired confidence method. They are engineering proposals, not accepted evidence or universal definitions of similar quality. Choose margins that reflect product harm, estimate sample requirements from the pilot, then freeze the protocol before the held-out run. Structural safety and deterministic schema checks remain hard gates regardless of average score. Cap evaluation cost and handle multiple candidates/categories explicitly; inconclusive results do not qualify a pack. Do not keep sampling until a preferred candidate passes.
 
@@ -468,7 +468,7 @@ The following are release criteria, not optional exploratory tests:
 - A pressure cancellation follows a completed tool action; recovery does not execute that action again automatically.
 - A candidate passes prose quality but fails agent tasks, or reaches 20 only by disabling a required feature; it does not qualify that profile.
 
-Use deterministic metadata/unit fixtures and bounded fault injection for lifecycle failures. Extend the existing `Tools/context_proxy.swift`, `Tools/memory_override_gate.py`, native performance checks and `Tools/check_sevra_memory_ui.sh` instead of building parallel memory-control suites. Check Mac Light, Dark and System appearances and clear pending/error states; preserve readiness preferences independently of pack and ceiling choices. Run the existing engine acceptance battery and real application checks for behavior that depends on the native runtime. Do not substitute tests that merely restate the implementation for end-to-end ownership and recovery checks.
+Use deterministic metadata/unit fixtures and bounded fault injection for lifecycle failures. Extend the existing `Tools/context_proxy.swift`, `Tools/memory_override_gate.py`, native performance checks and `Tools/check_slotstream_memory_ui.sh` instead of building parallel memory-control suites. Check Mac Light, Dark and System appearances and clear pending/error states; preserve readiness preferences independently of pack and ceiling choices. Run the existing engine acceptance battery and real application checks for behavior that depends on the native runtime. Do not substitute tests that merely restate the implementation for end-to-end ownership and recovery checks.
 
 ### Review record and unresolved evidence
 

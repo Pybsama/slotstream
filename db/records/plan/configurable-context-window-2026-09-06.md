@@ -2,7 +2,7 @@
 type: plan
 id: 01m1vgtznvvvt2hm9z1aw6dew2
 created: 2026-09-06T14:09:28.251268+00:00
-updated: 2026-09-13T19:56:09.219048+00:00
+updated: 2026-10-16T06:32:38.448093+00:00
 summary: 'Configurable context through the model limit: shared byte accounting, request guards, bounded prefill and staged qualification'
 date: 2026-09-06
 doc: plan
@@ -335,7 +335,7 @@ windows only after qualification; P6 releases the complete feature.
 | C14 | Fake availability/pressure at admission, image work, each prefill boundary and decode causes typed failure with bounded stop latency. Fixed-size, no-elastic and unreadable-memory paths remain covered without inducing real system pressure. |
 | C15 | Cleanup proves joined readers, completed GPU users, released pins and restored allocator limits; invalid state is not retained, pressure-aborted state is not immediately re-cached, and a fresh short request recovers. |
 | C16 | HTTP/SSE/NDJSON tests before and after committed headers for all dialects: right status or terminal error, no success tail, no extra output after terminal, disconnect/backpressure does not hang. Existing successful text/tools/vision behavior survives. |
-| C17 | Strict consumer fixture rejects tool calls followed by error, timeout, EOF or `length`, even when arguments are valid JSON. Engine release gates its own terminal contract and existing real clients. The actual db.md/Rust receiving-side gate remains owned by Sevra H2/F2; it is required before claiming that end-to-end integration safe, not a new dependency on shipping Sevra Desktop. |
+| C17 | Strict consumer fixture rejects tool calls followed by error, timeout, EOF or `length`, even when arguments are valid JSON. Engine release gates its own terminal contract and existing real clients. The actual db.md/Rust receiving-side gate remains owned by Slotstream H2/F2; it is required before claiming that end-to-end integration safe, not a new dependency on shipping Slotstream Desktop. |
 | C18 | Increasing supported prompt lengths with reply room, including a near-ceiling prompt and nontrivial decode reaching the configured total cap. Preserve exact tokens/configuration, full completion, sampled physical footprint, RSS, MLX peaks, swap and abort state. A one-token 65K diagnostic does not prove all decode/vision/MTP combinations. |
 | C19 | Cold state and already-filled/interleaved retention; minimum-feasible, pass-transition and ordinary targets; MTP and vision combinations actually advertised at the new cap. Unsupported combinations fail explicitly rather than inheriting a text-only measurement. |
 | C20 | Live small controlled deadline/guard interruption and recovery; one model process at a time with real reclaimable memory checked and several GB spare. Use injected guard triggers, not a memory hog or simulated RAM to authorize real allocations. |
@@ -778,7 +778,7 @@ metadata correction also preserves its complete original failed body/raw bytes.
 | C04–C05 | Owned-allocation and interleaved retention contracts pass; the corrected governor passes both80-assertion native variants in V202. Full-window retention capacity remains C19. |
 | C06–C07 | All ten bounded numerical shape/prefix witnesses pass their1605 unchanged assertions and greedy-ID criteria; the full schedule satisfies actual query/key bounds. Normal long-window activation still requires P5 execution. |
 | C08–C15 | Checked diagnostics, entrypoints, exact limits, deadline/queue clocks, ownership, pressure interruption and cleanup/recovery pass the identified component and live matrices. Their contaminated intervals carry no resource/timing claim. |
-| C16–C17 | V215 passes all seven dialect variants and real HTTP overflow/robustness checks. The strict consumer fixture is engine-side evidence; actual Sevra H2 receiving-side action authority remains outside this claim. |
+| C16–C17 | V215 passes all seven dialect variants and real HTTP overflow/robustness checks. The strict consumer fixture is engine-side evidence; actual Slotstream H2 receiving-side action authority remains outside this claim. |
 | C18–C19 | Eight exact prospective protocols are prepared, covering sixteen main rungs: memory/pass transitions, cold and four-conversation retained ladders through262144, then exact minimum-target full-window variants. None has executed or performed its mandatory full payload verification. |
 | C20 | Live injected deadline/guard interruption and recovery are exercised without a memory hog or overlapping model. Existing full resource acceptance still remains open under C21. |
 | C21 | Identified native, static, planner, sampler, numerical, image, cache and HTTP checks pass within their stated scopes. The full governor resource battery stopped on swap-ins; the remaining whole-process resource/recall battery and combined MTP/image resource completion remain open. |

@@ -1,15 +1,15 @@
 import AppKit
 import SwiftUI
 import Vision
-@testable import SevraMac
-@testable import SevraRuntime
+@testable import SlotstreamMac
+@testable import SlotstreamRuntime
 
 /// Render the production settings with simulated telemetry, without a model,
 /// user Home, preference writes, or a visible window.
 @main struct MemoryUIChecks {
     @MainActor static func main() async throws {
         NSApplication.shared.setActivationPolicy(.prohibited)
-        let out = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SEVRA_UI_OUT"]!)
+        let out = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_UI_OUT"]!)
         let model = AppModel()
         let setupOwner = LocalInference(model: out.appendingPathComponent("uninstalled-fixture-model"))
         guard let reviewedSetup = try await setupOwner.modelSetup(preferences: .init()) else {
