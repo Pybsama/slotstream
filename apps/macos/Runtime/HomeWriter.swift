@@ -57,8 +57,8 @@ final class SaveQueue: @unchecked Sendable {
     private var written = 0
     private var outcomes: [Int: Result<Void, Error>] = [:]
     private var ticketWaiters: [Int: CheckedContinuation<Void, Error>] = [:]
-    private static let paused = SevraError.conflict("Home records changed outside Sevra. Writes and AI context are paused; the changed files have been preserved.")
-    private static let closing = SevraError.refused("Sevra is closing. Your saved files are preserved.")
+    private static let paused = AppRuntimeError.conflict("Home records changed outside Slotstream. Writes and AI context are paused; the changed files have been preserved.")
+    private static let closing = AppRuntimeError.refused("Slotstream is closing. Your saved files are preserved.")
 
     init(durable revision: Int) { durable = revision }
 
@@ -268,7 +268,7 @@ actor HomeWriter {
                 failures = 0
             } catch {
                 let conflict: Bool
-                if case SevraError.conflict = error { conflict = true } else { conflict = false }
+                if case AppRuntimeError.conflict = error { conflict = true } else { conflict = false }
                 queue.failed(batch, error: error, isConflict: conflict)
                 if queue.abandonIfClosed(error) { break }
                 guard !conflict else { continue }
@@ -281,13 +281,13 @@ actor HomeWriter {
     }
     /// Runs a store operation in turn with saves.
     func perform<T>(_ operation: (HomeStore) throws -> T) throws -> T {
-        guard !finished else { throw SevraError.refused("This Home is closed.") }
+        guard !finished else { throw AppRuntimeError.refused("This Home is closed.") }
         return try operation(store)
     }
     /// Saves device grants. Callers change their cache first and number each
     /// change, so a save that arrives late never replaces a newer one.
     func saveGrants(_ grants: [String: AppGrant], version: Int) throws {
-        guard !finished else { throw SevraError.refused("This Home is closed.") }
+        guard !finished else { throw AppRuntimeError.refused("This Home is closed.") }
         guard version > grantsVersion else { return }
         try store.saveGrants(grants)
         grantsVersion = version

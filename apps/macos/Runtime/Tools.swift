@@ -95,10 +95,10 @@ public enum ToolCatalog {
                  fields: [field("id", "string", "Record ID."), field("text", "string", "Markdown to append.")], terminal: false),
         ToolSpec(name: "kb.edit", group: .knowledgeChange, summary: "Stage an exact replacement in the body of a knowledge base record you read in this job. old must appear exactly once in the body.",
                  fields: [field("id", "string", "Record ID."), field("old", "string", "Exact body text to replace."), field("new", "string", "Replacement text.")], terminal: false),
-        ToolSpec(name: "artifact.propose", group: .document, summary: "Propose a complete Markdown document for the person to review and save in Sevra. Cite excerpts you read as [S1]. Use only when asked for a saved document. Return this as the only tool call.",
+        ToolSpec(name: "artifact.propose", group: .document, summary: "Propose a complete Markdown document for the person to review and save in Slotstream. Cite excerpts you read as [S1]. Use only when asked for a saved document. Return this as the only tool call.",
                  fields: [field("filename", "string", "Simple Markdown filename, such as briefing.md."),
                           field("content", "string", "The complete Markdown document.")], terminal: true),
-        ToolSpec(name: "app.propose", group: .apps, summary: "Propose a mini-app for review: one self-contained HTML file with inline CSS and JavaScript. It runs offline with no network. It can store records only through window.sevra. Return this as the only tool call.",
+        ToolSpec(name: "app.propose", group: .apps, summary: "Propose a mini-app for review: one self-contained HTML file with inline CSS and JavaScript. It runs offline with no network. It can store records only through window.slotstream. Return this as the only tool call.",
                  fields: [field("name", "string", "Short app name."),
                           field("description", "string", "One sentence about what the app does."),
                           field("data", "string", "Collections the app uses, as name:read or name:write separated by commas, such as habits:write. Empty for none.", required: false),
@@ -107,10 +107,10 @@ public enum ToolCatalog {
         ToolSpec(name: "app.read", group: .apps, summary: "Read an existing mini-app's current HTML and settings before revising it.",
                  fields: [field("app_id", "string", "App ID, or its exact name."),
                           field("offset", "integer", "UTF-8 byte offset to continue from.", required: false)], terminal: false),
-        ToolSpec(name: "skill.propose", group: .skills, summary: "Propose a reusable skill for review: instructions Sevra follows when the person selects it. Return this as the only tool call.",
+        ToolSpec(name: "skill.propose", group: .skills, summary: "Propose a reusable skill for review: instructions Slotstream follows when the person selects it. Return this as the only tool call.",
                  fields: [field("name", "string", "Short lowercase name used as /name, such as weekly-review."),
                           field("description", "string", "One sentence about when to use it."),
-                          field("instructions", "string", "Markdown instructions for Sevra."),
+                          field("instructions", "string", "Markdown instructions for Slotstream."),
                           field("tools", "string", "Tool groups it needs, comma separated: read, change, knowledge, apps. Empty for none.", required: false),
                           field("skill_id", "string", "To revise an existing skill, its ID. Omit for a new skill.", required: false)], terminal: true),
     ]
@@ -127,7 +127,7 @@ public enum ToolCatalog {
         if groups.contains(.change) { lines.append("You may stage file changes with file.create, file.edit and file.write. They are not written until the person reviews them after your final answer. Read a file before changing it. Then finish with a short summary of the staged changes.") }
         if groups.contains(.knowledge) { lines.append("An attached db.md knowledge base can be searched with kb.search and kb.query; read records with source.read.") }
         if groups.contains(.knowledgeChange) { lines.append("You may stage knowledge base records with kb.create, kb.append and kb.edit; the person reviews them first.") }
-        if groups.contains(.apps) { lines.append("You can build mini-apps with app.propose: one complete HTML file with inline CSS and JavaScript, no external URLs, no network. Save data only through the host API: await sevra.list(collection), sevra.get(collection, id), sevra.create(collection, data) returning {id, revision}, sevra.update(collection, id, data, revision), sevra.archive(collection, id, revision). Each record is {id, revision, data, created, updated}. Sevra assigns record ids; an app cannot choose them. To keep one value such as a count or settings, use the first record from sevra.list and create one only when the list is empty. After your own create or update, update the page yourself; the window 'sevra-change' event reports changes made elsewhere, never your own saves. Declare every collection in data. Use app.read before revising an existing app.") }
+        if groups.contains(.apps) { lines.append("You can build mini-apps with app.propose: one complete HTML file with inline CSS and JavaScript, no external URLs, no network. Save data only through the host API: await slotstream.list(collection), slotstream.get(collection, id), slotstream.create(collection, data) returning {id, revision}, slotstream.update(collection, id, data, revision), slotstream.archive(collection, id, revision). Each record is {id, revision, data, created, updated}. Slotstream assigns record ids; an app cannot choose them. To keep one value such as a count or settings, use the first record from slotstream.list and create one only when the list is empty. After your own create or update, update the page yourself; the window 'slotstream-change' event reports changes made elsewhere, never your own saves. Declare every collection in data. Use app.read before revising an existing app.") }
         if groups.contains(.skills) { lines.append("You can save a reusable workflow as a skill with skill.propose when the person asks for one.") }
         return lines.joined(separator: "\n")
     }
@@ -153,23 +153,23 @@ public struct ProposedTool: Sendable, Equatable {
     public var arguments: [String: JSONValue]
     public init(id: String = UUID().uuidString, name: String, arguments: [String: JSONValue]) { self.id = id; self.name = name; self.arguments = arguments }
     public func string(_ key: String) throws -> String {
-        guard case .string(let value)? = arguments[key] else { throw SevraError.refused("Tool \(name) requires a text \(key).") }; return value
+        guard case .string(let value)? = arguments[key] else { throw AppRuntimeError.refused("Tool \(name) requires a text \(key).") }; return value
     }
     public func optionalString(_ key: String) throws -> String? {
         guard let value = arguments[key] else { return nil }
         if case .null = value { return nil }
-        guard case .string(let text) = value else { throw SevraError.refused("Tool \(name) requires \(key) as text.") }
+        guard case .string(let text) = value else { throw AppRuntimeError.refused("Tool \(name) requires \(key) as text.") }
         return text
     }
     public func integer(_ key: String, default fallback: Int) throws -> Int {
         guard let value = arguments[key] else { return fallback }
         if case .null = value { return fallback }
-        guard case .int(let n) = value, n >= 0, n <= 64 * 1024 * 1024 else { throw SevraError.refused("Invalid tool offset.") }
+        guard case .int(let n) = value, n >= 0, n <= 64 * 1024 * 1024 else { throw AppRuntimeError.refused("Invalid tool offset.") }
         return n
     }
     /// Validates this call against the tools actually offered for this job.
     public func validate(offered: [ToolSpec]) throws {
-        guard !id.isEmpty, id.utf8.count <= 128 else { throw SevraError.refused("The model returned an invalid tool-call identifier. No calls from that response were executed.") }
+        guard !id.isEmpty, id.utf8.count <= 128 else { throw AppRuntimeError.refused("The model returned an invalid tool-call identifier. No calls from that response were executed.") }
         guard let spec = offered.first(where: { $0.name == name }) else {
             throw ToolSchemaError(issue: "The model requested an unavailable tool.", offered: offered)
         }
@@ -184,9 +184,9 @@ public struct ProposedTool: Sendable, Equatable {
             }
             switch (field.type, value!) {
             case ("string", .string(let text)):
-                guard text.utf8.count <= 1024 * 1024 else { throw SevraError.refused("Tool \(name) received an oversized \(field.name).") }
+                guard text.utf8.count <= 1024 * 1024 else { throw AppRuntimeError.refused("Tool \(name) received an oversized \(field.name).") }
             case ("integer", .int(let number)):
-                guard number >= 0, number <= 64 * 1024 * 1024 else { throw SevraError.refused("Invalid tool offset.") }
+                guard number >= 0, number <= 64 * 1024 * 1024 else { throw AppRuntimeError.refused("Invalid tool offset.") }
             default:
                 throw ToolSchemaError(issue: "Tool \(name) received \(field.name) with the wrong type.", offered: offered)
             }
@@ -194,7 +194,7 @@ public struct ProposedTool: Sendable, Equatable {
         if name == "artifact.propose" {
             try HomeStore.validateFilename(string("filename"))
             let content = try string("content")
-            guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, content.utf8.count <= 65536 else { throw SevraError.refused("The proposed document is empty or exceeds its size limit.") }
+            guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, content.utf8.count <= 65536 else { throw AppRuntimeError.refused("The proposed document is empty or exceeds its size limit.") }
         }
     }
     /// The published tool list for the original starter workflow. Kept for

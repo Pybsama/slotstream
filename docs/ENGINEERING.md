@@ -11,7 +11,7 @@ for Slotstream. For installation and a first reply, start with
 | Commands and configuration | [Command reference](CLI.md) |
 | HTTP integration | [API reference](API.md), [Hermes notes](HERMES-NOTES.md), [fx protocol](FX.md#protocol-reference) |
 | Embedding in an app | [Swift library](LIBRARY.md) |
-| Sevra native application | [Mac development and native philosophy](SEVRA-MAC.md) |
+| Slotstream native application | [Mac development and native philosophy](SLOTSTREAM-MAC.md) |
 | Build, test, and contribute | [Testing](TESTING.md), [Contributing](../CONTRIBUTING.md) |
 | Download internals | [Slotpack format](DOWNLOAD-FORMAT.md) |
 | Expert lookahead | [How it works, experiments and results](EXPERT-LOOKAHEAD.md) |
@@ -124,7 +124,7 @@ are read from the SSD into the slots the GPU computes from, process memory is
 accounted from real CPU and GPU allocations, and the governor resizes the
 cache under memory pressure. The same design ships as one binary, installs
 with one command and can be called in process from a Mac app; the
-[Swift library](LIBRARY.md) and the [Sevra Mac notes](SEVRA-MAC.md) describe
+[Swift library](LIBRARY.md) and the [Slotstream Mac notes](SLOTSTREAM-MAC.md) describe
 that use.
 
 What the native stack does not claim: the measured gains on this page come

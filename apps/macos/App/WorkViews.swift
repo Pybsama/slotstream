@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import SevraRuntime
+import SlotstreamRuntime
 
 /// Colors shared with the main view, derived the same way.
 struct Palette {
@@ -83,7 +83,7 @@ struct AttachmentBar: View {
             } label: {
                 Text(item.access == .change ? "Can change" : "Read only").foregroundStyle(item.access == .change ? Color.accentColor : palette.secondary)
             }.menuStyle(.borderlessButton).fixedSize().disabled(model.working)
-                .help("Choose whether Sevra may propose changes to \(item.name)")
+                .help("Choose whether Slotstream may propose changes to \(item.name)")
             NativeIconButton(symbol: "xmark", title: "Remove \(item.name)", help: "Remove from this thread. The original stays unchanged.", action: { model.detach(item) })
                 .frame(width: 16, height: 16).disabled(model.working)
         }
@@ -150,7 +150,7 @@ struct ChangesPanel: View {
             .sheet(item: $fullText) { change in
                 VStack(alignment: .leading, spacing: 12) {
                     HStack { Text(change.display).font(.headline).textSelection(.enabled); Spacer(); Button("Done") { fullText = nil }.keyboardShortcut(.cancelAction) }
-                    Text("The complete text Sevra will write.").font(.callout).foregroundStyle(palette.secondary)
+                    Text("The complete text Slotstream will write.").font(.callout).foregroundStyle(palette.secondary)
                     ScrollView { Text(change.content).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
                     Button("Copy") { model.copyText(change.content) }
                 }.padding(24).frame(width: 640, height: 520)
@@ -158,7 +158,7 @@ struct ChangesPanel: View {
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 Text("No changes to review").font(.headline)
-                Text("When Sevra proposes file changes, they appear here before anything is written.").foregroundStyle(palette.secondary)
+                Text("When Slotstream proposes file changes, they appear here before anything is written.").foregroundStyle(palette.secondary)
             }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
@@ -180,7 +180,7 @@ struct ChangesPanel: View {
             let places = set.roots.values.map(\.name).sorted().joined(separator: ", ")
             Text(set.summary + (places.isEmpty ? "" : " in " + places)).foregroundStyle(palette.secondary)
             if set.state == .proposed {
-                Text("Nothing has been written yet. Sevra checks that each file is unchanged since it was read, keeps the previous version, and replaces files in one step.")
+                Text("Nothing has been written yet. Slotstream checks that each file is unchanged since it was read, keeps the previous version, and replaces files in one step.")
                     .font(.callout).foregroundStyle(palette.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if let note = set.note {
@@ -320,7 +320,7 @@ struct AppReviewPanel: View {
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 Text("No app to review").font(.headline)
-                Text("Ask Sevra to build a mini-app, or type /app in the composer.").foregroundStyle(palette.secondary)
+                Text("Ask Slotstream to build a mini-app, or type /app in the composer.").foregroundStyle(palette.secondary)
             }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
@@ -338,7 +338,7 @@ struct SkillReviewPanel: View {
                     Text(proposal.description)
                     Text(proposal.tools.isEmpty ? "Uses no tools." : "Expects: " + proposal.tools.map(\.rawValue).joined(separator: ", ") + ".")
                         .font(.callout).foregroundStyle(palette.secondary)
-                    Text("A skill adds instructions to a request. It never grants access by itself; attachments and reviews still decide what Sevra can read and change.")
+                    Text("A skill adds instructions to a request. It never grants access by itself; attachments and reviews still decide what Slotstream can read and change.")
                         .font(.callout).foregroundStyle(palette.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 12)
                 ScrollView {
@@ -358,7 +358,7 @@ struct SkillReviewPanel: View {
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 Text("No skill to review").font(.headline)
-                Text("Ask Sevra to save a workflow as a skill, or type /skill in the composer.").foregroundStyle(palette.secondary)
+                Text("Ask Slotstream to save a workflow as a skill, or type /skill in the composer.").foregroundStyle(palette.secondary)
             }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
@@ -372,7 +372,7 @@ struct AppsPanel: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Apps & Skills").font(.title2.bold())
-                Text("Ask Sevra for a small app or a repeatable workflow. You review every version before it runs. Apps work offline and see only the data you allow.")
+                Text("Ask Slotstream for a small app or a repeatable workflow. You review every version before it runs. Apps work offline and see only the data you allow.")
                     .foregroundStyle(palette.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Button { model.useSkill("app") } label: { Label("Build an App", systemImage: "square.grid.2x2") }
@@ -488,7 +488,7 @@ struct AppCanvas: View {
                     }
                     Spacer()
                     Label("Offline · own data only", systemImage: "lock.shield").font(.caption).foregroundStyle(palette.secondary)
-                        .help("This app runs in its own view with no internet access. It sees only the data listed here, and only through Sevra.")
+                        .help("This app runs in its own view with no internet access. It sees only the data listed here, and only through Slotstream.")
                     Button("Reload") { model.reloadApp() }.help("Start the app again. Saved data is unchanged.")
                     NativeIconButton(symbol: "xmark", title: "Close app", help: "Close this app", action: model.closeApp).frame(width: 28, height: 28)
                 }.padding(.horizontal, 16).padding(.vertical, 10)

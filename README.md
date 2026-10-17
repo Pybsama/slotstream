@@ -25,14 +25,6 @@ recorded method, and the experiments that failed stay in the
 
 [Get started](#install) · [Speed](#speed) · [Guides](#guides) · [Get help](#support)
 
-> **I'm building Sevra on Slotstream: private, personal AI optimized for your computer.**
-> Sevra will choose a tested model for your hardware, keep that choice current
-> as models improve, and let you control what it remembers. The Mac app is in
-> development and runs Slotstream in process; see
-> [how it is built](docs/SEVRA-MAC.md) and
-> [join the waitlist](https://www.sevrahq.com/). Slotstream's command-line
-> tool, APIs and Swift library remain independently usable.
-
 ## Who it's for
 
 Slotstream is built for Macs that cannot hold the model in memory: **16 to
@@ -59,7 +51,7 @@ of a word. These speeds describe reply generation; loading the model and
 processing the prompt take additional time.
 
 **On October 5, 2026, our 48 GB M5 Pro measured 20.91–23.69 tok/s with the
-original 4-bit model at a 33 GB memory budget.** The development build used the Sevra
+original 4-bit model at a 33 GB memory budget.** The development build used the Slotstream
 Desktop startup settings and its existing automatic memory ceiling:
 
 | Workload | Median generation speed |
@@ -261,12 +253,11 @@ is tuned for the one below it: expert records are read from the SSD straight
 into the cache slots the GPU computes from, the memory plan is checked against
 what the process really uses, and a governor resizes the cache while other apps
 need room. It is also why the engine ships as one file that installs with one
-command, and why a Mac app such as Sevra can run it in process. The speed on
+command, and why the native Mac app can run it in process. The speed on
 this page comes from measured mechanisms that this control allows, not from
 the language itself; every published number has a recorded method in the
 [measurements](MEASUREMENTS.md). The trade is that the engine runs only on
-Apple Silicon; Windows and Linux are planned in Sevra with their own native
-engines.
+Apple Silicon. Windows and Linux are not supported.
 
 ## Status and limits
 
@@ -342,8 +333,7 @@ conversations share, within a disk quota.
 
 ### Can I run it on Linux or Windows?
 
-Support for AMD and NVIDIA on Windows and Linux is planned for Sevra.
-It isn't available in the current Slotstream engine.
+No. The current engine requires Apple Silicon, MLX and Metal.
 
 <a id="related-projects"></a>
 
@@ -388,8 +378,8 @@ Thank you for supporting its development.
 
 I'm [Carlos Galarza](https://www.carlosgalarza.com). I build local AI and
 make it run efficiently on the computers people already own. Slotstream is
-the engine, written natively for the Mac and tuned as one system, and
-[Sevra](https://www.sevrahq.com/) is the private AI app I'm building on it.
+written natively for the Mac and tuned as one system. The
+[Slotstream Mac app](docs/SLOTSTREAM-MAC.md) is under development in this repository.
 I also help teams run open models on their own hardware and debug agent
 workflows. For help or consulting, [email me](mailto:carloslfu@gmail.com).
 

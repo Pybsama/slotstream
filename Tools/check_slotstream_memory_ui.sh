@@ -3,19 +3,19 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # Render production memory settings offscreen with simulated telemetry.
 # No model or user Home is loaded.
-DBMD=${SEVRA_DBMD:-$HOME/.dbmd/bin/dbmd}
-python3 Tools/prepare_sevra_build.py
-swift build --package-path apps/macos --product Sevra -j "${SEVRA_BUILD_JOBS:-2}"
-BIN=$(swift build --package-path apps/macos --show-bin-path)
-TMP=$(mktemp -d "${TMPDIR:-/tmp}/sevra-memory-ui-XXXXXX")
+DBMD=${SLOTSTREAM_DBMD:-$HOME/.dbmd/bin/dbmd}
+python3 Tools/prepare_slotstream_build.py
+swift build --disable-build-manifest-caching --package-path apps/macos --product SlotstreamDesktop -j "${SLOTSTREAM_BUILD_JOBS:-2}"
+BIN=$(swift build --disable-build-manifest-caching --package-path apps/macos --show-bin-path)
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/slotstream-memory-ui-XXXXXX")
 trap 'rm -rf "$TMP"' EXIT
 # Reuse exactly the clang module flags SwiftPM used for the app module.
 XCC=$(python3 - "$(dirname "$BIN")/../debug.yaml" <<'PY'
 import re, sys
 manifest = open(sys.argv[1]).read()
-start = manifest.find('\n  "C.SevraMac-arm64-apple-macosx-debug.module":')
+start = manifest.find('\n  "C.SlotstreamMac-arm64-apple-macosx-debug.module":')
 if start < 0:
-    sys.exit("SevraMac debug module not found in the SwiftPM manifest")
+    sys.exit("SlotstreamMac debug module not found in the SwiftPM manifest")
 end = manifest.find('\n  "', start + 5)
 block = manifest[start:end]
 args = re.findall(r'"((?:[^"\\]|\\.)*)"', re.search(r'\n    args: \[(.*?)\]\n', block, re.S).group(1))
@@ -33,15 +33,15 @@ SDK=$(xcrun --show-sdk-path)
 FW="$(dirname "$(dirname "$(dirname "$(xcrun --find swiftc)")")")/Library/Developer/Frameworks"
 [ -d "$FW" ] || FW="$SDK/System/Library/Frameworks"
 # shellcheck disable=SC2086
-swiftc -module-name SevraMemoryUIChecks -parse-as-library -c apps/macos/NativeChecks/MemoryUIChecks.swift -o "$TMP/checks.o" \
+swiftc -module-name SlotstreamMemoryUIChecks -parse-as-library -c apps/macos/NativeChecks/MemoryUIChecks.swift -o "$TMP/checks.o" \
   -I "$BIN/Modules" -target arm64-apple-macosx14.0 -Onone -enable-testing \
   -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE $XCC \
   -module-cache-path "$BIN/ModuleCache" -swift-version 5 -I "$FW" -L "$FW" \
   -sdk "$SDK" -g -Xcc -isysroot -Xcc "$SDK" -Xcc -fPIC -Xcc -g -package-name macos
-swiftc -lc++ -L "$BIN" -o "$TMP/checks" -module-name SevraMemoryUIChecks -Xlinker -no_warn_duplicate_libraries -emit-executable \
-  -Xlinker -rpath -Xlinker @loader_path "@$BIN/Sevra.product/Objects.LinkFileList" "$TMP/checks.o" \
+swiftc -lc++ -L "$BIN" -o "$TMP/checks" -module-name SlotstreamMemoryUIChecks -Xlinker -no_warn_duplicate_libraries -emit-executable \
+  -Xlinker -rpath -Xlinker @loader_path "@$BIN/SlotstreamDesktop.product/Objects.LinkFileList" "$TMP/checks.o" \
   -target arm64-apple-macosx14.0 -framework Foundation -framework Metal -framework Accelerate -framework Vision -framework WebKit \
   -I "$FW" -L "$FW" -sdk "$SDK" -g
-OUT=${SEVRA_UI_OUT:-$PWD/.build/sevra-memory-ui}
+OUT=${SLOTSTREAM_UI_OUT:-$PWD/.build/slotstream-memory-ui}
 rm -rf "$OUT"; mkdir -p "$OUT"
-SEVRA_UI_OUT="$OUT" SEVRA_FONTS="$PWD/apps/macos/Resources/Fonts" SEVRA_DBMD="$DBMD" "$TMP/checks"
+SLOTSTREAM_UI_OUT="$OUT" SLOTSTREAM_FONTS="$PWD/apps/macos/Resources/Fonts" SLOTSTREAM_DBMD="$DBMD" "$TMP/checks"
