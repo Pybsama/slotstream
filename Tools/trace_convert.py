@@ -15,6 +15,7 @@ and is rejected rather than copying or discarding routing decisions.
 
 usage: trace_convert.py <trace.bin> <out.npz> [--all] [--name decode]
 """
+import argparse
 import sys
 import numpy as np
 
@@ -36,13 +37,13 @@ def read_stream(path):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    keep_all = "--all" in sys.argv
-    name = "decode"
-    for a in sys.argv[1:]:
-        if a.startswith("--name"):
-            name = a.split("=", 1)[1] if "=" in a else name
-    src, dst = args[0], args[1]
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    parser.add_argument('source', help='binary RouterTrace input')
+    parser.add_argument('destination', help='output npz archive')
+    parser.add_argument('--all', action='store_true', help='include multi-token passes')
+    parser.add_argument('--name', default='decode', help='array name in the archive (default: %(default)s)')
+    args = parser.parse_args()
+    src, dst, keep_all, name = args.source, args.destination, args.all, args.name
 
     calls = read_stream(src)
     kept = [c for c in calls if keep_all or c[1] == 1]

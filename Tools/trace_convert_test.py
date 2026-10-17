@@ -14,7 +14,7 @@ SCRIPT = Path(__file__).with_name('trace_convert.py')
 
 
 class TraceConvertChecks(unittest.TestCase):
-    def convert(self, passes, *, keep_all=False):
+    def convert(self, passes, *, keep_all=False, name='decode', options=(), options_first=False):
         """Write the production RouterTrace wire format, including partial passes."""
         raw = bytearray()
         expected = []
@@ -30,12 +30,15 @@ class TraceConvertChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             source, output = Path(folder) / 'trace.bin', Path(folder) / 'trace.npz'
             source.write_bytes(raw)
-            result = subprocess.run([sys.executable, str(SCRIPT), str(source), str(output)]
-                                    + (['--all'] if keep_all else []),
-                                    capture_output=True, text=True, check=True, timeout=10)
+            paths = [str(source), str(output)]
+            flags = (['--all'] if keep_all else []) + list(options)
+            result = subprocess.run([sys.executable, str(SCRIPT)]
+                                    + (flags + paths if options_first else paths + flags),
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
             with np.load(output, allow_pickle=False) as archive:
-                self.assertEqual(archive.files, ['decode'])
-                observed = archive['decode']
+                self.assertEqual(archive.files, [name])
+                observed = archive[name]
         wanted = np.array(expected, dtype=np.int16).reshape(-1, LAYERS, TOPK)
         self.assertEqual(observed.dtype, np.dtype('int16'))
         np.testing.assert_array_equal(observed, wanted)
@@ -83,6 +86,47 @@ class TraceConvertChecks(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('same token count and topK', result.stderr)
             self.assertFalse(output.exists())
+
+    def test_equals_name_is_preserved(self):
+        for first in (False, True):
+            with self.subTest(options_first=first):
+                self.convert([(1, range(LAYERS))], name='prefill',
+                             options=['--name=prefill'], options_first=first)
+
+    def test_spaced_name_after_paths(self):
+        self.convert([(1, range(LAYERS))], name='prefill', options=['--name', 'prefill'])
+
+    def test_spaced_name_before_paths(self):
+        self.convert([(1, range(LAYERS))], name='prefill', options=['--name', 'prefill'],
+                     options_first=True)
+
+    def test_spaced_name_with_all(self):
+        self.convert([(2, range(LAYERS))], keep_all=True, name='prefill',
+                     options=['--name', 'prefill'])
+
+    def test_invalid_arguments_preserve_existing_output(self):
+        raw = b''.join(struct.pack('<iii', layer, 1, TOPK)
+                       + struct.pack('<' + 'h' * TOPK, *range(TOPK)) for layer in range(LAYERS))
+        for invalid in (['--unknown'], ['--name'], ['extra']):
+            with self.subTest(arguments=invalid), tempfile.TemporaryDirectory() as folder:
+                source, output = Path(folder) / 'trace.bin', Path(folder) / 'trace.npz'
+                source.write_bytes(raw)
+                output.write_bytes(b'existing archive sentinel')
+                result = subprocess.run([sys.executable, str(SCRIPT), str(source), str(output), *invalid],
+                                        capture_output=True, text=True, timeout=10)
+                self.assertEqual((result.returncode, output.read_bytes() == b'existing archive sentinel'),
+                                 (2, True), result.stderr)
+
+    def test_help_does_not_read_source_or_write_output(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source, output = Path(folder) / 'missing.bin', Path(folder) / 'trace.npz'
+            output.write_bytes(b'existing archive sentinel')
+            result = subprocess.run([sys.executable, str(SCRIPT), str(source), str(output), '--help'],
+                                    capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('usage:', result.stdout)
+            self.assertIn('--name', result.stdout)
+            self.assertEqual(output.read_bytes(), b'existing archive sentinel')
 
 
 if __name__ == '__main__':
