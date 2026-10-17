@@ -1,17 +1,17 @@
 import CryptoKit
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 /// Real-model app cache lifecycle, using only an explicitly disposable Home.
 func realCacheCheckIfRequested() async throws -> Bool {
     guard CommandLine.arguments.contains("--real-cache") else { return false }
     let args = CommandLine.arguments
-    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw SevraError.refused("A real cache check requires a new --home directory.") }
+    guard let i = args.firstIndex(of: "--home"), i + 1 < args.count else { throw AppRuntimeError.refused("A real cache check requires a new --home directory.") }
     let home = URL(fileURLWithPath: args[i + 1]).standardizedFileURL
     let budget = try realCheckBudget()
     guard !FileManager.default.fileExists(atPath: home.path), (Machine.current().availableGB ?? 0) >= budget + 3 else {
-        throw SevraError.refused("Use a new disposable Home and the selected budget plus 3 GB reclaimable memory.")
+        throw AppRuntimeError.refused("Use a new disposable Home and the selected budget plus 3 GB reclaimable memory.")
     }
     try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
     let engine = LocalInference(memoryGB: budget)
@@ -83,7 +83,7 @@ func realCacheCheckIfRequested() async throws -> Bool {
                 try await Task.sleep(nanoseconds: 10_000_000)
             }
             cancellation.cancel()
-            do { _ = try await running.value; throw SevraError.refused("CHECK FAILED: active cancellation was ignored") }
+            do { _ = try await running.value; throw AppRuntimeError.refused("CHECK FAILED: active cancellation was ignored") }
             catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "cancellation fails the incomplete turn") }
             try require(observed, "cancellation occurs during real token generation")
             let recovered = try await ask([ChatMessage(role: "user", content: "What is 6 times 7? Just the number.")])

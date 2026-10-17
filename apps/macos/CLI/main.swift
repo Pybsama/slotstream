@@ -1,15 +1,15 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 
-// A distinct internal executable preserves the existing `sevra` compatibility CLI.
+// A distinct internal executable preserves the existing `slotstream` compatibility CLI.
 let args = Array(CommandLine.arguments.dropFirst())
 func option(_ name: String) -> String? { guard let i = args.firstIndex(of: name), i + 1 < args.count else { return nil }; return args[i + 1] }
 if args.contains("--help") || args.isEmpty {
     print("""
-    sevra-local chat --home PATH [--dbmd PATH] --prompt TEXT [--thread ID] [--source FOLDER] [--model PATH] [--nonce ID] [--think]
-    sevra-local status --home PATH [--dbmd PATH] [--thread ID]
-    sevra-local stop --home PATH [--thread ID]
-    sevra-local answer-now --home PATH [--thread ID]
+    slotstream-local chat --home PATH [--dbmd PATH] --prompt TEXT [--thread ID] [--source FOLDER] [--model PATH] [--nonce ID] [--think]
+    slotstream-local status --home PATH [--dbmd PATH] [--thread ID]
+    slotstream-local stop --home PATH [--thread ID]
+    slotstream-local answer-now --home PATH [--thread ID]
     --think turns thinking on for the thread (sticky); answer-now ends the current thought and answers from it.
     Attaches to an existing Mac owner; --dbmd is required to start its own owner.
     Artifact proposals require exact-content review in the native app. No automatic approval.
@@ -26,15 +26,15 @@ signal(SIGINT, SIG_IGN)
 signalSource.setEventHandler { _ = try? client.request(LocalRequest(operation: "stop", threadID: threadID)) }
 signalSource.resume()
 Task {
-    var owner: SevraRuntime?
+    var owner: SlotstreamRuntime?
     var endpoint: LocalEndpoint?
     do {
         if let dbmd = option("--dbmd") {
             do {
                 let engine = option("--model").map { LocalInference(model: URL(fileURLWithPath: $0)) } ?? LocalInference()
-                let runtime = try SevraRuntime(homeURL: homeURL, dbmd: URL(fileURLWithPath: dbmd), inference: engine)
+                let runtime = try SlotstreamRuntime(homeURL: homeURL, dbmd: URL(fileURLWithPath: dbmd), inference: engine)
                 owner = runtime; endpoint = try LocalEndpoint(runtime: runtime)
-            } catch SevraError.ownerBusy { /* Attach only to the authenticated current owner. */ }
+            } catch AppRuntimeError.ownerBusy { /* Attach only to the authenticated current owner. */ }
         }
         if args.first == "status" {
             let reply = try client.request(LocalRequest(operation: "status", threadID: threadID))
@@ -55,9 +55,9 @@ Task {
             var shownStatus = ""
             while true {
                 let reply = try client.request(LocalRequest(operation: "status", threadID: threadID))
-                guard let thread = reply.thread else { throw SevraError.unavailable("The selected thread is unavailable.") }
+                guard let thread = reply.thread else { throw AppRuntimeError.unavailable("The selected thread is unavailable.") }
                 guard thread.run?.id == accepted.runID else {
-                    print("This run is no longer the current response. Review its saved history in Sevra."); break
+                    print("This run is no longer the current response. Review its saved history in Slotstream."); break
                 }
                 if let status = thread.run?.status, status.hasPrefix("Thinking") || status.hasPrefix("Finishing"), status != shownStatus {
                     fputs("\r" + status + "        ", stderr); shownStatus = status
@@ -73,7 +73,7 @@ Task {
                 }
                 try await Task.sleep(nanoseconds: 150_000_000)
             }
-        } else { throw SevraError.unavailable("Unsupported internal command.") }
+        } else { throw AppRuntimeError.unavailable("Unsupported internal command.") }
     } catch { fputs(error.localizedDescription + "\n", stderr); status = 1 }
     do { try await owner?.shutdown() } catch { fputs(error.localizedDescription + "\n", stderr); status = 1 }
     endpoint?.stop()

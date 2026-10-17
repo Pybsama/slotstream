@@ -1,11 +1,11 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 
 /// Clicks change memory at once and saves merge in the background; only a
 /// promise of durability, such as a saved draft, waits for the disk.
 func writeBehindChecks(root: URL, dbmd: URL) async throws {
     let home = root.appendingPathComponent("write-behind")
-    var runtime: SevraRuntime? = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []))
+    var runtime: SlotstreamRuntime? = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: ScriptedInference(turns: []))
     let before = await runtime!.storageActivity().saves
     let clock = ContinuousClock(), start = clock.now
     var ids: [String] = []

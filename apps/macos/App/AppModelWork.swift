@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import SevraRuntime
+import SlotstreamRuntime
 
 /// Sources, reviewed changes, mini-apps and skills.
 extension AppModel {
@@ -12,7 +12,7 @@ extension AppModel {
         let picker = NSOpenPanel()
         picker.canChooseDirectories = true; picker.canChooseFiles = true; picker.allowsMultipleSelection = true
         picker.prompt = "Attach"
-        picker.message = "Choose files or folders for this thread. Sevra reads them, and changes a folder only if you allow it. Every change waits for your review."
+        picker.message = "Choose files or folders for this thread. Slotstream reads them, and changes a folder only if you allow it. Every change waits for your review."
         guard picker.runModal() == .OK else { return }
         attachFiles(picker.urls)
     }
@@ -86,7 +86,7 @@ extension AppModel {
         guard !applyingChanges else { return }
         let alert = NSAlert()
         alert.messageText = "Undo these changes?"
-        alert.informativeText = "Sevra puts back the previous version of each changed file and moves new files to the Trash. A file edited since then is left as it is."
+        alert.informativeText = "Slotstream puts back the previous version of each changed file and moves new files to the Trash. A file edited since then is left as it is."
         alert.addButton(withTitle: "Undo Changes"); alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         applyingChanges = true

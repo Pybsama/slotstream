@@ -2,10 +2,11 @@ import AppKit
 import SwiftUI
 import CoreText
 import Combine
-import SevraRuntime
+import SlotstreamRuntime
 
-@main struct SevraMain {
+@main struct SlotstreamMain {
     @MainActor static func main() {
+        AppPreferences.migrateLegacy()
         let application = NSApplication.shared
         let delegate = AppDelegate()
         application.delegate = delegate
@@ -28,10 +29,10 @@ import SevraRuntime
         }
         model.setAppearance(model.appearance)
         // Finder, Dock and About all use the same bundled, multiresolution icon.
-        if let iconURL = Bundle.main.url(forResource: "Sevra", withExtension: "icns") {
+        if let iconURL = Bundle.main.url(forResource: "Slotstream", withExtension: "icns") {
             NSApp.applicationIconImage = NSImage(contentsOf: iconURL)
         }
-        window = SevraWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window = SlotstreamWindow(contentRect: NSRect(x: 0, y: 0, width: 1120, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Home"; window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.toolbarStyle = .unified
@@ -43,13 +44,13 @@ import SevraRuntime
             self.detailLeadingInset = leading
             self.scheduleToolbarAlignment()
         }))
-        window.center(); window.setFrameAutosaveName("SevraMain")
+        window.center(); window.setFrameAutosaveName("SlotstreamMain")
         if let screen = window.screen ?? NSScreen.main, !screen.visibleFrame.intersects(window.frame) { window.center() }
         buildMenus(); buildToolbar(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
         // Observe after each published change, and only mutate chrome when its
         // displayed value changes. Streaming must not reconstruct the toolbar.
         modelChanges = model.objectWillChange.receive(on: RunLoop.main).sink { [weak self] in self?.updateToolbar() }
-        NotificationCenter.default.addObserver(self, selector: #selector(find(_:)), name: .sevraFind, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(find(_:)), name: .slotstreamFind, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(willSleep(_:)), name: NSWorkspace.willSleepNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(didWake(_:)), name: NSWorkspace.didWakeNotification, object: nil)
         model.homes.didOpen = { [weak self] next in self?.showHome(next) }
@@ -82,7 +83,7 @@ import SevraRuntime
         return .terminateLater
     }
     @objc func switchHome(_ sender: Any?) {
-        NotificationCenter.default.post(name: .sevraShowHomes, object: nil)
+        NotificationCenter.default.post(name: .slotstreamShowHomes, object: nil)
     }
     @objc func newHome(_ sender: Any?) { model.homes.chooseNew() }
     @objc func openHome(_ sender: Any?) { model.homes.chooseExisting() }
@@ -100,9 +101,9 @@ import SevraRuntime
     @objc func didWake(_ notification: Notification) { model.wake() }
     @objc func focusComposer(_ sender: Any?) { model.panel = ""; model.focusRevision += 1 }
     @objc func focusConversation(_ sender: Any?) { model.panel = ""; model.textSession.focusDocument() }
-    @objc func jumpLatest(_ sender: Any?) { NotificationCenter.default.post(name: .sevraJumpToLatest, object: nil) }
+    @objc func jumpLatest(_ sender: Any?) { NotificationCenter.default.post(name: .slotstreamJumpToLatest, object: nil) }
     @objc func home(_ sender: Any?) { model.navigate("home") }
-    @objc func toggleSidebar(_ sender: Any?) { NotificationCenter.default.post(name: .sevraToggleSidebar, object: nil) }
+    @objc func toggleSidebar(_ sender: Any?) { NotificationCenter.default.post(name: .slotstreamToggleSidebar, object: nil) }
     @objc func back(_ sender: Any?) { model.closePanel() }
     @objc func revealHome(_ sender: Any?) { NSWorkspace.shared.open(model.homeURL) }
     @objc func attachSources(_ sender: Any?) { model.panel = ""; model.attach() }
@@ -138,13 +139,13 @@ import SevraRuntime
             let command = MacCommand.owned.first { $0.title == title }
             let item = NSMenuItem(title: title, action: action, keyEquivalent: command?.key ?? key); item.keyEquivalentModifierMask = command?.modifiers ?? modifiers; item.target = target; parent.addItem(item)
         }
-        let app = menu("Sevra")
-        add(app, "About Sevra", #selector(NSApplication.orderFrontStandardAboutPanel(_:)))
+        let app = menu("Slotstream")
+        add(app, "About Slotstream", #selector(NSApplication.orderFrontStandardAboutPanel(_:)))
         add(app, "Settings…", #selector(settings(_:)), ",", target: self)
-        app.addItem(.separator()); add(app, "Hide Sevra", #selector(NSApplication.hide(_:)), "h")
+        app.addItem(.separator()); add(app, "Hide Slotstream", #selector(NSApplication.hide(_:)), "h")
         add(app, "Hide Others", #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option])
         add(app, "Show All", #selector(NSApplication.unhideAllApplications(_:)))
-        app.addItem(.separator()); add(app, "Quit Sevra", #selector(NSApplication.terminate(_:)), "q")
+        app.addItem(.separator()); add(app, "Quit Slotstream", #selector(NSApplication.terminate(_:)), "q")
         let file = menu("File")
         add(file, "Switch Home…", #selector(switchHome(_:)), "h", [.command, .shift], target: self)
         add(file, "New Home…", #selector(newHome(_:)), "", target: self)
@@ -178,15 +179,15 @@ import SevraRuntime
         NSApp.windowsMenu = windows; NSApp.mainMenu = main
     }
 
-    private static let sidebarItem = NSToolbarItem.Identifier("Sevra.sidebar")
-    private static let backItem = NSToolbarItem.Identifier("Sevra.back")
-    private static let headingItem = NSToolbarItem.Identifier("Sevra.heading")
-    private static let alignmentItem = NSToolbarItem.Identifier("Sevra.alignment")
-    private static let searchItem = NSToolbarItem.Identifier("Sevra.search")
-    private static let moreItem = NSToolbarItem.Identifier("Sevra.more")
+    private static let sidebarItem = NSToolbarItem.Identifier("Slotstream.sidebar")
+    private static let backItem = NSToolbarItem.Identifier("Slotstream.back")
+    private static let headingItem = NSToolbarItem.Identifier("Slotstream.heading")
+    private static let alignmentItem = NSToolbarItem.Identifier("Slotstream.alignment")
+    private static let searchItem = NSToolbarItem.Identifier("Slotstream.search")
+    private static let moreItem = NSToolbarItem.Identifier("Slotstream.more")
 
     private func buildToolbar() {
-        let toolbar = NSToolbar(identifier: "Sevra.main")
+        let toolbar = NSToolbar(identifier: "Slotstream.main")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
@@ -389,7 +390,7 @@ import SevraRuntime
 
 /// Escape also reaches native document views and a window with no focused view.
 /// Native sheets and text input handle their own cancellation first.
-@MainActor private final class SevraWindow: NSWindow {
+@MainActor private final class SlotstreamWindow: NSWindow {
     override func sendEvent(_ event: NSEvent) {
         // The Find field's editor is a sibling of its document. Letting Escape
         // traverse that responder chain can select the other pane's document.
@@ -411,7 +412,7 @@ import SevraRuntime
         super.sendEvent(event)
     }
     override func cancelOperation(_ sender: Any?) {
-        NotificationCenter.default.post(name: .sevraEscape, object: nil)
+        NotificationCenter.default.post(name: .slotstreamEscape, object: nil)
     }
 }
 

@@ -2,11 +2,11 @@
 type: decision
 id: 01m2nvyh0y76whet55dkgs69bs
 created: 2026-09-16T19:43:53.886405+00:00
-updated: 2026-09-16T19:43:53.886405+00:00
+updated: 2026-10-16T06:32:39.400805+00:00
 summary: Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
 decided_on: 2026-09-16
 evidence: '[[records/measurements/c1-mac-mini-m2-16gb-base-storage-community-2026-09-02]], [[records/measurements/c3-macbook-air-m5-32gb-community]], [[records/measurements/c2-macbook-pro-m5-max-128gb-community]], [[records/measurements/hardware-planning-ranges-2026-09-13]], [[records/measurements/decode-lookahead-default-2026-09-13]]'
-reversible_if: Sevra adopts a qualified resident path for Macs that hold the model, or paired measurements show this engine matching resident engines on such Macs
+reversible_if: Slotstream adopts a qualified resident path for Macs that hold the model, or paired measurements show this engine matching resident engines on such Macs
 title: 'Slotstream targets Macs that cannot hold the model: 16 to 64 GB'
 status: standing
 ---
@@ -39,7 +39,7 @@ of this one, and it would trade against the machines the project exists for.
 
 **What this does not change.** No number, default, automatic plan or ceiling
 moves. The M5 Max sweep stays published because it is true within Slotstream.
-Sevra's maintained model selection may later choose a resident path for large
+Slotstream's maintained model selection may later choose a resident path for large
 Macs; that is a product decision recorded elsewhere, not this one.
 
 **Surfaces updated on 2026-09-16.** README ("Who it's for", the opening
