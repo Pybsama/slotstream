@@ -73,7 +73,7 @@ def check(binary):
         supported = [
             ['prefix-exact-check'], ['prefix-exact-check', '--plan', '--memory-gb', '10', '--mtp', 'off', '--vision', 'off'],
             ['vision-parity', '--image', str(root / 'Tools/assets/vision_test/secret1.jpg'), '--out', str(folder / 'vision')],
-            ['parity'], ['ngram-golden'], ['dequant-golden'],
+            ['parity', '--tokens', '9707,11'], ['ngram-golden', '--tokens', '9707,11'], ['dequant-golden'],
             ['mtp-fixture-inputs', '--out', str(folder / 'mtp.safetensors')],
         ]
         for args, expected in [([x], '--mirror is not supported by this command') for x in unsupported] + [
