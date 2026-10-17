@@ -27,7 +27,11 @@ package struct GatewayReasoningOutput {
 
     package mutating func finish(thinking think: String) -> [[String: Any]] {
         var parts: [[String: Any]] = []
-        if !think.isEmpty, open {
+        if !think.isEmpty {
+            if !open {
+                parts.append(["type": "reasoning-start", "id": "r0"])
+                open = true
+            }
             parts.append([
                 "type": "reasoning-delta", "id": "r0", "delta": think,
             ])
