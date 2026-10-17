@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 func capabilityChecks(root: URL, dbmd: URL) async throws {
@@ -43,8 +43,8 @@ func capabilityChecks(root: URL, dbmd: URL) async throws {
         try require(refused && session.citations.isEmpty, "invalid table refuses without a partial result: " + label)
     }
     let cancelled = Cancellation(); cancelled.cancel()
-    do { _ = try session.execute(ProposedTool(name: "source.table", arguments: ["id": .string("a1")]), cancellation: cancelled); throw SevraError.refused("CHECK FAILED: cancelled table ran") }
-    catch { try require(error is SevraError && !error.localizedDescription.contains("CHECK FAILED"), "table cancellation") }
+    do { _ = try session.execute(ProposedTool(name: "source.table", arguments: ["id": .string("a1")]), cancellation: cancelled); throw AppRuntimeError.refused("CHECK FAILED: cancelled table ran") }
+    catch { try require(error is AppRuntimeError && !error.localizedDescription.contains("CHECK FAILED"), "table cancellation") }
     print("PASS: complete filtered/grouped decimal table calculations, quoted Unicode/CSV cells, provenance, sample disclosure, malformed/oversize/precision refusals and cancellation")
 
     let codeURL = root.appendingPathComponent("capability.py"), code = "def sum_to(n):\n    return sum(range(n))\n"
@@ -59,7 +59,7 @@ func capabilityChecks(root: URL, dbmd: URL) async throws {
             EngineTurn(text: "", calls: [ProposedTool(name: "source.read", arguments: ["id": .string("a1")])]),
             EngineTurn(text: "", calls: [ProposedTool(name: "file.edit", arguments: ["id": .string("a1"), "old": .string("range(n)"), "new": .string("range(n + 1)")])]),
             EngineTurn(text: "", calls: [invalid]), EngineTurn(text: "Staged the inclusive range change for review; no tests were executed.")])
-        let runtime = try SevraRuntime(homeURL: root.appendingPathComponent("capability-edit-\(index)"), dbmd: dbmd, inference: probe)
+        let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("capability-edit-\(index)"), dbmd: dbmd, inference: probe)
         let attachment = try await runtime.attach(threadID: "home", folder: codeURL)
         try await runtime.setAccess(threadID: "home", attachmentID: attachment.id, access: .change)
         try await runtime.submit(threadID: "home", text: "Fix the inclusive sum and let me review it", nonce: "edit")
@@ -86,7 +86,7 @@ func capabilityChecks(root: URL, dbmd: URL) async throws {
         EngineTurn(text: "", calls: [ProposedTool(name: "memory.search", arguments: ["query": .string("quartz")])]), EngineTurn(text: "Saved quartz memory"),
         EngineTurn(text: "", calls: [ProposedTool(name: "history.search", arguments: ["query": .string("workshop")])]), EngineTurn(text: "No retained result"),
         EngineTurn(text: "", calls: [ProposedTool(name: "memory.search", arguments: ["query": .string("")])]), EngineTurn(text: "No saved memory")])
-    let runtime = try SevraRuntime(homeURL: historyHome, dbmd: dbmd, inference: recall)
+    let runtime = try SlotstreamRuntime(homeURL: historyHome, dbmd: dbmd, inference: recall)
     try await runtime.remember(threadID: "home", messageID: old.id, text: "Quartz workshop preference: local processing.", admitted: true)
     try await runtime.submit(threadID: "home", text: "Find the older workshop detail", nonce: "history")
     let found = try await terminal(runtime, "home")
@@ -116,7 +116,7 @@ func capabilityChecks(root: URL, dbmd: URL) async throws {
     let paging = ScriptedInference(turns: [
         EngineTurn(text: "", calls: [ProposedTool(name: "history.search", arguments: ["query": .string("PAGING-CANARY")])]),
         EngineTurn(text: "", calls: [ProposedTool(name: "history.search", arguments: ["query": .string("PAGING-CANARY"), "offset": .int(512)])]), EngineTurn(text: "Found it")])
-    let paged = try SevraRuntime(homeURL: pagingHome, dbmd: dbmd, inference: paging)
+    let paged = try SlotstreamRuntime(homeURL: pagingHome, dbmd: dbmd, inference: paging)
     try await paged.submit(threadID: "home", text: "Find the original canary", nonce: "paged")
     let pagedResult = try await terminal(paged, "home")
     let pages = await paging.observedContexts
@@ -124,7 +124,7 @@ func capabilityChecks(root: URL, dbmd: URL) async throws {
     try require(pages[2].last!.content.contains("PAGING-CANARY-831") && pages[2].last!.content.contains("\"complete\":true"), "recall continuation reaches older evidence beyond its scan bound")
     try await paged.shutdown()
     let privateProbe = ScriptedInference(turns: [EngineTurn(text: "", calls: [ProposedTool(name: "history.search", arguments: ["query": .string("PAGING-CANARY")])])])
-    let privateRuntime = try SevraRuntime(homeURL: root.appendingPathComponent("capability-incognito"), dbmd: dbmd, inference: privateProbe)
+    let privateRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("capability-incognito"), dbmd: dbmd, inference: privateProbe)
     let privateID = try await privateRuntime.newThread(mode: .incognito)
     try await privateRuntime.submit(threadID: privateID, text: "Find older history", nonce: "private")
     let privateResult = try await terminal(privateRuntime, privateID)

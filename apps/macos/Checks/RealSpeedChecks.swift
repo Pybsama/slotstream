@@ -1,5 +1,5 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
 /// Ordinary checks stay at 10 GB. A larger MTP allocation is an explicitly
@@ -9,7 +9,7 @@ func realCheckBudget() throws -> Double {
     guard let index = args.firstIndex(of: "--mtp-profile-gb") else { return 10 }
     guard index + 1 < args.count, let budget = Double(args[index + 1]), budget.isFinite,
           budget >= 10, budget <= 33, (Machine.current().availableGB ?? 0) >= budget + 3 else {
-        throw SevraError.refused("The MTP measurement needs a budget between 10 and 33 GB and target plus 3 GB reclaimable.")
+        throw AppRuntimeError.refused("The MTP measurement needs a budget between 10 and 33 GB and target plus 3 GB reclaimable.")
     }
     let model = WeightStore.default.modelDirectory
     let plan = try PerformancePolicy.plan(.init(budget: .custom, customGB: budget), on: .current(),
@@ -32,7 +32,7 @@ func realSpeedCheckIfRequested() async throws -> Bool {
           budget >= 8.5, let arm = argument("--arm"),
           ["plain", "auto", "256", "512", "1024", "reserved256", "reserved512", "chat"].contains(arm),
           (Machine.current().availableGB ?? 0) >= budget + 3 else {
-        throw SevraError.refused("Specify --memory-gb and --arm plain|auto|chat|256|512|1024|reserved256|reserved512, with target plus 3 GB reclaimable.")
+        throw AppRuntimeError.refused("Specify --memory-gb and --arm plain|auto|chat|256|512|1024|reserved256|reserved512, with target plus 3 GB reclaimable.")
     }
     let policy = try Int(arm).map { try RuntimeAllocationPolicy(prefillChunkOverride: $0) }
     let model = WeightStore.default.modelDirectory
@@ -44,7 +44,7 @@ func realSpeedCheckIfRequested() async throws -> Bool {
     if arm == "chat" {
         try engine.configureShortPromptPrefill(maxPromptTokens: PerformancePolicy.shortPromptTokens, chunk: PerformancePolicy.shortPromptChunk)
         for (limit, chunk) in [(-1, 512), (ContextPolicy.modelLimit + 1, 512), (1536, 255), (1536, 4097)] {
-            do { try engine.configureShortPromptPrefill(maxPromptTokens: limit, chunk: chunk); throw SevraError.refused("CHECK FAILED: invalid short-prompt policy accepted") }
+            do { try engine.configureShortPromptPrefill(maxPromptTokens: limit, chunk: chunk); throw AppRuntimeError.refused("CHECK FAILED: invalid short-prompt policy accepted") }
             catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "invalid short-prompt policy is rejected") }
         }
     }

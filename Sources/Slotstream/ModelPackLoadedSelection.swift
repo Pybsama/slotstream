@@ -18,12 +18,14 @@ extension Engine {
     /// Conservative boundary for measured product evidence. Explicit runtime
     /// experiments remain usable, but cannot inherit the default profile's
     /// measurements. Only names are inspected; secret values are never hashed,
-    /// retained or exposed as evidence. These two names select test/build tools
-    /// and have no effect on execution inside an already built runtime.
+    /// retained or exposed as evidence. Known app paths and test/build tools
+    /// do not tune execution inside an already loaded runtime. Loaded model
+    /// identity, storage and controls are checked separately below.
     package static func admitsStartupEvidence(environment: [String: String],
         build: SlotstreamBuild.PerformanceConfiguration = .current) -> Bool {
         guard build == .release else { return false }
-        let tooling: Set<String> = ["SLOTSTREAM_TEST_BINARY", "SLOTSTREAM_METALLIB_MACOS"]
+        let tooling: Set<String> = ["SLOTSTREAM_TEST_BINARY", "SLOTSTREAM_METALLIB_MACOS",
+            "SLOTSTREAM_MODEL", "SLOTSTREAM_HOME", "SLOTSTREAM_DBMD", "SLOTSTREAM_EXTRACT"]
         return !environment.keys.contains { name in
             (name.hasPrefix("SLOTSTREAM_") && !tooling.contains(name)) || name.hasPrefix("MLX_")
         }

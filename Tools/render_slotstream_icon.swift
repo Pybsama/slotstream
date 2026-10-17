@@ -3,10 +3,10 @@ import SwiftUI
 
 /// Build artwork, not a running app. Reuses the exact native Observer geometry.
 /// The transparent margin and rounded warm tile belong to the Mac icon only.
-@main struct RenderSevraIcon {
+@main struct RenderSlotstreamIcon {
     @MainActor static func main() throws {
         guard CommandLine.arguments.count == 2 else {
-            throw NSError(domain: "SevraIcon", code: 1, userInfo: [NSLocalizedDescriptionKey: "Pass an output .iconset directory."])
+            throw NSError(domain: "SlotstreamIcon", code: 1, userInfo: [NSLocalizedDescriptionKey: "Pass an output .iconset directory."])
         }
         let directory = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -25,7 +25,7 @@ import SwiftUI
                 renderer.scale = CGFloat(pixels) / 1024
                 guard let cg = renderer.cgImage,
                       let data = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:]) else {
-                    throw NSError(domain: "SevraIcon", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not render Observer."])
+                    throw NSError(domain: "SlotstreamIcon", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not render Observer."])
                 }
                 let suffix = scale == 2 ? "@2x" : ""
                 try data.write(to: directory.appendingPathComponent("icon_\(points)x\(points)\(suffix).png"))

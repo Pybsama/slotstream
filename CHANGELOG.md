@@ -437,7 +437,7 @@ determines which version the installer downloads.
   only a state whose length is one of its own prefill pass boundaries and whose
   every token was read in those passes, and re-reads the rest, so the same
   conversation gives the same tokens and bit-identical prompt logits either
-  way. The Sevra basics run that produced that malformed call now writes the
+  way. The Slotstream basics run that produced that malformed call now writes the
   same edit with no correction round. A follow-up turn pays one partial pass
   for it: measured at 961 slots on a three-turn chat, follow-up prefill 2.47 s
   against 8.56 s, both well under the 26.3 s of reading the conversation cold.
@@ -628,7 +628,7 @@ determines which version the installer downloads.
   stop weight verification from a Stop button or at shutdown
   (`WeightStore.status(shouldContinue:)` and
   `WeightStore.sha256(of:shouldContinue:)`). Existing signatures are
-  unchanged. The Sevra for Mac development app in `apps/macos` uses them; it
+  unchanged. The Slotstream for Mac development app in `apps/macos` uses them; it
   is not part of the release download.
 - Say who Slotstream is for. It is built for Macs that cannot hold the model,
   16 to 64 GB; 96 GB and larger Macs run it but are not the optimization
@@ -639,7 +639,7 @@ determines which version the installer downloads.
   `db/records/decisions/target-range-macs-that-cannot-hold-the-model.md`.
 - Say that Slotstream is native end to end. The README's new Built native
   section, the engineering notes' native-stack table, the Swift library
-  guide, the Sevra Mac notes and `llms.txt` now describe the Swift, MLX and
+  guide, the Slotstream Mac notes and `llms.txt` now describe the Swift, MLX and
   Metal stack, the run-time-compiled Metal kernels, the C download decoder
   and the role of the Python tooling, and keep speed attributed to the
   measured mechanisms. No number changed. Decision:

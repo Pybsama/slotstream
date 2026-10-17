@@ -57,7 +57,7 @@ BIN=${BIN:-.build/release/slotstream}
         self.write('Tools/planner_gates_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PLANNER') == '1' else 0)\n")
         self.write('Tools/api_generation_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_API_GENERATION') == '1' else 0)\n")
         self.write('Tools/consumer_smoke_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_CONSUMER') == '1' else 0)\n")
-        self.write('Tools/build_sevra_mac_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_BUNDLE_INPUTS') == '1' else 0)\n")
+        self.write('Tools/build_slotstream_mac_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_BUNDLE_INPUTS') == '1' else 0)\n")
         self.write('Tools/process_memory_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_NATIVE_MEMORY') == '1' else 0)\n")
         self.write('Tools/launch_request_deadline_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_LAUNCH_DEADLINE') == '1' else 0)\n")
         self.write('Tools/safetensors_empty_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_EMPTY_TENSORS') == '1' else 0)\n")
@@ -134,7 +134,7 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
         self.assertEqual(rows, [])
 
     def test_missing_bundle_input_regression_stops_acceptance(self):
-        (self.root/'Tools/build_sevra_mac_test.py').unlink()
+        (self.root/'Tools/build_slotstream_mac_test.py').unlink()
         result, rows = self.run_entry({})
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(rows, [])

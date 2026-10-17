@@ -1,19 +1,19 @@
 import Foundation
-import SevraRuntime
+import SlotstreamRuntime
 import Slotstream
 
-func terminal(_ runtime: SevraRuntime, _ id: String) async throws -> WorkThread {
+func terminal(_ runtime: SlotstreamRuntime, _ id: String) async throws -> WorkThread {
     for _ in 0..<600 {
         let s = await runtime.snapshot()
         if let t = s.home.threads.first(where: { $0.id == id }), t.run?.state.terminal == true || t.run?.state == .needsYou { return t }
         try await Task.sleep(nanoseconds: 20_000_000)
     }
-    throw SevraError.refused("CHECK FAILED: runtime did not reach a terminal or needs-you state")
+    throw AppRuntimeError.refused("CHECK FAILED: runtime did not reach a terminal or needs-you state")
 }
 
 func adverseChecks(root: URL, dbmd: URL) async throws {
     let delayed = ScriptedInference(turns: [EngineTurn(text: String(repeating: "stream ", count: 300)), EngineTurn(text: "second"), EngineTurn(text: "third")], delayNanoseconds: 1_000_000)
-    let runtime = try SevraRuntime(homeURL: root.appendingPathComponent("queue"), dbmd: dbmd, inference: delayed)
+    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("queue"), dbmd: dbmd, inference: delayed)
     let a = try await runtime.newThread(title: "A"), b = try await runtime.newThread(title: "B")
     let first = try await runtime.submit(threadID: "home", text: "first", nonce: "first")
     try await runtime.submit(threadID: b, text: "second", nonce: "second")
@@ -26,7 +26,7 @@ func adverseChecks(root: URL, dbmd: URL) async throws {
     try require(bResult.messages.last?.text == "second" && aResult.messages.last?.text == "third", "global queue follows acceptance order, not thread order")
     let original = try await runtime.submit(threadID: "home", text: "first", nonce: "first")
     try require(original == first, "old submission nonce cannot create a later duplicate")
-    do { _ = try await runtime.submit(threadID: "home", text: "changed", nonce: "first"); throw SevraError.refused("CHECK FAILED: changed nonce accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "nonce binds exact input") }
+    do { _ = try await runtime.submit(threadID: "home", text: "changed", nonce: "first"); throw AppRuntimeError.refused("CHECK FAILED: changed nonce accepted") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "nonce binds exact input") }
     try await runtime.shutdown()
     print("PASS: cooperative cancellation, FIFO cross-thread scheduling, durable nonce registry")
 
@@ -56,7 +56,7 @@ func adverseChecks(root: URL, dbmd: URL) async throws {
     let previous = try Data(contentsOf: target)
     let changed = previous + Data("\nexternal edit\n".utf8)
     try changed.write(to: target)
-    do { try store.save(state); throw SevraError.refused("CHECK FAILED: external revision overwritten") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "external revision rejected") }
+    do { try store.save(state); throw AppRuntimeError.refused("CHECK FAILED: external revision overwritten") } catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "external revision rejected") }
     let remaining = try Data(contentsOf: target)
     try require(remaining == changed, "external conflicting bytes preserved")
     print("PASS: per-thread external edits pause writes and preserve user bytes")
@@ -83,9 +83,9 @@ func inspectCanaryFiles(_ home: URL, canary: String) throws {
 func ipcChecks(root: URL, dbmd: URL) async throws {
     let home = root.appendingPathComponent(String(repeating: "long-home-path-", count: 8))
     let engine = ScriptedInference(turns: [EngineTurn(text: String(repeating: "attached ", count: 100))], delayNanoseconds: 1_000_000)
-    let runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: engine)
+    let runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: engine)
     try await runtime.beginModelMaintenance()
-    do { _ = try await runtime.submit(threadID: "home", text: "must wait for setup", nonce: "setup-refusal"); throw SevraError.refused("CHECK FAILED: model mutation raced with inference") }
+    do { _ = try await runtime.submit(threadID: "home", text: "must wait for setup", nonce: "setup-refusal"); throw AppRuntimeError.refused("CHECK FAILED: model mutation raced with inference") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "model setup excludes inference") }
     await runtime.endModelMaintenance()
     let endpoint = try LocalEndpoint(runtime: runtime)
@@ -97,11 +97,11 @@ func ipcChecks(root: URL, dbmd: URL) async throws {
     let capability = home.appendingPathComponent(".sevra/session-capability")
     let secret = try Data(contentsOf: capability)
     try Data("invalid-capability".utf8).write(to: capability)
-    do { _ = try client.request(LocalRequest(operation: "status")); throw SevraError.refused("CHECK FAILED: invalid capability accepted") }
+    do { _ = try client.request(LocalRequest(operation: "status")); throw AppRuntimeError.refused("CHECK FAILED: invalid capability accepted") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "invalid local capability refused") }
     try secret.write(to: capability)
     let privateID = try await runtime.newThread(mode: .incognito)
-    do { _ = try client.request(LocalRequest(operation: "status", threadID: privateID)); throw SevraError.refused("CHECK FAILED: incognito exposed to client") }
+    do { _ = try client.request(LocalRequest(operation: "status", threadID: privateID)); throw AppRuntimeError.refused("CHECK FAILED: incognito exposed to client") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "incognito not exposed to unbound observers") }
     let accepted = try client.request(LocalRequest(operation: "submit", text: "one job", nonce: "ipc-once"))
     let repeated = try client.request(LocalRequest(operation: "submit", text: "one job", nonce: "ipc-once"))
@@ -124,13 +124,13 @@ func ipcChecks(root: URL, dbmd: URL) async throws {
 func personalLoopChecks(root: URL, dbmd: URL) async throws {
     let engine = ScriptedInference(turns: Array(repeating: EngineTurn(text: "Acknowledged."), count: 6))
     let home = root.appendingPathComponent("personal-loop")
-    let runtime = try SevraRuntime(homeURL: home, dbmd: dbmd, inference: engine)
+    let runtime = try SlotstreamRuntime(homeURL: home, dbmd: dbmd, inference: engine)
     try await runtime.saveDraft(threadID: "home", text: "old draft", expectedRevision: 0)
     try await runtime.saveDraft(threadID: "home", text: "new draft", expectedRevision: 1)
-    do { try await runtime.saveDraft(threadID: "home", text: "stale draft", expectedRevision: 0); throw SevraError.refused("CHECK FAILED: stale draft accepted") }
+    do { try await runtime.saveDraft(threadID: "home", text: "stale draft", expectedRevision: 0); throw AppRuntimeError.refused("CHECK FAILED: stale draft accepted") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "stale draft cannot overwrite newer text") }
     try await runtime.submit(threadID: "home", text: "new draft", nonce: "draft-race")
-    do { try await runtime.saveDraft(threadID: "home", text: "new draft", expectedRevision: 2); throw SevraError.refused("CHECK FAILED: submitted draft restored") }
+    do { try await runtime.saveDraft(threadID: "home", text: "new draft", expectedRevision: 2); throw AppRuntimeError.refused("CHECK FAILED: submitted draft restored") }
     catch { try require(!error.localizedDescription.contains("CHECK FAILED"), "pending autosave cannot restore an accepted draft") }
     let origin = try await terminal(runtime, "home")
     try require(origin.draft.isEmpty, "accepted composer stays empty")

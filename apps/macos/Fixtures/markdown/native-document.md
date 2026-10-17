@@ -1,6 +1,6 @@
 # A good place to think
 
-Sevra keeps the conversation **readable**, the next action clear, and your files local. This is a UI test document, not a model response or product claim.
+Slotstream keeps the conversation **readable**, the next action clear, and your files local. This is a UI test document, not a model response or product claim.
 
 ## A short plan
 
