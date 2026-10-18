@@ -546,3 +546,6 @@ Capture final integrated mirror review corrections, regression proof, full local
 ## [2026-10-18 09:20] update | records/measurements/mirrored-checkpoint-review-2026-10-18.md
 Preserve hosted memory-admission fixture failure and move Engine mirror CLI cases into full model acceptance. Verify 22 weights-free and 26 complete cases on unchanged binary, plus 69 harness tests; keep original full-battery evidence distinct.
 
+## [2026-10-18 10:19] update | records/measurements/mirrored-checkpoint-review-2026-10-18.md
+Keep mirror review focused: preserve all raw captures on the fork evidence branch and immutable links, retain concise measurement and run records, and remove raw archives from the PR file diff. Runtime and test sources are unchanged.
+

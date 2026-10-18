@@ -1,3 +1,0 @@
-The phenomenon of the blue sky during the day and the vibrant red hues of sunset is a classic example of atmospheric optics, primarily governed by a physical process known as Rayleigh scattering. To understand this, one must first recognize that sunlight, while appearing white to the human eye, is actually composed of a full spectrum of colors, each corresponding to a specific wavelength of light. When this sunlight enters Earth’s atmosphere, it interacts with the gases that make up the air, such as nitrogen and oxygen. These gas molecules are significantly smaller than the wavelengths of visible light, which is the critical condition for Rayleigh scattering to occur.
-
-Rayleigh scattering

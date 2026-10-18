@@ -8776,68 +8776,21 @@ Global swap-ins changed in five of the six completed requests, with no new swap-
 Prior replies were read again before posting the [new full-model follow-up](https://github.com/carloslfu/slotstream/issues/54#issuecomment-6171643768). Its body and the still-open state are verified and archived. No inference default, installed CLI or release changed. The only source edit corrects stale lookahead comments; all noncomment lines are identical. The six payload/runtime validations, binary/helper identities, archive hashes and process cleanup pass.
 
 ## Mirrored checkpoint reads: final review corrections and three-arm comparison
-On this M4 Mac mini, combining the external and internal checkpoint copies provides a useful measured advantage over the faster single disk for both the repeated-sentence workload and ordinary prose analysis, with MTP off and on. The median paired reduction in generation-request time is 14.4%, 18.4%, 15.1% and 16.8%, respectively; all 24 measured triplets favor both disks. TTFT, decode throughput and whole-process completion also improve in every triplet. External-only is faster than internal-only throughout this cohort, so the result cannot be explained by merely switching to the internal disk.
+On the measured M4 Mac mini, both disks reduce generation-request time by
+14.4–18.4% versus the faster single disk (paired medians); all 24 triplets
+favor both. This supports the opt-in mirror path for this setup, at the cost
+of a second full checkpoint copy and shared read routing.
 
-The benefit comes with storage for a second full checkpoint copy and the maintenance cost of shared read routing. These bounded results support the opt-in mirror path on this measured setup; they do not establish a universal speedup or justify enabling duplicate storage by default. There is no cold-SSD, energy, full application workflow or other-hardware claim. Ordinary prose uses a fixed 128-token output budget, not a completed long-form writing task. The complete unmodified functional suite and deterministic counterfactual routing checks supply separate correctness evidence.
-
-The final mirrored-read implementation is built from `bccd78e0a1100247f14091cc0ae59ba4f306175f`,
-integrating main `159b43e` and the merged fixture fix in #58. Release executable
-SHA-256: `04090257eb4a009790f867ed02c919a3cbd2fff026f87cd759c05105ede77567`. Later test-harness/evidence/documentation commits do
-not change the compiled source; the capture contains the complete source hash
-inventory.
-
-The router distinguishes an idle unknown replica from an in-flight probe and
-balances pending bytes while all replicas are unmeasured. Deterministic tests
-cover cold and post-idle bursts across two and three replicas, unequal queued
-bytes and cancellation. The original router passes its original 14 assertions
-but fails 10 assertions in the expanded suite; the fixed router passes all 26.
-All shared `ModelOptions` callers were audited. Supported direct loaders now
-forward mirrors; six unsupported commands reject the option explicitly.
-Behavioral CLI tests exercise single and repeated `--mirror` arguments and
-require a missing mirror to fail before diagnostic output is written.
-
-Local validation: 106 T0/T1 checks, 41300 assertions, no failures or
-skips; 26 mirror CLI cases; complete static and sampler/governor
-gates; mirrored prefix exactness with and without a memory plan/MTP; combined
-mirrored MTP/vision determinism and memory; byte-identical single/mirrored
-vision pixels and embeddings. The unmodified full acceptance suite on this
-binary finishes with **35 passed, 0 failed**. External-library consumption,
-instrumented T0/T1 coverage and the advisory coverage comparison also complete.
-These are local receipts; GitHub-hosted check status remains separate.
-
-The first hosted weights-free attempt exposed a fixture-placement error: the
-Engine-based `prefix-exact-check` paths perform real model-memory admission
-before opening the missing mirror, so the small runner refused for headroom
-before it could test forwarding. The failure is preserved in the
-[hosted job](https://github.com/carloslfu/slotstream/actions/runs/39112079535/job/117630166671).
-The weights-free gate now requires all 22 non-Engine cases. The complete
-26-case gate is also wired into `Tools/verify.sh` after its model preflight;
-memory refusal is never accepted as mirror evidence. Both profiles pass on
-the unchanged Mac binary, and 69 Python regression/entry-point tests pass.
-[Follow-up receipts](https://github.com/spikezz/slotstream/tree/536f064b8c3c60ef8e42c9af172eb076de9d60af/db/sources/artifacts/mirror-review-ci-fixture-20261018)
-retain the exact errors and results. The original 35-check full-suite receipt
-and the separately rerun 26-case mirror gate remain distinct; this does not
-claim a fresh run of the newly assembled 36-check battery. Compiled inputs
-remain identical to the fully validated mirror implementation.
-The frozen MLX 0.31 draft-head comparison differs and is retained as a historical diagnostic; the required independent MLX 0.32.2 comparison passes. Historical golden files are unchanged.
-
-**Three-arm comparison.** Apple M4 Mac mini, 32 GiB, macOS 15.7.4;
-external WD_BLACK SN8100 2 TB and internal Apple AP0256Z 256 GB, on separate
-physical disks. Both copies pass full pinned-payload verification. The optional
-MTP files have equal full SHA-256 digests. Both lack the optional lookahead
-correction payload; this is recorded, so this study does not qualify the
-configuration with that correction installed.
-
-Repeated-sentence and ordinary prose-analysis prompts each run with MTP off
-(10 GB process target) and on (12 GB). Each configuration has one warmup per
-arm, then six measured triplets using every permutation of external/internal/both.
-The combined arm uses the external copy as primary and the internal copy as `--mirror`.
-There are 12 warmups and 72 measured requests, with no selection of best runs.
-Every request generates the same bounded 128-token output for its workload;
-these timings measure that output budget, not a complete 500-word answer.
-Prompt token counts by configuration: {"prose-off": 483, "prose-on": 483, "repeated-off": 1220, "repeated-on": 1220}.
-All use greedy sampling, a 32768-token context and vision off. Fresh processes
-reset application caches; the OS file cache is neither flushed nor controlled.
+**Method.** Mac mini M4, 32 GiB, macOS 15.7.4; external WD_BLACK SN8100 2 TB
+and internal Apple AP0256Z 256 GB on separate physical disks. Both copies
+pass full payload verification and their MTP files have identical SHA-256
+hashes. The optional lookahead correction payload is absent from both.
+Repeated-sentence and ordinary prose-analysis prompts each use MTP off
+(10 GB process target) and on (12 GB), greedy sampling, context 32768,
+vision off and 128 output tokens. Prompt lengths are 1220 and 483 tokens.
+Each profile has one warmup per arm, then six triplets covering all six
+external/internal/both orders: 12 warmups and 72 measured runs. Fresh
+processes reset application caches; the OS file cache is uncontrolled.
 
 Each arm's six-run medians:
 
@@ -8856,15 +8809,10 @@ Each arm's six-run medians:
 | Prose, MTP on | internal | 19.813 | 2.113 | 24.405 | 84.810 | 26.078 | 86.711 |
 | Prose, MTP on | both | 41.853 | 3.784 | 11.566 | 45.354 | 12.790 | 46.676 |
 
-TTFT is generator entry to the first sampled non-EOS token. Request time covers
-generation, excluding model loading. Launch-to-first-text and process time
-include startup; their raw monotonic timestamps are preserved. Native
-first-text latency is also available in every raw stats file and summary.
-
-Paired benefits compare both disks against the faster single disk **within
-each triplet, separately for each metric**. Positive percentages mean higher
-throughput or lower latency. These medians need not equal ratios of the
-independent arm medians above.
+TTFT runs from generator entry to the first sampled non-EOS token; request
+time excludes model loading. Launch-to-first-text and process time include
+startup. Paired benefits compare both against the faster single disk within
+each triplet, separately for each metric:
 
 | Workload | Prefill increase | Decode increase | TTFT reduction | Request reduction, median [min, max] | Faster request rounds |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -8873,24 +8821,33 @@ independent arm medians above.
 | Prose, MTP off | +28.8% | +12.1% | +22.3% | +15.1% [+11.8%, +20.7%] | 6/6 |
 | Prose, MTP on | +38.5% | +13.4% | +27.7% | +16.8% [+16.2%, +18.0%] | 6/6 |
 
-All prompt IDs, output IDs, output text and effective settings match within
-every triplet; outputs also match across rounds. Both replicas serve bytes in
-each mirrored run, and every run exercises direct-to-slot reads. Whole-process
-peaks are at most 7.357 GB under the 10 GB target and
-8.092 GB under the 12 GB target, using 20 ms footprint samples plus
-native lifetime physical-footprint/RSS counters. The measured process intervals
-have no additional global swap, and generation starts/ends with nominal thermal
-state and low-power mode off. The independent audit recomputes all reported
-medians, ranges, benefit ratios and output/memory checks from raw receipts.
+All prompt IDs, output IDs, text and settings match within triplets, and
+outputs match across rounds. Both replicas serve bytes and every run exercises
+direct-to-slot reads. Maximum whole-process peaks are 7.357 GB (MTP off) and
+8.092 GB (on), using 20 ms samples plus native lifetime footprint/RSS counters.
+No measured run adds global swap; thermal state is nominal and low-power
+mode is off at generation start/end. The independent audit recomputes the
+results from all raw receipts without excluding a measured run.
 
-These measurements apply to this hardware, model, prompts and explicit
-budgets. Comparing the MTP-off and MTP-on rows also changes the memory budget
-and pool size. The earlier two-arm comparison did not establish which single
-disk was faster and is retained only as historical evidence in the
-[original PR report](https://github.com/carloslfu/slotstream/pull/57#issuecomment-6101386281).
+**Validation.** The measured implementation is `bccd78e`, integrating main
+`159b43e` and #58. The original router fails 10 new assertions; the fixed
+router passes 26. Native checks pass 106 tests / 41300 assertions, the original
+unmodified full acceptance battery passes 35/35, and static, mirrored
+prefix/MTP/vision, library-consumer and instrumented-coverage gates pass.
+The later CLI harness separates 22 weights-free cases from all 26 cases after
+model-memory preflight. Both pass on the unchanged binary, with 69 Python
+harness tests passing. The 35-check receipt and separately rerun CLI gate do
+not constitute a fresh run of the newly assembled 36-check battery. Historical
+MLX 0.31 comparison differences are preserved; independent MLX 0.32.2 passes.
+Hosted CI is reported separately in the PR.
 
-[Raw commands, prompts, outputs, stats, timing observations, protocol, independent
-audit, build identity and validation logs](https://github.com/spikezz/slotstream/tree/9df0b1ad04669e7ceda2a2f75a0c237fe83fb9bd/db/sources/artifacts/mirror-review-20261018) are committed with digest
-inventories. Only local filesystem paths are relabelled; original and published
-digests are both recorded. Tensor binaries, model payloads and executables are
-not committed.
+**Scope.** These are fixed 128-token completions, not finished long-form jobs.
+MTP off/on also changes memory and pool budgets. There is no cold-SSD,
+energy, complete application-workflow or other-hardware claim, nor a reason
+to duplicate checkpoints by default.
+
+[Raw runs, protocol, commands, outputs, hashes and audit](https://github.com/spikezz/slotstream/tree/9df0b1ad04669e7ceda2a2f75a0c237fe83fb9bd/db/sources/artifacts/mirror-review-20261018) and
+[CLI harness follow-up receipts](https://github.com/spikezz/slotstream/tree/536f064b8c3c60ef8e42c9af172eb076de9d60af/db/sources/artifacts/mirror-review-ci-fixture-20261018) are preserved outside this PR's
+file diff on the fork's `pr57-validation-evidence-20261018` archive branch.
+Links pin immutable commits. The linked run record holds build identity and
+capture details; local paths are relabelled with original/published digests.

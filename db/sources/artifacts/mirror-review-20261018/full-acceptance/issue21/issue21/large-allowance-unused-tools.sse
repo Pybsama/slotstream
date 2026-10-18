@@ -1,8 +1,0 @@
-: keepalive
-
-data: {"id":"chatcmpl-C7A982D8-B4E2-4F3B-B490-33F0AAF83BCA","created":1792286995,"object":"chat.completion.chunk","model":"qwen3.8-flash-next:4bit","choices":[{"index":0,"delta":{"content":"4","role":"assistant"},"finish_reason":null}]}
-
-data: {"created":1792286995,"choices":[{"delta":{},"finish_reason":"stop","index":0}],"id":"chatcmpl-C7A982D8-B4E2-4F3B-B490-33F0AAF83BCA","model":"qwen3.8-flash-next:4bit","usage":{"prompt_tokens":269,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens":1,"total_tokens":270},"object":"chat.completion.chunk"}
-
-data: [DONE]
-

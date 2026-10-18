@@ -1,3 +1,0 @@
---memory-gb 10 process footprint and RSS stay under target
-python3 Tools/memory_gate.py /tmp/ssv_mem.json --limit-gb 10
-{"passed": true, "maximum_observed_bytes": 5621338936, "sampled_footprint_bytes": 5621338936, "image_preparation_peak_bytes": 0, "lifetime_rss_bytes": 5415419904, "physical_footprint_end_bytes": 5621338936, "lifetime_footprint_peak_bytes": 5621338936, "sampling_interval_ms": 20, "global_swap_deltas": {"generator": {"swapins": 0, "swapouts": 0}}}

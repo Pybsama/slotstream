@@ -2,7 +2,7 @@
 type: index
 scope: type-folder
 folder: records/machines
-updated: 2026-10-18T08:34:33.568092616Z
+updated: 2026-10-18T10:19:17.861150921Z
 ---
 
 # records/machines
