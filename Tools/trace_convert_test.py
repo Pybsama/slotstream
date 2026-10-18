@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,8 @@ SCRIPT = Path(__file__).with_name('trace_convert.py')
 
 
 class TraceConvertChecks(unittest.TestCase):
-    def convert(self, passes, *, keep_all=False, name='decode', options=(), options_first=False):
+    def convert(self, passes, *, keep_all=False, name='decode', options=(), options_first=False,
+                filename='trace.npz', expected_filename='trace.npz'):
         """Write the production RouterTrace wire format, including partial passes."""
         raw = bytearray()
         expected = []
@@ -28,7 +30,7 @@ class TraceConvertChecks(unittest.TestCase):
             if len(layers) == LAYERS and (keep_all or tokens == 1):
                 expected.extend(ids)
         with tempfile.TemporaryDirectory() as folder:
-            source, output = Path(folder) / 'trace.bin', Path(folder) / 'trace.npz'
+            source, output = Path(folder) / 'trace.bin', Path(folder) / filename
             source.write_bytes(raw)
             paths = [str(source), str(output)]
             flags = (['--all'] if keep_all else []) + list(options)
@@ -36,6 +38,10 @@ class TraceConvertChecks(unittest.TestCase):
                                     + (flags + paths if options_first else paths + flags),
                                     capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
+            output = Path(folder) / expected_filename
+            with zipfile.ZipFile(output) as compressed:
+                self.assertEqual(compressed.namelist(), [name + '.npy'])
+                self.assertEqual(compressed.getinfo(name + '.npy').compress_type, zipfile.ZIP_DEFLATED)
             with np.load(output, allow_pickle=False) as archive:
                 self.assertEqual(archive.files, [name])
                 observed = archive[name]
@@ -103,6 +109,19 @@ class TraceConvertChecks(unittest.TestCase):
     def test_spaced_name_with_all(self):
         self.convert([(2, range(LAYERS))], keep_all=True, name='prefill',
                      options=['--name', 'prefill'])
+
+    def test_file_array_name(self):
+        self.convert([(1, range(LAYERS))], name='file', options=['--name', 'file'])
+
+    def test_allow_pickle_array_name(self):
+        self.convert([(2, range(LAYERS))], keep_all=True, name='allow_pickle',
+                     options=['--name', 'allow_pickle'])
+
+    def test_suffixless_destination(self):
+        self.convert([(1, range(LAYERS))], filename='trace', expected_filename='trace.npz')
+
+    def test_uppercase_suffix_destination(self):
+        self.convert([(1, range(LAYERS))], filename='trace.NPZ', expected_filename='trace.NPZ.npz')
 
     def test_invalid_arguments_preserve_existing_output(self):
         raw = b''.join(struct.pack('<iii', layer, 1, TOPK)

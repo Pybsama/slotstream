@@ -17,6 +17,7 @@ usage: trace_convert.py <trace.bin> <out.npz> [--all] [--name decode]
 """
 import argparse
 import sys
+import zipfile
 import numpy as np
 
 N_LAYERS = 48
@@ -75,7 +76,11 @@ def main():
             arr[offset:offset + tokens, layer] = ids
         offset += tokens
 
-    np.savez_compressed(dst, **{name: arr})
+    # Keep array labels separate from NumPy's function parameter names.
+    archive_path = dst if dst.endswith('.npz') else dst + '.npz'
+    with zipfile.ZipFile(archive_path, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+        with archive.open(name + '.npy', 'w', force_zip64=True) as output:
+            np.save(output, arr, allow_pickle=False)
     print(f"{len(calls)} calls -> {len(arr)} complete steps x {N_LAYERS} layers x {topk}"
           f"{f' ({dropped} partial pass(es) dropped)' if dropped else ''} -> {dst}")
 
