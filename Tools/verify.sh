@@ -207,11 +207,15 @@ if [ -f "$MTPFILE" ]; then
 import json,sys
 from pathlib import Path
 text=Path(sys.argv[1]).read_text()
-assert 'PASS  vision speculation deterministic' in text
-assert 'PASS  vision speculation ran' in text
-assert 'SKIP' not in text and 'MTP CHECK PASS' in text
+if 'PASS  vision speculation deterministic' not in text:
+    raise SystemExit('missing vision speculation determinism pass')
+if 'PASS  vision speculation ran' not in text:
+    raise SystemExit('missing vision speculation execution pass')
+if not ('SKIP' not in text and 'MTP CHECK PASS' in text):
+    raise SystemExit('MTP check did not complete without skips')
 rows=[json.loads(line.removeprefix('MTP CHECK MEMORY ')) for line in text.splitlines() if line.startswith('MTP CHECK MEMORY ')]
-assert len(rows)==1 and rows[0]['memory_validated'] is True
+if not (len(rows)==1 and rows[0]['memory_validated'] is True):
+    raise SystemExit('MTP check did not validate memory')
 PYMTP
   then
     echo "PASS  speculative decode gates (determinism, state integrity, accept sanity)"; PASS=$((PASS+1))
@@ -267,7 +271,7 @@ run_model "$BIN" context-check --tokens 2048 --memory-gb $BIG_MEMORY --sample-fo
   2>"$VERIFY_OUT/context-check.stderr.txt" > /tmp/ssv_ctx.json || CONTEXT_STATUS=$?
 printf '%s\n' "$CONTEXT_STATUS" > "$VERIFY_OUT/context-check.exit-status.txt"
 check "context-check: 2k rung reads inside the plan and reports it" \
-      "[ \"\$CONTEXT_STATUS\" -eq 0 ] && python3 -c 'import json; d=json.loads(open(\"/tmp/ssv_ctx.json\").read().strip().splitlines()[-1]); assert d[\"fits\"] and d[\"aborted\"] is None and d[\"prefill_tokens\"]==2048, d'"
+      "[ \"\$CONTEXT_STATUS\" -eq 0 ] && python3 -c 'import json,sys; d=json.loads(open(\"/tmp/ssv_ctx.json\").read().strip().splitlines()[-1]); sys.exit(0 if d[\"fits\"] and d[\"aborted\"] is None and d[\"prefill_tokens\"]==2048 else str(d))'"
 
 check "context-check: process memory remains under target" \
       "python3 Tools/memory_gate.py /tmp/ssv_ctx.json --limit-gb $BIG_MEMORY"
