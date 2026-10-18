@@ -3,6 +3,9 @@
 
 The fixture is sufficient for CheckpointIndex's header checks, never inference.
 Every supported command must fail on the missing mirror before reading tensors.
+Engine entrypoints still perform real memory admission before opening headers;
+--weights-free excludes those cases for small CI runners. The full acceptance
+battery runs the complete set after its model-memory preflight.
 """
 import argparse
 import json
@@ -59,7 +62,7 @@ def fixture(directory):
     (directory / 'model.safetensors').write_bytes(struct.pack('<Q', len(header)) + header + bytes(4*len(names)))
 
 
-def check(binary):
+def check(binary, *, weights_free=False):
     root = Path(__file__).resolve().parent.parent
     env = {k: v for k, v in os.environ.items() if not k.startswith(('SLOTSTREAM_', 'SS_DEBUG', 'VQ_'))}
     rows = []
@@ -70,8 +73,11 @@ def check(binary):
         fixture(model)
         unsupported = ['doctor', 'template-check', 'mtp-parity', 'optimization-state-check',
                        'decode-overlap-check', 'draft-stream-check']
-        supported = [
-            ['prefix-exact-check'], ['prefix-exact-check', '--plan', '--memory-gb', '10', '--mtp', 'off', '--vision', 'off'],
+        engine = [
+            ['prefix-exact-check'],
+            ['prefix-exact-check', '--plan', '--memory-gb', '10', '--mtp', 'off', '--vision', 'off'],
+        ]
+        supported = ([] if weights_free else engine) + [
             ['vision-parity', '--image', str(root / 'Tools/assets/vision_test/secret1.jpg'), '--out', str(folder / 'vision')],
             ['parity', '--tokens', '9707,11'], ['ngram-golden', '--tokens', '9707,11'], ['dequant-golden'],
             ['mtp-fixture-inputs', '--out', str(folder / 'mtp.safetensors')],
@@ -91,10 +97,14 @@ def check(binary):
                     raise RuntimeError(json.dumps(rows[-1], indent=2))
         if (folder / 'vision').exists() or (folder / 'mtp.safetensors').exists():
             raise RuntimeError('failed mirror validation published diagnostic output')
-    print(json.dumps({'passed': True, 'checks': len(rows), 'results': rows}, indent=2))
+    print(json.dumps({'passed': True, 'scope': 'weights-free' if weights_free else 'complete',
+                      'checks': len(rows), 'results': rows}, indent=2))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--binary', type=Path, default=os.environ.get('SLOTSTREAM_TEST_BINARY', '.build/release/slotstream'))
-    check(parser.parse_args().binary.resolve())
+    parser.add_argument('--weights-free', action='store_true',
+                        help='exclude Engine entrypoints that require real model-memory admission')
+    args = parser.parse_args()
+    check(args.binary.resolve(), weights_free=args.weights_free)

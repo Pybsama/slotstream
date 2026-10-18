@@ -11,6 +11,7 @@ done
 sh -n install.sh
 python3 -m py_compile Tools/*.py Tools/reference/*.py Tools/slotpack/*.py
 python3 Tools/static_gates_binary_test.py
+python3 Tools/checkpoint_mirror_cli_test.py
 python3 Tools/installer_gates_binary_test.py
 python3 Tools/installer_metal_test.py
 python3 Tools/verify_binary_test.py
@@ -49,7 +50,7 @@ if grep -En 'File\(path: .*sha256: nil\)' Sources/Slotstream/PinnedModel.swift; 
 fi
 
 python3 Tools/mtp_process_guard_gate.py --binary "$BIN"
-python3 Tools/checkpoint_mirror_cli.py --binary "$BIN"
+python3 Tools/checkpoint_mirror_cli.py --binary "$BIN" --weights-free
 "$BIN" runtime-check
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.

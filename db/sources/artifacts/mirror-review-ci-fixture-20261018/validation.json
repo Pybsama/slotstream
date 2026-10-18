@@ -1,0 +1,15 @@
+{
+  "compiled_source": "bccd78e0a1100247f14091cc0ae59ba4f306175f",
+  "binary_sha256": "04090257eb4a009790f867ed02c919a3cbd2fff026f87cd759c05105ede77567",
+  "compiled_inputs_verified": 299,
+  "python_tests": {
+    "scope": 6,
+    "verify_entry": 27,
+    "static_entry": 36
+  },
+  "mac_gate": {
+    "weights-free": 22,
+    "complete": 26
+  },
+  "scope": "Harness-only change. Full complete-mode CLI rerun against unchanged validated Mac binary. Original 35-check full battery retained; the newly inserted mirror gate is verified separately, not claimed as a fresh 36-check battery run."
+}
