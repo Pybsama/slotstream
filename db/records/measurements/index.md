@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-14T15:16:12.682687Z
+updated: 2026-10-18T08:34:33.612588241Z
 ---
 
 # records/measurements
 
+- [[records/measurements/mirrored-checkpoint-review-2026-10-18]] — Mirrored checkpoint reads: final review corrections and three-arm comparison
 - [[records/measurements/issue54-native-boundary-probe-2026-10-13]] — Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff
 - [[records/measurements/issue54-full-model-2026-10-14]] — Six public-release full-model requests on M5 do not reproduce the sustained 32k cliff; M4 cause and release-fix status remain unresolved
 - [[records/measurements/issue54-boundary-followup-2026-10-13]] — Issue 54 remains unverified after expanded path probes; full-model attempt refused before launch for insufficient headroom

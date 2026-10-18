@@ -540,3 +540,6 @@ Correct the preceding local test count: the T0 command passed 87 checks and 3891
 ## [2026-10-16 21:28] update | records/decisions/slotstream-app-identity.md
 Verify successful final Xcode job 117197678135 at 8e5ad41: BUILD SUCCEEDED, all 13 pinned packages match, and Slotstream.app contents and strict signing pass. Docs, context proxies and public-library CI pass; other full CI jobs remain running. Correct prior validation receipts: the gate exited successfully but dbmd reported unknown repair log-kind warnings, so those earlier zero-warning claims were inaccurate. Preserve the five existing repair entries by declaring their historical kind in DB.md; future entries use standard update. Revalidate the completed store with zero errors and warnings before committing this receipt.
 
+## [2026-10-18 08:35] update | records/measurements/mirrored-checkpoint-review-2026-10-18.md
+Capture final integrated mirror review corrections, regression proof, full local acceptance and balanced external/internal/combined measurements with raw receipts; report hosted CI separately.
+

@@ -350,6 +350,8 @@ the checkpoint loader. `doctor`, `template-check`, `mtp-parity`,
 `optimization-state-check`, `decode-overlap-check`, and `draft-stream-check`
 do not support mirror routing and reject `--mirror` explicitly.
 
+See the [controlled disk comparison and full validation record](../db/records/measurements/mirrored-checkpoint-review-2026-10-18.md) for measured benefits, tested hardware, output and memory checks, and raw evidence.
+
 ## Optimization defaults
 
 The CLI resolves the selected optimization family automatically: compact
