@@ -28,9 +28,15 @@ def client_fragment():
 
 class FxGateStatusTests(unittest.TestCase):
     def invoke(self, status=0, output='hello from slotstream', wire_status=0,
-               stderr=False, literal_paths=False):
+               stderr=False, literal_paths=False, alias_paths=False):
         with tempfile.TemporaryDirectory(prefix='slotstream-fx-status-') as temporary:
             root = Path(temporary)
+            if alias_paths:
+                physical = root / 'physical'
+                physical.mkdir()
+                alias = root / 'alias'
+                alias.symlink_to(physical, target_is_directory=True)
+                root = alias
             bin_dir = root / 'bin'
             bin_dir.mkdir()
             trace = root / 'client.json'
@@ -70,7 +76,7 @@ sys.exit(int(os.environ['FX_TEST_STATUS']))
             actual = json.loads(trace.read_text())
             self.assertEqual(actual, dict(
                 argv=['ask', '--no-save', 'Read hello.txt and tell me exactly what it says.'],
-                cwd=str(workspace), home=str(home), mode='yolo',
+                cwd=str(workspace.resolve()), home=str(home), mode='yolo',
                 base='http://127.0.0.1:11477',
                 chat='http://127.0.0.1:11477/v3/ai/language-model',
                 key='local-dummy-key', keychain='1'))
@@ -94,6 +100,9 @@ sys.exit(int(os.environ['FX_TEST_STATUS']))
 
     def test_literal_private_paths_and_client_arguments(self):
         self.assertEqual(self.invoke(literal_paths=True).returncode, 0)
+
+    def test_aliased_private_workspace_keeps_environment_paths(self):
+        self.assertEqual(self.invoke(alias_paths=True, literal_paths=True).returncode, 0)
 
     def test_success_requires_expected_text(self):
         for text in ['', 'unrelated output']:
