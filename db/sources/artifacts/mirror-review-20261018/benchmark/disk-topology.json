@@ -1,0 +1,26 @@
+{
+  "external": {
+    "volume": "disk7s1",
+    "physical_stores": [
+      {
+        "DeviceIdentifier": "disk6s2",
+        "Size": 2000189177856
+      }
+    ],
+    "physical_disks": [
+      "disk6"
+    ]
+  },
+  "internal": {
+    "volume": "disk3s5",
+    "physical_stores": [
+      {
+        "DeviceIdentifier": "disk0s2",
+        "Size": 245107195904
+      }
+    ],
+    "physical_disks": [
+      "disk0"
+    ]
+  }
+}

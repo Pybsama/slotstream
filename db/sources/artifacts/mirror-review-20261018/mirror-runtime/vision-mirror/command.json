@@ -1,0 +1,10 @@
+[
+  "/Volumes/external/slotstream/.build/release/slotstream",
+  "vision-parity",
+  "--model",
+  "/Volumes/external/model",
+  "--out",
+  "/Volumes/external/review-evidence/mirror-runtime/vision-mirror/tensors",
+  "--mirror",
+  "/Volumes/internal/model"
+]

@@ -1,0 +1,17 @@
+[
+  "/Volumes/external/slotstream/.build/release/slotstream",
+  "prefix-exact-check",
+  "--plan",
+  "--memory-gb",
+  "12",
+  "--mtp",
+  "on",
+  "--vision",
+  "off",
+  "--model",
+  "/Volumes/external/model",
+  "--mirror",
+  "/Volumes/internal/model",
+  "--max-tokens",
+  "12"
+]

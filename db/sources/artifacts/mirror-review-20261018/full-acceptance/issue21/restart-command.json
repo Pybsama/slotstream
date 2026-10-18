@@ -1,0 +1,18 @@
+[
+  "/Volumes/external/slotstream/.build/arm64-apple-macosx/release/slotstream",
+  "serve",
+  "--memory-gb",
+  "8.1",
+  "--max-context",
+  "32768",
+  "--vision",
+  "off",
+  "--mtp",
+  "off",
+  "--port",
+  "50420",
+  "--prefix-cache-dir",
+  "/Volumes/external/review-evidence/full-acceptance/issue21/prefix",
+  "--prefix-cache-min-tokens",
+  "512"
+]

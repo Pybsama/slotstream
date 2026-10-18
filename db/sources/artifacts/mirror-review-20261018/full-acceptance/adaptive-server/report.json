@@ -1,0 +1,278 @@
+{
+  "passed": true,
+  "binary_sha256": "04090257eb4a009790f867ed02c919a3cbd2fff026f87cd759c05105ede77567",
+  "limit_gb": 10,
+  "no_elastic": false,
+  "observations": [
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    },
+    {
+      "memory_limit_gb": 10,
+      "target_gb": 10,
+      "pool_slots": 833,
+      "max_prefill_wait_minutes": 17
+    }
+  ],
+  "startup_timeout_seconds": 180,
+  "completion_timeout_seconds": 120,
+  "preflight_available_gb": 29.35660544,
+  "command": [
+    "slotstream",
+    "serve",
+    "--memory-limit-gb",
+    "10",
+    "--max-context",
+    "32768",
+    "--max-prefill-wait",
+    "17",
+    "--mtp",
+    "off",
+    "--vision",
+    "off",
+    "--port",
+    "49990"
+  ],
+  "startup_seconds": 53.60809070803225,
+  "completion_seconds": 6.421991207986139,
+  "completion": {
+    "message": {
+      "role": "assistant",
+      "content": "The Nile."
+    },
+    "index": 0,
+    "finish_reason": "stop"
+  },
+  "server_reaped": true
+}

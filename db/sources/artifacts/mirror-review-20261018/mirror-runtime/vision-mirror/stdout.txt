@@ -1,0 +1,1 @@
+wrote 2808 patches -> 702 tokens (832x864, grid 52x54) to /Volumes/external/review-evidence/mirror-runtime/vision-mirror/tensors

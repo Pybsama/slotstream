@@ -1,0 +1,520 @@
+== build (instrumented) ==
+== run ==
+PASS  quantization-geometry (184 assertions)
+PASS  pack-memory (6289 assertions)
+PASS  automatic-pack-policy (78 assertions)
+PASS  model-pack-planning (689 assertions)
+PASS  model-pack-startup-defaults (95 assertions)
+PASS  model-pack-startup-selection (61 assertions)
+PASS  quantization-session-framing (43 assertions)
+PASS  quantization-performance-protocol (112 assertions)
+PASS  quantization-metadata (100 assertions)
+PASS  affine-standalone-metadata (35 assertions)
+PASS  quantization-read-batch (37 assertions)
+PASS  quantization-ple-storage (49 assertions)
+PASS  quantization-tensor-file (120 assertions)
+PASS  quantization-kernels (96 assertions)
+PASS  quantization-candidate-arithmetic (66 assertions)
+PASS  persistent-prefix-metadata-bounds (99 assertions)
+PASS  prefill-schedule (22 assertions)
+PASS  context-policy (8 assertions)
+PASS  automatic-context-window (82 assertions)
+PASS  memory-budget-context (86 assertions)
+PASS  configurable-context (5176 assertions)
+PASS  checkpoint-mirror (26 assertions)
+PASS  optimization-exact-read (14 assertions)
+PASS  optimization-packed-layout (288 assertions)
+PASS  optimization-ngram-prefetch-ticket (28 assertions)
+PASS  optimization-cache-bookkeeping (20619 assertions)
+PASS  optimization-adaptive-policy (75 assertions)
+PASS  optimization-runtime-budget (561 assertions)
+PASS  optimization-layer-local-victim (226 assertions)
+PASS  optimization-pressure-boundary (74 assertions)
+PASS  runtime-check (188 assertions)
+PASS  optimization-prefix-client-capacity (79 assertions)
+PASS  persistent-prefix-policy (126 assertions)
+PASS  persistent-prefix-clear (18 assertions)
+PASS  persistent-conversation-ids (12 assertions)
+PASS  persistent-prefix-removal-failures (50 assertions)
+PASS  persistent-prefix-read-failures (36 assertions)
+PASS  governor-check (42 assertions)
+PASS  pull-check (14 assertions)
+PASS  machine-planning (15 assertions)
+PASS  http-framing (63 assertions)
+PASS  http-routing (23 assertions)
+PASS  optimization-bounded-output (38 assertions)
+PASS  expert-lookahead-lane-budget (16 assertions)
+PASS  expert-lookahead-tickets (61 assertions)
+PASS  expert-lookahead-scheduler (26 assertions)
+PASS  expert-lookahead-forecast-merge (38 assertions)
+PASS  expert-lookahead-forecast-tap (72 assertions)
+PASS  decode-lookahead-defaults (57 assertions)
+PASS  vision-check (169 assertions)
+PASS  fused-workspace-reservation (164 assertions)
+PASS  fused-prefill-attention (34 assertions)
+PASS  sampler-behaviour (647 assertions)
+PASS  expert-lookahead-adoption (10 assertions)
+PASS  expert-lookahead-routing-readback (14 assertions)
+PASS  optimization-compact-indexer (84 assertions)
+PASS  persistent-prefix-round-trip (110 assertions)
+PASS  aligned-prefix-resume (43 assertions)
+PASS  optimization-slot-slices (196 assertions)
+PASS  optimization-slot-words (436 assertions)
+PASS  vision-splice (12 assertions)
+PASS  optimization-vision-attention (60 assertions)
+PASS  optimization-router-selection (43 assertions)
+PASS  optimization-compiled-norm (49 assertions)
+PASS  optimization-router-projection (30 assertions)
+PASS  verify-pass-rows (48 assertions)
+PASS  optimization-indexer-block-selection (163 assertions)
+PASS  optimization-indexer-visibility (262 assertions)
+PASS  toolcall-check (19 assertions)
+PASS  toolcall-stream-check (14 assertions)
+PASS  toolcall-coercion (35 assertions)
+PASS  tool-schema-refs (63 assertions)
+PASS  tool-schema-ref-output (50 assertions)
+PASS  tool-schema-ref-dialects (12 assertions)
+PASS  gateway-request (37 assertions)
+PASS  gateway-numeric (212 assertions)
+PASS  gateway-tool-selection (58 assertions)
+PASS  gateway-request-shapes (35 assertions)
+PASS  gateway-call-input-shapes (24 assertions)
+PASS  gateway-result-output-shapes (31 assertions)
+PASS  gateway-prompt (23 assertions)
+PASS  gateway-tool-results (28 assertions)
+PASS  gateway-v4-images (15 assertions)
+PASS  gateway-catalog (28 assertions)
+PASS  gateway-events (19 assertions)
+PASS  chat-splice (20 assertions)
+PASS  gateway-null-bridge (10 assertions)
+PASS  gateway-anyof-types (53 assertions)
+PASS  openai-conversation (56 assertions)
+PASS  openai-tool-output (487 assertions)
+PASS  prefill-progress (5 assertions)
+PASS  openai-context-budget (19 assertions)
+PASS  responses-request (71 assertions)
+PASS  responses-events (54 assertions)
+PASS  responses-replay (42 assertions)
+PASS  responses-pending-turn (63 assertions)
+PASS  responses-codex-tools (13 assertions)
+PASS  responses-codex-fixture (15 assertions)
+PASS  anthropic-request (87 assertions)
+PASS  anthropic-logical-turns (285 assertions)
+PASS  anthropic-events (40 assertions)
+PASS  think-split-stream (4 assertions)
+PASS  serving-edges (12 assertions)
+PASS  launch-plans (156 assertions)
+PASS  launch-server (107 assertions)
+PASS  weightstore-cancellable (12 assertions)
+
+106 passed, 0 failed, 0 skipped (41300 assertions)
+== coverage ==
+Filename                                                                                                Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Sources/Slotstream/AdaptiveSpeculation.swift                                                                 33                 1    96.97%          12                 0   100.00%          45                 0   100.00%           0                 0         -
+Sources/Slotstream/AffineEngineSource.swift                                                                  60                57     5.00%          14                13     7.14%         102               101     0.98%           0                 0         -
+Sources/Slotstream/AffineExpertControl.swift                                                                121                84    30.58%          29                14    51.72%         177               118    33.33%           0                 0         -
+Sources/Slotstream/AffineGroupedExperts.swift                                                                87                87     0.00%          42                42     0.00%         193               193     0.00%           0                 0         -
+Sources/Slotstream/AffineStandalonePack.swift                                                                95                60    36.84%          29                 9    68.97%         149                76    48.99%           0                 0         -
+Sources/Slotstream/AnthropicDialect.swift                                                                   453                79    82.56%          96                13    86.46%         690                40    94.20%           0                 0         -
+Sources/Slotstream/AppliedModelConfiguration.swift                                                           11                11     0.00%           4                 4     0.00%          38                38     0.00%           0                 0         -
+Sources/Slotstream/AuthenticatedTensorBatch.swift                                                            81                10    87.65%          29                 3    89.66%         132                 7    94.70%           0                 0         -
+Sources/Slotstream/AutomaticPackPolicy.swift                                                                115                10    91.30%          51                 5    90.20%         233                 8    96.57%           0                 0         -
+Sources/Slotstream/BlockSelection.swift                                                                      27                 2    92.59%          15                 0   100.00%         104                 0   100.00%           0                 0         -
+Sources/Slotstream/BoundedOutput.swift                                                                       98                 8    91.84%          48                 2    95.83%         190                 7    96.32%           0                 0         -
+Sources/Slotstream/CPUSlotWrite.swift                                                                         9                 9     0.00%           3                 3     0.00%          24                24     0.00%           0                 0         -
+Sources/Slotstream/CacheBookkeeping.swift                                                                   121                 4    96.69%          45                 0   100.00%         161                 0   100.00%           0                 0         -
+Sources/Slotstream/Checkpoint.swift                                                                         454               310    31.72%         134                61    54.48%         756               464    38.62%           0                 0         -
+Sources/Slotstream/CheckpointMirror.swift                                                                    40                 2    95.00%          22                 2    90.91%          81                 2    97.53%           0                 0         -
+Sources/Slotstream/CodingToolLaunch.swift                                                                   596                79    86.74%         153                13    91.50%        1072                42    96.08%           0                 0         -
+Sources/Slotstream/CompiledArithmetic.swift                                                                   9                 2    77.78%           7                 1    85.71%          35                 1    97.14%           0                 0         -
+Sources/Slotstream/Context.swift                                                                            172                20    88.37%          38                 0   100.00%         238                 5    97.90%           0                 0         -
+Sources/Slotstream/ContextBoundaryProbe.swift                                                                55                55     0.00%          19                19     0.00%         154               154     0.00%           0                 0         -
+Sources/Slotstream/ContextFeasibility.swift                                                                  59                16    72.88%          20                 8    60.00%         114                24    78.95%           0                 0         -
+Sources/Slotstream/ContextMemory.swift                                                                      161                23    85.71%          46                 8    82.61%         325                20    93.85%           0                 0         -
+Sources/Slotstream/ContextWindowPolicy.swift                                                                131                 8    93.89%          33                 2    93.94%         307                 3    99.02%           0                 0         -
+Sources/Slotstream/DecodeLookahead+Configuration.swift                                                       16                 0   100.00%           8                 0   100.00%          57                 0   100.00%           0                 0         -
+Sources/Slotstream/DecodeLookahead.swift                                                                      9                 0   100.00%           3                 0   100.00%          12                 0   100.00%           0                 0         -
+Sources/Slotstream/DownloadConcurrency.swift                                                                 20                20     0.00%           6                 6     0.00%          22                22     0.00%           0                 0         -
+Sources/Slotstream/DownloadHTTP.swift                                                                       150               130    13.33%          44                29    34.09%         200               161    19.50%           0                 0         -
+Sources/Slotstream/EmbeddingRows.swift                                                                       68                68     0.00%          20                20     0.00%         138               138     0.00%           0                 0         -
+Sources/Slotstream/Engine.swift                                                                             813               757     6.89%         248               232     6.45%        1748              1624     7.09%           0                 0         -
+Sources/Slotstream/Errors.swift                                                                              16                14    12.50%           4                 3    25.00%          29                26    10.34%           0                 0         -
+Sources/Slotstream/ExactRead.swift                                                                           49                 5    89.80%          13                 0   100.00%          60                 0   100.00%           0                 0         -
+Sources/Slotstream/ExpertLookaheadTrace.swift                                                               102                40    60.78%          54                22    59.26%         146                50    65.75%           0                 0         -
+Sources/Slotstream/ExpertPredictor.swift                                                                     79                79     0.00%          17                17     0.00%         146               146     0.00%           0                 0         -
+Sources/Slotstream/ExpertPrefetch.swift                                                                     617               115    81.36%         256                38    85.16%        1023               128    87.49%           0                 0         -
+Sources/Slotstream/ExpertStore.swift                                                                        711               710     0.14%         251               250     0.40%        1555              1551     0.26%           0                 0         -
+Sources/Slotstream/ExpertTransferProfile.swift                                                               16                16     0.00%          16                16     0.00%          16                16     0.00%           0                 0         -
+Sources/Slotstream/FusedPrefillAttention.swift                                                               22                 4    81.82%          12                 1    91.67%          44                 2    95.45%           0                 0         -
+Sources/Slotstream/GDNPhaseProfile.swift                                                                      3                 3     0.00%           3                 3     0.00%           6                 6     0.00%           0                 0         -
+Sources/Slotstream/GatewayDialect.swift                                                                     247                29    88.26%          48                16    66.67%         525                41    92.19%           0                 0         -
+Sources/Slotstream/GatewayOutput.swift                                                                       42                 1    97.62%          11                 0   100.00%          69                 0   100.00%           0                 0         -
+Sources/Slotstream/Generate.swift                                                                           686               512    25.36%         258               123    52.33%        1624              1380    15.02%           0                 0         -
+Sources/Slotstream/GenerationPhase.swift                                                                      1                 1     0.00%           1                 1     0.00%           1                 1     0.00%           0                 0         -
+Sources/Slotstream/Governor.swift                                                                           178               107    39.89%          79                55    30.38%         430               287    33.26%           0                 0         -
+Sources/Slotstream/LayerLocalVictim.swift                                                                    14                 0   100.00%           1                 0   100.00%          13                 0   100.00%           0                 0         -
+Sources/Slotstream/Layers.swift                                                                             674               512    24.04%         291               209    28.18%        1707              1316    22.91%           0                 0         -
+Sources/Slotstream/MTP.swift                                                                                118               108     8.47%          58                49    15.52%         274               257     6.20%           0                 0         -
+Sources/Slotstream/MTPExpertStream.swift                                                                    141               141     0.00%          24                24     0.00%         286               286     0.00%           0                 0         -
+Sources/Slotstream/Machine.swift                                                                             16                 1    93.75%          13                 0   100.00%          58                 0   100.00%           0                 0         -
+Sources/Slotstream/MemTrace.swift                                                                            21                21     0.00%           6                 6     0.00%          41                41     0.00%           0                 0         -
+Sources/Slotstream/Model.swift                                                                              775               702     9.42%         306               269    12.09%        1432              1294     9.64%           0                 0         -
+Sources/Slotstream/ModelPackLoadedSelection.swift                                                            36                30    16.67%           9                 5    44.44%          88                75    14.77%           0                 0         -
+Sources/Slotstream/ModelPackPlanning.swift                                                                   30                 4    86.67%          11                 2    81.82%          90                13    85.56%           0                 0         -
+Sources/Slotstream/ModelPackRegistry.swift                                                                   62                22    64.52%          29                 8    72.41%         131                39    70.23%           0                 0         -
+Sources/Slotstream/ModelPackStartupDefaults.swift                                                            53                 5    90.57%          20                 1    95.00%         123                 6    95.12%           0                 0         -
+Sources/Slotstream/ModelPackStartupSelection.swift                                                           85                16    81.18%          23                 2    91.30%         148                22    85.14%           0                 0         -
+Sources/Slotstream/NgramHash.swift                                                                           23                23     0.00%           4                 4     0.00%          43                43     0.00%           0                 0         -
+Sources/Slotstream/NgramPrefetch.swift                                                                       36                 0   100.00%          18                 0   100.00%          90                 0   100.00%           0                 0         -
+Sources/Slotstream/NgramStore.swift                                                                         232               230     0.86%          85                83     2.35%         414               402     2.90%           0                 0         -
+Sources/Slotstream/Observation.swift                                                                          9                 1    88.89%           9                 1    88.89%          36                 1    97.22%           0                 0         -
+Sources/Slotstream/OpenAIDialect.swift                                                                      156                47    69.87%          25                10    60.00%         196                29    85.20%           0                 0         -
+Sources/Slotstream/OpenAIOutput.swift                                                                        66                 3    95.45%          19                 1    94.74%          92                 2    97.83%           0                 0         -
+Sources/Slotstream/OptimizationPlatform.swift                                                                16                 2    87.50%          12                 0   100.00%          36                 0   100.00%           0                 0         -
+Sources/Slotstream/Optimizations.swift                                                                      228                10    95.61%         100                 4    96.00%         305                 9    97.05%           0                 0         -
+Sources/Slotstream/PackMemoryProfile.swift                                                                   43                 4    90.70%          14                 0   100.00%          69                 0   100.00%           0                 0         -
+Sources/Slotstream/PackedExpertLayout.swift                                                                 164                19    88.41%          35                 3    91.43%         314                 9    97.13%           0                 0         -
+Sources/Slotstream/PackedProjectionPair.swift                                                                16                16     0.00%          10                10     0.00%          44                44     0.00%           0                 0         -
+Sources/Slotstream/PartialRotation.swift                                                                     22                22     0.00%          12                12     0.00%          54                54     0.00%           0                 0         -
+Sources/Slotstream/PersistentPrefixCache.swift                                                              396                59    85.10%         180                14    92.22%         845                51    93.96%           0                 0         -
+Sources/Slotstream/PersistentPrefixConversation.swift                                                        55                16    70.91%          15                 1    93.33%         160                18    88.75%           0                 0         -
+Sources/Slotstream/PersistentPrefixFormat.swift                                                             240                77    67.92%          84                18    78.57%         376               106    71.81%           0                 0         -
+Sources/Slotstream/PersistentPrefixGenerator.swift                                                          128                68    46.88%          48                25    47.92%         248               125    49.60%           0                 0         -
+Sources/Slotstream/PersistentPrefixPolicy.swift                                                             197                 7    96.45%          86                 1    98.84%         284                 2    99.30%           0                 0         -
+Sources/Slotstream/PersistentPrefixRestore.swift                                                            162                40    75.31%          38                 5    86.84%         369                37    89.97%           0                 0         -
+Sources/Slotstream/PersistentPrefixSave.swift                                                               203                43    78.82%          67                13    80.60%         517                43    91.68%           0                 0         -
+Sources/Slotstream/PinnedModel.swift                                                                          8                 0   100.00%           8                 0   100.00%          13                 0   100.00%           0                 0         -
+Sources/Slotstream/PinnedTransport.swift                                                                     10                 8    20.00%           4                 3    25.00%          12                 9    25.00%           0                 0         -
+Sources/Slotstream/Plan.swift                                                                               486                68    86.01%         128                17    86.72%        1216               117    90.38%           0                 0         -
+Sources/Slotstream/PlannerDevice.swift                                                                        9                 2    77.78%           5                 0   100.00%          29                 0   100.00%           0                 0         -
+Sources/Slotstream/PrefillReadPolicy.swift                                                                   29                 0   100.00%          21                 0   100.00%          38                 0   100.00%           0                 0         -
+Sources/Slotstream/PrefixCache.swift                                                                        355                71    80.00%         204                39    80.88%         740                91    87.70%           0                 0         -
+Sources/Slotstream/PressureBoundary.swift                                                                    24                 9    62.50%          12                 1    91.67%          35                 8    77.14%           0                 0         -
+Sources/Slotstream/ProcessMemory.swift                                                                       57                19    66.67%          22                 5    77.27%         122                19    84.43%           0                 0         -
+Sources/Slotstream/QuantizationLayout.swift                                                                  51                 8    84.31%           7                 0   100.00%          71                 0   100.00%           0                 0         -
+Sources/Slotstream/RequestControl.swift                                                                     211                28    86.73%          95                11    88.42%         324                35    89.20%           0                 0         -
+Sources/Slotstream/ResidentExpertOverlap.swift                                                                3                 3     0.00%           1                 1     0.00%          10                10     0.00%           0                 0         -
+Sources/Slotstream/ResponsesDialect.swift                                                                   463                97    79.05%          98                12    87.76%         814                46    94.35%           0                 0         -
+Sources/Slotstream/RouterProjection.swift                                                                    18                 3    83.33%          10                 2    80.00%          28                 6    78.57%           0                 0         -
+Sources/Slotstream/RouterSelection.swift                                                                     18                 2    88.89%          12                 0   100.00%          67                 0   100.00%           0                 0         -
+Sources/Slotstream/RouterTapCorrection.swift                                                                 76                22    71.05%          24                 7    70.83%         135                18    86.67%           0                 0         -
+Sources/Slotstream/RouterTrace.swift                                                                         12                12     0.00%           4                 4     0.00%          26                26     0.00%           0                 0         -
+Sources/Slotstream/RoutingReadbackQueue.swift                                                                12                 0   100.00%           8                 0   100.00%          21                 0   100.00%           0                 0         -
+Sources/Slotstream/SelectedAttention.swift                                                                   34                34     0.00%          17                17     0.00%         145               145     0.00%           0                 0         -
+Sources/Slotstream/Server.swift                                                                            1351              1137    15.84%         307               241    21.50%        2662              2239    15.89%           0                 0         -
+Sources/Slotstream/ServerActivity.swift                                                                      45                 6    86.67%          25                 3    88.00%         116                 5    95.69%           0                 0         -
+Sources/Slotstream/SlotWritePlan.swift                                                                       17                 0   100.00%           5                 0   100.00%          22                 0   100.00%           0                 0         -
+Sources/Slotstream/SlotpackDownload.swift                                                                   281               278     1.07%          72                71     1.39%         491               483     1.63%           0                 0         -
+Sources/Slotstream/SlotpackManifest.swift                                                                    54                23    57.41%          16                 6    62.50%          95                36    62.11%           0                 0         -
+Sources/Slotstream/StatePrefixFork.swift                                                                     38                10    73.68%          12                 2    83.33%          65                12    81.54%           0                 0         -
+Sources/Slotstream/StateRecovery.swift                                                                       39                23    41.03%          28                16    42.86%          92                42    54.35%           0                 0         -
+Sources/Slotstream/TapCorrectionSidecar.swift                                                                28                16    42.86%           5                 2    60.00%          44                19    56.82%           0                 0         -
+Sources/Slotstream/ToolCallSplitter.swift                                                                   300                15    95.00%          65                 0   100.00%         490                14    97.14%           0                 0         -
+Sources/Slotstream/VQArithmetic.swift                                                                         4                 1    75.00%           2                 0   100.00%          19                 0   100.00%           0                 0         -
+Sources/Slotstream/VQBankAdmission.swift                                                                     12                 6    50.00%           3                 2    33.33%          18                 6    66.67%           0                 0         -
+Sources/Slotstream/VQCheckpoint.swift                                                                       372               372     0.00%         105               105     0.00%         489               489     0.00%           0                 0         -
+Sources/Slotstream/VQDecode.swift                                                                            14                 1    92.86%           1                 0   100.00%          26                 0   100.00%           0                 0         -
+Sources/Slotstream/VQDenseOverlay.swift                                                                     113               104     7.96%          28                21    25.00%         165               149     9.70%           0                 0         -
+Sources/Slotstream/VQDraftWeights.swift                                                                      71                61    14.08%          19                16    15.79%         125               103    17.60%           0                 0         -
+Sources/Slotstream/VQExpert.swift                                                                            70                31    55.71%          24                 9    62.50%         132                38    71.21%           0                 0         -
+Sources/Slotstream/VQExpertKernels.swift                                                                     47                 1    97.87%          11                 0   100.00%          70                 1    98.57%           0                 0         -
+Sources/Slotstream/VQGenerationProbe.swift                                                                   66                66     0.00%           8                 8     0.00%          98                98     0.00%           0                 0         -
+Sources/Slotstream/VQModelProbe.swift                                                                       247               247     0.00%          72                72     0.00%         425               425     0.00%           0                 0         -
+Sources/Slotstream/VQPLERows.swift                                                                           44                 4    90.91%          11                 0   100.00%          81                 0   100.00%           0                 0         -
+Sources/Slotstream/VQPackedExperts.swift                                                                     60                60     0.00%          13                13     0.00%          87                87     0.00%           0                 0         -
+Sources/Slotstream/VQPrefillRecords.swift                                                                    60                60     0.00%           7                 7     0.00%          84                84     0.00%           0                 0         -
+Sources/Slotstream/VQPrefillStream.swift                                                                     26                26     0.00%           9                 9     0.00%          48                48     0.00%           0                 0         -
+Sources/Slotstream/VQRecord.swift                                                                            78                58    25.64%          25                20    20.00%         114                91    20.18%           0                 0         -
+Sources/Slotstream/VQRecordBank.swift                                                                       120               104    13.33%          33                21    36.36%         205               186     9.27%           0                 0         -
+Sources/Slotstream/VQRecordCache.swift                                                                      113               113     0.00%          47                47     0.00%         175               175     0.00%           0                 0         -
+Sources/Slotstream/VQRecordReadBatch.swift                                                                   60                 3    95.00%          24                 0   100.00%          86                 0   100.00%           0                 0         -
+Sources/Slotstream/VQRecordReadPlan.swift                                                                    44                42     4.55%           7                 6    14.29%          61                54    11.48%           0                 0         -
+Sources/Slotstream/VQResidentText.swift                                                                      32                32     0.00%          12                12     0.00%          70                70     0.00%           0                 0         -
+Sources/Slotstream/VQRotaryCoefficients.swift                                                                37                37     0.00%          16                16     0.00%          93                93     0.00%           0                 0         -
+Sources/Slotstream/VQRotaryTable.swift                                                                       16                 1    93.75%          16                 1    93.75%          40                 1    97.50%           0                 0         -
+Sources/Slotstream/VQRouteStream.swift                                                                       22                22     0.00%           8                 8     0.00%          54                54     0.00%           0                 0         -
+Sources/Slotstream/VQTensorFile.swift                                                                       126                13    89.68%          33                 2    93.94%         198                 5    97.47%           0                 0         -
+Sources/Slotstream/VQTrunkProbe.swift                                                                        25                25     0.00%           6                 6     0.00%          68                68     0.00%           0                 0         -
+Sources/Slotstream/Vendored/GatedDelta.swift                                                                 91                56    38.46%          35                16    54.29%         369               175    52.57%           0                 0         -
+Sources/Slotstream/VerifyPassSelfCheck.swift                                                                117                 4    96.58%          42                 1    97.62%         313                 1    99.68%           0                 0         -
+Sources/Slotstream/Version.swift                                                                             10                 7    30.00%           1                 0   100.00%           6                 3    50.00%           0                 0         -
+Sources/Slotstream/Vision.swift                                                                             350               188    46.29%          84                45    46.43%         797               450    43.54%           0                 0         -
+Sources/Slotstream/VisionAttention.swift                                                                     22                10    54.55%           9                 4    55.56%          63                18    71.43%           0                 0         -
+Sources/Slotstream/VisionPrompt.swift                                                                        59                42    28.81%          29                21    27.59%         122                89    27.05%           0                 0         -
+Sources/Slotstream/WeightDownload.swift                                                                     342               342     0.00%         112               112     0.00%         729               729     0.00%           0                 0         -
+Sources/Slotstream/WeightStore.swift                                                                        283               188    33.57%          93                59    36.56%         538               330    38.66%           0                 0         -
+Sources/Slotstream/Weights.swift                                                                            140               123    12.14%          59                50    15.25%         235               187    20.43%           0                 0         -
+Sources/Slotstream/WordSlotWrite.swift                                                                       11                 0   100.00%           9                 0   100.00%          24                 0   100.00%           0                 0         -
+Sources/SlotstreamDiagnostics/CheckReport.swift                                                              35                19    45.71%          18                 6    66.67%          54                19    64.81%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AdaptiveSpeculation.swift                                         106                82    22.64%          30                28     6.67%         259               197    23.94%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineContext.swift                                                94                94     0.00%          22                22     0.00%         267               267     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineEngine.swift                                                279               279     0.00%         109               109     0.00%         643               643     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineExpertControl.swift                                         101               101     0.00%          17                17     0.00%         202               202     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineGeneration.swift                                             97                97     0.00%          27                27     0.00%         225               225     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineGroupedExperts.swift                                        151               151     0.00%          31                31     0.00%         311               311     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineSpeculation.swift                                           184               184     0.00%          60                60     0.00%         507               507     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineStandalone.swift                                             84                21    75.00%          35                15    57.14%         148                21    85.81%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AffineVision.swift                                                126               126     0.00%          51                51     0.00%         271               271     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AlignedResume.swift                                                61                13    78.69%          28                13    53.57%         256                13    94.92%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AllHitReplay.swift                                                 62                62     0.00%          38                38     0.00%         156               156     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+AutomaticPackPolicy.swift                                          97                37    61.86%          68                35    48.53%         259                36    86.10%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+BlockSelection.swift                                               59                 5    91.53%          20                 5    75.00%          98                 5    94.90%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+CacheBookkeeping.swift                                             72                12    83.33%          30                12    60.00%         155                12    92.26%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+CheckpointMirror.swift                                             15                 0   100.00%           9                 0   100.00%          94                 0   100.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+CompactIndexer.swift                                               27                 5    81.48%          13                 5    61.54%          95                 5    94.74%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+CompiledNorm.swift                                                 18                 3    83.33%           7                 2    71.43%          40                 2    95.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+CompletePrompt.swift                                              129               129     0.00%          40                40     0.00%         299               299     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ComputeIslands.swift                                              116               116     0.00%          52                52     0.00%         212               212     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Context.swift                                                     490               112    77.14%         158                85    46.20%        1026                99    90.35%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ContextBoundary.swift                                               3                 3     0.00%           2                 2     0.00%           7                 7     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ContextServing.swift                                              216               216     0.00%          79                79     0.00%         488               488     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ContextSmallPass.swift                                            173               173     0.00%          60                60     0.00%         374               374     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+DecodeLookahead.swift                                              87                29    66.67%          58                28    51.72%         214                28    86.92%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+DecodeOverlap.swift                                                34                34     0.00%          13                13     0.00%          71                71     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+DraftStream.swift                                                  46                46     0.00%          32                32     0.00%         121               121     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+EmbeddingRows.swift                                                50                50     0.00%          13                13     0.00%         101               101     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+EmbeddingRuntime.swift                                            125               125     0.00%          40                40     0.00%         447               447     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ExactRead.swift                                                    62                18    70.97%          27                 8    70.37%         133                14    89.47%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ExpertLookahead.swift                                             400               164    59.00%         269               141    47.58%        1245               152    87.79%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+FusedPrefill.swift                                                 61                 7    88.52%          31                 7    77.42%         130                 7    94.62%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+GDNProfile.swift                                                   97                97     0.00%          45                45     0.00%         191               191     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+GDNProjection.swift                                                33                33     0.00%          13                13     0.00%          89                89     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+GenerationPhase.swift                                              53                53     0.00%          26                26     0.00%         119               119     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Governor.swift                                                     62                45    27.42%          48                42    12.50%         236                47    80.08%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+HTTP.swift                                                         91                32    64.84%          36                18    50.00%         342                35    89.77%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ImageFailure.swift                                                 13                13     0.00%           9                 9     0.00%          55                55     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ImageReuse.swift                                                   40                40     0.00%          19                19     0.00%         119               119     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Integrated.swift                                                  180               180     0.00%          58                58     0.00%         633               633     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+LayerLocalVictim.swift                                             56                29    48.21%          28                14    50.00%         111                64    42.34%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+MTPIndexer.swift                                                   57                57     0.00%          27                27     0.00%         127               127     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Machine.swift                                                      23                13    43.48%          14                12    14.29%          64                14    78.12%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+MixedDense.swift                                                   11                 1    90.91%           3                 0   100.00%          37                 0   100.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ModelPackPlanning.swift                                           144                42    70.83%          64                32    50.00%         240                39    83.75%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ModelPackStartupDefaults.swift                                    101                30    70.30%          40                24    40.00%         173                24    86.13%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ModelPackStartupSelection.swift                                    99                32    67.68%          44                28    36.36%         200                30    85.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+NgramCache.swift                                                   69                69     0.00%          25                25     0.00%         170               170     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+NgramLookahead.swift                                              127               102    19.69%          53                41    22.64%         236               157    33.47%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Optimization.swift                                                697               697     0.00%         280               280     0.00%        1783              1783     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Output.swift                                                       97                59    39.18%          38                35     7.89%         234                87    62.82%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+OutputServing.swift                                               186               186     0.00%          64                64     0.00%         397               397     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PackMemory.swift                                                  245                87    64.49%         126                73    42.06%         442                77    82.58%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PackedLayout.swift                                                227               107    52.86%          80                39    51.25%         406               158    61.08%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PartialRotation.swift                                              32                32     0.00%          18                18     0.00%         119               119     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PersistentConversation.swift                                       17                 5    70.59%           8                 5    37.50%          70                 5    92.86%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PersistentPrefix.swift                                            214                71    66.82%         123                60    51.22%         556                78    85.97%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PersistentPrefixModel.swift                                        89                89     0.00%          33                33     0.00%         243               243     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PersistentPrefixPolicy.swift                                      109                50    54.13%          91                48    47.25%         493                50    89.86%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PoolRequests.swift                                                 51                51     0.00%          16                16     0.00%         110               110     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PrefillOpportunities.swift                                        144               102    29.17%          48                38    20.83%         375               216    42.40%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PrefillQualification.swift                                        147               147     0.00%          53                53     0.00%         313               313     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PrefixCapacity.swift                                               81                22    72.84%          31                21    32.26%         270                22    91.85%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PrefixFork.swift                                                   62                62     0.00%          18                18     0.00%         154               154     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PrefixRetention.swift                                             173               173     0.00%          70                70     0.00%         365               365     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PrefixVision.swift                                                 51                51     0.00%          20                20     0.00%         124               124     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PressureBoundary.swift                                            118               110     6.78%          62                58     6.45%         338               291    13.91%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+PromptSpeed.swift                                                  94                94     0.00%          35                35     0.00%         201               201     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Pull.swift                                                         24                13    45.83%          18                12    33.33%          84                14    83.33%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Quantization.swift                                                319                77    75.86%          82                48    41.46%         581                53    90.88%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+QuantizationBench.swift                                            83                83     0.00%          13                13     0.00%         300               300     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+QuantizationFixtures.swift                                        115               115     0.00%          21                21     0.00%         365               365     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+QuantizationLogits.swift                                           61                61     0.00%          10                10     0.00%         132               132     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+QuantizationPerformance.swift                                     495               253    48.89%         132                78    40.91%         728               360    50.55%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+QuantizationSession.swift                                         333               216    35.14%          71                50    29.58%         538               323    39.96%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+QuantizationTasks.swift                                           254               254     0.00%          61                61     0.00%         431               431     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ReadFailureServing.swift                                          167               167     0.00%          48                48     0.00%         404               404     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ReadHandles.swift                                                  35                35     0.00%          14                14     0.00%          47                47     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ReadRecovery.swift                                                182               182     0.00%          60                60     0.00%         326               326     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+ResidentOverlap.swift                                             121               121     0.00%          44                44     0.00%         279               279     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+RopePerformance.swift                                              48                48     0.00%          23                23     0.00%         101               101     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+RouterProjection.swift                                              9                 2    77.78%           3                 2    33.33%          36                 2    94.44%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+RoutingReadback.swift                                              19                 6    68.42%          19                 6    68.42%          64                 6    90.62%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Runtime.swift                                                     190                71    62.63%          70                60    14.29%         501                70    86.03%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+RuntimeBudget.swift                                                89                39    56.18%          24                22     8.33%         185               103    44.32%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+SamplerPerformance.swift                                           57                57     0.00%          25                25     0.00%         106               106     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+SelectedAttention.swift                                           111               111     0.00%          36                36     0.00%         200               200     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Selection.swift                                                   106                11    89.62%          39                11    71.79%         214                11    94.86%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+SharedPrefix.swift                                                102               102     0.00%          36                36     0.00%         337               337     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+SlotSlices.swift                                                  127                69    45.67%          55                29    47.27%         228               124    45.61%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+StateRecovery.swift                                                96                96     0.00%          31                31     0.00%         225               225     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+TerminalPrefill.swift                                              44                44     0.00%          26                26     0.00%         176               176     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQArithmetic.swift                                                 27                 4    85.19%          14                 4    71.43%         169                 4    97.63%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQBank.swift                                                       92                92     0.00%          28                28     0.00%         202               202     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQContext.swift                                                   102               102     0.00%          40                40     0.00%         270               270     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQDraft.swift                                                      53                53     0.00%           9                 9     0.00%         114               114     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQGeneration.swift                                                234               234     0.00%          59                59     0.00%         401               401     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQModel.swift                                                     105               105     0.00%          24                24     0.00%         246               246     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQPLE.swift                                                        74                21    71.62%          32                15    53.12%         114                16    85.96%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQParallelBank.swift                                               50                50     0.00%          22                22     0.00%         113               113     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQPerformance.swift                                               158               158     0.00%          29                29     0.00%         358               358     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQPrefillModel.swift                                              256               256     0.00%          76                76     0.00%         405               405     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQReadBatch.swift                                                  87                23    73.56%          30                14    53.33%         151                20    86.75%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQRecords.swift                                                   216               216     0.00%          76                76     0.00%         560               560     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQSpeculation.swift                                               135               135     0.00%          40                40     0.00%         403               403     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQState.swift                                                     144               144     0.00%          52                52     0.00%         360               360     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQTensorFile.swift                                                220                60    72.73%          86                 9    89.53%         465                27    94.19%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VQTrunk.swift                                                      38                38     0.00%          12                12     0.00%         101               101     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VerifyPass.swift                                                   59                20    66.10%          31                19    38.71%         105                19    81.90%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+Vision.swift                                                      181                91    49.72%         111                81    27.03%         734                85    88.42%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VisionAttention.swift                                              42                 2    95.24%          10                 1    90.00%          74                 1    98.65%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics+VisionCapacity.swift                                              101               101     0.00%          28                28     0.00%         197               197     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Diagnostics.swift                                                              66                17    74.24%          14                 8    42.86%         146                12    91.78%           0                 0         -
+Sources/SlotstreamDiagnostics/ExpertLookaheadCollector.swift                                                167               167     0.00%          81                81     0.00%         343               343     0.00%           0                 0         -
+Sources/SlotstreamDiagnostics/Goldens.swift                                                                  38                 7    81.58%          10                 4    60.00%         116                 4    96.55%           0                 0         -
+Sources/SlotstreamDiagnostics/VQReferenceExecution.swift                                                     16                 0   100.00%           4                 0   100.00%          25                 0   100.00%           0                 0         -
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TOTAL                                                                                                     32191             20056    37.70%       11259              6999    37.84%       68037             39721    41.62%           0                 0         -
+{
+  "checks" : [
+    "embedded manifest and original pins agree",
+    "new installs use an exact public Hugging Face commit",
+    "Hugging Face reset survives the old one-minute cap",
+    "long Retry-After is respected",
+    "the later server retry boundary wins",
+    "unbounded waits are capped and remain cancellable",
+    "invalid throttle headers wait one resolver window",
+    "ordinary transient errors retain exponential backoff",
+    "HTTP-date retry boundaries are honored",
+    "C encoder accepts Swift data",
+    "Swift C roundtrip is exact",
+    "manifest hash is mandatory",
+    "pinned file identity cannot change",
+    "unknown version",
+    "empty object list",
+    "invalid size=9223372036854775807",
+    "invalid rawSize=9223372036854775807",
+    "invalid rawSize=0",
+    "invalid size=0",
+    "overlapping ranges",
+    "range escapes file",
+    "range references unknown file",
+    "path traversal",
+    "compressed corruption",
+    "reconstruction digest is mandatory",
+    "trial starts at 16",
+    "plateau rolls back to 8",
+    "useful gain trials 32",
+    "cap stays at 32",
+    "CPU backlog or retries stops expansion",
+    "CPU backlog or retries stops expansion",
+    "original public API signatures remain available",
+    "public synchronous log lifetime closes on cancellation",
+    "selected store prices only its compiled files",
+    "missing selected store reports its own size",
+    "selected store recognizes its complete authenticated files",
+    "cancellable selected store recognizes the same ready files",
+    "same-name same-size deployment must verify its own digest",
+    "explicit verification cannot inherit another deployment's digest",
+    "cancellable verification also refuses a different deployment",
+    "replacing selected bytes changes which store is ready",
+    "selected store verification remains cancellable",
+    "absent optional selected file needs no repair",
+    "present optional file is checked against its own pin",
+    "legacy store APIs retain original required bytes",
+    "selected transport must match the selected file pins",
+    "selected transport must match selected optionality",
+    "selected transport digest is authenticated",
+    "deployment refuses unsafe name \"..\/escape\"",
+    "deployment refuses unsafe name \"sub\/file\"",
+    "deployment refuses unsafe name \"sub\\\\file\"",
+    "deployment refuses unsafe name \"bad\\0name\"",
+    "deployment refuses unsafe name \".\"",
+    "deployment refuses unsafe name \"..\"",
+    "deployment refuses unsafe name \".pull.lock\"",
+    "deployment refuses unsafe name \".SLOTPACK-state.json\"",
+    "deployment refuses duplicate or auxiliary alias weights.bin",
+    "deployment refuses duplicate or auxiliary alias WEIGHTS.BIN",
+    "deployment refuses duplicate or auxiliary alias weights.bin.part",
+    "deployment refuses duplicate or auxiliary alias weights.bin.partmap",
+    "deployment refuses duplicate or auxiliary alias weights.bin.slotpack.part",
+    "deployment refuses canonical Unicode name aliases",
+    "deployment requires every complete file digest",
+    "deployment byte sum cannot overflow",
+    "empty deployment cannot become ready",
+    "optional-only deployment cannot become ready",
+    "dangling resume bits do not report downloaded bytes",
+    "resume progress combines original weight and metadata bytes",
+    "finalized files are not counted as partial progress",
+    "invalid resume bits do not report downloaded bytes",
+    "selected alternate reports its own complete original ranges",
+    "same-size other pack cannot inherit resume progress",
+    "legacy original cannot inherit alternate resume progress",
+    "switching the selected identity changes the matching progress",
+    "alternate resume bit count remains exact",
+    "unvalidated overlapping alternate ranges cannot report progress",
+    "invalid alternate identity cannot report progress",
+    "disk space and margin checked before creating parts\/0",
+    "disk space and margin checked before creating parts\/2000004095"
+  ],
+  "pass" : true
+}
+{"name": "normal", "pass_": true, "seconds": 0.178, "returncode": 0}
+{"name": "selected-store-compressed", "pass_": true, "seconds": 0.056, "returncode": 0}
+{"name": "selected-store-already-installed", "pass_": true, "seconds": 0.017, "returncode": 0}
+{"name": "selected-store-raw-fallback", "pass_": true, "seconds": 0.052, "returncode": 0}
+{"name": "selected-store-explicit-raw", "pass_": true, "seconds": 0.021, "returncode": 0}
+{"name": "selected-store-repairs-same-size-final", "pass_": true, "seconds": 0.03, "returncode": 0}
+{"name": "selected-store-cancellation", "pass_": true, "seconds": 0.501, "returncode": 1}
+{"name": "cache-miss-reporting", "pass_": true, "seconds": 0.075, "returncode": 0}
+{"name": "redirect", "pass_": true, "seconds": 0.053, "returncode": 0}
+{"name": "bad-object-fallback", "pass_": true, "seconds": 0.055, "returncode": 0}
+{"name": "missing-object-raw-fallback", "pass_": true, "seconds": 0.048, "returncode": 0}
+{"name": "raw-wrong-range-fails", "pass_": true, "seconds": 0.012, "returncode": 1}
+{"name": "raw-ignored-range-fails", "pass_": true, "seconds": 0.012, "returncode": 1}
+{"name": "optional-absent", "pass_": true, "seconds": 0.052, "returncode": 0}
+{"name": "optional-corrupt-and-unavailable", "pass_": true, "seconds": 0.053, "returncode": 0}
+{"name": "bad-object-fails", "pass_": true, "seconds": 0.012, "returncode": 1}
+{"name": "retry-after", "pass_": true, "seconds": 0.052, "returncode": 0}
+{"name": "hugging-face-rate-limit", "pass_": true, "seconds": 5.379, "returncode": 0}
+{"name": "cancel-during-hugging-face-rate-limit", "pass_": true, "seconds": 0.511, "returncode": 1}
+{"name": "transient-retry", "pass_": true, "seconds": 5.419, "returncode": 0}
+{"name": "wrong-length-fallback", "pass_": true, "seconds": 11.347, "returncode": 0}
+{"name": "short-body-fallback", "pass_": true, "seconds": 36.151, "returncode": 0}
+{"name": "content-encoding-fallback", "pass_": true, "seconds": 36.216, "returncode": 0}
+{"name": "cancel-preserves-progress", "pass_": true, "seconds": 1.49, "returncode": 1}
+{"name": "damaged-resumed-chunk-rejected", "pass_": true, "seconds": 0.064, "returncode": 1}
+{"name": "damaged-resumed-chunk-repair", "pass_": true, "seconds": 0.054, "returncode": 0}
+{"name": "resume", "pass_": true, "seconds": 0.05, "returncode": 0}
+{"name": "already-installed", "pass_": true, "seconds": 0.013, "returncode": 0}
+{"name": "valid-symlinks-reused", "pass_": true, "seconds": 0.012, "returncode": 0}
+{"name": "corruption-seed", "pass_": true, "seconds": 0.05, "returncode": 0}
+{"name": "same-size-final-repair", "pass_": true, "seconds": 0.028, "returncode": 0}
+{"name": "invalid-resume-map", "pass_": true, "seconds": 0.053, "returncode": 0}
+{"name": "forged-complete-map-without-parts", "pass_": true, "seconds": 0.053, "returncode": 0}
+{"name": "oversized-map-is-discarded", "pass_": true, "seconds": 0.053, "returncode": 0}
+{"name": "part-symlink-rejected", "pass_": true, "seconds": 0.005, "returncode": 1}
+{"name": "part-hardlink-rejected", "pass_": true, "seconds": 0.004, "returncode": 1}
+{"name": "part-fifo-rejected", "pass_": true, "seconds": 0.004, "returncode": 1}
+{"name": "concurrent-writer-rejected", "pass_": true, "seconds": 0.018, "returncode": 1}
+ALL HTTP CHECKS PASS
+{"name": "raw-inflight-peer-failure", "pass_": true, "seconds": 0.287, "timed_out": false, "request_counts": {"slow.bin": 1, "peer.bin": 1}, "returncode": 1}
+{"name": "raw-inflight-peer-hash-failure", "pass_": true, "seconds": 0.143, "timed_out": false, "request_counts": {"slow.bin": 1, "peer.bin": 1}, "returncode": 1}
+{"name": "raw-inflight-user-cancel", "pass_": true, "seconds": 0.352, "timed_out": false, "request_counts": {"slow.bin": 1, "peer.bin": 1}, "returncode": 1}
+{"name": "raw-inflight-success", "pass_": true, "seconds": 0.348, "timed_out": false, "request_counts": {"slow.bin": 1, "peer.bin": 1}, "returncode": 0}
+{"name": "raw-inflight-optional-failure", "pass_": true, "seconds": 0.348, "timed_out": false, "request_counts": {"slow.bin": 1, "peer.bin": 1}, "returncode": 0}
+{"name": "raw-retry-after-429", "pass_": true, "seconds": 3.055, "request_offsets": [0.0, 3.014], "returncode": 0}
+{"name": "raw-retry-after-503", "pass_": true, "seconds": 3.048, "request_offsets": [0.0, 3.016], "returncode": 0}
+{"name": "raw-ratelimit-429", "pass_": true, "seconds": 3.135, "request_offsets": [0.0, 3.101], "returncode": 0}
+{"name": "raw-headerless-429-cancel", "pass_": true, "seconds": 3.445, "request_offsets": [0.0], "returncode": 1}
+{"name": "raw-long-retry-cancel", "pass_": true, "seconds": 3.478, "request_offsets": [0.0], "returncode": 1}
+{"name": "raw-short-retry-cancel", "pass_": true, "seconds": 0.358, "request_offsets": [0.0], "returncode": 1}
+{"name": "raw-404-retry-header-fallback", "pass_": true, "seconds": 0.035, "request_offsets": [0.0], "returncode": 0, "fallback_request_offsets": [0.003]}
+{"name": "raw-protocol-retry-header-fallback", "pass_": true, "seconds": 0.021, "request_offsets": [0.0], "returncode": 0, "fallback_request_offsets": [0.002]}
+{"name": "raw-retry-peer-failure", "pass_": true, "seconds": 0.335, "request_offsets": [0.0], "returncode": 1}
+{"name": "raw-retry-optional-skip", "pass_": true, "seconds": 0.361, "request_offsets": [0.0], "returncode": 0, "optional_request_counts": [1, 1]}
+{"name": "raw-multichunk", "pass_": true, "seconds": 0.45, "returncode": 0}
+{"name": "raw-installed-no-http", "pass_": true, "seconds": 0.286, "returncode": 0}
+{"name": "raw-source-fallback-missing", "pass_": true, "seconds": 0.458, "returncode": 0}
+{"name": "raw-source-fallback-wrong-range", "pass_": true, "seconds": 0.474, "returncode": 0}
+{"name": "raw-source-fallback-encoding", "pass_": true, "seconds": 40.967, "returncode": 0}
+{"name": "raw-source-fallback-ignore-range", "pass_": true, "seconds": 0.473, "returncode": 0}
+{"name": "raw-wrong-range-fails", "pass_": true, "seconds": 0.028, "returncode": 1}
+{"name": "raw-corrupt-final-rejected", "pass_": true, "seconds": 0.271, "returncode": 1}
+{"name": "raw-optional-inflight-writers", "pass_": true, "seconds": 0.298, "returncode": 0}
+{"name": "raw-cancel", "pass_": true, "seconds": 3.327, "returncode": 1}
+{"name": "raw-resume", "pass_": true, "seconds": 0.451, "returncode": 0}
+{"name": "raw-same-size-repair", "pass_": true, "seconds": 0.597, "returncode": 0}
+ALL RAW HTTP CHECKS PASS
+SUSTAINED MEMORY PASS 585416704 bytes peak RSS
+TRANSPORT LINE COVERAGE PASS: real manifest, HTTP, raw and sustained-memory fixtures
+lcov: /Volumes/external/review-evidence/coverage.info (52254 line records)

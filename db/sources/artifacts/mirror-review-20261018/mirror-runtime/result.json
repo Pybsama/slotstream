@@ -1,0 +1,52 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "name": "prefix-exact-mirror",
+      "exit": 0
+    },
+    {
+      "name": "prefix-exact-mirror-plan-mtp",
+      "exit": 0
+    },
+    {
+      "name": "mtp-vision-mirror",
+      "exit": 0
+    },
+    {
+      "name": "mtp-vision-memory",
+      "passed": true,
+      "receipt": {
+        "lifetime_physical_footprint_peak_bytes": 8996248200,
+        "lifetime_rss_peak_bytes": 6541508608,
+        "memory_validated": true,
+        "physical_footprint_end_bytes": 8996248200,
+        "sampled_peak_bytes": 8996248200,
+        "samples": 15237,
+        "swap_clean": true,
+        "swapins_after": 555,
+        "swapins_before": 555,
+        "swapouts_after": 808,
+        "swapouts_before": 808,
+        "target_gb": 12
+      }
+    },
+    {
+      "name": "vision-single",
+      "exit": 0
+    },
+    {
+      "name": "vision-mirror",
+      "exit": 0
+    },
+    {
+      "name": "vision-byte-equality",
+      "passed": true,
+      "files": [
+        "pixels.bin",
+        "embed.bin",
+        "manifest.json"
+      ]
+    }
+  ]
+}

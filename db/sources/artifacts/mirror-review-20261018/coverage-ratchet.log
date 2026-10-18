@@ -1,0 +1,141 @@
+coverage: 43.63% of 67584 lines across 251 files
+  up    Sources/Slotstream/CacheBookkeeping.swift            94.90% -> 100.00%
+  up    Sources/Slotstream/Checkpoint.swift                  1.68% -> 38.62%
+  up    Sources/Slotstream/Context.swift                     80.79% -> 97.90%
+  up    Sources/Slotstream/ContextFeasibility.swift          73.68% -> 78.95%
+  up    Sources/Slotstream/ContextMemory.swift               91.30% -> 93.85%
+  up    Sources/Slotstream/ContextWindowPolicy.swift         97.98% -> 99.02%
+  up    Sources/Slotstream/DownloadHTTP.swift                89.89% -> 93.62%
+  up    Sources/Slotstream/ExactRead.swift                   71.67% -> 100.00%
+  up    Sources/Slotstream/GatewayDialect.swift              86.36% -> 92.19%
+  up    Sources/Slotstream/Governor.swift                    28.80% -> 33.26%
+  up    Sources/Slotstream/Layers.swift                      20.10% -> 22.91%
+  up    Sources/Slotstream/NgramStore.swift                  1.34% -> 2.90%
+  up    Sources/Slotstream/PersistentPrefixCache.swift       93.17% -> 93.96%
+  up    Sources/Slotstream/PersistentPrefixRestore.swift     88.98% -> 89.97%
+  up    Sources/Slotstream/ProcessMemory.swift               63.93% -> 84.43%
+  up    Sources/Slotstream/ResponsesDialect.swift            93.85% -> 94.35%
+  up    Sources/Slotstream/Server.swift                      12.59% -> 15.89%
+  up    Sources/Slotstream/ToolCallSplitter.swift            96.58% -> 97.14%
+  up    Sources/Slotstream/Vendored/GatedDelta.swift         0.00% -> 52.57%
+  up    Sources/Slotstream/WeightDownload.swift              83.11% -> 84.22%
+  up    Sources/Slotstream/WeightStore.swift                 45.43% -> 85.71%
+  up    Sources/Slotstream/Weights.swift                     0.00% -> 20.43%
+  up    Sources/SlotstreamDiagnostics/Diagnostics+HTTP.swift 88.31% -> 89.77%
+  up    Sources/SlotstreamDiagnostics/Diagnostics+PersistentPrefix.swift 85.40% -> 85.97%
+  NEW   Sources/Slotstream/AffineEngineSource.swift          no snapshot -> 0.98%
+  NEW   Sources/Slotstream/AffineExpertControl.swift         no snapshot -> 33.33%
+  NEW   Sources/Slotstream/AffineGroupedExperts.swift        no snapshot -> 0.00%
+  NEW   Sources/Slotstream/AffineStandalonePack.swift        no snapshot -> 48.99%
+  NEW   Sources/Slotstream/AppliedModelConfiguration.swift   no snapshot -> 0.00%
+  NEW   Sources/Slotstream/AuthenticatedTensorBatch.swift    no snapshot -> 94.70%
+  NEW   Sources/Slotstream/AutomaticPackPolicy.swift         no snapshot -> 96.57%
+  NEW   Sources/Slotstream/CheckpointMirror.swift            no snapshot -> 97.53%
+  NEW   Sources/Slotstream/ContextBoundaryProbe.swift        no snapshot -> 0.00%
+  NEW   Sources/Slotstream/FusedPrefillAttention.swift       no snapshot -> 95.45%
+  NEW   Sources/Slotstream/GatewayOutput.swift               no snapshot -> 100.00%
+  NEW   Sources/Slotstream/GenerationPhase.swift             no snapshot -> 0.00%
+  NEW   Sources/Slotstream/MTPExpertStream.swift             no snapshot -> 0.00%
+  NEW   Sources/Slotstream/ModelPackLoadedSelection.swift    no snapshot -> 14.77%
+  NEW   Sources/Slotstream/ModelPackPlanning.swift           no snapshot -> 85.56%
+  NEW   Sources/Slotstream/ModelPackRegistry.swift           no snapshot -> 70.23%
+  NEW   Sources/Slotstream/ModelPackStartupDefaults.swift    no snapshot -> 95.12%
+  NEW   Sources/Slotstream/ModelPackStartupSelection.swift   no snapshot -> 85.14%
+  NEW   Sources/Slotstream/NgramHash.swift                   no snapshot -> 0.00%
+  NEW   Sources/Slotstream/PackMemoryProfile.swift           no snapshot -> 100.00%
+  NEW   Sources/Slotstream/PersistentPrefixConversation.swift no snapshot -> 88.75%
+  NEW   Sources/Slotstream/PrefillReadPolicy.swift           no snapshot -> 100.00%
+  NEW   Sources/Slotstream/QuantizationLayout.swift          no snapshot -> 100.00%
+  NEW   Sources/Slotstream/VQArithmetic.swift                no snapshot -> 100.00%
+  NEW   Sources/Slotstream/VQBankAdmission.swift             no snapshot -> 66.67%
+  NEW   Sources/Slotstream/VQCheckpoint.swift                no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQDecode.swift                    no snapshot -> 100.00%
+  NEW   Sources/Slotstream/VQDenseOverlay.swift              no snapshot -> 9.70%
+  NEW   Sources/Slotstream/VQDraftWeights.swift              no snapshot -> 17.60%
+  NEW   Sources/Slotstream/VQExpert.swift                    no snapshot -> 71.21%
+  NEW   Sources/Slotstream/VQExpertKernels.swift             no snapshot -> 98.57%
+  NEW   Sources/Slotstream/VQGenerationProbe.swift           no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQModelProbe.swift                no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQPLERows.swift                   no snapshot -> 100.00%
+  NEW   Sources/Slotstream/VQPackedExperts.swift             no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQPrefillRecords.swift            no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQPrefillStream.swift             no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQRecord.swift                    no snapshot -> 20.18%
+  NEW   Sources/Slotstream/VQRecordBank.swift                no snapshot -> 9.27%
+  NEW   Sources/Slotstream/VQRecordCache.swift               no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQRecordReadBatch.swift           no snapshot -> 100.00%
+  NEW   Sources/Slotstream/VQRecordReadPlan.swift            no snapshot -> 11.48%
+  NEW   Sources/Slotstream/VQResidentText.swift              no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQRotaryCoefficients.swift        no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQRotaryTable.swift               no snapshot -> 97.50%
+  NEW   Sources/Slotstream/VQRouteStream.swift               no snapshot -> 0.00%
+  NEW   Sources/Slotstream/VQTensorFile.swift                no snapshot -> 97.47%
+  NEW   Sources/Slotstream/VQTrunkProbe.swift                no snapshot -> 0.00%
+  NEW   Sources/Slotstream/Version.swift                     no snapshot -> 50.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineContext.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineEngine.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineExpertControl.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineGeneration.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineGroupedExperts.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineSpeculation.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineStandalone.swift no snapshot -> 85.81%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AffineVision.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+AutomaticPackPolicy.swift no snapshot -> 86.10%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+CheckpointMirror.swift no snapshot -> 100.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+ContextBoundary.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+DecodeOverlap.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+DraftStream.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+FusedPrefill.swift no snapshot -> 94.62%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+GenerationPhase.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+MixedDense.swift no snapshot -> 100.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+ModelPackPlanning.swift no snapshot -> 83.75%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+ModelPackStartupDefaults.swift no snapshot -> 86.13%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+ModelPackStartupSelection.swift no snapshot -> 85.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+PackMemory.swift no snapshot -> 82.58%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+PersistentConversation.swift no snapshot -> 92.86%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+PrefillOpportunities.swift no snapshot -> 42.40%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+PromptSpeed.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+Quantization.swift no snapshot -> 90.88%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+QuantizationBench.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+QuantizationFixtures.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+QuantizationLogits.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+QuantizationPerformance.swift no snapshot -> 50.55%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+QuantizationSession.swift no snapshot -> 39.96%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+QuantizationTasks.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQArithmetic.swift no snapshot -> 97.63%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQBank.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQContext.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQDraft.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQGeneration.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQModel.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQPLE.swift no snapshot -> 85.96%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQParallelBank.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQPerformance.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQPrefillModel.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQReadBatch.swift no snapshot -> 86.75%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQRecords.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQSpeculation.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQState.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQTensorFile.swift no snapshot -> 94.19%
+  NEW   Sources/SlotstreamDiagnostics/Diagnostics+VQTrunk.swift no snapshot -> 0.00%
+  NEW   Sources/SlotstreamDiagnostics/VQReferenceExecution.swift no snapshot -> 100.00%
+  DOWN  Sources/Slotstream/Engine.swift                      9.08% -> 7.09%
+  DOWN  Sources/Slotstream/Generate.swift                    16.31% -> 15.02%
+  DOWN  Sources/Slotstream/MTP.swift                         8.46% -> 6.20%
+  DOWN  Sources/Slotstream/Model.swift                       10.90% -> 9.64%
+  DOWN  Sources/Slotstream/PersistentPrefixFormat.swift      76.25% -> 71.81%
+  DOWN  Sources/Slotstream/PersistentPrefixGenerator.swift   50.80% -> 49.60%
+  DOWN  Sources/Slotstream/PersistentPrefixSave.swift        93.27% -> 91.68%
+  DOWN  Sources/Slotstream/Plan.swift                        90.89% -> 90.38%
+  DOWN  Sources/Slotstream/PrefixCache.swift                 88.37% -> 87.70%
+  DOWN  Sources/Slotstream/RequestControl.swift              90.82% -> 89.20%
+  DOWN  Sources/Slotstream/Vision.swift                      44.77% -> 43.54%
+  DOWN  Sources/SlotstreamDiagnostics/Diagnostics+DecodeLookahead.swift 87.90% -> 86.92%
+  DOWN  Sources/SlotstreamDiagnostics/Diagnostics+Governor.swift 81.31% -> 80.08%
+  DOWN  Sources/SlotstreamDiagnostics/Diagnostics+PressureBoundary.swift 15.77% -> 13.91%
+  DOWN  Sources/SlotstreamDiagnostics/Diagnostics+RuntimeBudget.swift 47.67% -> 44.32%
+
+15 file(s) lost coverage.
+
+96 new file(s) have no comparison snapshot.
+Advisory: inspect uncovered behavior and add meaningful checks where needed. Historical percentages do not block CI.

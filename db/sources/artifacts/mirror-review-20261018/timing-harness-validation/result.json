@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "stream",
+      "code": 0,
+      "wall_seconds": 0.364161209,
+      "first_output_seconds": 0.120329084
+    },
+    {
+      "case": "failure",
+      "code": 3,
+      "wall_seconds": 0.023015333,
+      "first_output_seconds": null
+    }
+  ]
+}

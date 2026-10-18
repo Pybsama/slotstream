@@ -1,0 +1,8 @@
+[
+  "/Volumes/external/slotstream/.build/release/slotstream",
+  "prefix-exact-check",
+  "--model",
+  "/Volumes/external/model",
+  "--mirror",
+  "/Volumes/internal/model"
+]
