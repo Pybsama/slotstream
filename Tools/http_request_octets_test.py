@@ -17,7 +17,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BASELINE_GROUPS = ("ascii", "header-bound", "framing", "body-limit", "closed")
+BASELINE_GROUPS = ("ascii", "header-bound", "framing", "body-limit", "closed",
+                   "obs-text", "utf8-octets", "obs-framing")
 
 
 def request(fields, body=b"", target=b"/api/chat", method=b"POST"):
@@ -114,6 +115,29 @@ def fixture_groups():
     ]
     groups["obs-framing"] = [case(name, request(fields + [b"X-Opaque: \xff"], b"hi"), refused(status))
                              for name, fields, status in obs_framing]
+    groups["empty-fields"] = [
+        case("empty-content-length", request([b"Content-Length:"]), refused("400 Bad Request")),
+        case("empty-then-valid-content-length", request([b"Content-Length:", b"Content-Length: 1"], b"x"),
+             refused("400 Bad Request")),
+        case("valid-then-empty-content-length", request([b"Content-Length: 1", b"Content-Length:"], b"x"),
+             refused("400 Bad Request")),
+        case("empty-transfer-encoding", request([b"Transfer-Encoding:"]), refused("400 Bad Request")),
+        case("empty-transfer-then-content-length", request([b"Transfer-Encoding:", b"Content-Length: 1"], b"x"),
+             refused("400 Bad Request")),
+        case("content-length-then-empty-transfer", request([b"Content-Length: 1", b"Transfer-Encoding:"], b"x"),
+             refused("400 Bad Request")),
+        case("empty-then-chunked-transfer", request([b"Transfer-Encoding:", b"Transfer-Encoding: chunked"]),
+             refused("400 Bad Request")),
+        case("chunked-then-empty-transfer", request([b"Transfer-Encoding: chunked", b"Transfer-Encoding:"]),
+             refused("400 Bad Request")),
+        case("duplicate-empty-transfer", request([b"Transfer-Encoding:", b"Transfer-Encoding:"]),
+             refused("400 Bad Request")),
+        case("empty-extension-is-accepted", request([b"Content-Length: 0", b"X-Trace:"]), accepted()),
+        case("value-keeps-colons", request([b"Content-Length: 2", b"X-Trace: first:second:third"], b"{}"),
+             accepted(body=b"{}", headers={"x-trace": b"first:second:third"})),
+        case("missing-length-is-still-empty", request([b"Host: localhost"], target=b"/api/version", method=b"GET"),
+             accepted("GET", "/api/version", headers={"host": b"localhost"})),
+    ]
     return groups
 
 
@@ -327,6 +351,9 @@ class HTTPRequestOctetsTests(unittest.TestCase):
 
     def test_obs_text_does_not_hide_framing_refusals(self):
         self.assert_group("obs-framing")
+
+    def test_empty_field_values_reach_framing_validation(self):
+        self.assert_group("empty-fields")
 
 
 if __name__ == "__main__":

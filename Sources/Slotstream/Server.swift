@@ -338,7 +338,7 @@ public final class Server {
         var sawContentLength = false
         var sawTransferEncoding = false
         for l in lines.dropFirst() {
-            let kv = l.split(separator: ":", maxSplits: 1)
+            let kv = l.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
             if kv.count == 2 {
                 let key = kv[0].trimmingCharacters(in: Self.httpOWS).lowercased()
                 let value = kv[1].trimmingCharacters(in: Self.httpOWS)
