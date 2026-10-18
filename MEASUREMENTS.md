@@ -8833,7 +8833,9 @@ results from all raw receipts without excluding a measured run.
 `159b43e` and #58. The original router fails 10 new assertions; the fixed
 router passes 26. Native checks pass 106 tests / 41300 assertions, the original
 unmodified full acceptance battery passes 35/35, and static, mirrored
-prefix/MTP/vision, library-consumer and instrumented-coverage gates pass.
+prefix/MTP, vision output-equality, library-consumer and instrumented-coverage
+gates pass. At this revision, the vision equality test still loaded only the
+primary; it did not establish mirror I/O.
 The later CLI harness separates 22 weights-free cases from all 26 cases after
 model-memory preflight. Both pass on the unchanged binary, with 69 Python
 harness tests passing. The 35-check receipt and separately rerun CLI gate do

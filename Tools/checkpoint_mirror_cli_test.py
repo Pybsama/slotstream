@@ -21,7 +21,7 @@ class MirrorCLIScope(unittest.TestCase):
             if insufficient and name == 'prefix-exact-check':
                 error = 'insufficient reclaimable memory for model allocation and safety headroom'
             elif name in ['doctor', 'template-check', 'mtp-parity', 'optimization-state-check',
-                          'decode-overlap-check', 'draft-stream-check']:
+                          'decode-overlap-check', 'draft-stream-check', 'ngram-golden']:
                 error = '--mirror is not supported by this command'
             else:
                 error = f'mirror {command[-1]} cannot serve'

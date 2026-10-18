@@ -63,6 +63,7 @@ BIN=${BIN:-.build/release/slotstream}
         self.write('Tools/pull_interrupt_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PULL_INTERRUPT') == '1' else 0)\n")
         self.write('Tools/memory_override_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MEMORY_OVERRIDES') == '1' else 0)\n")
         self.write('Tools/checkpoint_mirror_cli.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN'], '--weights-free']\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MIRROR_OPTIONS') == '1' else 0)\n")
+        self.write('Tools/vision_mirror_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_VISION_MIRROR') == '1' else 0)\n")
         self.write('Tools/mtp_process_guard_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_DRAFT_LOCK') == '1' else 0)\n")
         self.write('Tools/slotpack/cli_checks.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN'], '--selection-only', '--receipt', '.build/model-pack-selection.json']\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PACK_SELECTION') == '1' else 0)\n")
         for suite in OPTIMIZATION_SUITES:
@@ -146,6 +147,17 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
 
     def test_missing_mirror_option_gate_stops_acceptance(self):
         (self.root/'Tools/checkpoint_mirror_cli.py').unlink()
+        result, rows = self.run_entry({})
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
+    def test_failed_vision_mirror_read_gate_stops_acceptance(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_VISION_MIRROR': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
+    def test_missing_vision_mirror_read_gate_stops_acceptance(self):
+        (self.root/'Tools/vision_mirror_gate.py').unlink()
         result, rows = self.run_entry({})
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(rows, [])

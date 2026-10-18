@@ -2448,7 +2448,9 @@ memory to a particular request and can miss allocations between samples.
 
 ## Mirrored checkpoints
 
-`--mirror` spreads checkpoint reads across identical copies on different disks.
+`--mirror` spreads streamed expert/embedding reads and vision-weight loading
+across identical checkpoint copies on different disks. Other resident trunk
+and draft weights still load from the primary.
 Each read chooses the copy estimated to finish first from its recent throughput
 and queued bytes. An unmeasured idle copy receives a probe; while all copies
 are being probed, reads are balanced by pending bytes. Once a copy has a
@@ -2468,10 +2470,12 @@ Repeat `--mirror` for additional copies. The original pack supports mirrors with
 or without explicit `--quantization`; packed expert layouts and authenticated
 affine packs reject mirrors. Commands that load weights directly, including
 `prefix-exact-check` (with or without `--plan`), `vision-parity`, `parity`,
-`ngram-golden`, `dequant-golden`, and `mtp-fixture-inputs`, pass mirrors to
-the checkpoint loader. `doctor`, `template-check`, `mtp-parity`,
+`dequant-golden`, and `mtp-fixture-inputs`, pass mirrors to
+the checkpoint loader. `doctor`, `template-check`, `mtp-parity`, `ngram-golden`,
 `optimization-state-check`, `decode-overlap-check`, and `draft-stream-check`
 do not support mirror routing and reject `--mirror` explicitly.
+`vision-parity` records actual per-replica vision payload bytes in its
+`manifest.json` as `mirror_bytes` when mirrors are configured.
 
 See the [controlled disk comparison and full validation record](../db/records/measurements/mirrored-checkpoint-review-2026-10-18.md) for measured benefits, tested hardware, output and memory checks, and raw evidence.
 

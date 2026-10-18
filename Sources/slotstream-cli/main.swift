@@ -624,9 +624,10 @@ struct Run: ParsableCommand {
                 // The router knows replicas only by position, so they are named
                 // here by the option that supplied them: index 0 is --model and
                 // the rest are the --mirror directories in the order given.
-                let mirrorTotal = Double(max(stats.mirrorBytes.reduce(0, +), 1))
-                let mirrorReport = stats.mirrorBytes.isEmpty ? "" : "-- mirror split: "
-                    + stats.mirrorBytes.enumerated().map { replica in
+                let mirrorBytes = stats.mirrorBytes ?? []
+                let mirrorTotal = Double(max(mirrorBytes.reduce(0, +), 1))
+                let mirrorReport = mirrorBytes.isEmpty ? "" : "-- mirror split: "
+                    + mirrorBytes.enumerated().map { replica in
                         String(format: "%@ %.2f GB (%.1f%%)",
                             replica.offset == 0 ? "--model" : "--mirror #\(replica.offset)",
                             Double(replica.element) / 1e9,
@@ -2007,6 +2008,7 @@ struct NgramGolden: ParsableCommand {
 
     func run() throws {
         try model.rejectAdaptiveLimitForFixedDiagnostic()
+        try model.rejectMirrors()
         let fields = tokens.split(separator: ",", omittingEmptySubsequences: false)
         let parsed = fields.map { Int64($0.trimmingCharacters(in: .whitespaces)) }
         guard !fields.isEmpty, parsed.allSatisfy({ $0 != nil }) else {

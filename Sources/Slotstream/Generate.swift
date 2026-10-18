@@ -267,8 +267,9 @@ public struct GenStats: Codable {
     public var decodeScatterSeconds = 0.0
     public var decodeRecords = 0
     /// Cumulative bytes served per checkpoint replica, including model loading
-    /// and previous requests. Empty when no mirrors are configured.
-    public var mirrorBytes: [Int] = []
+    /// and previous requests. Empty when no mirrors are configured; nil in
+    /// statistics saved before this field existed.
+    public var mirrorBytes: [Int]? = []
     /// "stop" (EOS or stop sequence), "length", "error", or a low-level
     /// caller's explicit "cancelled" checkpoint yield.
     public var finishReason = "stop"

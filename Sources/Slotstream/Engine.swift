@@ -83,7 +83,6 @@ public struct ChatMessage {
 
 public final class Engine {
     public let modelDir: URL
-    private let mirrorDirs: [URL]
     public let model: Qwen4ExpModel
     public let generator: Generator
     public let tokenizer: any Tokenizers.Tokenizer
@@ -554,7 +553,6 @@ public final class Engine {
         self.configuredContextTokens = context.maxContextTokens
         self.resources = resources
         self.modelDir = modelDir
-        self.mirrorDirs = mirrors
         self._plan = plan
         // Sized from the same budget as the pool; SLOTSTREAM_PREFIX_CACHE=0
         // (or --no-prefix-cache) pins it off for parity work.
@@ -1046,7 +1044,8 @@ public final class Engine {
             }
             try request?.check(nextAllocationBytes: workspaceBytes, phase: "vision workspace admission")
             if let vt = visionTower { return vt }
-            let idx = try authenticatedVisionMetadata != nil ? model.pool.expertStore.index : CheckpointIndex(dir: modelDir, mirrors: mirrorDirs)
+            // Share routing observations and byte accounting with text reads.
+            let idx = model.pool.expertStore.index
             guard VisionTower.present(index: idx) else {
                 throw SlotstreamError.vision(
                     "this checkpoint has no vision tower — it is a text-only model")

@@ -25,8 +25,9 @@ archive to the implementation PR's file diff.
 
 The capture relabels local filesystem paths; its manifests retain original
 and published digests. Model payloads, tensor binaries and executables are
-excluded. All 299 compiled-source inputs remain identical in the later test
-harness/documentation commits.
+excluded. All 299 compiled-source inputs remain identical through the later
+test harness/documentation commit `0610422`. Subsequent runtime corrections
+require their own validation receipts.
 
 Exact build hashes from `final-build-sha256.txt`:
 

@@ -513,9 +513,19 @@ public final class CheckpointIndex {
     /// existing envelope; PLE tables are never admitted through this method.
     package func authenticatedArray(_ name: String, shouldContinue: () -> Bool = { true }) throws -> MLXArray {
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
-        guard let ref = tensors[name], let file = authenticatedFiles[ref.file],
-              (1...800_000_000).contains(ref.byteCount), !name.contains("ngram_embedding.shard_") else {
+        guard let ref = tensors[name], authenticatedFiles[ref.file] != nil else {
             throw ModelError("authenticated resident tensor is absent or exceeds its load-copy bound")
+        }
+        return try residentArray(name, shouldContinue: shouldContinue)
+    }
+
+    /// Eager, bounded resident loading through the index's exact-read path.
+    /// Mirrored vision must use this instead of reopening primary URLs in MLX.
+    package func residentArray(_ name: String, shouldContinue: () -> Bool = { true }) throws -> MLXArray {
+        guard shouldContinue() else { throw CheckpointReadError.cancelled }
+        guard let ref = tensors[name], (1...800_000_000).contains(ref.byteCount),
+              !name.contains("ngram_embedding.shard_") else {
+            throw ModelError("resident tensor is absent or exceeds its load-copy bound")
         }
         let dtype: DType
         switch ref.dtype {
@@ -525,16 +535,16 @@ public final class CheckpointIndex {
         case "F32": dtype = .float32
         case "I64": dtype = .int64
         case "I32": dtype = .int32
-        default: throw ModelError("unsupported authenticated resident tensor dtype")
+        default: throw ModelError("unsupported resident tensor dtype \(ref.dtype)")
         }
         var bytes = Data(count: ref.byteCount)
         try bytes.withUnsafeMutableBytes { destination in
-            try file.readDirect(into: destination.baseAddress!, ref: ref, offset: 0, count: ref.byteCount,
+            try preadChecked(into: destination.baseAddress!, ref, offset: 0, count: ref.byteCount,
                 shouldContinue: shouldContinue)
         }
         let array = MLXArray(bytes, ref.shape, dtype: dtype)
         eval(array)
-        try file.verifyUnchanged()
+        try authenticatedFiles[ref.file]?.verifyUnchanged()
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
         return array
     }

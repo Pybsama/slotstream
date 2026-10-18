@@ -51,6 +51,7 @@ fi
 
 python3 Tools/mtp_process_guard_gate.py --binary "$BIN"
 python3 Tools/checkpoint_mirror_cli.py --binary "$BIN" --weights-free
+python3 Tools/vision_mirror_gate.py --binary "$BIN"
 "$BIN" runtime-check
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.
