@@ -65,6 +65,7 @@ class MemberBoundTests(unittest.TestCase):
         first = tarfile.TarInfo('slotstream'); first.size = 1
         prefix = first.tobuf(format=tarfile.USTAR_FORMAT) + b'x' + bytes(511)
         entry.name = 'slotstream'
+        entry.size = release_candidate.MAX_BYTES - 1
         with self.subTest(kind='duplicate'):
             self.reject_at_header(entry, {'slotstream', 'mlx.metallib'}, prefix)
 
