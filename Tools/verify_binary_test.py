@@ -28,7 +28,7 @@ import json, os, sys
 with open(os.environ['VERIFY_FIXTURE_TRACE'], 'a') as output:
     output.write(json.dumps({'binary': __file__, 'arguments': sys.argv[1:]})+'\\n')
 if sys.argv[1:] == ['template-check']:
-    print('248045,8678,198,2523,513,10631,13,248046,198,248045,846,198,12675,1017,248046,198,248045,74455,198,248068,271,248069,271')
+    print(os.environ.get('VERIFY_FIXTURE_TEMPLATE_TEXT', '248045,8678,198,2523,513,10631,13,248046,198,248045,846,198,12675,1017,248046,198,248045,74455,198,248068,271,248069,271'))
 raise SystemExit(int(os.environ.get('VERIFY_FIXTURE_EXIT', '0')))
 ''')
             path.chmod(0o755)
@@ -109,6 +109,41 @@ safety_before() {
         p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['legacy']), 'VERIFY_FIXTURE_PREFLIGHT_EXIT': '2'})
         self.assertEqual(p.returncode, 2)
         self.assertEqual(rows, [])
+
+    def test_template_failure_with_expected_tokens_fails_gate(self):
+        for status in (1, 23, 137):
+            with self.subTest(status=status):
+                self.trace.unlink(missing_ok=True)
+                p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['frozen']),
+                                          'VERIFY_FIXTURE_EXIT': str(status)}, template=True)
+                self.assertEqual(len(rows), 1)
+                self.assertEqual(Path(rows[0]['binary']).resolve(), self.paths['frozen'].resolve())
+                self.assertEqual(rows[0]['arguments'], ['template-check'])
+                self.assertEqual(p.returncode, 1, p.stdout+p.stderr)
+                self.assertIn('FAIL  chat template == transformers', p.stdout)
+                self.assertNotIn('PASS  chat template == transformers', p.stdout)
+
+    def test_template_success_with_wrong_tokens_fails_gate(self):
+        p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['frozen']),
+                                  'VERIFY_FIXTURE_EXIT': '0',
+                                  'VERIFY_FIXTURE_TEMPLATE_TEXT': 'not-the-template-token-ids'}, template=True)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(Path(rows[0]['binary']).resolve(), self.paths['frozen'].resolve())
+        self.assertEqual(rows[0]['arguments'], ['template-check'])
+        self.assertEqual(p.returncode, 1, p.stdout+p.stderr)
+        self.assertIn('FAIL  chat template == transformers', p.stdout)
+        self.assertNotIn('PASS  chat template == transformers', p.stdout)
+
+    def test_template_success_with_empty_tokens_fails_gate(self):
+        p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['frozen']),
+                                  'VERIFY_FIXTURE_EXIT': '0',
+                                  'VERIFY_FIXTURE_TEMPLATE_TEXT': ''}, template=True)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(Path(rows[0]['binary']).resolve(), self.paths['frozen'].resolve())
+        self.assertEqual(rows[0]['arguments'], ['template-check'])
+        self.assertEqual(p.returncode, 1, p.stdout+p.stderr)
+        self.assertIn('FAIL  chat template == transformers', p.stdout)
+        self.assertNotIn('PASS  chat template == transformers', p.stdout)
 
 
 class VerifyContextStatus(unittest.TestCase):

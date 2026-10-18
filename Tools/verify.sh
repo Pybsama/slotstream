@@ -86,7 +86,7 @@ fi
 echo "== goldens (need bench/parity31 from Tools/parity_ref.py under mlx==0.31.1) =="
 run_model "$BIN" ngram-golden --tokens "9707,11,1246,525,498,30" 2>/dev/null | sed 's/^pos[0-9]*: //' > /tmp/ssv_ngram.txt
 check "ngram row ids == python reference"  "diff /tmp/ssv_ngram.txt bench/parity31/ngram_ids.txt"
-check "chat template == transformers"      "[ \"\$(run_binary template-check 2>/dev/null)\" = '248045,8678,198,2523,513,10631,13,248046,198,248045,846,198,12675,1017,248046,198,248045,74455,198,248068,271,248069,271' ]"
+check "chat template == transformers"      "template_ids=\$(run_binary template-check 2>/dev/null) && [ \"\$template_ids\" = '248045,8678,198,2523,513,10631,13,248046,198,248045,846,198,12675,1017,248046,198,248045,74455,198,248068,271,248069,271' ]"
 check "layer parity (historical reference, one-row projections)"  "run_binary parity --tokens '9707,11,1246,525,498,30' --layers 2 --compare bench/parity31 --row-invariant"
 
 # The historical fixtures remain immutable. A backend upgrade also needs a
