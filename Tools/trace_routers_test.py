@@ -38,7 +38,8 @@ class RouterTraceOutputChecks(unittest.TestCase):
     def setUpClass(cls):
         cls.code = output_code()
 
-    def save(self, requested, expected, *, absolute=False, existing_parent=False):
+    def save(self, requested, expected, *, absolute=False, existing_parent=False,
+             reported=None):
         # Valid routing IDs and the actual producer's 48-layer/top10 layout.
         wanted = (np.arange(3 * 48 * 10, dtype=np.int16) % 512).reshape(3, 48, 10)
         prefill = (np.arange(2 * 48 * 10, dtype=np.int16) % 512).reshape(2, 48, 10)
@@ -52,6 +53,21 @@ class RouterTraceOutputChecks(unittest.TestCase):
             if existing_parent:
                 target.parent.mkdir(parents=True)
                 sentinel.write_text("keep existing files", encoding="utf-8")
+
+            def check_archive():
+                self.assertTrue(target.is_file())
+                self.assertEqual(list(root.rglob("*.npz")), [target])
+                with np.load(target, allow_pickle=False) as archive:
+                    self.assertEqual(set(archive.files), {"chat", "chat_prefill", "meta"})
+                    self.assertEqual(archive["chat"].dtype, np.dtype("int16"))
+                    self.assertEqual(archive["chat_prefill"].dtype, np.dtype("int16"))
+                    np.testing.assert_array_equal(archive["chat"], wanted)
+                    np.testing.assert_array_equal(archive["chat_prefill"], prefill)
+                    self.assertEqual(archive["meta"].dtype, np.dtype("uint8"))
+                    self.assertEqual(json.loads(archive["meta"].tobytes().decode("utf-8")),
+                                     {"model": "fixture-model", "n_layers": 48,
+                                      "top_k": 10, "workloads": ["chat"]})
+
             namespace = {"args": SimpleNamespace(out=supplied, workload="chat", model="fixture-model"),
                          "all_traces": traces, "n_layers": 48, "top_k": 10, "wls": ["chat"],
                          "np": np, "json": json, "os": os}
@@ -65,22 +81,17 @@ class RouterTraceOutputChecks(unittest.TestCase):
                     except OSError as error:
                         # Preserve the real producer traceback as exception
                         # context; an ordinary output filename must succeed.
-                        self.fail(f"trace output failed for {supplied!r}: {error}")
+                        note = ""
+                        if reported is not None:
+                            check_archive()
+                            note = f"; verified archive {expected!r}"
+                        self.fail(f"trace output failed for {supplied!r}: {error}{note}")
             finally:
                 os.chdir(previous)
-            self.assertTrue(target.is_file())
-            self.assertEqual(list(root.rglob("*.npz")), [target])
-            with np.load(target, allow_pickle=False) as archive:
-                self.assertEqual(set(archive.files), {"chat", "chat_prefill", "meta"})
-                self.assertEqual(archive["chat"].dtype, np.dtype("int16"))
-                self.assertEqual(archive["chat_prefill"].dtype, np.dtype("int16"))
-                np.testing.assert_array_equal(archive["chat"], wanted)
-                np.testing.assert_array_equal(archive["chat_prefill"], prefill)
-                self.assertEqual(archive["meta"].dtype, np.dtype("uint8"))
-                self.assertEqual(json.loads(archive["meta"].tobytes().decode("utf-8")),
-                                 {"model": "fixture-model", "n_layers": 48,
-                                  "top_k": 10, "workloads": ["chat"]})
+            check_archive()
             visible = supplied if supplied is not None else "bench/traces/chat.npz"
+            if reported is not None:
+                visible = reported
             self.assertIn(f"wrote {visible} (", output.getvalue())
             if existing_parent:
                 self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep existing files")
@@ -106,8 +117,23 @@ class RouterTraceOutputChecks(unittest.TestCase):
     def test_nested_relative_output_path(self):
         self.save("new/nested/trace.npz", "new/nested/trace.npz")
 
+    def test_other_extension_output_filename(self):
+        self.save("trace.data", "trace.data.npz", reported="trace.data.npz")
+
+    def test_suffixless_output_filename(self):
+        self.save("trace", "trace.npz", reported="trace.npz")
+
+    def test_suffixless_output_parent(self):
+        self.save("new/nested/trace", "new/nested/trace.npz", reported="new/nested/trace.npz")
+
+    def test_suffixless_unicode_output_filename(self):
+        self.save("路由 轨迹", "路由 轨迹.npz", reported="路由 轨迹.npz")
+
     def test_unicode_output_parent(self):
         self.save("路由 目录/trace.npz", "路由 目录/trace.npz")
+
+    def test_uppercase_npz_output_filename(self):
+        self.save("trace.NPZ", "trace.NPZ.npz", reported="trace.NPZ.npz")
 
 
 if __name__ == "__main__":

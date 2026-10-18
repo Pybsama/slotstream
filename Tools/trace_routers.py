@@ -155,6 +155,8 @@ def main():
             all_traces.setdefault(wname + "_prefill", []).append(parr)
 
     out = args.out or f"bench/traces/{args.workload}.npz"
+    if not out.endswith(".npz"):
+        out += ".npz"
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     save = {}
     for k, lst in all_traces.items():
