@@ -543,3 +543,6 @@ Verify successful final Xcode job 117197678135 at 8e5ad41: BUILD SUCCEEDED, all 
 ## [2026-10-18 08:35] update | records/measurements/mirrored-checkpoint-review-2026-10-18.md
 Capture final integrated mirror review corrections, regression proof, full local acceptance and balanced external/internal/combined measurements with raw receipts; report hosted CI separately.
 
+## [2026-10-18 09:20] update | records/measurements/mirrored-checkpoint-review-2026-10-18.md
+Preserve hosted memory-admission fixture failure and move Engine mirror CLI cases into full model acceptance. Verify 22 weights-free and 26 complete cases on unchanged binary, plus 69 harness tests; keep original full-battery evidence distinct.
+

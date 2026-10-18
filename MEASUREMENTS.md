@@ -8782,7 +8782,7 @@ The benefit comes with storage for a second full checkpoint copy and the mainten
 
 The final mirrored-read implementation is built from `bccd78e0a1100247f14091cc0ae59ba4f306175f`,
 integrating main `159b43e` and the merged fixture fix in #58. Release executable
-SHA-256: `04090257eb4a009790f867ed02c919a3cbd2fff026f87cd759c05105ede77567`. Later evidence/documentation commits do
+SHA-256: `04090257eb4a009790f867ed02c919a3cbd2fff026f87cd759c05105ede77567`. Later test-harness/evidence/documentation commits do
 not change the compiled source; the capture contains the complete source hash
 inventory.
 
@@ -8804,6 +8804,21 @@ vision pixels and embeddings. The unmodified full acceptance suite on this
 binary finishes with **35 passed, 0 failed**. External-library consumption,
 instrumented T0/T1 coverage and the advisory coverage comparison also complete.
 These are local receipts; GitHub-hosted check status remains separate.
+
+The first hosted weights-free attempt exposed a fixture-placement error: the
+Engine-based `prefix-exact-check` paths perform real model-memory admission
+before opening the missing mirror, so the small runner refused for headroom
+before it could test forwarding. The failure is preserved in the
+[hosted job](https://github.com/carloslfu/slotstream/actions/runs/39112079535/job/117630166671).
+The weights-free gate now requires all 22 non-Engine cases. The complete
+26-case gate is also wired into `Tools/verify.sh` after its model preflight;
+memory refusal is never accepted as mirror evidence. Both profiles pass on
+the unchanged Mac binary, and 69 Python regression/entry-point tests pass.
+[Follow-up receipts](https://github.com/spikezz/slotstream/tree/536f064b8c3c60ef8e42c9af172eb076de9d60af/db/sources/artifacts/mirror-review-ci-fixture-20261018)
+retain the exact errors and results. The original 35-check full-suite receipt
+and the separately rerun 26-case mirror gate remain distinct; this does not
+claim a fresh run of the newly assembled 36-check battery. Compiled inputs
+remain identical to the fully validated mirror implementation.
 The frozen MLX 0.31 draft-head comparison differs and is retained as a historical diagnostic; the required independent MLX 0.32.2 comparison passes. Historical golden files are unchanged.
 
 **Three-arm comparison.** Apple M4 Mac mini, 32 GiB, macOS 15.7.4;
