@@ -54,6 +54,7 @@ extension Catalogue {
             Check("tool-schema-refs", tier: .t0) { toolSchemaRefs() },
             Check("tool-schema-ref-output", tier: .t0) { toolSchemaRefOutput() },
             Check("tool-schema-string-enum", tier: .t0) { toolSchemaStringEnum() },
+            Check("toolcall-unicode-string-stream", tier: .t0) { toolCallUnicodeStringStream() },
             Check("tool-schema-ref-dialects", tier: .t0) { try toolSchemaRefDialects() },
         ]
     }
@@ -645,6 +646,90 @@ extension Catalogue {
         let call = events.compactMap { if case .toolCall(let call) = $0 { return call }; return nil }.first
         c.equal("draft-07 ref sibling preserves integer", call?.arguments["value"], .int(0))
         c.equal("draft-07 ref sibling final JSON", call?.inputJSON, #"{"value":0}"#)
+        return c.report()
+    }
+
+    static func toolCallUnicodeStringStream() -> CheckReport {
+        var c = CheckBuilder("toolcall-unicode-string-stream")
+        let tool = ToolSchema(name: "write_file", params: ["content": .string])
+        // The expected JSON is literal: do not reuse the parser's quoting or
+        // Character-based event normalization as the oracle for Unicode bytes.
+        let cases: [(String, String, String)] = [
+            ("leading acute", "\u{0301}suffix", "{\"content\":\"\u{0301}suffix\"}"),
+            ("leading variation selector", "\u{FE0F}suffix", "{\"content\":\"\u{FE0F}suffix\"}"),
+            ("leading joiner", "\u{200D}suffix", "{\"content\":\"\u{200D}suffix\"}"),
+            ("leading nonjoiner", "\u{200C}suffix", "{\"content\":\"\u{200C}suffix\"}"),
+            ("leading two marks", "\u{0301}\u{0327}suffix", "{\"content\":\"\u{0301}\u{0327}suffix\"}"),
+            ("leading mark with escapes", "\u{0301}\"\\\t\n雪🙂", "{\"content\":\"\u{0301}\\\"\\\\\\t\\n雪🙂\"}"),
+            ("leading mark long value", "\u{0301}abcdefghijklmnopqrstuvwxyz0123456789",
+             "{\"content\":\"\u{0301}abcdefghijklmnopqrstuvwxyz0123456789\"}"),
+            ("trailing prepend", "A\u{0600}", "{\"content\":\"A\u{0600}\"}"),
+            ("base with mark control", "e\u{0301}suffix", "{\"content\":\"e\u{0301}suffix\"}"),
+            ("emoji joiner control", "👩\u{200D}💻", "{\"content\":\"👩\u{200D}💻\"}"),
+            ("ASCII escapes control", "\"\\\t\n", #"{"content":"\"\\\t\n"}"#),
+            ("empty control", "", #"{"content":""}"#),
+        ]
+        func shape(_ events: [ToolStreamEvent]) -> [String] {
+            var result: [String] = []
+            for event in events {
+                let kind: String
+                switch event {
+                case .toolInputStart(_, let name): kind = "start:\(name)"
+                case .toolInputDelta: kind = "delta"
+                case .toolInputEnd: kind = "end"
+                case .toolCall(let call): kind = "call:\(call.name)"
+                case .text: kind = "text"
+                case .malformed: kind = "malformed"
+                }
+                if kind != "delta" || result.last != kind { result.append(kind) }
+            }
+            return result
+        }
+        func call(_ events: [ToolStreamEvent]) -> ParsedToolCall? {
+            events.compactMap { if case .toolCall(let call) = $0 { return call }; return nil }.first
+        }
+        func argumentBytes(_ call: ParsedToolCall?) -> [UInt8]? {
+            guard case .string(let value) = call?.arguments["content"] else { return nil }
+            return Array(value.utf8)
+        }
+        func deltaBytes(_ events: [ToolStreamEvent]) -> [UInt8] {
+            events.compactMap { if case .toolInputDelta(_, let delta) = $0 { return delta }; return nil }
+                .flatMap { Array($0.utf8) }
+        }
+        let expectedShape = ["start:write_file", "delta", "end", "call:write_file"]
+        for (name, raw, expectedJSON) in cases {
+            let xml = "<tool_call>\n<function=write_file>\n<parameter=content>\n\(raw)\n</parameter>\n</function>\n</tool_call>"
+            let expectedBytes = Array(expectedJSON.utf8)
+            func complete(_ events: [ToolStreamEvent]) -> Bool {
+                let final = call(events)
+                return shape(events) == expectedShape && final?.arguments.count == 1
+                    && argumentBytes(final) == Array(raw.utf8)
+                    && final.map { Array($0.inputJSON.utf8) } == expectedBytes
+            }
+            let whole = ToolCallSplitter.parseAll(xml, tools: [tool], idFactory: countingIDs())
+            c.equal("\(name): whole event shape", shape(whole), expectedShape)
+            c.equal("\(name): whole argument bytes", argumentBytes(call(whole)), Array(raw.utf8))
+            c.equal("\(name): whole final JSON bytes", call(whole).map { Array($0.inputJSON.utf8) }, expectedBytes)
+            c.equal("\(name): whole delta JSON bytes", deltaBytes(whole), expectedBytes)
+            // A token boundary can split a grapheme cluster. Cover every
+            // Unicode scalar boundary, including within combining sequences.
+            let scalars = xml.unicodeScalars.map(String.init)
+            var finalMismatches = 0
+            var deltaMismatches = 0
+            for cut in 0...scalars.count {
+                let parser = ToolCallSplitter(tools: [tool], idFactory: countingIDs())
+                let events = parser.push(scalars[..<cut].joined())
+                    + parser.push(scalars[cut...].joined()) + parser.flush()
+                if !complete(events) { finalMismatches += 1 }
+                if deltaBytes(events) != expectedBytes { deltaMismatches += 1 }
+            }
+            c.equal("\(name): every scalar split final value", finalMismatches, 0)
+            c.equal("\(name): every scalar split delta JSON bytes", deltaMismatches, 0)
+            let parser = ToolCallSplitter(tools: [tool], idFactory: countingIDs())
+            let streamed = scalars.flatMap { parser.push($0) } + parser.flush()
+            c.expect("\(name): scalar stream final value", complete(streamed))
+            c.equal("\(name): scalar stream delta JSON bytes", deltaBytes(streamed), expectedBytes)
+        }
         return c.report()
     }
 

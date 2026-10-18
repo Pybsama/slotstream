@@ -455,9 +455,9 @@ public final class ToolCallSplitter {
         }
         if final, value.hasSuffix("\n") { value.removeLast() }
         if !value.isEmpty {
-            // Escape each stable span, without adding another pair of quotes.
+            // Strip quote bytes without consuming adjacent Unicode scalars.
             out.append(.toolInputDelta(id: currentID,
-                delta: String(JSONValue.quote(value).dropFirst().dropLast())))
+                delta: String(decoding: JSONValue.quote(value).utf8.dropFirst().dropLast(), as: UTF8.self)))
         }
     }
 
