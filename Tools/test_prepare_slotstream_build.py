@@ -92,7 +92,7 @@ class NativeInputFingerprintTests(unittest.TestCase):
                   'apps/macos/Extract/main.swift', 'apps/macos/CSandbox/slotstream_sandbox.c',
                   'apps/macos/CSandbox/include/slotstream_sandbox.h']
         with tempfile.TemporaryDirectory(prefix='native-input-fixture-') as temporary:
-            root = pathlib.Path(temporary)
+            root = pathlib.Path(temporary).resolve()
             for relative_path in copied:
                 destination = root / relative_path
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -123,7 +123,8 @@ class NativeInputFingerprintTests(unittest.TestCase):
             source_after = {key: value for key, value in self._snapshot(root).items()
                             if not key.startswith('tiny-bin/')}
             checked = self._invoke(helper, binary_dir, check=True)
-            receipt = {'case': name, 'fixture_root': str(root), 'expected_status': expected,
+            receipt = {'case': name, 'temporary_path': temporary,
+                       'fixture_root': str(root), 'expected_status': expected,
                        'mutation': {'path': relative, 'change': change},
                        'copied_sha256': {path: hashlib.sha256(bytes.fromhex(source_before[path])).hexdigest()
                                          for path in copied},
@@ -170,6 +171,24 @@ class NativeInputFingerprintTests(unittest.TestCase):
                                ('sandbox-delete', 'apps/macos/CSandbox/slotstream_sandbox.c')]:
             with self.subTest(source=name):
                 self._check_case(name, relative, 'delete')
+
+    def test_directory_alias_fixture_roots(self):
+        with tempfile.TemporaryDirectory(prefix='native-input-alias-') as temporary:
+            container = pathlib.Path(temporary).resolve()
+            physical = container / 'physical'
+            physical.mkdir()
+            alias = container / 'alias'
+            alias.symlink_to(physical, target_is_directory=True)
+            self.assertTrue(alias.is_symlink())
+            self.assertTrue(alias.is_dir())
+            self.assertEqual(alias.resolve(), physical)
+            self.assertNotEqual(alias, alias.resolve())
+            with mock.patch.object(tempfile, 'tempdir', str(alias)):
+                with self.subTest(source='aliased-unchanged'):
+                    self._check_case('aliased-unchanged', expected=0)
+                with self.subTest(source='aliased-runtime-edit'):
+                    self._check_case('aliased-runtime-edit',
+                                     'apps/macos/Runtime/FingerprintFixture.swift', 'edit')
 
 
 if __name__ == '__main__':
