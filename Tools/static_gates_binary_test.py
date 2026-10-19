@@ -58,6 +58,7 @@ BIN=${BIN:-.build/release/slotstream}
         self.write('Tools/api_generation_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_API_GENERATION') == '1' else 0)\n")
         self.write('Tools/consumer_smoke_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_CONSUMER') == '1' else 0)\n")
         self.write('Tools/process_memory_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_NATIVE_MEMORY') == '1' else 0)\n")
+        self.write('Tools/checkpoint_mirror_thread_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MIRROR_THREAD') == '1' else 0)\n")
         self.write('Tools/launch_request_deadline_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_LAUNCH_DEADLINE') == '1' else 0)\n")
         self.write('Tools/safetensors_empty_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_EMPTY_TENSORS') == '1' else 0)\n")
         self.write('Tools/pull_interrupt_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PULL_INTERRUPT') == '1' else 0)\n")
@@ -164,6 +165,11 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
 
     def test_failed_native_memory_regression_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_NATIVE_MEMORY': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
+
+    def test_failed_mirror_thread_regression_stops_acceptance(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_MIRROR_THREAD': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
         self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
 

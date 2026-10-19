@@ -79,8 +79,12 @@ extension Diagnostics {
         // Many callers exercise the production clock-under-lock and accounting.
         let concurrent = MirrorRouter(replicaCount: 3)
         DispatchQueue.concurrentPerform(iterations: 1000) { i in
-            let replica = concurrent.claim(byteCount: 16)
-            concurrent.release(replica, byteCount: 16, completed: i % 4 != 0)
+            // Exercise the same unlocked fast-path decision as readRouted.
+            // The ThreadSanitizer gate catches reading mutable array storage
+            // here while another worker updates its routing measurements.
+            let routed = concurrent.replicaCount > 1
+            let replica = routed ? concurrent.claim(byteCount: 16) : 0
+            if routed { concurrent.release(replica, byteCount: 16, completed: i % 4 != 0) }
         }
         c.equal("concurrent success/failure accounting", concurrent.servedBytes().reduce(0, +), 12000)
         c.equal("all configured replicas are reported", concurrent.servedBytes().count, 3)

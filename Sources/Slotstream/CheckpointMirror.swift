@@ -48,17 +48,20 @@ package final class MirrorRouter {
         }
     }
 
+    // Read by the single-copy fast path without taking the routing lock.
+    // Even reading Array.count races with concurrent element mutations, so
+    // keep the fixed configuration separate from mutable routing state.
+    package let replicaCount: Int
     private var replicas: [Replica]
     private let lock = NSLock()
     private let now: () -> UInt64
 
     package init(replicaCount: Int, now: @escaping () -> UInt64 = { DispatchTime.now().uptimeNanoseconds }) {
         precondition(replicaCount > 0, "a mirror needs at least one replica")
+        self.replicaCount = replicaCount
         replicas = Array(repeating: Replica(), count: replicaCount)
         self.now = now
     }
-
-    package var replicaCount: Int { replicas.count }
 
     /// Reserves a replica for one read of `byteCount` and returns its index.
     /// The caller must pass that index and the same `byteCount` to `release`

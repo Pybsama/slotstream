@@ -56,6 +56,7 @@ python3 Tools/vision_mirror_gate.py --binary "$BIN"
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.
 python3 Tools/process_memory_gate.py
+python3 Tools/checkpoint_mirror_thread_gate.py
 "$BIN" pull-check
 python3 Tools/slotpack/cli_checks.py --binary "$BIN" --selection-only --receipt .build/model-pack-selection.json
 python3 Tools/pull_interrupt_gate.py
