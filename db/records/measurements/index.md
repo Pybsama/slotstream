@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-18T10:19:17.751041788Z
+updated: 2026-10-19T17:59:51.831111Z
 ---
 
 # records/measurements
 
+- [[records/measurements/release-0-2-30-published-2026-10-19]] — v0.2.30 published and accepted; mirror contributor notified
 - [[records/measurements/mirrored-checkpoint-review-2026-10-18]] — Mirrored checkpoint reads: final review corrections and three-arm comparison
 - [[records/measurements/issue54-native-boundary-probe-2026-10-13]] — Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff
 - [[records/measurements/issue54-full-model-2026-10-14]] — Six public-release full-model requests on M5 do not reproduce the sustained 32k cliff; M4 cause and release-fix status remain unresolved

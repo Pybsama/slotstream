@@ -549,3 +549,6 @@ Preserve hosted memory-admission fixture failure and move Engine mirror CLI case
 ## [2026-10-18 10:19] update | records/measurements/mirrored-checkpoint-review-2026-10-18.md
 Keep mirror review focused: preserve all raw captures on the fork evidence branch and immutable links, retain concise measurement and run records, and remove raw archives from the PR file diff. Runtime and test sources are unchanged.
 
+## [2026-10-19 18:00] update | records/measurements/release-0-2-30-published-2026-10-19.md
+Publish v0.2.30 from exact successful CI bytes; preserve 36/36 native gates, public checksum/provenance/source verification, unchanged isolated installer and 31/31 installed-server checks. Notify PR 57 with the release link and retain the public evidence archive.
+
