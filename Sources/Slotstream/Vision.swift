@@ -578,6 +578,10 @@ public final class VisionTower: TensorSource {
                 kept[key] = try index.authenticatedArray(key, shouldContinue: shouldContinue)
             }
             try index.verifyAuthenticatedFilesUnchanged()
+        } else if index.mirror.replicaCount > 1 {
+            for key in index.tensors.keys.sorted() where Self.isTowerKey(key) {
+                kept[key] = try index.residentArray(key, shouldContinue: shouldContinue)
+            }
         } else {
             let files = Set(index.tensors.values.map { $0.file })
             for f in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {

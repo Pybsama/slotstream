@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-14T21:37:00.798994Z
+updated: 2026-10-18T10:19:17.805222175Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-18-mirror-review-final]] — Final integrated mirror review acceptance and three-arm performance capture
 - [[sources/runs/2026/10/2026-10-14-sevra-capability-fixes]] — Native capability fixes pass deterministic and app checks; real-model replay refused before loading for insufficient headroom
 - [[sources/runs/2026/10/2026-10-14-sevra-capability-audit]] — Real native capability audit: successful narrow jobs, failed reviewed edit, JSON and citation mismatch, and stale app artifacts
 - [[sources/runs/2026/10/2026-10-14-issue54-full-model]] — Six full-model requests complete without the reported 32k cliff on M5 across deployment, portable and automatic lookahead configurations; one interrupted prefill preserved
@@ -506,9 +507,8 @@ updated: 2026-10-14T21:37:00.798994Z
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-raw-delivery-correction]] — Raw planner benchmark refuses before model launch; exact request correction is frozen
 - [[sources/runs/2026/09/2026-09-09-optimization-final-component-control-and-vision-override-preparation]] — Final comparison controls preserve original workloads and draft explicit vision override compatibility
 - [[sources/runs/2026/09/2026-09-09-optimization-adaptive-public-planner-cohort-freeze]] — Three original public-planner cohorts rebound to the exact seven-case-qualified candidate
-- [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-seven-native-pass]] — All seven smaller-group native cases pass with complete prior coverage
 
 ## More
 
-This folder has 914 files. The 500 most recent are listed above.
+This folder has 915 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

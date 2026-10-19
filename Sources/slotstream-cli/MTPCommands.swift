@@ -24,6 +24,7 @@ struct MTPParity: ParsableCommand {
     @Option(help: "Write per-stage dumps here (debug)") var dump: String?
 
     func run() throws {
+        try model.rejectMirrors()
         try model.rejectAdaptiveLimitForFixedDiagnostic()
         let cfg = try ModelConfig.load(from: model.modelURL)
         let head = MTPHead(try MTPWeights(modelDir: model.modelURL, config: cfg))
@@ -257,7 +258,7 @@ struct MTPFixtureInputs: ParsableCommand {
         // Same ids the fixture always used; a real chat-ish opening.
         let ids = [151644, 8948, 198, 40, 1079]
         let step2 = 25
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         let m = try Qwen4ExpModel(index: index, poolSlots: 2048)
         try m.validate()
         let state = m.makeState()

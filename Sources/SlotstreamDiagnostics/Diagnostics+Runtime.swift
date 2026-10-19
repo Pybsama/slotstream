@@ -31,6 +31,11 @@ extension Diagnostics {
             from: JSONSerialization.data(withJSONObject: oldStats))
         c.expect("statistics predating the lifetime footprint field still decode",
             oldDecoded.lifetimePhysicalFootprintPeakBytes == nil && oldDecoded.peakMemoryGB == memoryStats.peakMemoryGB)
+        oldStats.removeValue(forKey: "mirrorBytes")
+        let preMirror = try JSONDecoder().decode(GenStats.self,
+            from: JSONSerialization.data(withJSONObject: oldStats))
+        c.expect("statistics predating mirrors still decode",
+            preMirror.mirrorBytes == nil && preMirror.peakMemoryGB == memoryStats.peakMemoryGB)
         var disk = PersistentPrefixObservation()
         disk.saveOutcome = "saved"; disk.savedTokens = 2_048; disk.saveBytes = 4_096; disk.reusedBytes = 1_024
         disk.sharedSaveOutcome = "saved"; disk.sharedSavedTokens = 768; disk.sharedSaveSeconds = 0.25

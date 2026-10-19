@@ -15,6 +15,7 @@ struct DecodeOverlapCheck: ParsableCommand {
     var tokens: Int = 24
 
     func run() throws {
+        try model.rejectMirrors()
         var failed = false
         for report in try Diagnostics.decodeOverlap(modelDir: model.modelURL, tokens: tokens) {
             for item in report.items {

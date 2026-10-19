@@ -33,13 +33,19 @@ raise SystemExit(int(os.environ.get('VERIFY_FIXTURE_EXIT', '0')))
 ''')
             path.chmod(0o755)
             self.paths[name] = path
+        (self.root/'Tools').mkdir()
+        (self.root/'Tools/checkpoint_mirror_cli.py').write_text('''import subprocess, sys
+assert len(sys.argv) == 3 and sys.argv[1] == '--binary'
+raise SystemExit(subprocess.run([sys.argv[2], 'mirror-cli-fixture']).returncode)
+''')
 
-    def run_check(self, changes=None, *, template=False, vision=False):
+    def run_check(self, changes=None, *, template=False, vision=False, mirror=False):
         # Extract the actual header, check function and one real call site.
         # Replace only the external preflight observation; full verify.sh,
         # its compiler/weight reads and its model battery are never launched.
         header = SCRIPT[SCRIPT.index('BIN='):SCRIPT.index('QPID=""')]
-        needle = ('check "vision tower dumps' if vision else
+        needle = ('check "mirror CLI forwarding' if mirror else
+                  'check "vision tower dumps' if vision else
                   'check "chat template ==' if template else 'check "layer parity (')
         lines = SCRIPT.splitlines()
         index = next(i for i, line in enumerate(lines) if line.lstrip().startswith(needle))
@@ -109,6 +115,26 @@ safety_before() {
         p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['legacy']), 'VERIFY_FIXTURE_PREFLIGHT_EXIT': '2'})
         self.assertEqual(p.returncode, 2)
         self.assertEqual(rows, [])
+
+    def test_complete_mirror_gate_uses_selected_binary_without_weights_free_flag(self):
+        p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['frozen'])}, mirror=True)
+        self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
+        self.assertEqual(rows, [{'binary': str(self.paths['frozen']), 'arguments': ['mirror-cli-fixture']}])
+        self.assertEqual(self.safety.read_text(), '13\n')
+
+    def test_mirror_gate_preserves_failure(self):
+        p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['frozen']),
+                                  'VERIFY_FIXTURE_EXIT': '23'}, mirror=True)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual(len(rows), 1)
+        self.assertIn('FAIL  mirror CLI forwarding', p.stdout)
+
+    def test_mirror_gate_requires_model_memory_preflight(self):
+        p, rows = self.run_check({'SLOTSTREAM_TEST_BINARY': str(self.paths['frozen']),
+                                  'VERIFY_FIXTURE_PREFLIGHT_EXIT': '2'}, mirror=True)
+        self.assertNotEqual(p.returncode, 0)
+        self.assertEqual(rows, [])
+        self.assertEqual(self.safety.read_text(), '13\n')
 
 
 class VerifyContextStatus(unittest.TestCase):

@@ -43,7 +43,7 @@ set -eu
 BIN=${BIN:-.build/release/slotstream}
 "$BIN" doctor --json
 ''')
-        for path in ['Tools/static_gates_binary_test.py', 'Tools/coverage_ratchet_test.py',
+        for path in ['Tools/static_gates_binary_test.py', 'Tools/checkpoint_mirror_cli_test.py', 'Tools/coverage_ratchet_test.py',
                      'Tools/process_cleanup_checks.py', 'Tools/context_qualification_checks.py',
                      'Tools/installer_gates_binary_test.py',
                      'Tools/verify_binary_test.py',
@@ -58,10 +58,13 @@ BIN=${BIN:-.build/release/slotstream}
         self.write('Tools/api_generation_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_API_GENERATION') == '1' else 0)\n")
         self.write('Tools/consumer_smoke_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_CONSUMER') == '1' else 0)\n")
         self.write('Tools/process_memory_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_NATIVE_MEMORY') == '1' else 0)\n")
+        self.write('Tools/checkpoint_mirror_thread_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MIRROR_THREAD') == '1' else 0)\n")
         self.write('Tools/launch_request_deadline_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_LAUNCH_DEADLINE') == '1' else 0)\n")
         self.write('Tools/safetensors_empty_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_EMPTY_TENSORS') == '1' else 0)\n")
         self.write('Tools/pull_interrupt_gate.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PULL_INTERRUPT') == '1' else 0)\n")
         self.write('Tools/memory_override_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MEMORY_OVERRIDES') == '1' else 0)\n")
+        self.write('Tools/checkpoint_mirror_cli.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN'], '--weights-free']\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_MIRROR_OPTIONS') == '1' else 0)\n")
+        self.write('Tools/vision_mirror_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_VISION_MIRROR') == '1' else 0)\n")
         self.write('Tools/mtp_process_guard_gate.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN']]\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_DRAFT_LOCK') == '1' else 0)\n")
         self.write('Tools/slotpack/cli_checks.py', "import os,sys\nassert sys.argv[1:] == ['--binary', os.environ['BIN'], '--selection-only', '--receipt', '.build/model-pack-selection.json']\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PACK_SELECTION') == '1' else 0)\n")
         for suite in OPTIMIZATION_SUITES:
@@ -138,8 +141,35 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(rows, [])
 
+    def test_failed_mirror_option_gate_stops_acceptance(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_MIRROR_OPTIONS': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
+    def test_missing_mirror_option_gate_stops_acceptance(self):
+        (self.root/'Tools/checkpoint_mirror_cli.py').unlink()
+        result, rows = self.run_entry({})
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
+    def test_failed_vision_mirror_read_gate_stops_acceptance(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_VISION_MIRROR': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
+    def test_missing_vision_mirror_read_gate_stops_acceptance(self):
+        (self.root/'Tools/vision_mirror_gate.py').unlink()
+        result, rows = self.run_entry({})
+        self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(rows, [])
+
     def test_failed_native_memory_regression_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_NATIVE_MEMORY': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
+
+    def test_failed_mirror_thread_regression_stops_acceptance(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_MIRROR_THREAD': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
         self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
 

@@ -1,22 +1,22 @@
 ---
 type: index
 scope: root
-updated: 2026-10-16T21:28:28.545818Z
+updated: 2026-10-18T10:19:17.861150921Z
 ---
 
 # Knowledge base index
 
-## Sources (935)
+## Sources (936)
 - [[sources/community/index|Community]] (13) — measurement reports from other people's Macs, verbatim
 - [[sources/docs/index|Docs]] (2) — frozen snapshots of the documents the records were lifted from
 - [[sources/references/index|References]] (6) — vendor documentation and prior art cited by measurements and design
-- [[sources/runs/index|Runs]] (914) — raw tool output captured before a number was transcribed
+- [[sources/runs/index|Runs]] (915) — raw tool output captured before a number was transcribed
 
-## Records (496)
+## Records (498)
 - [[records/analyses/index|Analyses]] (3)
 - [[records/claims/index|Claims]] (163) — every number on a public surface, with the measurement that supports it and the gate that guards it
 - [[records/decisions/index|Decisions]] (65) — what was decided, on which evidence, and what would reverse it
 - [[records/design/index|Design]] (31) — PLAN.md's design sections: goal, ground truth, byte math, architecture, correctness strategy, references
-- [[records/machines/index|Machines]] (13) — the machines measurements ran on
-- [[records/measurements/index|Measurements]] (192) — every MEASUREMENTS.md section as a record: what was measured, how, on which machine, and whether it still stands
+- [[records/machines/index|Machines]] (14) — the machines measurements ran on
+- [[records/measurements/index|Measurements]] (193) — every MEASUREMENTS.md section as a record: what was measured, how, on which machine, and whether it still stands
 - [[records/plan/index|Plan]] (29) — PLAN.md's operating sections: status tracker, milestones, the ordered queue, risks, done criteria, open questions

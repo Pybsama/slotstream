@@ -396,7 +396,11 @@ public final class Engine {
     }
 
     public convenience init(modelDir: URL, plan: MemoryPlan) async throws {
-        try await self.init(modelDir: modelDir, poolSlots: plan.slots, plan: plan)
+        try await self.init(modelDir: modelDir, mirrors: [], plan: plan)
+    }
+
+    public convenience init(modelDir: URL, mirrors: [URL], plan: MemoryPlan) async throws {
+        try await self.init(modelDir: modelDir, mirrors: mirrors, poolSlots: plan.slots, plan: plan)
     }
 
     /// Load a compiled maintained deployment with its own complete memory
@@ -404,20 +408,31 @@ public final class Engine {
     /// does not apply product tuning or confer a measured performance profile;
     /// those remain explicit steps before publishing a healthy runtime.
     public convenience init(modelDir: URL, pack: ModelPack, plan: MemoryPlan) async throws {
+        try await self.init(modelDir: modelDir, mirrors: [], pack: pack, plan: plan)
+    }
+
+    public convenience init(modelDir: URL, mirrors: [URL], pack: ModelPack, plan: MemoryPlan) async throws {
         try pack.validateLoadPlan(plan)
         if pack.id == PinnedAffineStandalone.id {
+            guard mirrors.isEmpty else {
+                throw ModelError("authenticated affine packs cannot be combined with checkpoint mirrors")
+            }
             let bundle = try AffineStandalonePack(directory: modelDir,
                 manifestSHA256: PinnedAffineStandalone.manifestSHA256)
             try await self.init(modelDir: bundle.directory,
                 affineSource: AffineEngineSource(standalone: bundle,
                     decodeLookahead: plan.decodeLookahead, nativeArithmetic: true), plan: plan)
         } else {
-            try await self.init(modelDir: modelDir, plan: plan)
+            try await self.init(modelDir: modelDir, mirrors: mirrors, plan: plan)
         }
     }
 
     public convenience init(modelDir: URL, poolSlots: Int, plan: MemoryPlan? = nil) async throws {
-        try await self.init(modelDir: modelDir, poolSlots: poolSlots, plan: plan, affineSource: nil)
+        try await self.init(modelDir: modelDir, mirrors: [], poolSlots: poolSlots, plan: plan)
+    }
+
+    public convenience init(modelDir: URL, mirrors: [URL], poolSlots: Int, plan: MemoryPlan? = nil) async throws {
+        try await self.init(modelDir: modelDir, mirrors: mirrors, poolSlots: poolSlots, plan: plan, affineSource: nil)
     }
 
     package convenience init(modelDir: URL, affineSource: AffineEngineSource, plan: MemoryPlan) async throws {
@@ -436,7 +451,7 @@ public final class Engine {
             affineSource: nil, originalCandidateControl: true)
     }
 
-    private init(modelDir: URL, poolSlots: Int, plan: MemoryPlan?, affineSource: AffineEngineSource?,
+    private init(modelDir: URL, mirrors: [URL] = [], poolSlots: Int, plan: MemoryPlan?, affineSource: AffineEngineSource?,
                  originalCandidateControl: Bool = false) async throws {
         // A plan made for a simulated machine may be printed and compared,
         // never loaded. Simulating memory the machine does not have still
@@ -574,7 +589,7 @@ public final class Engine {
                     artifact: affineSource.artifact,
                     shouldContinue: { (try? initial.check(phase: "authenticated model loading")) != nil })
             }
-        } else { index = try CheckpointIndex(dir: modelDir) }
+        } else { index = try CheckpointIndex(dir: modelDir, mirrors: mirrors) }
         // Expert Lookahead: an explicitly requested pack is validated against
         // the checkpoint geometry before the model allocates anything. A plan
         // made without the reserve cannot load a prefetch-enabled engine. With
@@ -1029,7 +1044,8 @@ public final class Engine {
             }
             try request?.check(nextAllocationBytes: workspaceBytes, phase: "vision workspace admission")
             if let vt = visionTower { return vt }
-            let idx = try authenticatedVisionMetadata != nil ? model.pool.expertStore.index : CheckpointIndex(dir: modelDir)
+            // Share routing observations and byte accounting with text reads.
+            let idx = model.pool.expertStore.index
             guard VisionTower.present(index: idx) else {
                 throw SlotstreamError.vision(
                     "this checkpoint has no vision tower — it is a text-only model")

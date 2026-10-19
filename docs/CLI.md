@@ -278,6 +278,7 @@ With no sizing override, auto sizes the process to the machine (see
 | Flag | Meaning |
 |---|---|
 | `--model <name or dir>` | Model name (resolves to `~/.slotstream/models`, or a dev checkout's `models/`) or a directory path. |
+| `--mirror <dir>` | Byte-identical checkpoint copy on another disk. Repeatable; see [Mirrored checkpoints](#mirrored-checkpoints). |
 | `--memory-limit-gb <gb>` | Adaptive total process ceiling, in decimal GB. Can exceed the default model ceiling. The cache shrinks when other apps need memory and can grow back when it is available, within the saved limit and the Mac's supported budget. Cannot be combined with the fixed memory/cache options below. |
 | `--memory-gb <gb>` | Total process memory budget, in decimal GB. The cache gets what remains after runtime, context, workspace and a nominal 1 GB margin. Near the minimum cache size, the plan can use part of that margin; `doctor` shows the actual planned headroom. Minimum 8.1 for the 32,768-token window; larger windows raise the minimum. This is a planning allowance, not an instruction to fill RAM. Conversation state and workspace use memory as needed, so measured usage can be lower. Auto picks the context window inside this target and preserves cache whose loss it cannot price; `--max-context N` chooses the context tradeoff explicitly. |
 | `--experts-per-layer <n>` | Expert cache size directly, 1…512. Each of the 48 layers has 512 experts of 2.76 MB and the cache holds `n × 48` of them, so the pool is `n × 0.133 GB`: 30/layer is 4 GB, 181 is 24 GB, 226 is 30 GB. The pool is one global cache; hot layers borrow slots from cold ones. |
@@ -321,6 +322,39 @@ Saved statistics retain `peakMemoryGB` as the maximum of lifetime footprint,
 lifetime RSS and current footprint; `lifetimePhysicalFootprintPeakBytes` exposes
 the native footprint peak separately. Sampling remains useful for attributing
 memory to a particular request and can miss allocations between samples.
+
+## Mirrored checkpoints
+
+`--mirror` spreads streamed expert/embedding reads and vision-weight loading
+across identical checkpoint copies on different disks. Other resident trunk
+and draft weights still load from the primary.
+Each read chooses the copy estimated to finish first from its recent throughput
+and queued bytes. An unmeasured idle copy receives a probe; while all copies
+are being probed, reads are balanced by pending bytes. Once a copy has a
+measurement, pending probes wait for completion before attracting more work.
+The run report shows the bytes served by each copy.
+
+Verify every copy, including the primary, before using mirrors:
+
+```bash
+slotstream pull --verify --dir /Volumes/external/model
+slotstream pull --verify --dir /Volumes/internal/model
+slotstream run --model /Volumes/external/model --mirror /Volumes/internal/model --prompt "Hello"
+```
+
+Startup checks shard sizes and safetensors headers, not tensor payload hashes.
+Repeat `--mirror` for additional copies. The original pack supports mirrors with
+or without explicit `--quantization`; packed expert layouts and authenticated
+affine packs reject mirrors. Commands that load weights directly, including
+`prefix-exact-check` (with or without `--plan`), `vision-parity`, `parity`,
+`dequant-golden`, and `mtp-fixture-inputs`, pass mirrors to
+the checkpoint loader. `doctor`, `template-check`, `mtp-parity`, `ngram-golden`,
+`optimization-state-check`, `decode-overlap-check`, and `draft-stream-check`
+do not support mirror routing and reject `--mirror` explicitly.
+`vision-parity` records actual per-replica vision payload bytes in its
+`manifest.json` as `mirror_bytes` when mirrors are configured.
+
+See the [controlled disk comparison and full validation record](../db/records/measurements/mirrored-checkpoint-review-2026-10-18.md) for measured benefits, tested hardware, output and memory checks, and raw evidence.
 
 ## Optimization defaults
 
