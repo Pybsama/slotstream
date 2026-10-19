@@ -6285,6 +6285,36 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## 0.2.30 - 2026-10-19
+
+- Add repeatable, optional `--mirror <dir>` to distribute text and vision
+  checkpoint reads across identical copies on different disks, with per-copy
+  byte reporting. The default still uses one copy, and existing Swift
+  initializers remain compatible. Verify every copy before use; packed expert
+  layouts and authenticated affine packs reject mirrors. By
+  [@spikezz](https://github.com/spikezz) in
+  [#57](https://github.com/carloslfu/slotstream/pull/57).
+- Fix concurrent access to the mirror replica count and add a ThreadSanitizer
+  regression check.
+- The AI SDK gateway rejects malformed tool settings, definitions, arguments
+  and results instead of silently defaulting or dropping them. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#56](https://github.com/carloslfu/slotstream/pull/56).
+- Give adaptive-memory acceptance tests bounded startup and completion
+  deadlines with reliable server cleanup. By
+  [@spikezz](https://github.com/spikezz) in
+  [#58](https://github.com/carloslfu/slotstream/pull/58).
+- Rename the development Mac app to Slotstream while preserving existing
+  Homes, preferences, backups and saved mini-app compatibility. Repair Xcode
+  app/engine naming conflicts and invalidate stale native build objects when
+  their inputs change.
+- The development app gains exact bounded CSV/TSV analysis, permitted history
+  and memory search, direct file references, shared grouped and page citations,
+  raw JSON copying, and bounded tool-schema correction. These changes are
+  available in source; this release does not include a Desktop installer.
+- Add diagnostic tools for context-boundary behavior and ready-expert overlap.
+  These experiments do not establish a default performance improvement.
+
 ## 0.2.29 - 2026-10-13
 
 - Remove GPU keepalive completely after base-M5 MacBook Air and M1 Max Mac Studio
@@ -6308,10 +6338,6 @@ determines which version the installer downloads.
   drafts. Destination checks, explicit active-work/Incognito handling and fresh
   session state preserve the separation between Homes. Restored backups use the
   same switcher. This remains a development app, not a public Desktop release.
-
-- Add repeatable `--mirror <dir>` to route checkpoint reads across identical
-  copies on different disks, with per-copy byte reporting. Verify every copy
-  before use; packed expert layouts and authenticated affine packs reject mirrors.
 
 ## 0.2.28 - 2026-10-07
 
