@@ -27,7 +27,7 @@ package final class EmbeddingRows {
             guard let ref = index.tensors[name] else { throw ModelError("missing embedding tensor \(name)") }
             return ref
         }
-        guard cfg.qBits == 4, cfg.qGroup == 64, cfg.hiddenSize == 2560,
+        guard cfg.qBits == 4, cfg.qGroup == 64, cfg.hiddenSize == (cfg.isFast ? 2048 : 2560),
               refs[0].shape == [cfg.vocabSize, cfg.hiddenSize / 8], refs[0].dtype == "U32",
               refs[1].shape == [cfg.vocabSize, cfg.hiddenSize / cfg.qGroup], refs[1].dtype == "BF16",
               refs[2].shape == refs[1].shape, refs[2].dtype == "BF16" else {

@@ -1,0 +1,43 @@
+import Foundation
+
+/// Pinned acceleration component. Stored separately from target shards so the
+/// target loader cannot accidentally interpret draft tensors as target weights.
+public enum DFlashDeployment {
+    public static let revision = "51ef7b6923ad6c14cb1bb41c37a9041446496ab6"
+    public static let files: [PinnedModel.File] = [
+        .init(path: "LICENSE", size: 11343, sha256: "50cbab8a892c5f2993b8c7351a99182507472def3b1374558308605d99b86b32"),
+        .init(path: "README.md", size: 5173, sha256: "d42aa1b008d20479a6fd3d5df2846d304d5c18a96e8191427bb819d3d30f3b2a"),
+        .init(path: "config.json", size: 1291, sha256: "86d2e8e57e7c70bb867240708d00c0535ae9ed3c828dbdcb21584471c7bbce59"),
+        .init(path: "model.safetensors", size: 1052513456, sha256: "d1f16c0ff85afbe6166fabfae998af3ec16fa11da87da4391b5e0e0a7c796a4d"),
+    ]
+    static let deployment = try! WeightDeployment(repository: "incoai/Qwen3.6-35B-A3B-DFlash2", revision: revision,
+        files: files, rawBases: ["https://huggingface.co/incoai/Qwen3.6-35B-A3B-DFlash2/resolve/" + revision])
+    public static func directory(for target: URL) -> URL { target.appendingPathComponent("dflash", isDirectory: true) }
+    public static func store(for target: URL) -> WeightStore {
+        WeightStore(modelDirectory: directory(for: target), deployment: deployment)
+    }
+}
+
+public extension ModelPack {
+    var usesDFlash: Bool { id == PinnedFastModel.name }
+    var installationBytes: Int64 { totalBytes + (usesDFlash ? DFlashDeployment.deployment.totalBytes : 0) }
+    func installationStores(at directory: URL) -> [WeightStore] {
+        [WeightStore(modelDirectory: directory, pack: self)] + (usesDFlash ? [DFlashDeployment.store(for: directory)] : [])
+    }
+    func installationFiles(at directory: URL) -> [URL] {
+        files.map { directory.appendingPathComponent($0.path) } + (usesDFlash
+            ? DFlashDeployment.files.map { DFlashDeployment.directory(for: directory).appendingPathComponent($0.path) } : [])
+    }
+    func installationStatus(at directory: URL, shouldContinue: @escaping () -> Bool = { true }) throws -> WeightStatus {
+        let states = try installationStores(at: directory).map { try $0.status(shouldContinue: shouldContinue) }
+        if states.allSatisfy({ $0.isReady }) { return .ready }
+        let remaining = states.reduce(Int64(0)) { $0 + $1.bytesToFetch }
+        let free = WeightStore.freeDiskBytes(near: directory)
+        let corrupt = states.enumerated().flatMap { index, status -> [String] in
+            if case .corrupt(let paths, _, _) = status { return paths.map { (index == 0 ? "" : "dflash/") + $0 } }
+            return []
+        }
+        if !corrupt.isEmpty { return .corrupt(paths: corrupt, repairBytes: remaining, freeDiskBytes: free) }
+        return .incomplete(remainingBytes: remaining, freeDiskBytes: free)
+    }
+}

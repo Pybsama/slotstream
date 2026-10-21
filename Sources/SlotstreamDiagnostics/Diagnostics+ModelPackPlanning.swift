@@ -4,6 +4,19 @@ import Slotstream
 extension Diagnostics {
     public static func modelPackPlanning() throws -> CheckReport {
         var c = CheckBuilder("model-pack-planning")
+        c.equal("Fast alias", try ModelPackRegistry.resolve(.pack("fast")).pack.id, PinnedFastModel.name)
+        c.equal("Smart alias", try ModelPackRegistry.resolve(.pack("smart")).pack.id, PinnedModel.name)
+        let fast = ModelPackRegistry.fast
+        c.expect("required draft is in the complete installation", fast.installationBytes > fast.totalBytes
+            && fast.installationFiles(at: URL(fileURLWithPath: "/fixture")).contains { $0.path.hasSuffix("dflash/model.safetensors") })
+        for ram in [16.0, 24, 32, 48, 64] {
+            let machine = Machine.simulated(ramGB: ram, availableGB: ram - 4)
+            let plan = try fast.startupPlan(on: machine)
+            try Planner.validateMemoryBudget(plan, availableGB: machine.availableGB)
+            c.expect("Fast bounded hardware proposal/\(ram)", plan.simulated && plan.slots <= 40 * 256
+                && plan.expectedPeakGB <= (plan.targetGB ?? 0) && !plan.mtpEnabled && !plan.visionEnabled)
+            c.expect("Fast keeps unknown speed evidence/\(ram)", !plan.resources.usesBaselineSpeedEvidence)
+        }
         let pack = ModelPackRegistry.baseline
         let request = PlanRequest(mtp: .auto, vision: .off, maxContextTokens: 32768)
         func bytes(_ plan: MemoryPlan) throws -> Data {

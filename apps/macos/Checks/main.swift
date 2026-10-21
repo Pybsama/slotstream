@@ -38,6 +38,8 @@ Task {
         if CommandLine.arguments.contains("--response-details") { try await responseDetailsChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--sources") { try await sourceNavigationChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--basics") { try await basicsChecks(root: root, dbmd: dbmd); return }
+        try literalStorageChecks(root: root, dbmd: dbmd)
+        if CommandLine.arguments.contains("--literal-storage") { return }
         let folder = root.appendingPathComponent("sources")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try Data("The launch date is October 12. The budget is 400 dollars.\n".utf8).write(to: folder.appendingPathComponent("notes.md"))

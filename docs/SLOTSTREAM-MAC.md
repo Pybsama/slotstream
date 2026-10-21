@@ -5,6 +5,17 @@ on the Slotstream engine.
 The development app lives under `apps/macos`. This is ongoing implementation,
 not an announced alpha or a supported installer.
 
+## Choose Fast or Smart
+
+Use the **Fast / Smart** selector beside the composer, or choose **Model** in
+Settings. Fast is the default for a new installation. Smart uses the larger
+model for work that needs more reasoning. Existing saved choices are preserved.
+Switching keeps the conversation, attachments, memory and review requirements.
+The app loads one model at a time and asks you to finish setup if the selected
+model is missing. A running task finishes before a saved setting is applied.
+
+See [models](MODELS.md) for the underlying models, engine aliases and limitations.
+
 ## What works in the development app
 
 | Task | Current workflow and limits |
@@ -101,8 +112,7 @@ Home. This override does not replace the remembered startup Home:
 SLOTSTREAM_HOME="$HOME/Slotstream/DevelopmentHome" .build/Slotstream.app/Contents/MacOS/Slotstream
 ```
 
-The current integration verifies and uses the existing Slotstream model
-location. Settings can check that installation or explicitly download, resume
+The app verifies and uses a separate managed location for each selected model. Settings can check that installation or explicitly download, resume
 or repair its pinned files. Opening Slotstream starts no download. Fresh-download
 and cancellation qualification remain separate from the installed-model test. No model is loaded merely to inspect history or edit a draft. Before
 running real inference, follow the repository's memory-safety rules and stop

@@ -516,7 +516,7 @@ public final class HomeStore {
         // A restart can find the exact next body already written by dbmd but
         // no completion receipt. It may finish this intent, never overwrite a
         // different external revision with the cached predecessor.
-        let alreadyWritten = try current != intent.previousHash && fm.fileExists(atPath: record.path) && body(record) == text
+        let alreadyWritten = try current != intent.previousHash && fm.fileExists(atPath: record.path) && Self.matchesStoredJSON(try body(record), text)
         guard current == intent.previousHash || alreadyWritten else {
             throw AppRuntimeError.conflict("An interrupted save conflicts with external edits. Recovery preserved both versions.")
         }
@@ -529,7 +529,7 @@ public final class HomeStore {
                 let previous = intent.replaced?[document.path] ?? intent.previousDocuments?[document.path]
                 if !document.immutable, let previous, digestBytes(try Data(contentsOf: url)) == previous {
                     try writeDocument(document, existing: true)
-                } else if try body(url) != document.body {
+                } else if try !Self.matchesStoredJSON(body(url), document.body) {
                     throw AppRuntimeError.conflict("Recovery found a different document at \(document.path). Both versions are preserved.")
                 }
                 // Otherwise an interrupted attempt already wrote this body.
@@ -579,7 +579,7 @@ public final class HomeStore {
             // dbmd reads this scratch body and it is deleted right after, so
             // it needs no flush of its own.
             let temp = root.appendingPathComponent(".sevra/record-body")
-            try durable(Data(text.utf8), at: temp, .none)
+            try durable(Data(Self.literalJSON(text).utf8), at: temp, .none)
             defer { try? fm.removeItem(at: temp) }
             if current == nil {
                 _ = try command(["write", "records/state/home.md", "--dir", root.appendingPathComponent("db").path, "--type", "sevra-home", "--summary", "Slotstream Home state and conversation history", "--fm", "meta-type=operational", "--body-file", temp.path, "--json"])
@@ -611,10 +611,39 @@ public final class HomeStore {
             }
         }
     }
+    /// JSON is record data, not Markdown links. Keep its decoded values exact
+    /// while preventing literal brackets from being interpreted by db.md.
+    /// Prose documents retain their normal link validation.
+    private static func literalJSON(_ text: String) -> String {
+        guard (try? JSONSerialization.jsonObject(with: Data(text.utf8), options: [.fragmentsAllowed])) != nil else { return text }
+        let bytes = Array(text.utf8)
+        var result = [UInt8](), quoted = false, escaped = false
+        result.reserveCapacity(bytes.count)
+        for (i, byte) in bytes.enumerated() {
+            if quoted {
+                if escaped { result.append(byte); escaped = false }
+                else if byte == 92 { result.append(byte); escaped = true }
+                else if byte == 34 { result.append(byte); quoted = false }
+                else if byte == 91 { result.append(contentsOf: "\\u005b".utf8) }
+                else { result.append(byte) }
+            } else {
+                result.append(byte)
+                if byte == 34 { quoted = true }
+                // JSON permits whitespace between nested array delimiters.
+                if byte == 91, i + 1 < bytes.count, bytes[i + 1] == 91 { result.append(32) }
+            }
+        }
+        return String(decoding: result, as: UTF8.self)
+    }
+    private static func matchesStoredJSON(_ actual: String, _ intended: String) -> Bool {
+        // Old interrupted saves and already-written immutable records retain
+        // their original bytes. Accept only that exact body or its literal form.
+        actual == intended || actual == literalJSON(intended)
+    }
     private func writeDocument(_ doc: Document, existing: Bool) throws {
         // A scratch body for dbmd, deleted right after; no flush needed.
         let temp = root.appendingPathComponent(".sevra/document-body")
-        try durable(Data(doc.body.utf8), at: temp, .none)
+        try durable(Data(Self.literalJSON(doc.body).utf8), at: temp, .none)
         defer { try? fm.removeItem(at: temp) }
         let url = root.appendingPathComponent("db/" + doc.path)
         if existing { _ = try command(["body", "set", url.path, "--body-file", temp.path, "--json"]) }

@@ -87,7 +87,7 @@ public final class Qwen4ExpModel {
     /// Request entry calls this before a cached MTP draft can advance. Direct
     /// model callers also prepare before touching main recurrent state.
     public var compiledNormFinishes: Int {
-        (attnHC + mlpHC + [mixer]).reduce(0) { $0 + $1.compiledFinishes }
+        (attnHC + mlpHC + [mixer].compactMap { $0 }).reduce(0) { $0 + $1.compiledFinishes }
     }
     public var readHandleCount: Int { pool.readHandleCount + ngram.readHandleCount }
     public var selectedAttentionTiles: Int {
@@ -126,7 +126,7 @@ public final class Qwen4ExpModel {
         ngram.directReadHandles = optimizations.directReadHandles
         let compiledNorm = optimizations.compiledNormFinish && CompiledArithmetic.prepare()
         if compiledNorm != compiledNormConfigured {
-            for unit in attnHC + mlpHC + [mixer] { unit.compiledNormFinish = compiledNorm }
+            for unit in attnHC + mlpHC + [mixer].compactMap { $0 } { unit.compiledNormFinish = compiledNorm }
             compiledNormConfigured = compiledNorm
         }
         mtpHead?.attnHC.compiledNormFinish = compiledNorm
@@ -167,11 +167,37 @@ public final class Qwen4ExpModel {
     var attnHC: [GatedResidual] = []
     var mlpHC: [GatedResidual] = []
     var ple: [Int: PLELayer] = [:]
-    let mixer: GatedResidual
+    let mixer: GatedResidual?
+    var fastAttention: [Int: FastAttention] = [:]
+    var fastInputNorm: [RMSNorm] = []
+    var fastMLPNorm: [RMSNorm] = []
+    var fastFinalNorm: RMSNorm?
     let lmHead: QLinear
     /// The optional MTP draft head for self-speculative decode; loaded from
     /// mtp.safetensors on demand (`enableMTP`), everything resident.
     public private(set) var mtpHead: MTPHead? = nil
+    package var dflash: DFlashDraft?
+    package var capturesDraftFeatures = false
+    package var draftFeatures: (end: Int, rows: MLXArray)?
+    private var capturedDraftLayers: [Int: MLXArray] = [:]
+    package func beginDraftCapture() {
+        draftFeatures = nil; capturedDraftLayers.removeAll()
+        capturesDraftFeatures = dflash != nil
+    }
+    package func endDraftCapture() {
+        capturesDraftFeatures = false; draftFeatures = nil; capturedDraftLayers.removeAll()
+    }
+    private func captureDraftLayer(_ layer: Int, hidden: MLXArray) {
+        guard capturesDraftFeatures, dflash?.targetLayers.contains(layer) == true else { return }
+        let value = cfg.isFast ? hidden : mean(hidden.reshaped([1, hidden.dim(1), cfg.hcCount, cfg.hiddenSize]), axis: 2)
+        capturedDraftLayers[layer] = value
+    }
+    private func finishDraftCapture(end: Int) {
+        guard capturesDraftFeatures, let dflash, capturedDraftLayers.count == dflash.targetLayers.count else { return }
+        let rows = concatenated(dflash.targetLayers.map { capturedDraftLayers[$0]! }, axis: -1)
+        eval(rows); draftFeatures = (end, rows)
+        capturedDraftLayers.removeAll()
+    }
     /// Diagnostic observer; called on the serialized model thread with router-rank IDs.
     public var routerObserver: ((Int, [Int32]) -> Void)? {
         didSet { rebuildRouterObserver() }
@@ -296,6 +322,10 @@ public final class Qwen4ExpModel {
             ? affineControlContextLimit : ContextPolicy.modelLimit
         let arithmetic: BlockArithmeticProfile = affineControlReferenceArithmetic ? .vqPR1788 : .deployed
         self.optimizations = try InferenceOptimizations.environment()
+        if index.config.isFast {
+            self.optimizations.automaticReadScope = false
+            self.optimizations.layerExpertWorkspace = false
+        }
         if affineControlReferenceArithmetic {
             // The independent PR1788 reference lets MLX select attention.
             // Forcing the newer fused kernel is a separate arithmetic profile;
@@ -343,18 +373,25 @@ public final class Qwen4ExpModel {
             if cfg.layerTypes[l] == "linear_attention" {
                 gdn[l] = GDNLayer(resident, layer: l, arithmetic: arithmetic)
             } else {
-                qsa[l] = QSAAttention(resident, layer: l, arithmetic: arithmetic)
+                if cfg.isFast { fastAttention[l] = FastAttention(resident, layer: l) }
+                else { qsa[l] = QSAAttention(resident, layer: l, arithmetic: arithmetic) }
             }
             moe[l] = MoELayer(resident, layer: l, pool: pool, arithmetic: arithmetic)
             moe[l]?.affineGroupedExperts = affineGroupedExperts
-            attnHC.append(GatedResidual(resident, base: base + ".attn_hyper_connection", useCombine: true, arithmetic: arithmetic))
-            mlpHC.append(GatedResidual(resident, base: base + ".mlp_hyper_connection", useCombine: true, arithmetic: arithmetic))
+            if cfg.isFast {
+                fastInputNorm.append(RMSNorm(weight: resident.tensor(base + ".input_layernorm.weight"), eps: cfg.rmsNormEps, groupSize: nil))
+                fastMLPNorm.append(RMSNorm(weight: resident.tensor(base + ".post_attention_layernorm.weight"), eps: cfg.rmsNormEps, groupSize: nil))
+            } else {
+                attnHC.append(GatedResidual(resident, base: base + ".attn_hyper_connection", useCombine: true, arithmetic: arithmetic))
+                mlpHC.append(GatedResidual(resident, base: base + ".mlp_hyper_connection", useCombine: true, arithmetic: arithmetic))
+            }
             if cfg.pleLayerIndices.contains(l) {
                 ple[l] = PLELayer(resident, layer: l, store: ngram, arithmetic: arithmetic)
             }
         }
-        if Self.debugDir != nil { attnHC[0].debugName = "hc0" }
-        mixer = GatedResidual(resident, base: "model.hyper_connection_mixer", useCombine: false, arithmetic: arithmetic)
+        if Self.debugDir != nil, !attnHC.isEmpty { attnHC[0].debugName = "hc0" }
+        mixer = cfg.isFast ? nil : GatedResidual(resident, base: "model.hyper_connection_mixer", useCombine: false, arithmetic: arithmetic)
+        if cfg.isFast { fastFinalNorm = RMSNorm(weight: resident.tensor("model.norm.weight"), eps: cfg.rmsNormEps, groupSize: nil) }
         lmHead = resident.linear("lm_head")
     }
 
@@ -373,7 +410,7 @@ public final class Qwen4ExpModel {
     /// `streamedExperts` loads the head without its routed experts, which
     /// then stream through a `PlannerCostModel.mtpStreamSlots` cache.
     public func enableMTP(modelDir: URL, streamedExperts: Bool) throws {
-        guard affineExpertArtifact == nil else {
+        guard !cfg.isFast, affineExpertArtifact == nil else {
             throw ModelError("this target requires independently authenticated draft admission; its expert recipe cannot configure the original head")
         }
         guard mtpHead == nil else { return }
@@ -475,7 +512,7 @@ public final class Qwen4ExpModel {
                 s.linear[l] = LinearCache()
             } else {
                 s.kv[l] = KVCache()
-                s.indexer[l] = IndexerCache(compactRaw: optimizations.compactIndexerRaw)
+                if !cfg.isFast { s.indexer[l] = IndexerCache(compactRaw: optimizations.compactIndexerRaw) }
             }
         }
         return s
@@ -565,7 +602,7 @@ public final class Qwen4ExpModel {
         guard maximumForwardTokens.map({ ids.count <= $0 }) ?? true else {
             throw ModelError("model forward exceeds this pack's admitted query-row bound")
         }
-        guard !(affineControlReferenceArithmetic || affineNativeArithmetic) || (state.tokenCount >= 0 && state.tokenCount <= inferenceContextLimit
+        guard !(cfg.isFast || affineControlReferenceArithmetic || affineNativeArithmetic) || (state.tokenCount >= 0 && state.tokenCount <= inferenceContextLimit
               && ids.count <= inferenceContextLimit - state.tokenCount) else {
             throw ModelError("model forward exceeds its admitted context or coefficient coverage")
         }
@@ -581,7 +618,8 @@ public final class Qwen4ExpModel {
               state.tokenCount >= 0, ids.count <= Int(Int32.max),
               state.tokenCount <= Int(Int32.max) - ids.count,
               state.linear.count == gdn.count,
-              state.kv.count == qsa.count, state.indexer.count == qsa.count,
+              state.kv.count == qsa.count + fastAttention.count, state.indexer.count == qsa.count,
+              fastAttention.keys.allSatisfy({ state.kv[$0]?.offset == state.tokenCount }),
               gdn.keys.allSatisfy({ state.linear[$0] != nil }),
               qsa.keys.allSatisfy({ state.kv[$0]?.offset == state.tokenCount
                   && state.indexer[$0]?.offset == state.tokenCount }) else {
@@ -600,6 +638,28 @@ public final class Qwen4ExpModel {
         state.recordedTokenIds = state.recordingEnabled ? ids : nil
         state.recordingBaseTokenCount = state.recordingEnabled ? state.tokenCount : nil
         state.committedBoundaryValid = false
+        capturedDraftLayers.removeAll()
+        if cfg.isFast {
+            guard vision.isEmpty else { throw ModelError("Fast currently accepts text and extracted image text, not image embeddings") }
+            var hidden = try resident.embedChecked(ids, shape: [1, ids.count]).asType(.bfloat16)
+            for layer in 0..<runLayers {
+                if shouldContinue?() == false { return nil }
+                let input = fastInputNorm[layer](hidden)
+                let attended = gdn[layer].map { $0(input, cache: state.linear[layer]) }
+                    ?? fastAttention[layer]!(input, rope: rope, cache: state.kv[layer]!)
+                hidden = hidden + attended
+                hidden = hidden + (try moe[layer]!(fastMLPNorm[layer](hidden)))
+                eval(hidden)
+                if optimizations.compactStateWindows { state.linear[layer]?.compactWindows() }
+                pool.unpinAll()
+                captureDraftLayer(layer, hidden: hidden)
+                perLayerHook?(layer, hidden)
+            }
+            state.tokenCount += ids.count
+            finishDraftCapture(end: state.tokenCount)
+            state.committedBoundaryValid = true
+            return hidden
+        }
         let S = ids.count
         let referenceRows: Int
         if alignSmallReferenceDispatch, smallPrefillSweep, state.tokenCount >= smallPrefillReferenceStart,
@@ -613,7 +673,7 @@ public final class Qwen4ExpModel {
         // Public full-output APIs, MTP and truncated diagnostic models retain
         // all rows. The pinned final layer is QSA; no recurrent update is
         // inferred from a configuration label or omitted for another family.
-        let terminalPruning = optimizations.terminalPrefillPruning && mtpHead == nil
+        let terminalPruning = !capturesDraftFeatures && optimizations.terminalPrefillPruning && mtpHead == nil
             && runLayers == cfg.numLayers && qsa[runLayers - 1] != nil
             && perLayerHook == nil && demand != .fullMulti
         let terminalLastQuery = terminalPruning && optimizations.terminalLastQuery && demand == .lastRow
@@ -945,10 +1005,12 @@ public final class Qwen4ExpModel {
                 state.linear[l]?.compactWindows()
             }
             MemTrace.mark("layer-end", h)
+            captureDraftLayer(l, hidden: h)
             perLayerHook?(l, h)
         }
         if shouldContinue?() == false { return nil }
         state.tokenCount += S
+        finishDraftCapture(end: state.tokenCount)
         state.committedBoundaryValid = true
         return h
     }
@@ -1117,10 +1179,11 @@ public final class Qwen4ExpModel {
                           executionOptions: InferenceOptimizations? = nil) -> MLXArray {
         let optimizations = executionOptions ?? self.optimizations
         let ranges = computeRanges ?? stride(from: 0, to: h.dim(1), by: 4096).map { $0 ..< min(h.dim(1), $0 + 4096) }
-        guard optimizations.layerExpertWorkspace, ranges.count > 1 else { return mixer(h).0 }
+        if let fastFinalNorm { return fastFinalNorm(h) }
+        guard optimizations.layerExpertWorkspace, ranges.count > 1 else { return mixer!(h).0 }
         var outputs: [MLXArray] = []
         for range in ranges {
-            let mixed = mixer(h[0..., range, 0...]).0
+            let mixed = mixer!(h[0..., range, 0...]).0
             eval(mixed); outputs.append(mixed)
         }
         return concatenated(outputs, axis: 1)

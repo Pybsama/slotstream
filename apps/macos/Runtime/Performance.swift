@@ -12,7 +12,7 @@ public struct PerformancePreferences: Codable, Equatable, Sendable {
     public var quantization: ModelPackSelection
     public var liveMemory: LiveMemoryManagement
     public init(budget: Budget = .automatic, customGB: Double = 10, readiness: Readiness = .automatic,
-                quantization: ModelPackSelection = .automatic, liveMemory: LiveMemoryManagement = .automatic) {
+                quantization: ModelPackSelection = .pack(PinnedFastModel.name), liveMemory: LiveMemoryManagement = .automatic) {
         self.budget = budget; self.customGB = customGB; self.readiness = readiness
         self.quantization = quantization; self.liveMemory = liveMemory
         self.hasCustomLimit = budget == .custom || customGB != 10

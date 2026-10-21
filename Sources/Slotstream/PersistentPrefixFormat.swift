@@ -240,7 +240,7 @@ package enum PersistentPrefixFile {
     package struct AttentionRecord: Codable, Equatable, Sendable {
         package var layer: Int
         package var kvOffset: Int
-        package var indexer: IndexerRecord
+        package var indexer: IndexerRecord?
     }
 
     package struct DraftRecord: Codable, Equatable, Sendable {

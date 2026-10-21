@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-19T18:00:11.316805Z
+updated: 2026-10-21T16:44:44.784813Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-21-fast-smart-integration]] — Native Fast/Smart integration checks, real workflow results, preserved quality failures, storage recovery and qualification limits.
+- [[sources/runs/2026/10/2026-10-21-fast-native-first]] — First native Fast and DFlash functional runs at a small explicit budget; timing is exploratory.
 - [[sources/runs/2026/10/2026-10-19-release-0-2-30-published-and-installed]] — v0.2.30 published and accepted from the exact CI archive
 - [[sources/runs/2026/10/2026-10-18-mirror-review-final]] — Final integrated mirror review acceptance and three-arm performance capture
 - [[sources/runs/2026/10/2026-10-14-sevra-capability-fixes]] — Native capability fixes pass deterministic and app checks; real-model replay refused before loading for insufficient headroom
@@ -505,10 +507,8 @@ updated: 2026-10-19T18:00:11.316805Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-qualification-drivers-preparation]] — Final source qualification drivers preserve original native, paired and long workloads
 - [[sources/runs/2026/09/2026-09-09-optimization-final-source-preparation-checks]] — Final composition source and original build lease preparation pass eight model-free checks
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-metadata-delivery-correction]] — Actual planner metadata collection corrects first-response observation failure
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-raw-delivery-correction]] — Raw planner benchmark refuses before model launch; exact request correction is frozen
-- [[sources/runs/2026/09/2026-09-09-optimization-final-component-control-and-vision-override-preparation]] — Final comparison controls preserve original workloads and draft explicit vision override compatibility
 
 ## More
 
-This folder has 916 files. The 500 most recent are listed above.
+This folder has 918 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

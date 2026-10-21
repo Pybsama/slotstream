@@ -143,12 +143,18 @@ public final class NgramStore {
         self.ringOrder = FIFOKeys(capacity: cacheCapacity)
         self.index = index
         self.cfg = index.config
-        self.pleLayerIndex = cfg.pleLayerIndices[0]
+        self.pleLayerIndex = cfg.pleLayerIndices.first ?? -1
         self.plePosition = 0
         self.nHeads = (cfg.ngramSize - 1) * cfg.headsPerNgram
         self.headDim = cfg.pleEmbedDim / nHeads
         self.eos = Int64(cfg.eosTokenId)
 
+        if cfg.isFast {
+            rowsPerShard = 0; wRowBytes = 0; sRowBytes = 0
+            rowReader = RowReader(index: index, rowsPerShard: 0, headDim: headDim, qGroup: cfg.ngramQGroup,
+                wRefs: [], sRefs: [], bRefs: [], wRowBytes: 0, sRowBytes: 0)
+            return
+        }
         let base = "model.layers.\(pleLayerIndex).ple.ple_embedding."
         if resident.has(base + "layer_multipliers") {
             multipliers = resident.tensor(base + "layer_multipliers").asArray(Int64.self)

@@ -51,6 +51,15 @@ public struct ModelPackStartupDefaults: Sendable {
 
     /// Existing Desktop choices, moved without enlarging any budget or
     /// claiming new qualification. The total ceiling already includes MTP.
+    // Use the existing hardware/headroom ceiling so the smaller model can
+    // become fully resident when it fits; expert slots still stop at its size.
+    package static let fast = Self(id: "qwen36-fast-startup-v1",
+        automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
+        draftMode: .off, draftPlacement: .automatic, draftDepth: 0,
+        lookahead: .off, prefixCacheEnabled: true,
+        shortPromptTokens: 1536, shortPromptChunk: 512,
+        reference: "db/records/decisions/fast-and-smart.md")
+
     package static let original = Self(id: "original-desktop-startup-v2",
         automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
         draftMode: .auto, draftPlacement: .automatic, draftDepth: 2,

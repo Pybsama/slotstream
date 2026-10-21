@@ -118,8 +118,8 @@ implementation the Swift port is checked against layer by layer, the numpy
 sampler oracle, the trace simulators and benchmark drivers, the model-free
 gates and the release checks. The [testing guide](TESTING.md) lists them.
 
-The stack is native on purpose. The engine exists for one model on one kind
-of hardware, and each layer is tuned for the layer below it: expert records
+The stack is native on purpose. The engine supports a small maintained set
+of models on Apple Silicon, and each layer is tuned for the layer below it: expert records
 are read from the SSD into the slots the GPU computes from, process memory is
 accounted from real CPU and GPU allocations, and the governor resizes the
 cache under memory pressure. The same design ships as one binary, installs

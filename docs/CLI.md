@@ -62,8 +62,10 @@ ID shown in the list. Omitting the option preserves existing custom-model
 behavior. Pack choice, the memory ceiling and runtime cache resizing remain
 independent controls. See [memory options](#memory-options).
 
-Original 4-bit is currently the only supported pack. Research formats do not
-appear as supported choices. The list explains the recommendation and reports
+Fast and Smart are the supported choices. Use `--model fast` or `--model smart`
+on `run`, `serve` and `doctor`, and `slotstream pull fast` or `slotstream pull smart`
+to install them. Existing commands without a model keep their Smart behavior.
+Research formats do not appear as supported choices. See [models](MODELS.md). The list explains the recommendation and reports
 available evidence; it does not certify a speed for your current configuration.
 
 ### `slotstream run`
@@ -192,7 +194,9 @@ are stored once and reported as one total.
 
 Download losslessly compressed model weights from Hugging Face, reconstructing
 the original files with resumable transfers and hash verification.
-The only model name is `qwen3.8-flash-next:4bit`, which is also the default.
+The default remains `qwen3.8-flash-next:4bit` (Smart). Development builds also
+accept `fast` and `smart`; `pull fast` installs and verifies the target and its
+required DFlash component together. See [Fast and Smart](MODELS.md).
 
 | Flag | Meaning |
 |---|---|

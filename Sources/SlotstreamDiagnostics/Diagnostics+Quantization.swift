@@ -113,7 +113,7 @@ extension Diagnostics {
         c.equal("optional forecast declaration preserves the historical weight identity", automatic.pack.manifestDigest,
             "8e10fef2cfa5c6d8590494f5dbed440a7617a404fa17ce169cf55fb99b71e082")
         c.equal("registry preserves required download bytes", automatic.pack.requiredBytes, PinnedModel.requiredBytes)
-        c.expect("research packs cannot enter Auto", ModelPackRegistry.supported.count == 1)
+        c.expect("research packs cannot enter Auto", Set(ModelPackRegistry.supported.map(\.id)) == Set([PinnedModel.name, PinnedFastModel.name]))
         c.expect("supported baseline is not a new speed qualification", automatic.pack.qualifiedAutomaticProfiles.isEmpty)
         c.expect("selection modes have separate reasons", automatic.automatic && !pinned.automatic && automatic.reason != pinned.reason)
         for unknown in ["vq-2.1", "vq-3.2", "../model", "", "auto"] {

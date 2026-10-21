@@ -60,7 +60,7 @@ public struct ModelPackSetupOffer: Sendable {
     fileprivate init(_ decision: ModelPackDecision) {
         pack = decision.pack; automatic = decision.automatic
         evidence = decision.evidence; automaticProfileID = decision.automaticProfileID
-        if !decision.automatic { reason = "Setup for your selected quantization." }
+        if !decision.automatic { reason = "Setup for your selected model." }
         else if decision.evidence == .measured {
             reason = "Recommended from matching configuration tests. The files and actual configuration are checked before use."
         } else if decision.evidence == .estimated {

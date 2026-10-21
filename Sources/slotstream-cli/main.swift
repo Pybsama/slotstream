@@ -169,7 +169,15 @@ struct ModelOptions: ParsableArguments {
     /// choice owns all subsequent directory, verification and resource calls.
     var selectedPack: ModelPack? {
         get throws {
-            guard let quantization else { return nil }
+            guard let quantization else {
+                if originalModelName { return nil }
+                if let alias = ModelPackRegistry.alias(model) { return alias }
+                // An external SSD directory still needs Fast's own geometry.
+                if let config = try? ModelConfig.load(from: ModelLocator.resolve(model)), config.isFast {
+                    return ModelPackRegistry.fast
+                }
+                return nil
+            }
             return try ModelPackRegistry.resolve(quantization == "auto" ? .automatic : .pack(quantization)).pack
         }
     }
@@ -225,6 +233,7 @@ struct ModelOptions: ParsableArguments {
     /// Does this checkpoint carry a tower? Reads the shard headers only.
     func visionAvailable() throws -> Bool {
         let directory = try modelURL
+        if try resources == .fast { return false }
         guard let idx = try? CheckpointIndex(dir: directory) else { return false }
         return VisionTower.present(index: idx)
     }
@@ -326,7 +335,7 @@ struct ModelOptions: ParsableArguments {
         guard let pack = try selectedPack ?? (originalModelName ? ModelPackRegistry.baseline : nil) else {
             return !FileManager.default.fileExists(atPath: url.appendingPathComponent("config.json").path)
         }
-        return WeightStore(modelDirectory: url, pack: pack).remainingBytes() > 0
+        return pack.installationStores(at: url).contains { $0.remainingBytes() > 0 }
     }
 
     /// The announce, doctor and serving metadata share the same reservation
@@ -354,7 +363,7 @@ struct ModelOptions: ParsableArguments {
         let fm = FileManager.default
         let pack = try selectedPack ?? (originalModelName ? ModelPackRegistry.baseline : nil)
         if quantization != nil, !originalModelName, let pack {
-            guard WeightStore(modelDirectory: url, pack: pack).status().isReady else {
+            guard try pack.installationStatus(at: url).isReady else {
                 throw PlanError("this directory does not contain the selected verified pack; use slotstream pull with an explicit destination before selecting it")
             }
             return
@@ -368,13 +377,13 @@ struct ModelOptions: ParsableArguments {
         }
         // pinned model: every manifest file must be present whole (a partial
         // first download must resume here, not die later in the engine)
-        let store = WeightStore(modelDirectory: url, pack: pack)
-        var remaining = store.remainingBytes()
+        let stores = pack.installationStores(at: url)
+        var remaining = stores.reduce(Int64(0)) { $0 + $1.remainingBytes() }
         if remaining == 0 {
             // Size alone cannot distinguish a valid file from same-size
             // corruption. Hash before loading; this takes seconds and prevents
             // a damaged tokenizer/config/weight from reaching the engine.
-            let status = store.status()
+            let status = try pack.installationStatus(at: url)
             if status.isReady { return }
             remaining = status.bytesToFetch
             if case .corrupt(let paths, _, _) = status {
@@ -382,7 +391,7 @@ struct ModelOptions: ParsableArguments {
                     + paths.joined(separator: ", "))
             }
         }
-        let have = max(0, pack.requiredBytes - remaining)
+        let have = max(0, pack.installationBytes - remaining)
         // free disk where the weights will actually land
         var probe = url
         while !fm.fileExists(atPath: probe.path), probe.path != "/" {
@@ -392,7 +401,7 @@ struct ModelOptions: ParsableArguments {
             forPath: probe.path))?[.systemFreeSize] as? Int64 ?? 0
         print("""
             \(pack.id) is not \(have > 0 ? "fully " : "")downloaded yet.
-              size:  \(String(format: "%.1f", Double(pack.totalBytes) / 1e9)) GB in \(pack.files.count) files (resumable if interrupted)\(
+              size:  \(String(format: "%.1f", Double(pack.installationBytes) / 1e9)) GB in \(pack.files.count) files (resumable if interrupted)\(
                   have > 0 ? String(format: "\n  have:  %.1f GB already here — the download resumes", Double(have) / 1e9) : "")
               time:  measured during download; compressed transfer and reconstruction overlap
               to:    \(url.path)
@@ -402,7 +411,9 @@ struct ModelOptions: ParsableArguments {
         switch askYesNo("download now? [Y/n] ") {
         case .some(true):
             try withInterruptiblePull { cancellation in
-                try store.download(.init(transport: .automatic, cancellation: cancellation), log: { print($0); fflush(stdout) })
+                for store in stores {
+                    try store.download(.init(transport: .automatic, cancellation: cancellation), log: { print($0); fflush(stdout) })
+                }
                 // The same optional forecast sidecar `slotstream pull` fetches.
                 for file in pack.decodeForecastFiles {
                     TapCorrectionSidecar.ensure(modelDir: url, file: file, cancellation: cancellation, log: { print($0); fflush(stdout) })
@@ -610,7 +621,7 @@ struct Run: ParsableCommand {
                 }
                 if let error = stats.runtimeError { throw ModelError(error) }
                 let hs = String(format: "%.3f", stats.expertHitRate)
-                let perLayer = String(format: "~%.0f/%d experts per layer", plan.expertsPerLayerCached, Geometry.expertsPerLayer)
+                let perLayer = String(format: "~%.0f/%d experts per layer", plan.expertsPerLayerCached, engine.model.cfg.numExperts)
                 let memoryObservation: String
                 if let sample = stats.sampledFootprint {
                     memoryObservation = String(format: "sampled footprint peak %.3f GB", Double(sample.peakBytes) / 1e9)
@@ -637,9 +648,9 @@ struct Run: ParsableCommand {
                     """
 
                     -- prefill \(stats.prefillTokens) tok in \(String(format: "%.2f", stats.prefillSeconds))s (\(String(format: "%.1f", stats.prefillTPS)) tok/s)\(stats.prefixHit ? " | \(stats.reusedPrefixTokens) of \(stats.promptTokens) reused from the previous turn" : "")
-                    -- prefill split: io \(String(format: "%.2f", stats.prefillIOSeconds))s + scatter \(String(format: "%.2f", stats.prefillScatterSeconds))s | \(stats.prefillRecords) records (\(String(format: "%.1f", Double(stats.prefillRecords) * 2.7648e-3)) GB, \(String(format: "%.1f", Double(stats.prefillRecords) * 2.7648e-3 / max(stats.prefillIOSeconds, 1e-9))) GB/s)
+                    -- prefill split: io \(String(format: "%.2f", stats.prefillIOSeconds))s + scatter \(String(format: "%.2f", stats.prefillScatterSeconds))s | \(stats.prefillRecords) records (\(String(format: "%.1f", Double(stats.prefillReadBytes) / 1e9)) GB, \(String(format: "%.1f", Double(stats.prefillReadBytes) / 1e9 / max(stats.prefillIOSeconds, 1e-9))) GB/s)
                     -- decode \(stats.decodeTokens) tok in \(String(format: "%.2f", stats.decodeSeconds))s (\(String(format: "%.2f", stats.decodeTPS)) tok/s)
-                    \(RouterTrace.flush().map { $0 + "\n" } ?? "")\(MemTrace.on ? MemTrace.report() + "\n" : "")-- decode split: io \(String(format: "%.2f", stats.decodeIOSeconds))s + scatter \(String(format: "%.2f", stats.decodeScatterSeconds))s | \(stats.decodeRecords) records\(stats.verifyPasses > 0 ? String(format: " | mtp %d/%d drafts accepted (%.0f%%), %d verify passes", stats.acceptedDrafts, stats.draftedTokens, 100 * stats.draftAcceptRate, stats.verifyPasses) : "")
+                    \(RouterTrace.flush().map { $0 + "\n" } ?? "")\(MemTrace.on ? MemTrace.report() + "\n" : "")-- decode split: io \(String(format: "%.2f", stats.decodeIOSeconds))s + scatter \(String(format: "%.2f", stats.decodeScatterSeconds))s | \(stats.decodeRecords) records\(stats.verifyPasses > 0 ? String(format: " | %@ %d/%d drafts accepted (%.0f%%), %d verify passes", stats.speculativeMethod ?? "speculation", stats.acceptedDrafts, stats.draftedTokens, 100 * stats.draftAcceptRate, stats.verifyPasses) : "")
                     \(mirrorReport)-- expert cache \(perLayer), hit rate \(hs) | ngram rows \(stats.ngramRowHits)h/\(stats.ngramRowMisses)m | \(memoryObservation) | total \(String(format: "%.1f", -t0.timeIntervalSinceNow))s
 
                     """.data(using: .utf8)!)
@@ -995,10 +1006,10 @@ struct Doctor: ParsableCommand {
             return "weights: \(url.path) (not the pinned model — size unknown)"
         }
         let fm = FileManager.default
-        let remaining = WeightStore(modelDirectory: url, pack: pack).remainingBytes()
+        let remaining = pack.installationStores(at: url).reduce(Int64(0)) { $0 + $1.remainingBytes() }
         if remaining == 0 {
             let line = String(format: "weights: present by size, %.1f GB at %@ (run pull --verify for hashes)",
-                              Double(pack.totalBytes) / 1e9, url.path)
+                              Double(pack.installationBytes) / 1e9, url.path)
             if pack.id != ModelPackRegistry.baseline.id {
                 var lines = [line]
                 for file in pack.decodeForecastFiles {
@@ -1060,8 +1071,8 @@ struct Doctor: ParsableCommand {
                 + "(\(Geometry.totalRecords) records = 67.9 GB streamed from SSD)")
         } else if !quiet {
             print(String(format: "model:  %d layers x %d experts x %.2f MB (%d records = %.1f GB streamed from SSD)",
-                Geometry.layers, Geometry.expertsPerLayer, Double(resources.expertRecordBytes) / 1e6,
-                Geometry.totalRecords, resources.poolGB(Geometry.totalRecords)))
+                resources.layers, resources.expertsPerLayer, Double(resources.expertRecordBytes) / 1e6,
+                resources.totalRecords, resources.poolGB(resources.totalRecords)))
         }
         if !quiet, let pack { print("pack:   \(pack.title) (\(pack.id)); speed evidence requires a matching loaded configuration") }
         // Disk is the gate that bites before memory does, and the README sends
@@ -1224,7 +1235,7 @@ struct Doctor: ParsableCommand {
             let full = row.fullyResident
             let chunk = row.prefillChunk
             if !resources.usesBaselineSpeedEvidence {
-                print(String(format: "  %6.1f GB   %8.0f/512      uncalibrated      %5d   uncalibrated", t, e, chunk))
+                print(String(format: "  %6.1f GB   %8.0f/%d      uncalibrated      %5d   uncalibrated", t, e, resources.expertsPerLayer, chunk))
                 continue
             }
             let wait = PrefillSchedule.estSeconds(tokens: maxContext, maxChunk: chunk)

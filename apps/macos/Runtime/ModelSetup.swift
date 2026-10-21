@@ -23,7 +23,7 @@ public final class ModelSetup: @unchecked Sendable {
     private let selectionPreferences: PerformancePreferences?
     /// Disk bytes for a complete offered installation, including declared
     /// optional components. This is not the remaining network transfer size.
-    public var completeBytes: Int64 { pack.totalBytes + decodeForecastFiles.reduce(0) { $0 + Int64($1.size) } }
+    public var completeBytes: Int64 { pack.installationBytes + decodeForecastFiles.reduce(0) { $0 + Int64($1.size) } }
     private let decodeForecastFiles: [TapCorrectionSidecar.File]
     private let lock = NSLock()
     private var cancellation: PullCancellation?
@@ -42,7 +42,7 @@ public final class ModelSetup: @unchecked Sendable {
         store = WeightStore(modelDirectory: model, pack: pack)
         decodeForecastFiles = pack.decodeForecastFiles
         value = ModelSetupStatus(phase: "Not checked", detail: "Check the installed local model, or download its pinned files.",
-            requiredBytes: store.requiredBytes, freeBytes: WeightStore.freeDiskBytes(near: model), ready: false, busy: false)
+            requiredBytes: pack.installationBytes, freeBytes: WeightStore.freeDiskBytes(near: model), ready: false, busy: false)
     }
     /// Readiness and an unused saved custom limit do not change a setup.
     /// Legacy direct callers have no bound proposal and remain compatible.
@@ -62,17 +62,19 @@ public final class ModelSetup: @unchecked Sendable {
     }
     public func check() throws {
         let token = try begin("Checking local files")
-        do { finish(try store.status(shouldContinue: { !token.isCancelled })) }
+        do { finish(try pack.installationStatus(at: store.modelDirectory, shouldContinue: { !token.isCancelled })) }
         catch { let reason: Error = token.isCancelled ? AppRuntimeError.cancelled : error; pause(reason); throw reason }
     }
     public func download() throws {
         let token = try begin("Downloading local model")
         do {
-            try store.download(PullOptions(cancellation: token), log: { [weak self] line in
+            for component in pack.installationStores(at: store.modelDirectory) {
+            try component.download(PullOptions(cancellation: token), log: { [weak self] line in
                 // Raw transport logs stay out of product copy and persistent
                 // diagnostics. Surface a bounded phase only.
                 self?.set { $0.detail = line.localizedCaseInsensitiveContains("verif") ? "Verifying downloaded files" : "Downloading verified model files. Progress is saved so you can resume." }
             })
+            }
             // Only this deployment's explicitly qualified optional forecasts.
             // A failure does not fail setup; finish reports a missing forecast
             // only when the selected pack actually declares that capability.
@@ -80,7 +82,7 @@ public final class ModelSetup: @unchecked Sendable {
                 set { $0.detail = "Downloading the decode forecast file" }
                 TapCorrectionSidecar.ensure(modelDir: store.modelDirectory, file: file, cancellation: token, log: { _ in })
             }
-            finish(try store.status(shouldContinue: { !token.isCancelled }))
+            finish(try pack.installationStatus(at: store.modelDirectory, shouldContinue: { !token.isCancelled }))
         } catch {
             let reason: Error = token.isCancelled ? AppRuntimeError.cancelled : error
             pause(reason)

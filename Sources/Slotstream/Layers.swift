@@ -1387,7 +1387,8 @@ final class MoELayer {
         self.layer = layer
         self.pool = pool
         let b = "model.layers.\(layer).mlp"
-        routerProjection = RouterProjection(w.tensor(b + ".gate.weight"))
+        let router = w.linear(b + ".gate")
+        routerProjection = cfg.isFast ? RouterProjection(quantized: router) : RouterProjection(router.w)
         sharedGate = w.linear(b + ".shared_expert_gate")
         sharedGateProj = w.linear(b + ".shared_expert.gate_proj")
         sharedUpProj = w.linear(b + ".shared_expert.up_proj")

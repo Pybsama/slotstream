@@ -100,9 +100,10 @@ public final class Engine {
         if resources == .gsq224GroupedControl || resources == .gsq224GroupedVisionControl {
             return "2bit gate/up / original 4bit down, dense and PLE"
         }
-        return resources == .original || resources == .originalCandidateControl ? "4bit" : "3bit experts / original dense and PLE"
+        return resources == .fast || resources == .original || resources == .originalCandidateControl ? "4bit" : "3bit experts / original dense and PLE"
     }
     package var modelDigest: String {
+        if resources == .fast { return "sha256:" + ModelPackRegistry.fast.manifestDigest }
         guard let identity = model.authenticatedArtifactIdentity else {
             return "slotstream-qwen38-flash-next-4bit"
         }
@@ -110,6 +111,8 @@ public final class Engine {
         return "sha256:" + SHA256.hash(data: Data(deployed.utf8)).map { String(format: "%02x", $0) }.joined()
     }
     package func acceptsModelName(_ requested: String) -> Bool {
+        if resources == .fast { return [modelName, "fast", PinnedFastModel.directoryName].contains(requested) }
+        if requested == "smart", resources == .original { return true }
         if [modelName, "qwen3.8-flash-next", "qwen3.8-flash-next:latest"].contains(requested) { return true }
         return resources == .original && requested == "qwen38-flash-next-mlx-4bit"
     }
@@ -509,7 +512,8 @@ public final class Engine {
                 throw ModelError("standalone component metadata and tensor owners require the same directory")
             }
         }
-        let resources: PackMemoryProfile = originalCandidateControl ? .originalCandidateControl : (affineSource?.resources ?? .original)
+        let resources: PackMemoryProfile = originalCandidateControl ? .originalCandidateControl
+            : (affineSource?.resources ?? (plan?.resources == .fast ? .fast : .original))
         guard plan?.resources == resources || (plan == nil && affineSource == nil) else {
             throw SlotstreamError.invalidPlan("the loader and memory plan must describe the same pack")
         }
@@ -530,7 +534,7 @@ public final class Engine {
         let context = try ContextConfiguration(maxContextTokens: plan?.maxContextTokens ?? ContextPolicy.defaultTokens,
             maxPrefillWaitMinutes: plan?.maxPrefillWaitMinutes ?? ContextConfiguration.defaultWaitMinutes,
             qualification: plan?.contextQualification ?? false)
-        guard poolSlots >= Geometry.floorSlots, poolSlots <= Geometry.totalRecords,
+        guard poolSlots >= Geometry.floorSlots, poolSlots <= resources.totalRecords,
               context.maxContextTokens <= resources.maximumContext,
               plan == nil || plan?.slots == poolSlots,
               (plan?.prefillChunk ?? 256) <= resources.maximumPrefill,
@@ -561,7 +565,7 @@ public final class Engine {
             maxTokens: plan?.prefixCacheTokens
                 ?? Planner.prefixCacheTokensFor(poolBudgetGB: Geometry.gb(poolSlots)),
             enabled: env != "0" && (plan?.runtimeAllocationPolicy?.prefixCacheEnabled ?? true))
-        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil {
+        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast {
             prefixCache.setBudgetLimit(p.prefixCacheTokens)
         }
         // MLX's allocator otherwise retains freed transients (KV caches,
@@ -575,7 +579,7 @@ public final class Engine {
             ? 2 << 30 : 128_000_000
         self.modelName = affineSource?.nativeArithmetic == true
             ? PinnedAffineStandalone.id
-            : affineSource?.artifact.modelName ?? "qwen3.8-flash-next:4bit"
+            : affineSource?.artifact.modelName ?? (resources == .fast ? PinnedFastModel.name : PinnedModel.name)
         let t0 = Date()
         let index: CheckpointIndex
         if let affineSource {
@@ -639,7 +643,12 @@ public final class Engine {
                 affineControlContextLimit: context.maxContextTokens,
                 affinePiecewiseAllocation: affineSource.piecewiseAllocation,
                 affineGroupedExperts: affineSource.groupedExperts, affineNativeArithmetic: affineSource.nativeArithmetic)
-        } else { self.model = try Qwen4ExpModel(index: index, poolSlots: poolSlots) }
+        } else {
+            guard index.config.isFast == (resources == .fast) else {
+                throw ModelError("The selected model and memory plan differ; use the fast or smart alias")
+            }
+            self.model = try Qwen4ExpModel(index: index, poolSlots: poolSlots)
+        }
         self.responsiveGovernor = model.optimizations.responsiveGovernor
         try model.validate()
         // Read from the index that is already open — no tensor is touched, and
@@ -660,6 +669,13 @@ public final class Engine {
             model.optimizations.rowInvariantProjection = true
             model.optimizations.verifySplitAttention = true
             model.optimizations.verifySplitMinContext = 0
+        }
+        if resources == .fast, ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] != "0" {
+            let store = DFlashDeployment.store(for: modelDir)
+            guard try store.status().isReady else {
+                throw ModelError("Fast's DFlash files are missing or invalid; run slotstream pull fast")
+            }
+            self.model.dflash = try DFlashDraft(directory: DFlashDeployment.directory(for: modelDir), target: model.cfg)
         }
         self.generator = Generator(model: model)
         if prefetchConfiguration.active {
@@ -705,7 +721,7 @@ public final class Engine {
                         .data(using: .utf8)!) }
             }
         }
-        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil {
+        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast {
             generator.setPrefillBudgetCeiling(p.prefillChunk)
             generator.prefillChunk = p.prefillChunk
         }

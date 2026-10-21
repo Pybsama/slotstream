@@ -27,6 +27,17 @@ boundaries intact. Verify the app's embedded engine and build identity separatel
 from the CLI. Missing capabilities and disclosed limitations are not implemented
 features; maintain the task map and remaining gates alongside code.
 
+## Fast and Smart (October 21, 2026)
+
+Follow [the Fast and Smart decision](db/records/decisions/fast-and-smart.md).
+Fast is the default for new app installs; preserve existing saved choices and
+legacy CLI defaults. Keep model switching explicit, one model loaded, and
+conversation/tool/review ownership unchanged. Test complete installations,
+actual model geometry, both cache layouts and native workflows. An upstream
+speed claim or a successful CLI answer is not complete app qualification.
+Retain target verification, bounded draft state and ordinary decoding when
+speculation costs more. Never port GPU spin or power-state tricks.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

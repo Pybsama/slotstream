@@ -19,8 +19,9 @@ Less available memory can reduce the expert cache and slow replies; the chip,
 SSD and workload also matter. See the [hardware guide](HARDWARE.md)
 for measurements from real Macs and estimates for each memory size.
 
-Slotstream currently runs one model, Qwen3.8-Flash-Next, on Apple Silicon.
-Windows, Linux, and other models are not supported by the current engine.
+The released CLI defaults to Qwen3.8-Flash-Next on Apple Silicon. Development
+builds also offer Qwen3.6-35B-A3B through the [Fast and Smart choices](MODELS.md).
+Windows, Linux and arbitrary model imports are not supported.
 
 ## Install
 

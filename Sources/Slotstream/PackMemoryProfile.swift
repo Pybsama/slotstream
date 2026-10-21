@@ -47,6 +47,20 @@ package struct PackMemoryProfile: Equatable, Sendable {
         self.groupedWorkspace = groupedWorkspace
     }
 
+    // Keep Smart's 5.3 GB fixed allowance and context reserves conservatively.
+    // Fast has no PLE/HC/indexer payload; that allowance covers its smaller
+    // resident target, quantized DFlash, bounded draft KV/features and loading
+    // transients. First native 9 GB runs peaked below 4.2 GB (engineering
+    // decision fast-and-smart); no Smart throughput estimate is inherited.
+    package static let fast = Self(identity: "qwen36-fast-memory-v1",
+        expertRecordBytes: 1_769_472, maximumPrefill: 512,
+        maximumContext: 32_768, usesBaselineSpeedEvidence: false,
+        supportsStreamedDraft: false, supportsVision: false, automaticOptimizations: false)
+
+    package var layers: Int { self == .fast ? 40 : Geometry.layers }
+    package var expertsPerLayer: Int { self == .fast ? 256 : Geometry.expertsPerLayer }
+    package var totalRecords: Int { layers * expertsPerLayer }
+
     package static let original = Self(identity: "original-affine4-memory-v1",
         expertRecordBytes: 2_764_800, maximumPrefill: 4096,
         maximumContext: ContextPolicy.modelLimit, usesBaselineSpeedEvidence: true,
@@ -203,9 +217,9 @@ package struct PackMemoryProfile: Equatable, Sendable {
 
     package func slotsForCapacityBudgetGB(_ value: Double) -> Int {
         guard expertWorkspaceBytes > 0 else { return slotsForPoolGB(value) }
-        if value >= capacityBudgetGB(Geometry.totalRecords) { return Geometry.totalRecords }
+        if value >= capacityBudgetGB(totalRecords) { return totalRecords }
         if !value.isFinite || value <= capacityBudgetGB(Geometry.floorSlots) { return Geometry.floorSlots }
-        var low = Geometry.floorSlots, high = Geometry.totalRecords
+        var low = Geometry.floorSlots, high = totalRecords
         while low < high {
             let mid = low + (high - low + 1) / 2
             if capacityBudgetGB(mid) <= value { low = mid } else { high = mid - 1 }
@@ -213,8 +227,8 @@ package struct PackMemoryProfile: Equatable, Sendable {
         return low
     }
     package func slotsForPoolGB(_ value: Double) -> Int {
-        guard value.isFinite else { return value > 0 ? Geometry.totalRecords : Geometry.floorSlots }
-        if value >= poolGB(Geometry.totalRecords) { return Geometry.totalRecords }
+        guard value.isFinite else { return value > 0 ? totalRecords : Geometry.floorSlots }
+        if value >= poolGB(totalRecords) { return totalRecords }
         if value <= poolGB(Geometry.floorSlots) { return Geometry.floorSlots }
         return Int(value * 1e9 / Double(expertRecordBytes))
     }

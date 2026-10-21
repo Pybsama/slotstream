@@ -12,6 +12,8 @@ public struct AppliedModelConfiguration: Codable, Equatable, Sendable {
     public let manifestDigest: String
     public let contextTokens: Int
     public let mtp: Bool
+    /// Absent in historical receipts. True identifies the loaded native draft.
+    public var dflash: Bool? = nil
     public let vision: Bool
     public let liveMemory: LiveMemoryManagement
     public let startupTargetGB: Double?
@@ -36,10 +38,11 @@ extension Engine {
                 "pack": pack.manifestDigest, "arithmetic": arithmetic.digest,
                 "plan": String(decoding: ledger, as: UTF8.self), "live_memory": liveMemory.rawValue]
             if let startup { components["schema"] = "product-configuration-v2"; components["startup_policy"] = startup.digest }
+            components["dflash"] = model.dflash == nil ? "off" : DFlashDeployment.revision
             let identity = PersistentPrefixIdentity(components: components).digest
             return AppliedModelConfiguration(generation: UUID(), identity: identity, packID: pack.id,
                 manifestDigest: pack.manifestDigest, contextTokens: plan.maxContextTokens,
-                mtp: plan.mtpEnabled, vision: plan.visionEnabled, liveMemory: liveMemory,
+                mtp: plan.mtpEnabled, dflash: model.dflash != nil, vision: plan.visionEnabled, liveMemory: liveMemory,
                 startupTargetGB: plan.targetGB, memoryCeilingGB: plan.memoryLimitGB,
                 startupPolicyID: startup?.id, executionPolicyIdentity: startup?.digest)
         }

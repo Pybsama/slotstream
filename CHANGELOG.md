@@ -6,6 +6,18 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+- Preserve literal JSON brackets in saved conversations and tool results. Table
+  output no longer becomes an accidental db.md link, and interrupted saves recover.
+
+- Add Fast and Smart to the native app's composer and settings. New installs
+  start with Fast; existing choices, conversations and review boundaries remain.
+- Add native Qwen3.6-35B-A3B inference with pinned DFlash 2, bounded SSD expert
+  streaming and adaptive target verification. Keep Smart's existing MTP path.
+- Add `fast` and `smart` engine aliases, complete target/draft setup verification,
+  model-specific memory planning and persistent caches for Fast's attention layout.
+
 ## 0.2.30 - 2026-10-19
 
 - Add repeatable, optional `--mirror <dir>` to distribute text and vision

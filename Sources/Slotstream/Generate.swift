@@ -86,6 +86,7 @@ public struct SampleParams {
 }
 
 public struct GenStats: Codable {
+    public var speculativeMethod: String?
     package init() {}
     public var requestSeconds = 0.0
     public var queueSeconds = 0.0
@@ -643,6 +644,8 @@ public final class Generator {
             return finish([])
         }
         model.prepareOptimizationKernels()
+        model.beginDraftCapture()
+        defer { model.endDraftCapture() }
         // Vision prompts are cacheable, but not on ids alone: every image
         // expands to a run of the same placeholder id, so a second picture of
         // the same shape produces identical ids. The image segments carry a
@@ -1280,7 +1283,16 @@ public final class Generator {
         let draftStream = mtpHead?.expertStream
         let draftStreamStart = draftStream.map { ($0.hits, $0.misses, $0.readSeconds) }
         do {
-        if let head = mtpHead, speculationEnabled, let mtpState = state.mtp {
+        if let draft = model.dflash, speculationEnabled {
+            stats.speculativeMethod = "dflash2"
+            try dflashDecode(draft: draft, state: state, logits: logits, params: params, eosIds: eosIds,
+                shouldContinue: canContinue, contextLimit: admittedContext,
+                checkAllocation: { end, bytes, phase in
+                    try checkAllocation(end: end, workspaceBytes: bytes, phase: phase)
+                }, onToken: observedToken, out: &out, generated: &generated,
+                reason: &reason, consumed: &consumed, stats: &stats)
+        } else if let head = mtpHead, speculationEnabled, let mtpState = state.mtp {
+            stats.speculativeMethod = "mtp"
             try speculativeDecode(
                 head: head, mtpState: mtpState, state: state, logits: logits,
                 params: params, eosIds: eosIds, shouldContinue: canContinue,

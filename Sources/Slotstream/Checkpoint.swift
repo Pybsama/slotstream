@@ -15,6 +15,7 @@ public struct ModelError: Error, CustomStringConvertible {
 // MARK: - Config
 
 public struct ModelConfig {
+    public private(set) var isFast = false
     public var hiddenSize = 2560
     public var numLayers = 48
     public var numAttentionHeads = 24
@@ -114,6 +115,7 @@ public struct ModelConfig {
                     + "\(PinnedModelName.display) checkpoint — check --model")
         }
         var c = ModelConfig()
+        c.isFast = root["model_type"] as? String == "qwen3_5_moe"
         func i(_ k: String, _ d: Int) -> Int { (t[k] as? Int) ?? d }
         func f(_ k: String, _ d: Float) -> Float {
             if let v = t[k] as? Double { return Float(v) }
@@ -212,7 +214,8 @@ public struct ModelConfig {
                 guard c.quantizationOverrides[name] == nil else { throw ModelError("duplicate quantization descriptor for \(name)") }
                 let descriptor = try AffineQuantization(bits: bits, groupSize: group)
                 let expectedGroup = name.contains("ngram_embedding") ? 32 : 64
-                guard bits == 4, group == expectedGroup else {
+                let fastRouter = c.isFast && (name.hasSuffix(".mlp.gate") || name.hasSuffix(".mlp.shared_expert_gate"))
+                guard bits == (fastRouter ? 8 : 4), group == expectedGroup else {
                     throw ModelError("unqualified quantization layout for \(name); the installed adapter requires affine 4-bit")
                 }
                 c.quantizationOverrides[name] = descriptor
@@ -220,6 +223,12 @@ public struct ModelConfig {
         }
         guard root["vq_modules"] == nil, root["vq_ple"] == nil else {
             throw ModelError("VQ candidate decoding is experimental; this pack has not qualified for Engine.load")
+        }
+        if c.isFast {
+            c.outputGateType = "silu"
+            c.hcCount = 1
+            c.pleLayerIds = []
+            c.admittedExpertRecordBytes = 1_769_472
         }
         try c.validate()
         return c
@@ -232,6 +241,21 @@ public struct ModelConfig {
     private func validate() throws {
         func bad(_ detail: String) throws -> Never {
             throw ModelError("unsupported or invalid text_config (\(detail)) — check --model")
+        }
+        if isFast {
+            guard hiddenSize == 2048, numLayers == 40, numAttentionHeads == 16,
+                  numKVHeads == 2, headDim == 256, vocabSize == 248_320,
+                  maxPositionEmbeddings == 262_144, fullAttentionInterval == 4,
+                  numExperts == 256, topK == 8, moeIntermediate == 512,
+                  sharedExpertIntermediate == 512, linearNumKHeads == 16,
+                  linearNumVHeads == 32, linearKHeadDim == 128, linearVHeadDim == 128,
+                  convKernel == 4, qBits == 4, qGroup == 64,
+                  rmsNormEps == 1e-6, ropeTheta == 10_000_000, partialRotaryFactor == 0.25,
+                  layerTypes == (0..<40).map({ ($0 + 1) % 4 == 0 ? "full_attention" : "linear_attention" }),
+                  eosTokenId >= 0, eosTokenId < vocabSize else {
+                try bad("checkpoint geometry does not match Qwen3.6-35B-A3B-4bit")
+            }
+            return
         }
         guard hiddenSize == 2560, numLayers == 48, maxPositionEmbeddings == ContextPolicy.modelLimit,
             numAttentionHeads == 24, numKVHeads == 2, headDim == 256,
@@ -645,7 +669,8 @@ public final class CheckpointIndex {
             linear(base + ".input_mix_weight_up")
             if inject { required.append(base + ".block_inject_weight.weight") }
         }
-        hyper("model.hyper_connection_mixer", inject: false)
+        if config.isFast { required.append("model.norm.weight") }
+        else { hyper("model.hyper_connection_mixer", inject: false) }
         for l in 0 ..< config.numLayers {
             let layer = "model.layers.\(l)"
             let mlp = layer + ".mlp"
@@ -657,8 +682,12 @@ public final class CheckpointIndex {
             for piece in ExpertStore.pieces {
                 required.append(mlp + ".switch_mlp." + piece)
             }
-            hyper(layer + ".attn_hyper_connection", inject: true)
-            hyper(layer + ".mlp_hyper_connection", inject: true)
+            if config.isFast {
+                required += [layer + ".input_layernorm.weight", layer + ".post_attention_layernorm.weight"]
+            } else {
+                hyper(layer + ".attn_hyper_connection", inject: true)
+                hyper(layer + ".mlp_hyper_connection", inject: true)
+            }
 
             if config.layerTypes[l] == "linear_attention" {
                 let b = layer + ".linear_attn"
@@ -675,9 +704,11 @@ public final class CheckpointIndex {
                 }
                 required.append(b + ".q_norm.weight")
                 required.append(b + ".k_norm.weight")
-                linear(b + ".indexer.index_qk_proj")
-                required.append(b + ".indexer.q_layernorm.weight")
-                required.append(b + ".indexer.k_layernorm.weight")
+                if !config.isFast {
+                    linear(b + ".indexer.index_qk_proj")
+                    required.append(b + ".indexer.q_layernorm.weight")
+                    required.append(b + ".indexer.k_layernorm.weight")
+                }
             }
 
             if config.pleLayerIndices.contains(l) {
