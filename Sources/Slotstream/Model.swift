@@ -179,23 +179,34 @@ public final class Qwen4ExpModel {
     package var dflash: DFlashDraft?
     package var capturesDraftFeatures = false
     package var draftFeatures: (end: Int, rows: MLXArray)?
+    package var draftPrefillFeatures: (end: Int, rows: MLXArray)?
+    package var accumulatingDraftPrefill = false
     private var capturedDraftLayers: [Int: MLXArray] = [:]
     package func beginDraftCapture() {
         draftFeatures = nil; capturedDraftLayers.removeAll()
         capturesDraftFeatures = dflash != nil
+        draftPrefillFeatures = nil; accumulatingDraftPrefill = capturesDraftFeatures
     }
     package func endDraftCapture() {
         capturesDraftFeatures = false; draftFeatures = nil; capturedDraftLayers.removeAll()
+        draftPrefillFeatures = nil; accumulatingDraftPrefill = false
     }
     private func captureDraftLayer(_ layer: Int, hidden: MLXArray) {
         guard capturesDraftFeatures, dflash?.targetLayers.contains(layer) == true else { return }
-        let value = cfg.isFast ? hidden : mean(hidden.reshaped([1, hidden.dim(1), cfg.hcCount, cfg.hiddenSize]), axis: 2)
+        let value = cfg.isFast ? hidden : mean(hidden.reshaped([1, hidden.dim(1), cfg.hcCount, cfg.hiddenSize]), axis: 2).asType(.bfloat16)
         capturedDraftLayers[layer] = value
     }
     private func finishDraftCapture(end: Int) {
         guard capturesDraftFeatures, let dflash, capturedDraftLayers.count == dflash.targetLayers.count else { return }
         let rows = concatenated(dflash.targetLayers.map { capturedDraftLayers[$0]! }, axis: -1)
         eval(rows); draftFeatures = (end, rows)
+        if accumulatingDraftPrefill {
+            let previous = draftPrefillFeatures
+            let continuous = previous?.end == end - rows.dim(1)
+            let joined = continuous ? concatenated([previous!.rows, rows], axis: 1) : rows
+            let bounded = contiguous(joined[0..., max(0, joined.dim(1) - DFlashDraft.window)..., 0...])
+            eval(bounded); draftPrefillFeatures = (end, bounded)
+        }
         capturedDraftLayers.removeAll()
     }
     /// Diagnostic observer; called on the serialized model thread with router-rank IDs.
@@ -673,7 +684,8 @@ public final class Qwen4ExpModel {
         // Public full-output APIs, MTP and truncated diagnostic models retain
         // all rows. The pinned final layer is QSA; no recurrent update is
         // inferred from a configuration label or omitted for another family.
-        let terminalPruning = !capturesDraftFeatures && optimizations.terminalPrefillPruning && mtpHead == nil
+        let needsTerminalDraftFeatures = capturesDraftFeatures && dflash?.targetLayers.contains(runLayers - 1) == true
+        let terminalPruning = !needsTerminalDraftFeatures && optimizations.terminalPrefillPruning && mtpHead == nil
             && runLayers == cfg.numLayers && qsa[runLayers - 1] != nil
             && perLayerHook == nil && demand != .fullMulti
         let terminalLastQuery = terminalPruning && optimizations.terminalLastQuery && demand == .lastRow

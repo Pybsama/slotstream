@@ -18,6 +18,23 @@ public enum DFlashDeployment {
     }
 }
 
+/// Exact upstream Smart draft, kept separate from the Fast deployment.
+/// The explicit native comparison uses these original published bytes.
+package enum SmartDFlashDeployment {
+    package static let revision = "a22a1744e85c17364dcc54a6a420af7135d4c7f6"
+    package static let files: [PinnedModel.File] = [
+        .init(path: "README.md", size: 5402, sha256: "296dfce04d501f313f4223a4ab2378f198ecb860e3b24a4689e66aff651f0477"),
+        .init(path: "config.json", size: 1236, sha256: "2409575986f9ea24d455343eb469c0e6940def5edab1d1be503bb8eb4cc3b1b9"),
+        .init(path: "model.safetensors", size: 1206140008, sha256: "d6723f2a359eaf33ec0c95f22ae8edda896774020c552296a85e1913b4d3186f"),
+    ]
+    static let deployment = try! WeightDeployment(repository: "incoai/Qwen3.8-Flash-Next-DFlash2",
+        revision: revision, files: files,
+        rawBases: ["https://huggingface.co/incoai/Qwen3.8-Flash-Next-DFlash2/resolve/" + revision])
+    package static func store(for target: URL) -> WeightStore {
+        WeightStore(modelDirectory: DFlashDeployment.directory(for: target), deployment: deployment)
+    }
+}
+
 public extension ModelPack {
     var usesDFlash: Bool { id == PinnedFastModel.name }
     var installationBytes: Int64 { totalBytes + (usesDFlash ? DFlashDeployment.deployment.totalBytes : 0) }

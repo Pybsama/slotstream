@@ -12,9 +12,11 @@ extension Generator {
         consumed: inout [Int], stats: inout GenStats) throws {
         state.invalidateMTP()
         let context = DFlashDraft.Context()
-        if let features = model.draftFeatures, features.end == state.tokenCount {
+        model.accumulatingDraftPrefill = false
+        if let features = model.draftPrefillFeatures ?? model.draftFeatures, features.end == state.tokenCount {
             draft.append(features.rows, endingAt: features.end, to: context)
         }
+        model.draftPrefillFeatures = nil
         var policy = AdaptiveSpeculationPolicy(maximumDepth: 7)
         guard params.maxTokens > 0, shouldContinue() else { reason = "stop"; return }
         let first = sample(logits, params: params, generated: generated)
@@ -35,7 +37,7 @@ extension Generator {
                     model.capturesDraftFeatures = false
                     stats.adaptiveDisabledAtOutput = stats.adaptiveDisabledAtOutput ?? out.count
                 }
-                try checkAllocation(state.tokenCount + 1, 1_300_000, "plain Fast decode")
+                try checkAllocation(state.tokenCount + 1, 1_300_000, "plain target decode")
                 let started = RuntimeClock.now()
                 let next = try model.lastLogitsChecked([token], state: state)
                 eval(next)

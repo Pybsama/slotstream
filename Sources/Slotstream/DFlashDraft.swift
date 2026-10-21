@@ -5,7 +5,11 @@ import Foundation
 import MLX
 import MLXNN
 
+private let dflashSwiGLU: @Sendable (MLXArray, MLXArray) -> MLXArray =
+    compile(shapeless: true) { gate, up in gate * sigmoid(gate) * up }
+
 package final class DFlashDraft {
+    package var debugSink: ((String, MLXArray) -> Void)?
     package let targetLayers: [Int]
     package let hiddenSize: Int
     private let layers: [Layer]
@@ -15,7 +19,7 @@ package final class DFlashDraft {
     private let selector: QLinear
     private let predecessor: MLXArray
     private let successor: MLXArray
-    private let rope: Rope
+    private let ropeBase: Float
     private let maskToken = 248077
     package static let window = 2047
 
@@ -42,12 +46,37 @@ package final class DFlashDraft {
 
     package init(directory: URL, target: ModelConfig) throws {
         let data = try Data(contentsOf: directory.appendingPathComponent("config.json"))
+        let taps = try Self.validateConfiguration(data, target: target)
+        hiddenSize = target.hiddenSize; targetLayers = taps
+        ropeBase = target.isFast ? 10_000_000 : 10_000
+        let weights = try Weights(directory)
+        projection = try weights.linear("fc", input: target.hiddenSize * taps.count, output: target.hiddenSize)
+        hiddenNorm = try weights.norm("hidden_norm", width: target.hiddenSize)
+        finalNorm = try weights.norm("norm", width: target.hiddenSize)
+        selector = try weights.linear("candidate_selector.hidden_projection", input: target.hiddenSize, output: 256)
+        predecessor = try weights.tensor("candidate_selector.predecessor_codebook", shape: [target.vocabSize, 256])
+        successor = try weights.tensor("candidate_selector.successor_codebook", shape: [target.vocabSize, 256])
+        layers = try (0..<(target.isFast ? 6 : 5)).map { try Layer(weights, index: $0, width: target.hiddenSize) }
+        eval(predecessor, successor)
+    }
+
+    /// Reject unsupported geometry before reading or allocating draft tensors.
+    package static func validateConfiguration(_ data: Data, target: ModelConfig) throws -> [Int] {
         guard let config = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let draft = config["dflash_config"] as? [String: Any],
-              let taps = draft["target_layer_ids"] as? [Int], taps.count == (target.isFast ? 8 : 5),
-              taps == taps.sorted(), Set(taps).count == taps.count,
-              taps.allSatisfy({ (0..<target.numLayers).contains($0) }),
+              let taps = draft["target_layer_ids"] as? [Int],
+              taps == (target.isFast ? [1, 6, 11, 16, 22, 27, 32, 37] : [5, 15, 25, 35, 45]),
+              config["architectures"] as? [String] == ["DFlash2DraftModel"],
               config["hidden_size"] as? Int == target.hiddenSize,
+              config["vocab_size"] as? Int == target.vocabSize,
+              config["num_target_layers"] as? Int == target.numLayers,
+              config["rms_norm_eps"] as? Double == 1e-6,
+              config["hidden_act"] as? String == "silu",
+              config["attention_bias"] as? Bool == false,
+              let rotary = config["rope_parameters"] as? [String: Any],
+              rotary["rope_type"] as? String == "default",
+              rotary["rope_theta"] as? Int == (target.isFast ? 10_000_000 : 10_000),
+              config["layer_types"] as? [String] == Array(repeating: "sliding_attention", count: target.isFast ? 6 : 5),
               config["num_attention_heads"] as? Int == 32,
               config["num_key_value_heads"] as? Int == 8,
               config["head_dim"] as? Int == 128,
@@ -63,22 +92,13 @@ package final class DFlashDraft {
               draft["selector_top_k"] as? Int == 16 else {
             throw ModelError("Unsupported DFlash 2 configuration")
         }
-        hiddenSize = target.hiddenSize; targetLayers = taps
-        rope = Rope(dim: 128, base: target.isFast ? 10_000_000 : 10_000)
-        let weights = try Weights(directory)
-        projection = try weights.linear("fc", input: target.hiddenSize * taps.count, output: target.hiddenSize)
-        hiddenNorm = try weights.norm("hidden_norm", width: target.hiddenSize)
-        finalNorm = try weights.norm("norm", width: target.hiddenSize)
-        selector = try weights.linear("candidate_selector.hidden_projection", input: target.hiddenSize, output: 256)
-        predecessor = try weights.tensor("candidate_selector.predecessor_codebook", shape: [target.vocabSize, 256])
-        successor = try weights.tensor("candidate_selector.successor_codebook", shape: [target.vocabSize, 256])
-        layers = try (0..<(target.isFast ? 6 : 5)).map { try Layer(weights, index: $0, width: target.hiddenSize) }
-        eval(predecessor, successor)
+        return taps
     }
 
     /// A request-local bounded feature window. Target caches belong to the
     /// target; draft context can be discarded without changing model output.
     package final class Context {
+        package init() {}
         var hidden: MLXArray?
         var end = 0
         var keys: [MLXArray] = []
@@ -86,16 +106,17 @@ package final class DFlashDraft {
     }
 
     package func append(_ features: MLXArray, endingAt end: Int, to context: Context) {
+        debugSink?("context_features", features)
+        debugSink?("context_end", MLXArray([end]))
         let projected = hiddenNorm(projection(features))
         let count = projected.dim(1)
         let joined = context.hidden.map { context.end == end - count ? concatenated([$0, projected], axis: 1) : projected } ?? projected
         context.hidden = contiguous(joined[0..., max(0, joined.dim(1) - Self.window)..., 0...])
         context.end = end
         let addedStart = end - count
-        let (cosine, sine) = rope.table(start: addedStart, count: count)
         for (index, layer) in layers.enumerated() {
             var keys = layer.kNorm(layer.key(projected).reshaped([1, count, 8, 128])).transposed(0, 2, 1, 3)
-            keys = rope.rotate(keys, cosine.expandedDimensions(axis: 1), sine.expandedDimensions(axis: 1))
+            keys = rotate(keys, offset: addedStart)
             let values = layer.value(projected).reshaped([1, count, 8, 128]).transposed(0, 2, 1, 3)
             let oldCount = context.keys.count > index ? context.keys[index].dim(2) : 0
             let continuous = oldCount > 0 && context.hidden!.dim(1) > count
@@ -113,18 +134,46 @@ package final class DFlashDraft {
 
     package func propose(anchor: Int, depth: Int, target: Qwen4ExpModel, context: Context) throws -> [Int] {
         guard (1...7).contains(depth), context.keys.count == layers.count else { return [] }
+        let noise = try target.resident.embedChecked([anchor] + Array(repeating: maskToken, count: 7), shape: [1, 8]).asType(.bfloat16)
+        let hidden = try hiddenStates(noise: noise, depth: depth, context: context)
+        let logits = target.draftLogits(hidden).asType(.float32)
+        let indices = argPartition(logits, kth: target.cfg.vocabSize - 16, axis: -1)[.ellipsis, (target.cfg.vocabSize - 16)...]
+        let unary = takeAlong(logits, indices, axis: -1)
+        debugSink?("candidate_ids", indices)
+        debugSink?("candidate_scores", unary)
+        debugSink?("anchor", MLXArray([anchor]))
+        let selectedHidden = selector(hidden)
+        var previous = anchor, path: [Int] = []
+        for position in 0..<depth {
+            let candidates = indices[0, position]
+            let edges = sum(predecessor[previous].asType(.float32) * selectedHidden[0, position].asType(.float32)
+                * successor[candidates].asType(.float32), axis: -1)
+            let choice = argMax(unary[0, position] + edges).item(Int.self)
+            previous = candidates[choice].item(Int.self); path.append(previous)
+        }
+        debugSink?("draft_proposals", MLXArray(path))
+        return path
+    }
+
+    /// Replay captured target inputs without loading the target model. The
+    /// production proposal path uses this same network for reference checks.
+    package func hiddenStates(noise: MLXArray, depth: Int, context: Context) throws -> MLXArray {
+        guard (1...7).contains(depth), context.keys.count == layers.count,
+              noise.shape == [1, 8, hiddenSize], noise.dtype == .bfloat16 else {
+            throw ModelError("Invalid DFlash replay inputs")
+        }
         // Keep the trained eight-row block. Only verification depth varies.
         let count = 8
-        var hidden = try target.resident.embedChecked([anchor] + Array(repeating: maskToken, count: count - 1), shape: [1, count]).asType(.bfloat16)
+        var hidden = noise
+        debugSink?("noise_embedding", noise)
         for (index, layer) in layers.enumerated() {
             let normalized = layer.inputNorm(hidden)
             let (input, kernel) = layer.attentionConv.prepare(normalized)
             var queries = layer.qNorm(layer.query(input).reshaped([1, count, 32, 128])).transposed(0, 2, 1, 3)
             var keys = layer.kNorm(layer.key(input).reshaped([1, count, 8, 128])).transposed(0, 2, 1, 3)
             let values = layer.value(input).reshaped([1, count, 8, 128]).transposed(0, 2, 1, 3)
-            let (cosine, sine) = rope.table(start: context.end, count: count)
-            queries = rope.rotate(queries, cosine.expandedDimensions(axis: 1), sine.expandedDimensions(axis: 1))
-            keys = rope.rotate(keys, cosine.expandedDimensions(axis: 1), sine.expandedDimensions(axis: 1))
+            queries = rotate(queries, offset: context.end)
+            keys = rotate(keys, offset: context.end)
             let length = context.keys[index].dim(2)
             let queryPositions = MLXArray(0..<count).expandedDimensions(axis: 1) + length
             let keyPositions = MLXArray(0..<(length + count)).expandedDimensions(axis: 0)
@@ -135,24 +184,20 @@ package final class DFlashDraft {
                 scale: 1 / Float(128).squareRoot(), mask: .array(mask))
             hidden = hidden + layer.attentionConv.finish(layer.output(attended.transposed(0, 2, 1, 3).reshaped([1, count, 4096])), dynamic: kernel)
             let (mlpInput, mlpKernel) = layer.mlpConv.prepare(layer.postNorm(hidden))
-            let mlp = layer.down(silu(layer.gate(mlpInput)) * layer.up(mlpInput))
+            let mlp = layer.down(dflashSwiGLU(layer.gate(mlpInput), layer.up(mlpInput)))
             hidden = hidden + layer.mlpConv.finish(mlp, dynamic: mlpKernel)
             eval(hidden)
         }
         hidden = finalNorm(hidden[0..., 1..<(depth + 1), 0...])
-        let logits = target.draftLogits(hidden).asType(.float32)
-        let indices = argPartition(logits, kth: target.cfg.vocabSize - 16, axis: -1)[.ellipsis, (target.cfg.vocabSize - 16)...]
-        let unary = takeAlong(logits, indices, axis: -1)
-        let selectedHidden = selector(hidden)
-        var previous = anchor, path: [Int] = []
-        for position in 0..<depth {
-            let candidates = indices[0, position]
-            let edges = sum(predecessor[previous].asType(.float32) * selectedHidden[0, position].asType(.float32)
-                * successor[candidates].asType(.float32), axis: -1)
-            let choice = argMax(unary[0, position] + edges).item(Int.self)
-            previous = candidates[choice].item(Int.self); path.append(previous)
-        }
-        return path
+        debugSink?("draft_hidden", hidden)
+        return hidden
+    }
+
+    private func rotate(_ value: MLXArray, offset: Int) -> MLXArray {
+        // The draft reference and Splash retain float32 angles/arithmetic and
+        // round the rotated result once. The target's deployed partial-rotary
+        // arithmetic is a separate contract and remains unchanged.
+        MLXFast.RoPE(value, dimensions: 128, traditional: false, base: ropeBase, scale: 1, offset: offset)
     }
 
     private struct Convolution {

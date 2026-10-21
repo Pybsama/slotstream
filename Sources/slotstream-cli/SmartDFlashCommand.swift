@@ -1,0 +1,220 @@
+import ArgumentParser
+import Foundation
+import MLX
+import Slotstream
+
+/// Sequential native comparison through the production Engine, tokenizer,
+/// sampler and cache. This explicit instrument does not promote a new default.
+struct SmartDFlashCheck: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "smart-dflash-check",
+        abstract: "Compare native Smart plain, MTP and DFlash on explicit local cases")
+    @Option var method: String = "dflash"
+    @Option var memoryGB: Double = 10
+    @Option var cases: String
+    @Option var output: String
+    @Option var model: String = PinnedModel.name
+    @Option var dumpFirstDraft: String?
+    @Option var prefixCacheDir: String?
+    @Flag(help: "Download the pinned Smart draft before the comparison") var installDraft = false
+
+    struct Probe: Decodable {
+        let id: String
+        let prompt: String
+        let maxTokens: Int
+        var temperature: Float?
+        var seed: UInt64?
+        var stop: [String]?
+        var cancelAfter: Int?
+        var tool: ProbeTool?
+        var imagePaths: [String]?
+    }
+    struct ProbeTool: Decodable {
+        let name: String
+        let description: String
+        let parameters: [String: String]
+        var definition: ToolDefinition {
+            ToolDefinition(name: name, description: description, parameters: .object([
+                "type": .string("object"),
+                "properties": .object(parameters.mapValues { .object(["type": .string($0)]) }),
+                "required": .array(parameters.keys.sorted().map { .string($0) }),
+                "additionalProperties": .bool(false)]))
+        }
+    }
+    func run() throws {
+        guard ["plain", "mtp", "dflash"].contains(method), memoryGB.isFinite,
+              (10...33).contains(memoryGB) else { throw ValidationError("Use plain, mtp or dflash and a 10–33 GB explicit budget") }
+        let probes = try JSONDecoder().decode([Probe].self, from: Data(contentsOf: URL(fileURLWithPath: cases)))
+        guard !probes.isEmpty, probes.count <= 100,
+              probes.allSatisfy({ !$0.id.isEmpty && (1...4096).contains($0.maxTokens) && $0.prompt.utf8.count <= 500_000 && ($0.imagePaths?.count ?? 0) <= 1 }) else {
+            throw ValidationError("Cases must be bounded prompts with explicit output limits")
+        }
+        guard !FileManager.default.fileExists(atPath: output),
+              dumpFirstDraft.map({ !FileManager.default.fileExists(atPath: $0) }) ?? true else {
+            throw ValidationError("Use new receipt and draft-dump paths; existing evidence is never overwritten")
+        }
+        guard method == "dflash" || (!installDraft && dumpFirstDraft == nil) else {
+            throw ValidationError("Draft installation and capture require --method dflash")
+        }
+        let modelDirectory = ModelLocator.resolve(model)
+        if method == "dflash" {
+            let store = SmartDFlashDeployment.store(for: modelDirectory)
+            if installDraft { try store.download(log: { print($0) }) }
+            try store.verify()
+        }
+        let hasImages = probes.contains { !($0.imagePaths?.isEmpty ?? true) }
+        let resources: PackMemoryProfile = method == "dflash" ? .smartDFlash : .original
+        let machine = Machine.current()
+        guard let availableGB = machine.availableGB, availableGB >= memoryGB + 3 else { throw ModelError("Comparison needs target plus 3 GB reclaimable memory") }
+        let plan = try Planner.plan(resources: resources, expertsPerLayer: nil, poolGB: nil, memoryGB: memoryGB,
+            ramGB: machine.ramGB, workingSetGB: machine.workingSetGB, availableGB: machine.availableGB,
+            mtp: method == "mtp" ? .on : .off, mtpAvailable: method == "mtp",
+            vision: hasImages ? .on : .off, visionAvailable: hasImages,
+            maxContextTokens: 32768, qualification: false,
+            decodeLookahead: .off, mtpExperts: .automatic)
+        print(plan.banner())
+        let sem = DispatchSemaphore(value: 0)
+        var outcome: Result<Void, Error> = .success(())
+        Task {
+            do {
+                let launched = Date()
+                let engine = try await Engine(modelDir: modelDirectory, plan: plan)
+                // Identical, explicitly priced pass shapes in all methods.
+                engine.generator.prefillChunk = min(256, plan.prefillChunk)
+                engine.generator.footprintSampling = true
+                if let prefixCacheDir {
+                    _ = try engine.enablePersistentPrefixCache(.init(directory: URL(fileURLWithPath: prefixCacheDir)))
+                }
+                var didDump = false
+                var tensors: [String: MLXArray] = [:]
+                if let dumpFirstDraft {
+                    engine.model.dflash?.debugSink = { name, value in
+                        guard !didDump else { return }
+                        eval(value)
+                        if name == "context_features", let previous = tensors[name] {
+                            let joined = concatenated([previous, value], axis: 1)
+                            tensors[name] = joined[0..., max(0, joined.dim(1) - 2047)..<joined.dim(1), 0...]
+                            eval(tensors[name]!)
+                        } else { tensors[name] = value }
+                        if name == "draft_proposals" {
+                            do { try save(arrays: tensors, url: URL(fileURLWithPath: dumpFirstDraft)); didDump = true; tensors.removeAll() }
+                            catch { print("draft dump failed: \(error)") }
+                        }
+                    }
+                }
+                let loadSeconds = Date().timeIntervalSince(launched)
+                var rows: [[String: Any]] = []
+                for probe in probes {
+                    let control = try engine.beginRequest()
+                    let tools = probe.tool.map { [$0.definition] } ?? []
+                    var message = ChatMessage(role: "user", content: probe.prompt)
+                    message.images = try (probe.imagePaths ?? []).map { path in
+                        let handle = try FileHandle(forReadingFrom: URL(fileURLWithPath: path))
+                        defer { try? handle.close() }
+                        let size = try handle.seekToEnd()
+                        guard size > 0, size <= UInt64(VisionPreprocess.maxImageBytes) else {
+                            throw ValidationError("Image exceeds the bounded native image input size")
+                        }
+                        try handle.seek(toOffset: 0)
+                        guard let data = try handle.readToEnd(), !data.isEmpty else {
+                            throw ValidationError("Image input became empty while reading")
+                        }
+                        return data.base64EncodedString()
+                    }
+                    let (ids, vision) = try engine.encodeChatWithVision([message], tools: tools, thinking: false, request: control)
+                    var params = SampleParams.greedy
+                    params.maxTokens = probe.maxTokens
+                    params.temperature = probe.temperature ?? 0
+                    params.seed = probe.seed
+                    params.stop = probe.stop ?? []
+                    var callbacks = 0, streamed = ""
+                    let splitter = ToolCallSplitter(tools: tools.map(\.schema))
+                    var toolCalls: [[String: Any]] = [], malformed = false
+                    func collect(_ events: [ToolStreamEvent]) {
+                        for event in events {
+                            switch event {
+                            case .toolCall(let call): toolCalls.append(["name": call.name, "arguments_json": call.inputJSON])
+                            case .malformed: malformed = true
+                            default: break
+                            }
+                        }
+                    }
+                    let before = ProcessMemory.vmActivity()
+                    let start = Date()
+                    let (text, tokens, stats) = engine.generate(promptIds: ids, params: params, vision: vision,
+                        onToken: { _, delta in
+                            callbacks += 1; streamed += delta
+                            collect(splitter.push(delta))
+                            return probe.cancelAfter.map { callbacks < $0 } ?? true
+                        }, request: control)
+                    let after = ProcessMemory.vmActivity()
+                    collect(splitter.flush())
+                    let statsJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(stats))
+                    rows.append(["id": probe.id, "prompt_ids": ids, "text": text, "tokens": tokens,
+                        "streamed": streamed, "callbacks": callbacks, "stats": statsJSON,
+                        "tool_calls": toolCalls, "malformed_tool_call": malformed,
+                        "elapsed_seconds": Date().timeIntervalSince(start),
+                        "swapins_delta": (after?.swapins ?? 0) - (before?.swapins ?? 0),
+                        "swapouts_delta": (after?.swapouts ?? 0) - (before?.swapouts ?? 0)])
+                    let receipt: [String: Any] = ["method": method, "memory_gb": memoryGB,
+                        "plan": plan.json(), "load_seconds": loadSeconds, "runs": rows,
+                        "draft_dumped": didDump, "complete": rows.count == probes.count]
+                    try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
+                        .write(to: URL(fileURLWithPath: output), options: .atomic)
+                    print("\(probe.id): \(stats.finishReason), \(tokens.count) tokens, peak \(stats.peakMemoryGB) GB")
+                    if let error = stats.runtimeError { throw ModelError(error) }
+                    guard stats.peakMemoryGB <= memoryGB, !stats.memoryPressureCancelled else { throw ModelError("Comparison exceeded its physical memory budget") }
+                }
+                guard dumpFirstDraft == nil || didDump else { throw ModelError("No draft fixture was captured") }
+            } catch { outcome = .failure(error) }
+            sem.signal()
+        }
+        sem.wait(); try outcome.get()
+    }
+}
+
+/// Independent draft-network check using previously captured native inputs.
+struct SmartDFlashReplay: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "smart-dflash-replay",
+        abstract: "Replay a bounded Smart draft fixture without loading target weights")
+    @Option var fixture: String
+    @Option var output: String
+    @Option(help: "Comma-separated original projection chunk lengths") var contextChunks: String
+    @Option var model: String = PinnedModel.name
+
+    func run() throws {
+        guard !FileManager.default.fileExists(atPath: output) else { throw ValidationError("Use a new output path") }
+        let parts = contextChunks.split(separator: ",", omittingEmptySubsequences: false)
+        let chunks = parts.compactMap { Int($0) }
+        guard chunks.count == parts.count, !chunks.isEmpty, chunks.count <= 2047,
+              chunks.allSatisfy({ (1...2047).contains($0) }), chunks.reduce(0, +) <= 2047 else {
+            throw ValidationError("Use bounded positive context chunk lengths")
+        }
+        let url = URL(fileURLWithPath: fixture)
+        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard (1...100_000_000).contains(size), (Machine.current().availableGB ?? 0) >= 6 else {
+            throw ValidationError("Replay needs a bounded fixture and 6 GB reclaimable memory")
+        }
+        MLX.Memory.cacheLimit = 2_000_000_000
+        var arrays = try loadArrays(url: url)
+        guard let features = arrays["context_features"], features.shape == [1, chunks.reduce(0, +), 12800],
+              features.dtype == .bfloat16, let endArray = arrays["context_end"], endArray.size == 1,
+              let noise = arrays["noise_embedding"], let oldHidden = arrays["draft_hidden"],
+              oldHidden.ndim == 3, (1...7).contains(oldHidden.dim(1)) else { throw ValidationError("Invalid Smart draft fixture") }
+        let end = endArray.item(Int.self)
+        guard end >= features.dim(1), end <= 32768 else { throw ValidationError("Invalid context extent") }
+        let directory = ModelLocator.resolve(model)
+        try SmartDFlashDeployment.store(for: directory).verify()
+        let config = try ModelConfig.parse(Data(contentsOf: directory.appendingPathComponent("config.json")), label: "Smart replay")
+        let draft = try DFlashDraft(directory: DFlashDeployment.directory(for: directory), target: config)
+        let context = DFlashDraft.Context()
+        var at = 0
+        for count in chunks {
+            draft.append(features[0..., at..<(at + count), 0...], endingAt: end - features.dim(1) + at + count, to: context)
+            at += count
+        }
+        arrays["draft_hidden"] = try draft.hiddenStates(noise: noise, depth: oldHidden.dim(1), context: context)
+        eval(arrays["draft_hidden"]!)
+        try save(arrays: arrays, url: URL(fileURLWithPath: output))
+        print("Replayed \(chunks.count) context chunks and \(oldHidden.dim(1)) draft rows without target weights")
+    }
+}

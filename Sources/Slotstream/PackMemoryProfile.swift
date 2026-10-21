@@ -61,6 +61,17 @@ package struct PackMemoryProfile: Equatable, Sendable {
     package var expertsPerLayer: Int { self == .fast ? 256 : Geometry.expertsPerLayer }
     package var totalRecords: Int { layers * expertsPerLayer }
 
+    /// Explicit Smart DFlash comparison. The separate reserve covers the
+    /// published 1.21 GB loading payload, quantization overlap, draft KV and
+    /// the bounded feature window. Preserve the original fixed allowance;
+    /// do not load MTP or inherit its throughput evidence. Physical tests
+    /// determine whether this conservative envelope can become a default.
+    package static let smartDFlash = Self(identity: "smart-dflash2-memory-v1",
+        expertRecordBytes: 2_764_800, residentReserveBytes: 1_600_000_000,
+        maximumPrefill: 512, maximumContext: 32_768,
+        usesBaselineSpeedEvidence: false, supportsStreamedDraft: false,
+        supportsVision: true, automaticOptimizations: false)
+
     package static let original = Self(identity: "original-affine4-memory-v1",
         expertRecordBytes: 2_764_800, maximumPrefill: 4096,
         maximumContext: ContextPolicy.modelLimit, usesBaselineSpeedEvidence: true,

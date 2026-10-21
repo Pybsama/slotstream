@@ -100,7 +100,7 @@ public final class Engine {
         if resources == .gsq224GroupedControl || resources == .gsq224GroupedVisionControl {
             return "2bit gate/up / original 4bit down, dense and PLE"
         }
-        return resources == .fast || resources == .original || resources == .originalCandidateControl ? "4bit" : "3bit experts / original dense and PLE"
+        return resources == .fast || resources == .smartDFlash || resources == .original || resources == .originalCandidateControl ? "4bit" : "3bit experts / original dense and PLE"
     }
     package var modelDigest: String {
         if resources == .fast { return "sha256:" + ModelPackRegistry.fast.manifestDigest }
@@ -513,9 +513,13 @@ public final class Engine {
             }
         }
         let resources: PackMemoryProfile = originalCandidateControl ? .originalCandidateControl
-            : (affineSource?.resources ?? (plan?.resources == .fast ? .fast : .original))
+            : (affineSource?.resources ?? (plan?.resources == .fast ? .fast :
+                (plan?.resources == .smartDFlash ? .smartDFlash : .original)))
         guard plan?.resources == resources || (plan == nil && affineSource == nil) else {
             throw SlotstreamError.invalidPlan("the loader and memory plan must describe the same pack")
+        }
+        if resources == .smartDFlash, plan?.mtpEnabled != false {
+            throw SlotstreamError.invalidPlan("Smart DFlash uses one draft component; its plan must disable MTP")
         }
         let candidateProcessBudget: UInt64?
         if affineSource != nil {
@@ -670,10 +674,10 @@ public final class Engine {
             model.optimizations.verifySplitAttention = true
             model.optimizations.verifySplitMinContext = 0
         }
-        if resources == .fast, ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] != "0" {
-            let store = DFlashDeployment.store(for: modelDir)
-            guard try store.status().isReady else {
-                throw ModelError("Fast's DFlash files are missing or invalid; run slotstream pull fast")
+        if resources == .smartDFlash || (resources == .fast && ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] != "0") {
+            let store = resources == .smartDFlash ? SmartDFlashDeployment.store(for: modelDir) : DFlashDeployment.store(for: modelDir)
+            guard store.status().isReady else {
+                throw ModelError("The selected DFlash component is missing or invalid; verify its pinned installation")
             }
             self.model.dflash = try DFlashDraft(directory: DFlashDeployment.directory(for: modelDir), target: model.cfg)
         }

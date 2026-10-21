@@ -20,7 +20,11 @@ in native Swift/MLX, following [Z Lab DFlash](https://github.com/z-lab/dflash)
 convolution and candidate selection are adapted under the
 [MIT license](Licenses/DFlash-MIT.txt), Copyright 2026 Z Lab.
 The bounded context, target verification and app integration are Slotstream code.
-The separately downloaded Inco draft checkpoint retains its own bundled license.
+The separately downloaded Fast draft includes its own Apache 2.0 license.
+The pinned Smart draft declares Apache 2.0 in its
+[model card](https://huggingface.co/incoai/Qwen3.8-Flash-Next-DFlash2/tree/a22a1744e85c17364dcc54a6a420af7135d4c7f6);
+that revision has no separate LICENSE file. Both retain their original model
+cards and pinned provenance alongside the downloaded weights.
 
 The target architecture was checked against Apple's
 [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) Qwen35 and Qwen35MoE

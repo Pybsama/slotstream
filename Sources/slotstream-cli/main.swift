@@ -12,7 +12,7 @@ struct Slotstream: ParsableCommand {
         abstract: "Qwen3.8-Flash-Next on Apple Silicon via SSD-streamed experts + cache slots.",
         version: SlotstreamBuild.version,
         subcommands: [
-            Run.self, Serve.self, Launch.self, Stop.self, Pull.self, Doctor.self, ModelPackCommand.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
+            SmartDFlashCheck.self, SmartDFlashReplay.self, Run.self, Serve.self, Launch.self, Stop.self, Pull.self, Doctor.self, ModelPackCommand.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
             PrefixCheck.self, PrefixExactCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPRowCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
