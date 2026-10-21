@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-21T17:18:23.164254Z
+updated: 2026-10-21T21:49:26.794816Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-21-smart-dflash-review]] — Smart DFlash native and upstream comparison receipts
+- [[sources/runs/2026/10/2026-10-21-smart-dflash-timing-discarded]] — Discarded incomplete Smart timing round
 - [[sources/runs/2026/10/2026-10-21-fast-smart-ci]] — Successful exact-commit engine and app CI after the real Fast and Smart development-app qualification.
 - [[sources/runs/2026/10/2026-10-21-fast-smart-delivered-app]] — Exact development app Fast/Smart UI switches, verified installation, corrected workflow fixtures and preserved Fast quality limits.
 - [[sources/runs/2026/10/2026-10-21-fast-smart-integration]] — Native Fast/Smart integration checks, real workflow results, preserved quality failures, storage recovery and qualification limits.
@@ -505,10 +507,8 @@ updated: 2026-10-21T17:18:23.164254Z
 - [[sources/runs/2026/09/2026-09-09-optimization-first-work-guard-and-fixture-delivery-preparation]] — Early original first-work enforcement and bounded prospective fixture delivery preparation
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-resource-stop-and-first-work-failure]] — V515 12 GB planner resource stop and first-job workload failure, unqualified
 - [[sources/runs/2026/09/2026-09-09-optimization-final-static-consumer-preparation]] — Final static lease and external consumer preparation preserve original checks and guards
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-256-complete-pass]] — Original 10 GB public-planner cohort qualifies automatic grouping with exact full responses
-- [[sources/runs/2026/09/2026-09-09-optimization-final-qualification-drivers-preparation]] — Final source qualification drivers preserve original native, paired and long workloads
 
 ## More
 
-This folder has 920 files. The 500 most recent are listed above.
+This folder has 922 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

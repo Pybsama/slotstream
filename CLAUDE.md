@@ -42,6 +42,12 @@ weaken prose link validation to accept tool results. Match workflow assertions
 to the requested contract and retain genuine model-quality failures alongside
 passing integration checks. The linked decision records the concrete examples.
 
+Separate draft acceleration from target quantization. The
+[Smart draft review](db/records/decisions/smart-dflash-and-target-quantization.md)
+requires independent quality and complete-request evidence for each. Keep
+published BF16 comparisons distinct from local deployed-model comparisons;
+small smoke suites and draft acceptance do not establish negligible quality loss.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

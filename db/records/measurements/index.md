@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-19T17:59:51.831111Z
+updated: 2026-10-21T21:48:32.682233Z
 ---
 
 # records/measurements
 
+- [[records/measurements/smart-dflash-native-and-q2-review]] — Native Smart DFlash preserves this small task set with a modest timing gain; direct Q2 comparison adds failures and does not justify replacing Smart.
 - [[records/measurements/release-0-2-30-published-2026-10-19]] — v0.2.30 published and accepted; mirror contributor notified
 - [[records/measurements/mirrored-checkpoint-review-2026-10-18]] — Mirrored checkpoint reads: final review corrections and three-arm comparison
 - [[records/measurements/issue54-native-boundary-probe-2026-10-13]] — Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff

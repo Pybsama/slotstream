@@ -561,3 +561,6 @@ Recorded actual app switches, complete installation verification, focused workfl
 ## [2026-10-21 17:18] update | records/decisions/fast-and-smart.md
 Closed the exact-commit hosted verification gate: engine CI and native Mac app CI passed on a3cf97c. Preserved real-model quality limits and separate development-bundle evidence.
 
+## [2026-10-21 21:51] update | records/measurements/smart-dflash-native-and-q2-review.md
+Record pinned native DFlash reference parity, full native requests, retained quality and memory-pressure failures, direct Q2 regressions, paired timing, and the separate target-quantization adoption decision. App Smart and public release remain unchanged.
+

@@ -2,7 +2,7 @@
 type: decision
 id: 01m5fjxv27w5ch7he3qj0qw3jb
 created: 2026-10-21T15:57:53.095657+00:00
-updated: 2026-10-21T17:18:23.372117+00:00
+updated: 2026-10-21T21:49:26.863056+00:00
 summary: Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 decided_on: 2026-10-21
 reversible_if: Complete native workflow and hardware evidence supports changing the maintained models or defaults.
@@ -92,3 +92,6 @@ The existing useful-work and complete-workflow decisions remain binding:
 A table-tool result exposed a generic storage boundary bug: literal JSON array brackets were interpreted as Markdown links by db.md. Encode JSON data as literal data at the storage boundary, preserve exact decoded values and validate ordinary prose normally. Do not special-case CSV, weaken link validation or ask the user to repair a runtime serialization mistake. Recovery must accept only the exact intended original bytes or their exact literal encoding, and retain external-edit conflict checks. Tests cover normal saves, interrupted saves, Unicode and link-looking user text; a copy of the original failed Home also recovered.
 
 Acceptance checks must match the user contract. An unspecified JSON amount may correctly be a numeric string, and an inclusive range starting at one can be as correct as a range starting at zero. Preserve these raw outputs, correct the fixtures, and test the actual review/apply operation. Keep genuine model-quality misses visible. Do not claim generic language constraints are deterministic guarantees or add prompt-specific runtime hacks to turn a benchmark green.
+
+## Smart draft follow-up
+The native Smart DFlash investigation and direct upstream Q2 comparison are recorded in [[records/measurements/smart-dflash-native-and-q2-review]]. Keep draft acceleration separate from target quantization, as specified in [[records/decisions/smart-dflash-and-target-quantization]]. The app continues to use its established Smart deployment while the candidate is qualified.

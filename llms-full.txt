@@ -1066,6 +1066,23 @@ reference. Model weights come from
 [pipenetwork/Qwen3.8-Flash-Next-MLX-4bit](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit)
 and remain under the [Qwen community license](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit/blob/main/LICENSE).
 
+## Smart draft comparison
+
+Smart DFlash is an explicit engineering candidate. The app's Smart choice still
+uses its established MTP policy. `slotstream smart-dflash-check --help` describes
+the native comparison instrument for plain, MTP and DFlash requests with saved
+inputs and receipts. It supports streamed text, real tool schemas, bounded image
+inputs, cancellation and persistent-prefix tests. The separate
+`smart-dflash-replay` command compares captured draft inputs without loading the
+target model. Both use the production native implementation.
+
+See [the Smart DFlash measurement](../db/records/measurements/smart-dflash-native-and-q2-review.md)
+for tested source identities, failures and unfinished qualification. The
+[adoption decision](../db/records/decisions/smart-dflash-and-target-quantization.md)
+separates draft acceleration from replacing the target with a more compressed
+checkpoint. A draft acceptance rate is not a model-quality score or a speed
+claim.
+
 
 <!-- ===== docs/SLOTSTREAM-MAC.md ===== -->
 
