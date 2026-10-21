@@ -37,6 +37,10 @@ actual model geometry, both cache layouts and native workflows. An upstream
 speed claim or a successful CLI answer is not complete app qualification.
 Retain target verification, bounded draft state and ordinary decoding when
 speculation costs more. Never port GPU spin or power-state tricks.
+Store structured JSON as literal data at the HomeStore/db.md boundary; do not
+weaken prose link validation to accept tool results. Match workflow assertions
+to the requested contract and retain genuine model-quality failures alongside
+passing integration checks. The linked decision records the concrete examples.
 
 ## App identity (October 16, 2026)
 

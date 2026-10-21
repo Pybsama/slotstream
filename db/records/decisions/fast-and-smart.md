@@ -2,7 +2,7 @@
 type: decision
 id: 01m5fjxv27w5ch7he3qj0qw3jb
 created: 2026-10-21T15:57:53.095657+00:00
-updated: 2026-10-21T16:45:21.442672+00:00
+updated: 2026-10-21T16:58:31.842514+00:00
 summary: Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 decided_on: 2026-10-21
 reversible_if: Complete native workflow and hardware evidence supports changing the maintained models or defaults.
@@ -66,7 +66,7 @@ runs are exploratory, not a clean paired benchmark or a throughput promise.
 Batched kernels can change floating-point rounding and model decisions; target
 verification does not imply byte-identical text across different pass shapes.
 
-The [[sources/runs/2026/10/2026-10-21-fast-smart-integration]] preserve the native app, server, cache and workflow results. The complete native UI/runtime checks pass, as do live Fast/Smart switches. The capability suite also exposes model-quality limits: Fast exceeded two word limits and missed a history lookup inside deliberately repetitive prior messages. Smart retrieved that fact, and Fast could use it after switching back. Two other reported failures were overly narrow fixtures, not incorrect answers. Focused reruns, the final app bundle and committed CI are still pending. Do not represent this as a clean quality sweep or a release receipt.
+The [[sources/runs/2026/10/2026-10-21-fast-smart-integration]] preserve the native app, server, cache and workflow results. The complete native UI/runtime checks pass, as do live Fast/Smart switches. The capability suite also exposes model-quality limits: Fast exceeded two word limits and missed a history lookup inside deliberately repetitive prior messages. Smart retrieved that fact, and Fast could use it after switching back. Two other reported failures were overly narrow fixtures, not incorrect answers. The corrected OCR and reviewed-edit reruns passed, and the actual built app completed Fast/Smart/Fast conversation switches at a 9 GB ceiling. Its complete installation verified through Settings, its ad hoc signature passed, and its embedded input manifest matched current sources. Receipt: [[sources/runs/2026/10/2026-10-21-fast-smart-delivered-app]]. The isolated history miss also occurred with DFlash disabled, so it is not a demonstrated DFlash-specific defect. Exact-commit hosted checks are tracked separately. Do not represent this as a clean quality sweep or a public release receipt.
 Physical tests on 16 GB and 64 GB machines are unavailable in this session.
 Simulated planning and small budgets on the 48 GB Mac are narrower evidence.
 
@@ -92,4 +92,3 @@ The existing useful-work and complete-workflow decisions remain binding:
 A table-tool result exposed a generic storage boundary bug: literal JSON array brackets were interpreted as Markdown links by db.md. Encode JSON data as literal data at the storage boundary, preserve exact decoded values and validate ordinary prose normally. Do not special-case CSV, weaken link validation or ask the user to repair a runtime serialization mistake. Recovery must accept only the exact intended original bytes or their exact literal encoding, and retain external-edit conflict checks. Tests cover normal saves, interrupted saves, Unicode and link-looking user text; a copy of the original failed Home also recovered.
 
 Acceptance checks must match the user contract. An unspecified JSON amount may correctly be a numeric string, and an inclusive range starting at one can be as correct as a range starting at zero. Preserve these raw outputs, correct the fixtures, and test the actual review/apply operation. Keep genuine model-quality misses visible. Do not claim generic language constraints are deterministic guarantees or add prompt-specific runtime hacks to turn a benchmark green.
-

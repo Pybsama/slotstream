@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-16T06:32:38.240876+00:00
+updated: 2026-10-21T17:01:20.183785+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -281,3 +281,11 @@ The [fix qualification](../../../sources/runs/2026/10/2026-10-14-sevra-capabilit
 The full native regression suite, subsequent focused capability/UI checks and bundle smoke passed. The new real-model replay is **pending**, not passed: its safe preflight refused twice before model loading when the desktop had insufficient headroom. The prepared command and limits are in the source receipt. No new public desktop release, installer qualification, general task success rate or speed improvement is claimed.
 
 The durable engineering policy is [qualify complete native workflows](../../decisions/qualify-complete-native-workflows.md). Follow through from input and model choice to tool execution, review, rendering and the delivered artifact; keep absent capabilities separate from defects in existing workflows.
+
+## Fast and Smart, October 21, 2026
+
+The native app and engine now implement explicit Fast and Smart roles, with Fast for new app installs and existing saved choices preserved. Fast uses Qwen3.6-35B-A3B four-bit and native DFlash 2; Smart retains the existing Flash-Next/MTP path. Both use the bounded planner and SSD streaming. There is one loaded model and no task router. See [[records/decisions/fast-and-smart]].
+
+The full native UI/runtime suite passed, including real db.md persistence and crash recovery. Real Fast workflows covered writing, translation, decisions, documents, OCR, deterministic tables, code review, folder search and meeting notes. The corrected OCR and code-edit checks passed, including exact approved file application. Actual built-app Fast/Smart/Fast clicks and answers preserved conversation state and the custom memory ceiling. The complete Fast installation verified through Settings. Prefix restore and private-cache exclusion passed. Raw evidence: [[sources/runs/2026/10/2026-10-21-fast-smart-integration]] and [[sources/runs/2026/10/2026-10-21-fast-smart-delivered-app]].
+
+This is not a clean model-quality sweep: Fast exceeded two requested word limits and missed an old fact within deliberately repetitive history, both with and without DFlash. Smart retrieved the fact. These remain quality limitations, distinct from successful data preservation and switching. Physical tests used the owned 48 GB Mac with smaller budgets; 16–64 GB coverage outside it is simulated planning. No new public Desktop release, installed-release certification, sustained throughput comparison or physical 16/64 GB proof is claimed.

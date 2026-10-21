@@ -2,15 +2,15 @@
 type: index
 scope: type-folder
 folder: records/design
-updated: 2026-10-16T06:32:38.355396Z
+updated: 2026-10-21T17:01:20.183785Z
 ---
 
 # records/design
 
+- [[records/design/sevra-spec/implementation-status]] — Mac application implementation progress and unpassed release gates
 - [[records/design/sevra-spec/ui-contract]] — Mac UI geometry, native text, appearance and review requirements
 - [[records/design/sevra-spec/home-template]] — Versioned Slotstream Home configuration template
 - [[records/design/sevra-spec/mac-platform]] — Mac native implementation baseline and dependency qualification
-- [[records/design/sevra-spec/implementation-status]] — Mac application implementation progress and unpassed release gates
 - [[records/design/sevra-spec/runtime-contract]] — Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
 - [[records/design/sevra-spec/overview]] — Slotstream native product specification entry point
 - [[records/design/sevra-maintained-model-integration]] — Slotstream integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.

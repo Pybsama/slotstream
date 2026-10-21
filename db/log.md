@@ -555,3 +555,6 @@ Publish v0.2.30 from exact successful CI bytes; preserve 36/36 native gates, pub
 ## [2026-10-21 16:08] update | records/decisions/fast-and-smart.md
 Implement native Fast and explicit Fast/Smart app choice; preserve saved settings, pin target and draft installation, record initial functional runs and conservative memory policy. Complete app acceptance and shipping remain in progress.
 
+## [2026-10-21 17:00] update | records/decisions/fast-and-smart.md
+Recorded actual app switches, complete installation verification, focused workflow repairs, cache privacy and retained model-quality findings. Hosted checks tracked against implementation commit a3cf97c.
+
