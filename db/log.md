@@ -558,3 +558,6 @@ Implement native Fast and explicit Fast/Smart app choice; preserve saved setting
 ## [2026-10-21 17:00] update | records/decisions/fast-and-smart.md
 Recorded actual app switches, complete installation verification, focused workflow repairs, cache privacy and retained model-quality findings. Hosted checks tracked against implementation commit a3cf97c.
 
+## [2026-10-21 17:18] update | records/decisions/fast-and-smart.md
+Closed the exact-commit hosted verification gate: engine CI and native Mac app CI passed on a3cf97c. Preserved real-model quality limits and separate development-bundle evidence.
+
