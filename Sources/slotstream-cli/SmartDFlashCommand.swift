@@ -194,6 +194,7 @@ struct SmartDFlashReplay: ParsableCommand {
         guard (1...100_000_000).contains(size), (Machine.current().availableGB ?? 0) >= 6 else {
             throw ValidationError("Replay needs a bounded fixture and 6 GB reclaimable memory")
         }
+        try ModelProcessGuard.acquire()
         MLX.Memory.cacheLimit = 2_000_000_000
         var arrays = try loadArrays(url: url)
         guard let features = arrays["context_features"], features.shape == [1, chunks.reduce(0, +), 12800],
