@@ -564,3 +564,6 @@ Closed the exact-commit hosted verification gate: engine CI and native Mac app C
 ## [2026-10-21 21:51] update | records/measurements/smart-dflash-native-and-q2-review.md
 Record pinned native DFlash reference parity, full native requests, retained quality and memory-pressure failures, direct Q2 regressions, paired timing, and the separate target-quantization adoption decision. App Smart and public release remain unchanged.
 
+## [2026-10-21 22:24] update | records/measurements/smart-dflash-native-and-q2-review.md
+Record successful engine, native Mac app and context-proxy CI for final code ed0c6c9. Keep exact hosted receipts separate from local model tests, app adoption and release status.
+

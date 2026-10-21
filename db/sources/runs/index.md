@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-21T21:49:26.794816Z
+updated: 2026-10-21T22:23:48.392920Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-21-smart-dflash-final-code-ci]] — Hosted engine, Mac app and context checks pass for the final native Smart DFlash code
 - [[sources/runs/2026/10/2026-10-21-smart-dflash-review]] — Smart DFlash native and upstream comparison receipts
 - [[sources/runs/2026/10/2026-10-21-smart-dflash-timing-discarded]] — Discarded incomplete Smart timing round
 - [[sources/runs/2026/10/2026-10-21-fast-smart-ci]] — Successful exact-commit engine and app CI after the real Fast and Smart development-app qualification.
@@ -506,9 +507,8 @@ updated: 2026-10-21T21:49:26.794816Z
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-fixture-delivery-pass]] — Corrected 12 GB planner fixture passes four-response functional delivery, no timing qualification
 - [[sources/runs/2026/09/2026-09-09-optimization-first-work-guard-and-fixture-delivery-preparation]] — Early original first-work enforcement and bounded prospective fixture delivery preparation
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-resource-stop-and-first-work-failure]] — V515 12 GB planner resource stop and first-job workload failure, unqualified
-- [[sources/runs/2026/09/2026-09-09-optimization-final-static-consumer-preparation]] — Final static lease and external consumer preparation preserve original checks and guards
 
 ## More
 
-This folder has 922 files. The 500 most recent are listed above.
+This folder has 923 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

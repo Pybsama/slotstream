@@ -2,14 +2,14 @@
 type: measurement
 id: 01m5g6zxhaae830aswm9h9rffy
 created: 2026-10-21T21:48:32.682233+00:00
-updated: 2026-10-21T21:48:32.682233+00:00
+updated: 2026-10-21T22:23:54.970227+00:00
 summary: Native Smart DFlash preserves this small task set with a modest timing gain; direct Q2 comparison adds failures and does not justify replacing Smart.
 date: 2026-10-21
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
 order: '1860'
-runs: '[[sources/runs/2026/10/2026-10-21-smart-dflash-review]]'
+runs: '[[sources/runs/2026/10/2026-10-21-smart-dflash-review]], [[sources/runs/2026/10/2026-10-21-smart-dflash-final-code-ci]]'
 title: Smart DFlash native comparison and Q2 checkpoint review
 status: measured
 ---
@@ -215,3 +215,18 @@ it does not override the runtime guard. Both attempts remain in the archive.
 
 Raw evidence: [[sources/runs/2026/10/2026-10-21-smart-dflash-review]].
 Discarded timing attempt: [[sources/runs/2026/10/2026-10-21-smart-dflash-timing-discarded]].
+
+## Hosted verification
+The final code commit `ed0c6c9d04a5433f75ce6639e3984abcf6b8bdfe` passes
+[engine CI](https://github.com/carloslfu/slotstream/actions/runs/39680693199),
+[Mac app CI](https://github.com/carloslfu/slotstream/actions/runs/39680693003)
+and [context proxies](https://github.com/carloslfu/slotstream/actions/runs/39680693062).
+This includes the engine release build, external-library use, static/runtime
+safety checks, goldens, full weights-free catalogue, instrumented tests and
+coverage report, as well as the Xcode app build, scripted app checks and
+light/dark view snapshots. The candidate's tested bytes remain unchanged.
+
+These hosted checks complement the local model tests above. They do not promote
+the candidate into the app, qualify physical 16/64 GB hardware or publish a
+release. The raw exact-commit receipt is
+[[sources/runs/2026/10/2026-10-21-smart-dflash-final-code-ci]].
