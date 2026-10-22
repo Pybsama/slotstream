@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-22T07:25:24.328464+00:00
+updated: 2026-10-22T07:55:15.238091+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -329,6 +329,22 @@ PATH lookup bug, actual question/answer, final bundle hashes and test scope.
 The final stable-source rerun of the complete Mac suite passed on implementation commit `0c6f328`, including its final input-identity guard. Home integration checks also passed independently with CI-pinned dbmd 0.14.0. This closes the earlier local aggregate-run refusal; hosted checks remain tracked separately. [[sources/runs/2026/10/2026-10-21-slotstream-home-stable-checks]]
 
 ## Native Q2 candidate, October 22, 2026
-The exact GSQ-RCO Q2 checkpoint is implemented as an explicit native engine and app-runtime candidate. Packed mixed-format weights, SSD expert and embedding reads, pinned metadata/draft installation, target-verified DFlash and bounded cost-aware verification use Swift/MLX/Metal. Normal setup and automatic incumbent retention exclude the candidate. Fast and Smart remain unchanged.
+The exact GSQ-RCO Q2 checkpoint is implemented as an explicit native engine and
+app candidate. Packed mixed-format weights, SSD expert and embedding reads,
+pinned metadata/draft installation, target-verified DFlash and bounded
+cost-aware verification use Swift/MLX/Metal. Normal setup and automatic
+incumbent retention exclude the candidate. Fast and Smart remain unchanged.
 
-Independent component fixtures, the final engine catalogue and bounded CLI workflows pass. The full v2 scripted native UI/runtime suite passed; final app delivery and six real Q2 workflows are still being checked. Retain the smaller quality suite's failures and the paging-affected speed diagnostics. The exact target has no vision tower. See [[records/measurements/native-exact-q2-qualification]] for the current evidence and limits. No release or default promotion is claimed.
+Independent component fixtures, the qualified engine catalogue and bounded CLI
+workflows pass. The native scripted UI/runtime suite, production development
+bundle and six real Q2 jobs pass. The visible app completes a Q2 request; the
+final composer identifies it as a candidate. The real checks assert loaded pack
+and memory, preserving the wrong-model harness arm and activation failure that
+led to fixes. Physical app usage stays below its explicit limit.
+
+Retain the smaller quality suite's failures and paging-affected speed diagnostics.
+The exact target has no vision tower. See
+[[records/measurements/native-exact-q2-qualification]] for source identities,
+raw app receipts, remaining performance work and hardware limits. Six selected
+jobs on the owned Mac do not qualify every capability or other physical RAM
+sizes. No release or default promotion is claimed.

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T07:25:24.200581Z
+updated: 2026-10-22T07:55:15.069243Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-22-native-q2-app]] — Native Q2 passes six real app jobs and visible GUI generation under a ten-GB limit; preserved harness and activation failures
 - [[sources/runs/2026/10/2026-10-22-native-q2-timing-exclusions]] — Retain paging-affected native Q2 timing diagnostics and failed/intermediate attempts without clean speed claims
 - [[sources/runs/2026/10/2026-10-22-native-q2-port]] — Native exact Q2 source, numerical reference, functional, quality, memory and regression evidence
 - [[sources/runs/2026/10/2026-10-21-slotstream-home-stable-checks]] — Complete stable-source Mac suite and pinned dbmd Home integration compatibility
@@ -506,9 +507,8 @@ updated: 2026-10-22T07:25:24.200581Z
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-complete-pass]] — Complete 12 GB public-planner cohort passes with explicit startup swap-in pair exclusions
 - [[sources/runs/2026/09/2026-09-09-optimization-explicit-startup-swapin-method-and-full-freeze]] — Explicit whole-pair startup swap-in exclusion with unchanged hard limits and fresh full cohorts
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-repeat-startup-swapin-stop]] — Second 12 GB startup swap-in stop with ample headroom, preserved incomplete cohort
-- [[sources/runs/2026/09/2026-09-09-optimization-qualified-fixture-full-planner-cohorts-freeze]] — Full 12 and 16 GB original planner cohorts frozen after independent fixture delivery
 
 ## More
 
-This folder has 929 files. The 500 most recent are listed above.
+This folder has 930 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

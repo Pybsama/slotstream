@@ -1109,7 +1109,7 @@ Home. The normal app picker and automatic selection continue to use maintained
 Fast and Smart choices. Existing saved candidate settings retain their title.
 
 This candidate has not earned promotion to Smart. It lacks the original vision
-tower, and native speed still falls short of the upstream implementation.
+tower, and native tests have not reproduced the upstream speed.
 Document OCR is a separate native tool. See the
 [qualification record](../db/records/measurements/native-exact-q2-qualification.md)
 for exact source identities, quality failures, app results, memory evidence and

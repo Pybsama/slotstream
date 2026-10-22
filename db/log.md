@@ -579,3 +579,6 @@ Close the local stable-source regression gate and verify CLI/MCP compatibility w
 ## [2026-10-22 07:26] update | records/measurements/native-exact-q2-qualification.md
 Implement the exact native Q2 candidate with pinned mixed formats, bounded streaming and DFlash verification cost control. Preserve independent numerical fixtures, quality failures, memory evidence and excluded timing. Keep Fast/Smart defaults unchanged; final real app qualification remains in progress.
 
+## [2026-10-22 07:55] update | records/measurements/native-exact-q2-qualification.md
+Captured final native Q2 app sources, six passing real workflows, visible GUI proof, rejected harness/activation arms and cleanup; preserved performance/quality limits. Brain gates passed with zero errors or warnings and 354 claim checks.
+

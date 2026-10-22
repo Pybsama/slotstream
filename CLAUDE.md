@@ -62,6 +62,8 @@ actual memory, full app jobs and missing capabilities before changing Smart.
 Keep candidates outside normal setup and automatic incumbent retention; do not
 weaken selection regressions to admit them. Profile routed expert computation
 and dispatch as well as SSD waits before attributing a performance gap.
+Pass the same selected preferences to both app and inference owners, and assert
+the actual loaded pack and memory ceiling in every real-model workflow receipt.
 
 ## App identity (October 16, 2026)
 
