@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-22T07:55:15.284584Z
+updated: 2026-10-22T19:37:36.881Z
 ---
 
 # records/measurements
 
+- [[records/measurements/native-q2-splash-execution-comparison]] — Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs
 - [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
 - [[records/measurements/smart-dflash-native-and-q2-review]] — Historical native Smart DFlash reference and small-task review; Q2 performance and the adoption priority are corrected by the exact-recipe follow-up.
 - [[records/measurements/exact-q2-performance-and-quality-followup]] — Exact upstream Q2 is substantially faster in bounded coding controls; preserve capability failures and prioritize native qualification over the earlier DFlash-only conclusion

@@ -2,11 +2,15 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T07:55:15.069243Z
+updated: 2026-10-22T19:36:51.007594Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-followup]] — Final native Q2 warm control retains a gap; extra recovery-graph representation is rejected after limited benefit and incomplete guarded ABBA
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-validation]] — Full static suite and catalogue pass on frozen native Q2 v17; initial static fixture failure preserved
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-exclusions]] — Retained paging, cache mismatches, thermal exclusions, continuous-session memory failure, unsupported fixtures and unsuccessful native optimizations
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution]] — Frozen native Q2 ports, matched-cache comparisons, independent quality/state checks and six real app jobs, with performance parity still open
 - [[sources/runs/2026/10/2026-10-22-native-q2-app]] — Native Q2 passes six real app jobs and visible GUI generation under a ten-GB limit; preserved harness and activation failures
 - [[sources/runs/2026/10/2026-10-22-native-q2-timing-exclusions]] — Retain paging-affected native Q2 timing diagnostics and failed/intermediate attempts without clean speed claims
 - [[sources/runs/2026/10/2026-10-22-native-q2-port]] — Native exact Q2 source, numerical reference, functional, quality, memory and regression evidence
@@ -503,12 +507,8 @@ updated: 2026-10-22T07:55:15.069243Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-preparation-binding-amendment-and-source-review]] — Final prerequisite path amendment passes all27 affected checks and bounded source review
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-complete-pass]] — Complete 16 GB public-planner cohort passes with independently audited startup swap-in exclusions
 - [[sources/runs/2026/09/2026-09-09-hermes-automatic-mtp-preflight]] — Hermes automatic MTP guide and preflight verification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-source-current-profile-binding-preparation]] — Final-source preparation requires the exact qualified profile identities and declared exclusion audit
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-complete-pass]] — Complete 12 GB public-planner cohort passes with explicit startup swap-in pair exclusions
-- [[sources/runs/2026/09/2026-09-09-optimization-explicit-startup-swapin-method-and-full-freeze]] — Explicit whole-pair startup swap-in exclusion with unchanged hard limits and fresh full cohorts
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-repeat-startup-swapin-stop]] — Second 12 GB startup swap-in stop with ample headroom, preserved incomplete cohort
 
 ## More
 
-This folder has 930 files. The 500 most recent are listed above.
+This folder has 934 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

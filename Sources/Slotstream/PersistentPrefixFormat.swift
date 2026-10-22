@@ -131,6 +131,7 @@ public struct PersistentPrefixIdentity: Equatable {
             "optimizations": String(decoding: try encoder.encode(model.optimizations), as: UTF8.self),
             "attention_backend": FusedPrefillAttention.cacheIdentity,
             "context_arithmetic": String(PromptCheckpointKey.currentContextArithmetic),
+            "q2_preparation": Q2PackedExperts.enabled ? "planes-mpp-hc-q80-bf16-gdn-float-split-moe-ple-qkv-v7" : "raw-gdn-float-moe-ple-qkv-v5",
         ]
         if model.authenticatedArtifactIdentity != nil {
             components["tokenizer_metadata"] = PinnedModel.files

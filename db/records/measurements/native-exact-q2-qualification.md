@@ -2,12 +2,13 @@
 type: measurement
 id: 01m5h7yp7wb4k7xaf2n47wrzex
 created: 2026-10-22T07:24:35.452353+00:00
-updated: 2026-10-22T07:55:15.284584+00:00
+updated: 2026-10-22T19:06:51.575912+00:00
 summary: Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
 date: 2026-10-22
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
+note: Initial implementation remains historical evidence; the later native Q2 and Splash execution comparison qualifies grouped kernels, controller/state fixes and separate final app receipts.
 order: '1875'
 runs: '[[sources/runs/2026/10/2026-10-22-native-q2-port]], [[sources/runs/2026/10/2026-10-22-native-q2-timing-exclusions]], [[sources/runs/2026/10/2026-10-22-native-q2-app]]'
 title: Native exact Q2 qualification

@@ -53,7 +53,8 @@ python3 Tools/mtp_process_guard_gate.py --binary "$BIN"
 python3 Tools/checkpoint_mirror_cli.py --binary "$BIN" --weights-free
 python3 Tools/vision_mirror_gate.py --binary "$BIN"
 "$BIN" runtime-check
-"$BIN" q2-format-check --fixtures bench/q2/formats.json --policy-fixtures bench/q2/verify-budget.json
+"$BIN" q2-format-check --fixtures bench/q2/formats.json --policy-fixtures bench/q2/verify-budget.json --mix-fixtures bench/q2/mix-quantization.json
+"$BIN" q2-experts-check
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.
 python3 Tools/process_memory_gate.py

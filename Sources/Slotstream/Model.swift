@@ -341,6 +341,14 @@ public final class Qwen4ExpModel {
             self.optimizations.automaticReadScope = false
             self.optimizations.layerExpertWorkspace = false
             if index.q2 != nil {
+                // Q2 keeps only four layers pinned between barriers, bounded
+                // by DecodeLookahead.barrierPeriod when the pool is smaller.
+                self.decodeBarrierLayers = Self.environmentBarrierLayers ?? 4
+                // Submit useful resident work before demand I/O. The Q2
+                // qualification measures complete requests and actual memory.
+                if ProcessInfo.processInfo.environment["SLOTSTREAM_OPT_SHARED_OVERLAP"] == nil {
+                    self.optimizations.overlapSharedExpert = true
+                }
                 self.optimizations.fusedGDNProjection = false
                 self.optimizations.fusedPrefillWorkspace = false
             }
@@ -669,7 +677,7 @@ public final class Qwen4ExpModel {
                 hidden = hidden + attended
                 hidden = hidden + (try moe[layer]!(fastMLPNorm[layer](hidden)))
                 eval(hidden)
-                if optimizations.compactStateWindows { state.linear[layer]?.compactWindows() }
+                if optimizations.compactStateWindows, !state.recordingEnabled { state.linear[layer]?.compactWindows() }
                 pool.unpinAll()
                 captureDraftLayer(layer, hidden: hidden)
                 perLayerHook?(layer, hidden)
@@ -736,6 +744,7 @@ public final class Qwen4ExpModel {
         if !vision.isEmpty { h0 = Self.spliceVision(h0, runs: vision, length: S, hidden: cfg.hiddenSize) }
         Self.debugDump("embed", h0)
         var h = tiled(h0, repetitions: [1, 1, cfg.hcCount])
+        if pool.expertStore.isQ2 { h = h.asType(.float32) }
 
         // n-gram history: rolling context + new ids
         let history = state.ngramCtx + ids.map { Int64($0) }
@@ -950,7 +959,8 @@ public final class Qwen4ExpModel {
             if let observe = contextNumericsObserver {
                 moe[l]!.contextNumericsObserver = { name, value in observe(l, name, value) }
             } else { moe[l]!.contextNumericsObserver = nil }
-            let moeOut = try moe[l]!(x2)
+            let computedMoE = try moe[l]!(x2)
+            let moeOut = pool.expertStore.isQ2 ? computedMoE.asType(.bfloat16) : computedMoE
             if let readout = deferredReadout, let session = self.lookahead {
                 // Consumed here, after the demand reads: the host copy waits only
                 // for whatever of the readout the GPU has not finished.
@@ -1021,7 +1031,10 @@ public final class Qwen4ExpModel {
             // The layer has finished reading the convolution parent. Compact
             // only multi-token passes; a one-token decode parent is bounded
             // to the small convolution window plus one row already.
-            if optimizations.compactStateWindows, S > 1 {
+            // Recording owns every rollback window, so compacting the final
+            // one here cannot release the parent and only adds a GPU wait.
+            // The accepted windows are compacted together by rollbackChecked.
+            if optimizations.compactStateWindows, S > 1, !state.recordingEnabled {
                 state.linear[l]?.compactWindows()
             }
             MemTrace.mark("layer-end", h)
@@ -1481,7 +1494,8 @@ extension Qwen4ExpModel.State {
         invalidateCheckpoints(after: tokenCount, mtpOffset: nil)
         setRecording(false)
         if compactStateWindows {
-            for cache in linear.values { cache.compactWindows() }
+            let windows = linear.values.flatMap { $0.prepareCompactWindows() }
+            if !windows.isEmpty { eval(windows) }
         }
     }
 

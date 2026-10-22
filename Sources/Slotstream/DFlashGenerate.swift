@@ -30,7 +30,8 @@ extension Generator {
             guard shouldContinue() else { reason = "stop"; break }
             let action = policy.action(contextTokens: state.tokenCount)
             let requestedDepth: Int
-            if case .draft(let depth) = action, context.end == state.tokenCount { requestedDepth = depth }
+            if verifyBudget != nil, context.end == state.tokenCount { requestedDepth = 7 }
+            else if case .draft(let depth) = action, context.end == state.tokenCount { requestedDepth = depth }
             else { requestedDepth = 0 }
             let depth = min(requestedDepth, params.maxTokens - out.count,
                 max(0, contextLimit - state.tokenCount - 1))
@@ -101,8 +102,14 @@ extension Generator {
             verifyBudget?.observe(confidence: draft.proposalConfidence, verified: proposals.count,
                 accepted: accepted, seconds: RuntimeClock.seconds(since: started),
                 labelsValid: pending != nil && shouldContinue())
-            policy.observeDraft(seconds: RuntimeClock.seconds(since: started), emitted: out.count - emittedBefore,
-                drafted: proposals.count, accepted: accepted)
+            // Q2's confidence/cost controller already selects the useful
+            // prefix, including an anchor-only target pass. A second controller
+            // permanently halving its proposal horizon confounds its cost fit
+            // and prevents its scheduled exploration from recovering.
+            if verifyBudget == nil {
+                policy.observeDraft(seconds: RuntimeClock.seconds(since: started), emitted: out.count - emittedBefore,
+                    drafted: proposals.count, accepted: accepted)
+            }
         }
     }
 }

@@ -2,10 +2,10 @@
 type: decision
 id: 01m5g6zxj15k238q4qc7zw0ajr
 created: 2026-10-21T21:48:32.705335+00:00
-updated: 2026-10-22T07:55:15.217469+00:00
+updated: 2026-10-22T19:06:51.425895+00:00
 summary: Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 decided_on: 2026-10-21
-evidence: '[[records/measurements/smart-dflash-native-and-q2-review]], [[records/measurements/exact-q2-performance-and-quality-followup]], [[records/measurements/native-exact-q2-qualification]]'
+evidence: '[[records/measurements/smart-dflash-native-and-q2-review]], [[records/measurements/exact-q2-performance-and-quality-followup]], [[records/measurements/native-exact-q2-qualification]], [[records/measurements/native-q2-splash-execution-comparison]]'
 reversible_if: Complete native workflows show the exact Q2 candidate loses more useful work than its speed benefit justifies, or another qualified configuration provides a better measured tradeoff.
 title: Smart DFlash and compressed Smart targets
 status: standing
@@ -108,3 +108,21 @@ This exact artifact has no vision tower; native OCR is a separate capability.
 failures, memory limits and remaining work. Preserve current Smart until the
 complete measured tradeoff justifies promotion; zero regressions is not the
 criterion, but neither is a successful port alone. No public release is claimed.
+
+## Native execution comparison, October 22, 2026
+
+The follow-up ports grouped compressed experts, resident tiles, upstream weight
+preparation and precision boundaries, a single verification controller, fused
+operations and bounded speculative state recovery. The native candidate passes
+its component checks, continuous quality/runtime tests and six real app jobs.
+The matched-cache evidence still shows a material Splash speed advantage.
+Keep the candidate explicit and leave the maintained choices unchanged.
+
+The remaining priority is to reduce useful CPU/GPU handoffs and improve their
+overlap with bounded expert reads. A prefetcher or faster kernel alone is not
+evidence of a faster complete job. Preserve unsuccessful implementations,
+actual cache counts, process-memory failures and cold/warm distinctions. Do not
+combine separate adaptive policies whose actions corrupt each other's cost
+measurements. Preserve every recurrent rollback boundary when reducing state
+copies. No spin, power-state tricks, broad quality-equivalence claim or release
+is authorized by the benchmark result. See [[records/measurements/native-q2-splash-execution-comparison]].

@@ -431,19 +431,29 @@ final class LinearCache {
     }
 
     func compactWindows() {
+        let windows = prepareCompactWindows()
+        if !windows.isEmpty { eval(windows) }
+    }
+
+    /// Build independent owned-window copies without serializing every layer.
+    /// The owner evaluates the returned arrays together at a commit boundary.
+    func prepareCompactWindows() -> [MLXArray] {
         if let window = convState { convState = contiguous(window) }
         if let window = pleConvState { pleConvState = contiguous(window) }
         // eval alone does not detach a view. contiguous copies oversized
         // backing allocations in the pinned MLX implementation.
         // Both copies are independent and already retain their inputs. Submit
         // them together so one synchronization materializes both owned windows.
-        let windows = [convState, pleConvState].compactMap { $0 }
-        if !windows.isEmpty { eval(windows) }
         // Recording windows intentionally share one bounded verify parent.
         // rollback compacts the selected window after releasing the others.
+        return [convState, pleConvState].compactMap { $0 }
     }
 
     func clearRecording() {
+        // A recorder may return a view into one bounded backing allocation.
+        // Detach the accepted slice before clearing it, including full acceptance.
+        // MLX contiguous also copies an oversized contiguous backing buffer.
+        if !ssmStates.isEmpty, let state = ssmState { ssmState = contiguous(state) }
         record = false
         convStates = []
         ssmStates = []
@@ -668,6 +678,7 @@ package struct QSASelection {
 }
 
 final class QSAAttention {
+    private let q2: Bool
     let arithmetic: BlockArithmeticProfile
     var minimumProjectionRows = 0
     var stableSmallKeyDomain = false
@@ -703,6 +714,7 @@ final class QSAAttention {
 
     init(_ w: TensorSource, base b: String, arithmetic: BlockArithmeticProfile = .deployed) {
         self.arithmetic = arithmetic
+        q2 = (w as? ResidentWeights)?.usesQ2 == true
         cfg = w.config
         qProj = w.linear(b + ".q_proj")
         kProj = w.linear(b + ".k_proj")
@@ -721,10 +733,19 @@ final class QSAAttention {
         let (B, S, D) = (x.dim(0), x.dim(1), cfg.headDim)
         let offset = cache.offset
         indexer.appendKeysOnly(x, rope: rope, cache: idxCache)
-        var k = kNorm(kProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D])).transposed(0, 2, 1, 3)
+        var k = kProj(x, minimumRows: minimumProjectionRows).reshaped([B,S,cfg.numKVHeads,D])
         let v = vProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D]).transposed(0, 2, 1, 3)
         let (c, s) = rope.table(start: offset, count: S)
-        k = rope.rotate(k, c.expandedDimensions(axis: 1), s.expandedDimensions(axis: 1))
+        if q2 {
+            // Use the same normalization and rotary rounding as a full pass.
+            // Reusing the bounded preparation kernel avoids a second numerical
+            // implementation for this uncommon state-only terminal path.
+            k = Q2Attention.prepare(q:k,k:k,qNorm:kNorm.weight,kNorm:kNorm.weight,
+                cosine:c,sine:s).1
+        } else {
+            k = kNorm(k).transposed(0,2,1,3)
+            k = rope.rotate(k,c.expandedDimensions(axis:1),s.expandedDimensions(axis:1))
+        }
         let retained = cache.updateAndFetch(k, v)
         eval(retained.0, retained.1)
     }
@@ -752,18 +773,11 @@ final class QSAAttention {
         var q = qg[.ellipsis, 0 ..< D]
         let gate = qg[.ellipsis, D...].reshaped([B, S, H * D])
         debugSink?("qgRaw", qg)
-        q = qNorm(q).transposed(0, 2, 1, 3)
-        var k = kNorm(kProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D])).transposed(0, 2, 1, 3)
-        var v = vProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D]).transposed(0, 2, 1, 3)
-        debugSink?("qNormed", q)
-        debugSink?("kNormed", k)
-        debugSink?("v", v)
-
-        var (c, s) = rope.table(start: offset, count: S)
-        c = c.expandedDimensions(axis: 1)
-        s = s.expandedDimensions(axis: 1)
-        q = rope.rotate(q, c, s)
-        k = rope.rotate(k, c, s)
+        let rawK = kProj(x, minimumRows: minimumProjectionRows).reshaped([B,S,cfg.numKVHeads,D])
+        var k: MLXArray
+        (q,k) = prepareQueries(q,keys:rawK,rope:rope,offset:offset)
+        var v = vProj(x, minimumRows: minimumProjectionRows).reshaped([B,S,cfg.numKVHeads,D]).transposed(0,2,1,3)
+        debugSink?("v",v)
 
         (k, v) = cache.updateAndFetch(k, v)
 
@@ -779,7 +793,7 @@ final class QSAAttention {
             let attended = Self.attend(q: queries, k: k, v: v, sparse: mask,
                 base: offset + first, scale: scale, block: rows)
             let flattened = attended.transposed(0, 2, 1, 3).reshaped([B, rows, H * D])
-            return oProj(flattened * arithmetic.sigmoid(gate[0..., first..., 0...]), minimumRows: minimumProjectionRows)
+            return oProj(gated(flattened, gate[0..., first..., 0...]), minimumRows: minimumProjectionRows)
         }
 
         debugSink?("qRoped", q)
@@ -818,7 +832,7 @@ final class QSAAttention {
                     base: offset, scale: scale, block: queryRows)[0..., 0..., 0 ..< S, 0...]
                 if extent > actual { paddedSmallKeyDomains += 1 }
                 let flattened = attended.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
-                return oProj(flattened * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
+                return oProj(gated(flattened, gate), minimumRows: minimumProjectionRows)
             }
         }
         if exactRows {
@@ -830,7 +844,7 @@ final class QSAAttention {
             multiRowSplits += 1
             debugSink?("sdpaOut", out)
             out = out.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
-            return oProj(out * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
+            return oProj(gated(out, gate), minimumRows: minimumProjectionRows)
         }
         var out = Self.attend(
             q: q, k: k, v: v, sparse: sparse, base: offset, scale: scale,
@@ -846,7 +860,7 @@ final class QSAAttention {
             onSplit: { [weak self] in self?.multiRowSplits += 1 })
         debugSink?("sdpaOut", out)
         out = out.transposed(0, 2, 1, 3).reshaped([B, S, H * D])
-        return oProj(out * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
+        return oProj(gated(out, gate), minimumRows: minimumProjectionRows)
     }
 
     /// Attention for `x` over the cached keys and values without appending
@@ -859,22 +873,33 @@ final class QSAAttention {
         let H = cfg.numAttentionHeads
         let D = cfg.headDim
         let qg = qProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, H, 2 * D])
-        var q = qNorm(qg[.ellipsis, 0 ..< D]).transposed(0, 2, 1, 3)
+        var q = qg[.ellipsis, 0 ..< D]
         let gate = qg[.ellipsis, D...].reshaped([B, S, H * D])
-        var k = kNorm(kProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D])).transposed(0, 2, 1, 3)
+        var k = kProj(x, minimumRows: minimumProjectionRows).reshaped([B,S,cfg.numKVHeads,D])
         var v = vProj(x, minimumRows: minimumProjectionRows).reshaped([B, S, cfg.numKVHeads, D]).transposed(0, 2, 1, 3)
-        var (c, s) = rope.table(start: offset, count: S)
-        c = c.expandedDimensions(axis: 1)
-        s = s.expandedDimensions(axis: 1)
-        q = rope.rotate(q, c, s)
-        k = rope.rotate(k, c, s)
+        (q,k) = prepareQueries(q,keys:k,rope:rope,offset:offset)
         if offset > 0, let keys = cache.keys, let values = cache.values {
             k = concatenated([keys[0..., 0..., 0 ..< offset, 0...], k], axis: 2)
             v = concatenated([values[0..., 0..., 0 ..< offset, 0...], v], axis: 2)
         }
         let out = Self.attend(q: q, k: k, v: v, sparse: nil, base: offset, scale: scale,
                               block: AttentionTuning.queryBlock(pass: S, context: k.dim(2)))
-        return oProj(out.transposed(0, 2, 1, 3).reshaped([B, S, H * D]) * arithmetic.sigmoid(gate), minimumRows: minimumProjectionRows)
+        return oProj(gated(out.transposed(0, 2, 1, 3).reshaped([B, S, H * D]), gate), minimumRows: minimumProjectionRows)
+    }
+
+    private func gated(_ value:MLXArray,_ gate:MLXArray)->MLXArray {
+        q2 ? Q2Attention.gate([value,gate])[0] : value * arithmetic.sigmoid(gate)
+    }
+
+    private func prepareQueries(_ rawQ:MLXArray,keys rawK:MLXArray,rope:Rope,offset:Int)->(MLXArray,MLXArray) {
+        let (c,s)=rope.table(start:offset,count:rawQ.dim(1))
+        if q2 {
+            return Q2Attention.prepare(q:rawQ,k:rawK,qNorm:qNorm.weight,kNorm:kNorm.weight,cosine:c,sine:s)
+        }
+        let q=qNorm(rawQ).transposed(0,2,1,3),k=kNorm(rawK).transposed(0,2,1,3)
+        debugSink?("qNormed",q);debugSink?("kNormed",k)
+        return (rope.rotate(q,c.expandedDimensions(axis:1),s.expandedDimensions(axis:1)),
+                rope.rotate(k,c.expandedDimensions(axis:1),s.expandedDimensions(axis:1)))
     }
 
     /// Attention over a pass, in blocks of queries.
@@ -1155,6 +1180,7 @@ public enum AttentionTuning {
 // MARK: - Gated DeltaNet
 
 final class GDNLayer {
+    let q2Arithmetic: Bool
     let arithmetic: BlockArithmeticProfile
     var minimumProjectionRows = 0
     var fuseInputProjection = false
@@ -1179,6 +1205,7 @@ final class GDNLayer {
 
     init(_ w: TensorSource, layer: Int, arithmetic: BlockArithmeticProfile = .deployed) {
         self.arithmetic = arithmetic
+        q2Arithmetic = (w as? ResidentWeights)?.usesQ2 == true
         layerIndex = layer
         cfg = w.config
         let b = "model.layers.\(layer).linear_attn"
@@ -1243,6 +1270,15 @@ final class GDNLayer {
                 // window of K-1 rows ending after position t
                 c.convStates = (0 ..< S).map { t in convInput[0..., (t + 1) ..< (t + K), 0...] }
             }
+        }
+        if q2Arithmetic {
+            let fused = Q2GatedDelta.apply(convInput: convInput, convWeight: convWeight,
+                a: aProj, b: bProj, z: z, aLog: aLog, dtBias: dtBias, norm: norm.weight,
+                state: cache?.ssmState, keyHeads: cfg.linearNumKHeads,
+                valueHeads: cfg.linearNumVHeads, record: cache?.record == true)
+            cache?.ssmState = fused.state
+            if cache?.record == true { cache?.ssmStates = fused.states }
+            return outProj(fused.output.reshaped([B, S, valueDim]), minimumRows: minimumProjectionRows)
         }
         let convOut = MLXNN.silu(conv1d(convInput, convWeight, groups: convDim))
 
@@ -1333,6 +1369,13 @@ final class GDNLayer {
         let aProj = inA(x, minimumRows: minimumProjectionRows)
         let K = cfg.convKernel
         let convState = cache?.convState ?? MLXArray.zeros([B, K - 1, convDim], dtype: x.dtype)
+        if q2Arithmetic {
+            let fused = Q2GatedDelta.apply(convInput: concatenated([convState, mixed], axis: 1),
+                convWeight: convWeight, a: aProj, b: bProj, z: z, aLog: aLog,
+                dtBias: dtBias, norm: norm.weight, state: cache?.ssmState,
+                keyHeads: cfg.linearNumKHeads, valueHeads: cfg.linearNumVHeads, record: false)
+            return outProj(fused.output.reshaped([B, S, valueDim]), minimumRows: minimumProjectionRows)
+        }
         let convOut = MLXNN.silu(conv1d(concatenated([convState, mixed], axis: 1), convWeight, groups: convDim))
         var q = convOut[.ellipsis, 0 ..< keyDim].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
         var k = convOut[.ellipsis, keyDim ..< (2 * keyDim)].reshaped([B, S, cfg.linearNumKHeads, cfg.linearKHeadDim])
@@ -1394,7 +1437,7 @@ final class MoELayer {
         self.pool = pool
         let b = "model.layers.\(layer).mlp"
         let router = w.linear(b + ".gate")
-        routerProjection = cfg.isFast ? RouterProjection(quantized: router) : RouterProjection(router.w)
+        routerProjection = (cfg.isFast || router.ggufDenseOutput != nil) ? RouterProjection(quantized: router) : RouterProjection(router.w)
         sharedGate = w.linear(b + ".shared_expert_gate")
         sharedGateProj = w.linear(b + ".shared_expert.gate_proj")
         sharedUpProj = w.linear(b + ".shared_expert.up_proj")
@@ -1409,9 +1452,14 @@ final class MoELayer {
 
     /// The shared expert's two matmul outputs on `input`, without observers:
     /// the operations `callAsFunction` would otherwise build after routing.
+    private func sharedActivation(_ input: MLXArray) -> MLXArray {
+        let g = sharedGateProj(input, minimumRows: minimumProjectionRows)
+        let u = sharedUpProj(input, minimumRows: minimumProjectionRows)
+        return pool.expertStore.isQ2 ? Q2HyperConnection.swiGLU([g, u])[0] : MLXNN.silu(g) * u
+    }
+
     func sharedExpertParts(_ input: MLXArray) -> (MLXArray, MLXArray) {
-        let value = sharedDownProj(MLXNN.silu(sharedGateProj(input, minimumRows: minimumProjectionRows))
-            * sharedUpProj(input, minimumRows: minimumProjectionRows), minimumRows: minimumProjectionRows)
+        let value = sharedDownProj(sharedActivation(input), minimumRows: minimumProjectionRows)
         return (value, sharedGate(input, minimumRows: minimumProjectionRows))
     }
 
@@ -1431,8 +1479,15 @@ final class MoELayer {
             logits = concatenated(pieces, axis: 1)
         } else { logits = routerProjection(x) }
         contextNumericsObserver?("router", logits)
-        let idx = RouterSelection.indices(logits, k: cfg.topK, enabled: specializedRouter)
-        let weights = softmax(takeAlong(logits, idx, axis: -1), axis: -1, precise: true)
+        let idx: MLXArray, weights: MLXArray, q2SharedWeight: MLXArray?
+        if pool.expertStore.isQ2 {
+            let route = Q2MoE.route(scores: logits, input: x, sharedGate: sharedGate.w)
+            idx = route.indices; weights = route.weights; q2SharedWeight = route.sharedWeight
+        } else {
+            idx = RouterSelection.indices(logits, k: cfg.topK, enabled: specializedRouter)
+            weights = softmax(takeAlong(logits, idx, axis: -1), axis: -1, precise: true)
+            q2SharedWeight = nil
+        }
 
         // routing decision to CPU. Work deferred from the previous layer between
         // decode barriers is evaluated in this same wait and finished before
@@ -1448,9 +1503,23 @@ final class MoELayer {
             RouterTrace.record(layer: layer, tokens: B * S, topK: cfg.topK, ids: expertIds)
         }
         routerObserver?(layer, expertIds)
+        if let q2SharedWeight {
+            // These resident projections read no slots and can run while the
+            // host fills demand misses. All routed readers still join before
+            // a slot is reused. One FP32 sum includes the shared contribution.
+            let sharedValue = sharedDownProj(sharedActivation(x), minimumRows: minimumProjectionRows)
+            if overlapShared { asyncEval(sharedValue); sharedPrelaunches += 1 }
+            pool.advancePinGeneration()
+            let experts = try B * S >= SweepTuning.minTokens
+                ? sweep(x, expertIds: expertIds) : cached(x, expertIds: expertIds)
+            if let observe = contextNumericsObserver {
+                observe("routed", (experts.asType(.float32) * weights.expandedDimensions(axis: -1)).sum(axis: -2))
+                observe("sharedValue", sharedValue); observe("sharedGate", q2SharedWeight)
+            }
+            return Q2MoE.combine(experts: experts, weights: weights, shared: sharedValue, sharedWeight: q2SharedWeight)
+        }
         func sharedParts(_ input: MLXArray) -> (MLXArray, MLXArray) {
-            let value = sharedDownProj(MLXNN.silu(sharedGateProj(input, minimumRows: minimumProjectionRows))
-                * sharedUpProj(input, minimumRows: minimumProjectionRows), minimumRows: minimumProjectionRows)
+            let value = sharedDownProj(sharedActivation(input), minimumRows: minimumProjectionRows)
             let gate = sharedGate(input, minimumRows: minimumProjectionRows)
             contextNumericsObserver?("sharedValue", value)
             contextNumericsObserver?("sharedGate", gate)
@@ -1635,12 +1704,17 @@ final class MoELayer {
         return concatenated(outs, axis: 0).reshaped([B, S, H])
     }
 
-    private func q2Experts(_ x: MLXArray, weights: [MLXArray], ids: MLXArray, repeatInput: Int) -> MLXArray {
+    private func q2Experts(_ x: MLXArray, weights: [MLXArray], ids routeIds: [Int32], repeatInput: Int) -> MLXArray {
+        if Q2PackedExperts.enabled {
+            return Q2PackedExperts.apply(x, weights: weights, ids: routeIds, repeatInput: repeatInput,
+                hidden: cfg.hiddenSize, intermediate: cfg.moeIntermediate)
+        }
+        let ids = MLXArray(routeIds)
         let g = Q2GGUFLinear.gather(x, bytes: weights[0], format: .q20, rows: cfg.moeIntermediate,
             columns: cfg.hiddenSize, indices: ids, repeatInput: repeatInput)
         let u = Q2GGUFLinear.gather(x, bytes: weights[1], format: .q20, rows: cfg.moeIntermediate,
             columns: cfg.hiddenSize, indices: ids, repeatInput: repeatInput)
-        return Q2GGUFLinear.gather(MLXNN.silu(g) * u, bytes: weights[2], format: .q20, rows: cfg.hiddenSize,
+        return Q2GGUFLinear.gather(Q2HyperConnection.swiGLU([g, u])[0], bytes: weights[2], format: .q20, rows: cfg.hiddenSize,
             columns: cfg.moeIntermediate, indices: ids, repeatInput: 1)
     }
 
@@ -1663,7 +1737,7 @@ final class MoELayer {
             let slotIdx = MLXArray(slotIds, [B, S, count])
             let xe = x.expandedDimensions(axes: [-2, -3])
             if pool.expertStore.isQ2 {
-                return q2Experts(x, weights: pool.pools, ids: slotIdx, repeatInput: count)
+                return q2Experts(x, weights: pool.pools, ids: slotIds, repeatInput: count)
                     .reshaped([B, S, count, cfg.hiddenSize])
             }
             let g = gatherQuantizedMM(
@@ -1820,7 +1894,7 @@ final class MoELayer {
                     let ridx = MLXArray(local)
                     let dAll: MLXArray
                     if pool.expertStore.isQ2 {
-                        dAll = q2Experts(xg, weights: w, ids: ridx, repeatInput: 1).expandedDimensions(axis: 1)
+                        dAll = q2Experts(xg, weights: w, ids: local, repeatInput: 1).expandedDimensions(axis: 1)
                     } else {
                     let g = gatherQuantizedMM(
                         xg, w[0], scales: w[1], biases: w[2], rhsIndices: ridx, transpose: true,
@@ -1890,6 +1964,7 @@ public enum SweepTuning {
 // MARK: - hyper-connections
 
 final class GatedResidual {
+    private let q2: Bool
     var minimumProjectionRows = 0
     var compiledNormFinish = false
     private(set) var compiledFinishes = 0
@@ -1902,6 +1977,7 @@ final class GatedResidual {
     var debugName: String? = nil
 
     init(_ w: TensorSource, base: String, useCombine: Bool, arithmetic: BlockArithmeticProfile = .deployed) {
+        q2 = (w as? ResidentWeights)?.usesQ2 == true
         cfg = w.config
         hcNorm = RMSNorm(
             weight: w.tensor(base + ".hc_norm.weight"), eps: cfg.rmsNormEps,
@@ -1917,6 +1993,7 @@ final class GatedResidual {
     /// forecast's read of a target layer's hyper-connection on live streams.
     /// Same normalization, mixing weights and mean as the real read.
     func mixedInput(_ hyper: MLXArray) -> MLXArray {
+        if q2 { return q2Read(hyper, injecting: false).0 }
         let normed = hcNorm(hyper, compiledFinish: false)
         let downOut = down(normed, minimumRows: minimumProjectionRows)
         var w = MLXNN.silu(downOut / Float(cfg.hcCount))
@@ -1927,6 +2004,7 @@ final class GatedResidual {
 
     /// hyper (B,S,hc*H) -> (mixed (B,S,H), hyper, inject (B,S,hc)) or just mixed.
     func callAsFunction(_ hyper: MLXArray) -> (MLXArray, MLXArray?) {
+        if q2 { return q2Read(hyper, injecting: inject != nil) }
         let useCompiled = compiledNormFinish && CompiledArithmetic.prepare()
         if useCompiled { compiledFinishes += 1 }
         let normed = hcNorm(hyper, compiledFinish: useCompiled)
@@ -1944,11 +2022,20 @@ final class GatedResidual {
         let injected = 2 * hcNorm.arithmetic.sigmoid(projected / Float(cfg.hcCount))
         return (mixed, injected)
     }
+
+    private func q2Read(_ hyper: MLXArray, injecting: Bool) -> (MLXArray, MLXArray?) {
+        let (normalized, injection) = Q2HyperConnection.normalize(hyper, weight: hcNorm.weight,
+            inject: injecting ? inject : nil, hidden: cfg.hiddenSize)
+        let low = Q2HyperConnection.low(down(normalized, minimumRows: minimumProjectionRows))
+        let gate = up(low, minimumRows: minimumProjectionRows).asType(.bfloat16)
+        return (Q2HyperConnection.mix(normalized, gate: gate, hidden: cfg.hiddenSize), injection)
+    }
 }
 
 // MARK: - PLE
 
 final class PLELayer {
+    private let q2: Bool
     var minimumProjectionRows = 0
     var boundedTokens = false
     let cfg: ModelConfig
@@ -1969,6 +2056,7 @@ final class PLELayer {
     init(_ w: TensorSource, layer: Int, arithmetic: BlockArithmeticProfile = .deployed,
          embedding: @escaping ([Int64], Int) throws -> MLXArray) {
         cfg = w.config
+        q2 = (w as? ResidentWeights)?.usesQ2 == true
         self.embedding = embedding
         let b = "model.layers.\(layer).ple"
         keyProj = w.linear(b + ".key_proj")
@@ -2021,6 +2109,20 @@ final class PLELayer {
 
     private func transform(_ hidden: MLXArray, history: [Int64], nNew: Int, cache: LinearCache?) throws -> MLXArray {
         let emb = try embedding(history, nNew).asType(hidden.dtype)
+        if q2 {
+            let (gated, input) = Q2PLE.gate(key: keyProj(emb, minimumRows: minimumProjectionRows),
+                value: valueProj(emb, minimumRows: minimumProjectionRows), streams: hidden,
+                keyNorm: normKey.weight, queryNorm: normQuery.weight, convolutionNorm: normConv.weight)
+            let before = cache?.pleConvState ?? MLXArray.zeros([1,stateLen,hidden.dim(-1)],dtype:.bfloat16)
+            let full = concatenated([before.asType(.bfloat16), input],axis:1)
+            if let cache {
+                cache.pleConvState = full[0..., nNew..., 0...]
+                if cache.record {
+                    cache.pleConvStates = (0..<nNew).map { t in full[0..., (t+1)..<(t+1+stateLen), 0...] }
+                }
+            }
+            return Q2PLE.convolve(full,gated:gated,taps:convWeight,dilation:dilation)
+        }
         var key = normKey(keyProj(emb, minimumRows: minimumProjectionRows))
         let keyShape = Array(key.shape.dropLast()) + [cfg.hcCount, cfg.hiddenSize]
         key = key.reshaped(keyShape)

@@ -105,17 +105,25 @@ package final class Q2Checkpoint {
         var arrays: [String: MLXArray] = [:], linears: [String: Q2GGUFLinear] = [:]
         for (name, tensor) in mapped.sorted(by: { $0.key < $1.key }) {
             if name.contains(".switch_mlp.") || name == "model.embed_tokens.weight" { continue }
-            let bytes = try tensor.read()
+            var bytes = try tensor.read()
+            var format = tensor.format
+            if Q2PackedExperts.enabled, [.bf16, .f16].contains(format),
+               name.hasSuffix(".input_mix_weight_down.weight") || name.hasSuffix(".input_mix_weight_up.weight") {
+                bytes = try Q2MixQuantization.convert(bytes, format: format)
+                format = .q80
+            }
             let packed = MLXArray(bytes, [bytes.count], dtype: .uint8)
-            if ![Q2GGUFFormat.bf16, .f16, .f32].contains(tensor.format) {
+            if ![Q2GGUFFormat.bf16, .f16, .f32].contains(format) {
                 guard tensor.shape.count == 2 else { throw ModelError("Packed Q2 resident is not a matrix") }
-                var projection = Q2GGUFLinear(bytes: packed, format: tensor.format,
-                    rows: tensor.rows, columns: tensor.columns)
+                var projection = Q2GGUFLinear(bytes: packed, format: format,
+                    rows: tensor.rows, columns: tensor.columns, prepare: true)
+                projection.inputType = .bfloat16
+                projection.outputType = name == "lm_head.weight" ? .float32 : .bfloat16
                 if name.hasSuffix("linear_attn.in_proj_qkv.weight") { projection.outputOrder = qkvOrder }
                 if name.hasSuffix("linear_attn.in_proj_z.weight") { projection.outputOrder = MLXArray(valueOrder) }
                 if name.hasSuffix("linear_attn.out_proj.weight") { projection.inputOrder = outputOrder }
                 linears[String(name.dropLast(7))] = projection
-                arrays[name] = packed
+                arrays[name] = projection.bytes
             } else {
                 let dtype: DType = tensor.format == .f32 ? .float32 : tensor.format == .bf16 ? .bfloat16 : .float16
                 var a = MLXArray(bytes, tensor.shape, dtype: dtype)

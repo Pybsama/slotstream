@@ -238,6 +238,8 @@ struct Q2FormatCheck: ParsableCommand {
         abstract: "Check native packed Q2 deployment formats against independent fixtures")
     @Option var fixtures: String
     @Option var policyFixtures: String?
+    @Option var mixFixtures: String?
+    struct MixFixture: Decodable { let format: UInt32; let input: String; let expected: String }
     struct PolicyFixture: Decodable { let confidence: [Float]; let depth: Int; let accepted: Int; let seconds: Double }
     struct Fixture: Decodable {
         let format: UInt32
@@ -304,6 +306,58 @@ struct Q2FormatCheck: ParsableCommand {
                 }) else { throw ValidationError("Staged matrix mismatch for \(format) at \(count) rows") }
             }
             print("\(format): decode \(difference), matvec \(productError), routed batch PASS")
+            if Q2PackedExperts.enabled, ![Q2GGUFFormat.f32, .f16, .bf16].contains(format) {
+                let rowData = (0..<64).reduce(into: Data()) { result, row in
+                    let start = row % f.rows * f.columns / format.block * format.bytes
+                    result.append(data[start..<(start + f.columns / format.block * format.bytes)])
+                }
+                guard let tiled = Q2ResidentWeights(raw: MLXArray(rowData, [rowData.count], dtype: .uint8),
+                    format: format, rows: 64, columns: f.columns) else { throw ValidationError("Resident tile missing") }
+                for count in [1, 2, 3, 8, 9] {
+                    let inputs = MLXArray(Array(repeating: f.input, count: count).flatMap { $0 }, [count, f.columns]).asType(.bfloat16)
+                    let rounded = inputs[0].asType(.float32).asArray(Float.self)
+                    var expected: [Float] = []
+                    for row in 0..<64 {
+                        var sum: Float = 0
+                        for col in 0..<f.columns {
+                            sum += rounded[col] * Float(Float16(f.expected[(row % f.rows) * f.columns + col]))
+                        }
+                        expected.append(sum)
+                    }
+                    let actual = tiled(inputs).asType(.float32).asArray(Float.self)
+                    let scale = expected.map(abs).max()!
+                    let error = zip(actual, Array(repeating: expected, count: count).flatMap { $0 }).map { abs($0 - $1) }.max()!
+                    guard actual.allSatisfy(\.isFinite), error <= max(2e-5, scale * 0.008) else {
+                        throw ValidationError("Resident tile mismatch for \(format), rows \(count): \(error), scale \(scale)")
+                    }
+                    let full = tiled(inputs, outputType: .float32).asArray(Float.self)
+                    let fullError = zip(full, Array(repeating: expected, count: count).flatMap { $0 }).map { abs($0 - $1) }.max()!
+                    guard full.allSatisfy(\.isFinite), fullError <= max(2e-5, scale * 5e-5) else {
+                        throw ValidationError("FP32 head tile mismatch for \(format): \(fullError)")
+                    }
+                }
+                print("\(format): packed resident tiles match independent arithmetic, 1/2/3/8/9 rows")
+            }
+        }
+        if let mixFixtures {
+            let fixtures = try JSONDecoder().decode([MixFixture].self, from: Data(contentsOf: URL(fileURLWithPath: mixFixtures)))
+            guard fixtures.count == 2 else { throw ValidationError("Two bounded Q8 fixtures required") }
+            for fixture in fixtures {
+                guard let format = Q2GGUFFormat(rawValue: fixture.format),
+                      let input = Data(base64Encoded: fixture.input), let expected = Data(base64Encoded: fixture.expected),
+                      input.count <= 65536, expected.count <= 65536 else { throw ValidationError("Invalid Q8 fixture") }
+                guard try Q2MixQuantization.convert(input, format: format) == expected else {
+                    throw ValidationError("Q8 preparation differs from independent Splash oracle")
+                }
+            }
+            for bits: UInt16 in [0x7fc0, 0x7f80, 0xff80, 0x7f7f] {
+                let bad = withUnsafeBytes(of: bits.littleEndian) { Data($0) }
+                do {
+                    _ = try Q2MixQuantization.convert((0..<32).reduce(into: Data()) { d, _ in d.append(bad) }, format: .bf16)
+                    throw ValidationError("Invalid Q8 source accepted")
+                } catch is ModelError { }
+            }
+            print("Q8 mixing preparation: exact upstream bytes; nonfinite and overflowing scales refused")
         }
         if let policyFixtures {
             let sequence = try JSONDecoder().decode([PolicyFixture].self,

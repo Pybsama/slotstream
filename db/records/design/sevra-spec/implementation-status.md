@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-22T07:55:15.238091+00:00
+updated: 2026-10-22T19:06:39.267207+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -348,3 +348,16 @@ The exact target has no vision tower. See
 raw app receipts, remaining performance work and hardware limits. Six selected
 jobs on the owned Mac do not qualify every capability or other physical RAM
 sizes. No release or default promotion is claimed.
+
+## Native Q2 execution follow-up, October 22, 2026
+
+The engine now uses grouped packed-expert tiles, compressed resident tiles,
+upstream mixing-weight preparation and precision boundaries, fused target
+operations, one Q2 verification controller and compact speculative recovery.
+The rebuilt app passes six selected real-model jobs with loaded-pack and
+memory-ceiling assertions. Fast remains the default; existing Smart remains
+unchanged. The Q2 candidate stays outside ordinary setup and automatic
+selection. Performance parity with Splash is still open, with the bounded
+Metal execution sequence and disk/GPU handoffs the next substantial work.
+See [[records/measurements/native-q2-splash-execution-comparison]] for identities, matched/excluded comparisons, quality losses,
+failed experiments, native state checks and physical hardware limits.

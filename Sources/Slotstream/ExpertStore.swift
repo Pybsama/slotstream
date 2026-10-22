@@ -144,6 +144,19 @@ public final class ExpertStore {
               key.expert >= 0, key.expert < cfg.numExperts else { throw SlotPoolError.invalidKey(key) }
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
         let bytes = pieceRowBytes[piece]
+        if isQ2 && Q2PackedExperts.enabled {
+            // A speculative ticket must publish the same representation as a
+            // demand miss. Keep file I/O in private host memory, then transform
+            // into the ticket's destination before it can become visible.
+            guard let raw = malloc(bytes) else { throw ModelError("out of memory for Q2 speculative read") }
+            defer { free(raw) }
+            try read(into: raw, layer: key.layer, piece: piece, offset: key.expert * bytes, count: bytes)
+            guard shouldContinue() else { throw CheckpointReadError.cancelled }
+            Q2PackedExperts.repackCPU(raw, into: destination,
+                rows: piece == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
+                columns: piece == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+            return
+        }
         if usePackedLayout, let packedLayout {
             try packedLayout.readPiece(key, piece: piece, into: destination)
         } else {
@@ -365,6 +378,13 @@ public final class ExpertStore {
         for key in keys where key.layer < 0 || key.layer >= cfg.numLayers || key.expert < 0 || key.expert >= cfg.numExperts {
             throw SlotPoolError.invalidKey(key)
         }
+        func copyPiece(_ from: UnsafeRawPointer, _ to: UnsafeMutableRawPointer, _ piece: Int) {
+            if isQ2 && Q2PackedExperts.enabled {
+                Q2PackedExperts.repackCPU(from, into: to,
+                    rows: piece == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
+                    columns: piece == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+            } else { memcpy(to, from, pieceRowBytes[piece]) }
+        }
         let failure = JoinedReadFailure()
         let rowBytes = pieceRowBytes
         // 9n reads spread across worker lanes in the staging path's order.
@@ -397,7 +417,7 @@ public final class ExpertStore {
                 var j = lane
                 while j < jobs {
                     let (record, piece) = (j / pieceCount, j % pieceCount), bytes = rowBytes[piece]
-                    memcpy(bases[piece] + slots[record] * bytes, buffers[piece] + record * bytes, bytes)
+                    copyPiece(buffers[piece] + record * bytes, bases[piece] + slots[record] * bytes, piece)
                     j += lanes
                 }
             }
@@ -416,7 +436,7 @@ public final class ExpertStore {
                 let bytes = rowBytes[piece]
                 do {
                     try read(into: buffer, layer: key.layer, piece: piece, offset: key.expert * bytes, count: bytes)
-                    memcpy(bases[piece] + slots[record] * bytes, buffer, bytes)
+                    copyPiece(buffer, bases[piece] + slots[record] * bytes, piece)
                 } catch { failure.record(error) }
                 j += lanes
             }
@@ -543,6 +563,12 @@ public final class ExpertStore {
                 out.append(array)
             } else {
                 out.append(MLXArray(rawPointer: owned, shape, dtype: dtype) { free(owned) })
+            }
+        }
+        if isQ2 && Q2PackedExperts.enabled {
+            out = out.enumerated().map { p, raw in
+                Q2PackedExperts.repack(raw, rows: p == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
+                    columns: p == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
             }
         }
         let evalStart = profile == nil ? 0 : RuntimeClock.now()

@@ -4,8 +4,8 @@ import Foundation
 /// Licenses/splash-NOTICE.txt). Prices actual cycles, including SSD waits,
 /// and only verifies a useful prefix. It never authorizes an output token.
 /// The bounded calibration constants and prior are upstream's single-lane
-/// recipe, not measurements of Slotstream. The ordinary decode fallback
-/// independently checks whether the whole draft path pays for itself.
+/// recipe, not measurements of Slotstream. An anchor-only target pass is a
+/// priced alternative; periodic exploration can recover when conditions change.
 package struct DFlashVerifyBudget {
     package init() {}
     private static let prior: [Double] = [0.7, 0, -0.35, -0.8, -0.75, -0.75, -0.85, -0.45]
@@ -47,13 +47,11 @@ package struct DFlashVerifyBudget {
             let score = expected / cost(position + 2)
             if score > best { best = score; depth = position + 1 }
         }
-        // The existing adaptive policy owns the transition to ordinary
-        // decoding. Retain one proposal until it has a measured comparison.
-        return max(1, depth)
+        return depth
     }
     package mutating func observe(confidence: [Float], verified: Int, accepted: Int,
                                   seconds: Double, labelsValid: Bool = true) {
-        guard (1...7).contains(verified), verified <= confidence.count,
+        guard (0...7).contains(verified), verified <= confidence.count,
               (0...verified).contains(accepted) else { return }
         let r = Double(verified + 1)
         if seconds.isFinite && seconds > 0 {

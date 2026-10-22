@@ -15,6 +15,7 @@ public struct QLinear {
     public let groupSize: Int
     public let bits: Int
     package var gguf: Q2GGUFLinear? = nil
+    package var ggufDenseOutput: DType? = nil
 
     package init(w: MLXArray, scales: MLXArray?, biases: MLXArray?, groupSize: Int, bits: Int) {
         self.w = w; self.scales = scales; self.biases = biases
@@ -25,6 +26,9 @@ public struct QLinear {
 
     public func callAsFunction(_ x: MLXArray) -> MLXArray {
         if let gguf { return gguf(x) }
+        if let type = ggufDenseOutput {
+            return Q2FloatProjection.apply(x, weight: w, outputType: type)
+        }
         if let s = scales {
             if RowInvariantMatmul.enabled {
                 let rows = x.size / x.dim(-1)
@@ -93,10 +97,15 @@ extension TensorSource {
         let s = optionalTensor(base + ".scales")
         let b = optionalTensor(base + ".biases")
         let descriptor = config.quantizationOverrides[base]
-        return QLinear(
+        var value = QLinear(
             w: w, scales: s, biases: b,
             groupSize: groupSize ?? descriptor?.groupSize ?? config.qGroup,
             bits: bits ?? descriptor?.bits ?? config.qBits)
+        if (self as? ResidentWeights)?.usesQ2 == true, s == nil {
+            value.ggufDenseOutput = base.contains(".indexer.") || base.hasSuffix(".gate")
+                || base.hasSuffix(".shared_expert_gate") ? .float32 : .bfloat16
+        }
+        return value
     }
 }
 
@@ -111,6 +120,7 @@ public final class ResidentWeights: TensorSource {
     }
     private let embeddingRows: EmbeddingRows?
     private let q2: Q2Checkpoint?
+    package var usesQ2: Bool { q2 != nil }
     package let ggufLinears: [String: Q2GGUFLinear]
     public var usesEmbeddingRows: Bool { embeddingRows != nil || q2 != nil }
     package var embeddingReadFault: ReadFault? {

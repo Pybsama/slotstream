@@ -65,6 +65,15 @@ and dispatch as well as SSD waits before attributing a performance gap.
 Pass the same selected preferences to both app and inference owners, and assert
 the actual loaded pack and memory ceiling in every real-model workflow receipt.
 
+The [native execution comparison](db/records/measurements/native-q2-splash-execution-comparison.md)
+requires matching the whole deployment recipe, including weight preparation,
+precision boundaries, actual expert cache and verification controller. Avoid
+competing adaptive controllers. Separate cached compute, I/O and host/GPU waits;
+neither small kernels nor SSD bytes alone establish the bottleneck. Compact
+speculative state once it is committed, and preserve every rollback boundary.
+Keep unsuccessful experiments and memory-limit failures. Diagnostic timing
+instrumentation must not enter production builds or stand in for passing runs.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

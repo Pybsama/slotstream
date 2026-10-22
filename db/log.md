@@ -582,3 +582,6 @@ Implement the exact native Q2 candidate with pinned mixed formats, bounded strea
 ## [2026-10-22 07:55] update | records/measurements/native-exact-q2-qualification.md
 Captured final native Q2 app sources, six passing real workflows, visible GUI proof, rejected harness/activation arms and cleanup; preserved performance/quality limits. Brain gates passed with zero errors or warnings and 354 claim checks.
 
+## [2026-10-22 19:37] update | records/measurements/native-q2-splash-execution-comparison.md
+Port and qualify native Q2 expert/resident kernels, upstream precision, verification control and bounded state compaction. Preserve matched comparisons, all failures, six real app jobs, independent arithmetic, 107 catalogue checks and passing static gates. Reject additional recovery-graph representation after guarded replay; restore qualified v17 source identities exactly. Keep Fast/Smart unchanged and performance parity explicitly open. Brain gates pass with zero errors or warnings and 354 claim checks.
+

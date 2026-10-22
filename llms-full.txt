@@ -1110,6 +1110,10 @@ Fast and Smart choices. Existing saved candidate settings retain their title.
 
 This candidate has not earned promotion to Smart. It lacks the original vision
 tower, and native tests have not reproduced the upstream speed.
+The [native execution comparison](../db/records/measurements/native-q2-splash-execution-comparison.md)
+documents the compressed matrix kernels, fused arithmetic and state handling,
+with controlled comparisons and the remaining scheduling work. Matching model
+files alone does not match a deployment recipe.
 Document OCR is a separate native tool. See the
 [qualification record](../db/records/measurements/native-exact-q2-qualification.md)
 for exact source identities, quality failures, app results, memory evidence and
