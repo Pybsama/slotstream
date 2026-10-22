@@ -585,3 +585,6 @@ Captured final native Q2 app sources, six passing real workflows, visible GUI pr
 ## [2026-10-22 19:37] update | records/measurements/native-q2-splash-execution-comparison.md
 Port and qualify native Q2 expert/resident kernels, upstream precision, verification control and bounded state compaction. Preserve matched comparisons, all failures, six real app jobs, independent arithmetic, 107 catalogue checks and passing static gates. Reject additional recovery-graph representation after guarded replay; restore qualified v17 source identities exactly. Keep Fast/Smart unchanged and performance parity explicitly open. Brain gates pass with zero errors or warnings and 354 claim checks.
 
+## [2026-10-22 19:53] update | records/measurements/native-q2-splash-execution-comparison.md
+Add the archived clean-pair cycle-cost derivation: similar accepted draft counts, slower native execution per cycle. Capture the retained-source rebuild, exact tested default CLI restoration, 107 passing rebuilt catalogue checks and hosted status without treating still-running engine/app CI as passes. Performance parity stays open.
+

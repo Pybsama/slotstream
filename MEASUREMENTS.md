@@ -9606,6 +9606,16 @@ verification. The remaining time cannot simply be labeled disk latency.
 Upstream counters include startup; subtract status-before values when using
 them to analyze a request.
 
+In that one eligible v15 pair, native completes 126 verification cycles and
+accepts 385 draft tokens; Splash completes 131 cycles and accepts 380. The
+mean total decode cost per cycle is 138.33 ms native versus 77.68 ms Splash,
+computed from each request's decode duration and cycle count. Native uses
+slightly fewer cycles yet takes longer. In this fixture the main gap is the
+cost of executing a cycle, rather than fewer useful draft tokens. Those costs
+include draft, target, recovery and emission work; they are not pure GPU time
+or equal-width kernel timings. Different outputs and adaptive widths remain
+part of each engine's measured request.
+
 The next substantial port is the bounded native Metal execution sequence and
 its CPU/GPU handoffs, integrated with existing cache ownership, cancellation,
 rollback and process-memory accounting. Missing pieces also include upstream's
@@ -9700,3 +9710,5 @@ the corrected expectations and new failure-path assertion pass. Both runs
 remain in [[sources/runs/2026/10/2026-10-22-native-q2-execution-validation]].
 The source restoration after the rejected v18 experiment is hash-checked
 against both the CLI and app build identities.
+
+The code checkpoint is pushed as 3b6a307. The exact qualified v17 CLI is also restored as the default local build output. Local rebuild and catalogue receipts, the derived cycle-cost audit, and a hosted-status snapshot are in [[sources/runs/2026/10/2026-10-22-native-q2-execution-closeout]]. At that capture, documentation, context contracts and the external-library job pass; full engine and Mac app CI remain pending. They are not counted as passes.

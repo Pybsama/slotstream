@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T19:36:51.007594Z
+updated: 2026-10-22T19:52:45.107268Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-closeout]] — Pushed native Q2 checkpoint; exact tested local CLI restored, rebuilt catalogue passes, hosted engine and app CI still pending at capture
 - [[sources/runs/2026/10/2026-10-22-native-q2-execution-followup]] — Final native Q2 warm control retains a gap; extra recovery-graph representation is rejected after limited benefit and incomplete guarded ABBA
 - [[sources/runs/2026/10/2026-10-22-native-q2-execution-validation]] — Full static suite and catalogue pass on frozen native Q2 v17; initial static fixture failure preserved
 - [[sources/runs/2026/10/2026-10-22-native-q2-execution-exclusions]] — Retained paging, cache mismatches, thermal exclusions, continuous-session memory failure, unsupported fixtures and unsuccessful native optimizations
@@ -506,9 +507,8 @@ updated: 2026-10-22T19:36:51.007594Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-composition-build-pure-and-native-freeze]] — Exact selected final composition compiles and passes25360 pure assertions and116 CLI checks
 - [[sources/runs/2026/09/2026-09-09-optimization-final-preparation-binding-amendment-and-source-review]] — Final prerequisite path amendment passes all27 affected checks and bounded source review
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-complete-pass]] — Complete 16 GB public-planner cohort passes with independently audited startup swap-in exclusions
-- [[sources/runs/2026/09/2026-09-09-hermes-automatic-mtp-preflight]] — Hermes automatic MTP guide and preflight verification
 
 ## More
 
-This folder has 934 files. The 500 most recent are listed above.
+This folder has 935 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
