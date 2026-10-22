@@ -18,8 +18,11 @@ extension Generator {
         }
         model.draftPrefillFeatures = nil
         var policy = AdaptiveSpeculationPolicy(maximumDepth: 7)
-        var verifyBudget: DFlashVerifyBudget? = model.pool.expertStore.isQ2
-            && ProcessInfo.processInfo.environment["SLOTSTREAM_Q2_VERIFY_BUDGET"] != "0" ? .init() : nil
+        let environment = ProcessInfo.processInfo.environment
+        let useVerifyBudget = model.cfg.isFast
+            ? environment["SLOTSTREAM_DFLASH_VERIFY_BUDGET"] != "0"
+            : model.pool.expertStore.isQ2 && environment["SLOTSTREAM_Q2_VERIFY_BUDGET"] != "0"
+        var verifyBudget: DFlashVerifyBudget? = useVerifyBudget ? .init() : nil
         guard params.maxTokens > 0, shouldContinue() else { reason = "stop"; return }
         let first = sample(logits, params: params, generated: generated)
         if eosIds.contains(first) { reason = "stop"; return }
@@ -102,7 +105,7 @@ extension Generator {
             verifyBudget?.observe(confidence: draft.proposalConfidence, verified: proposals.count,
                 accepted: accepted, seconds: RuntimeClock.seconds(since: started),
                 labelsValid: pending != nil && shouldContinue())
-            // Q2's confidence/cost controller already selects the useful
+            // The confidence/cost controller already selects the useful
             // prefix, including an anchor-only target pass. A second controller
             // permanently halving its proposal horizon confounds its cost fit
             // and prevents its scheduled exploration from recovering.

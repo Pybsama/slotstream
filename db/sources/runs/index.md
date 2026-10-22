@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T19:52:45.107268Z
+updated: 2026-10-22T21:11:30.952101Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-22-fast-splash-app-validation]] — Fast app bundle identity, final gates and original/final real-workflow failures preserved
+- [[sources/runs/2026/10/2026-10-22-fast-splash-exclusions]] — Ineligible timing aggregates, memory refusals and rejected selector experiments preserved
+- [[sources/runs/2026/10/2026-10-22-fast-splash-execution]] — Matched Fast/Splash execution, native scheduling ports, quality controls and preserved failures
 - [[sources/runs/2026/10/2026-10-22-native-q2-execution-closeout]] — Pushed native Q2 checkpoint; exact tested local CLI restored, rebuilt catalogue passes, hosted engine and app CI still pending at capture
 - [[sources/runs/2026/10/2026-10-22-native-q2-execution-followup]] — Final native Q2 warm control retains a gap; extra recovery-graph representation is rejected after limited benefit and incomplete guarded ABBA
 - [[sources/runs/2026/10/2026-10-22-native-q2-execution-validation]] — Full static suite and catalogue pass on frozen native Q2 v17; initial static fixture failure preserved
@@ -504,11 +507,8 @@ updated: 2026-10-22T19:52:45.107268Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-composition-static-and-external-pass]] — Final exact-source static suite and independent public-library consumer both pass
 - [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-binding-preparation]] — Exact final lifetime adapter retains both original60request workloads and passes12 model-free checks
 - [[sources/runs/2026/09/2026-09-09-optimization-final-composition-seven-native-pass-and-serving-freeze]] — All5556 final native assertions pass and the original final serving matrix is bound
-- [[sources/runs/2026/09/2026-09-09-optimization-final-composition-build-pure-and-native-freeze]] — Exact selected final composition compiles and passes25360 pure assertions and116 CLI checks
-- [[sources/runs/2026/09/2026-09-09-optimization-final-preparation-binding-amendment-and-source-review]] — Final prerequisite path amendment passes all27 affected checks and bounded source review
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-complete-pass]] — Complete 16 GB public-planner cohort passes with independently audited startup swap-in exclusions
 
 ## More
 
-This folder has 935 files. The 500 most recent are listed above.
+This folder has 938 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

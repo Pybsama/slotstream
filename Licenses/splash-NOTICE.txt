@@ -1,5 +1,5 @@
-Slotstream includes adapted GGUF decoding, packed matrix tiles, mixing-weight quantization, hyper-connection kernels and verification-budget code from incoai/splash, commit 1482f6bbc2abf12375332725302019594150b6cb, licensed under Apache-2.0.
-Changes are identified in Q2GGUFKernelSources.swift, Q2ResidentKernelSources.swift, Q2PackedExperts.swift, Q2MixQuantization.swift, Q2HyperConnection.swift, Q2FloatProjection.swift, Q2GatedDelta.swift, Q2MoE.swift, Q2PLE.swift, Q2Attention.swift and DFlashVerifyBudget.swift. The native Swift/MLX adapters replace Splash allocation and dispatch.
+Slotstream includes adapted GGUF decoding, packed matrix tiles, mixing-weight quantization, hyper-connection kernels, draft selection and verification-budget code from incoai/splash, commit 1482f6bbc2abf12375332725302019594150b6cb, licensed under Apache-2.0.
+Changes are identified in Q2GGUFKernelSources.swift, Q2ResidentKernelSources.swift, Q2PackedExperts.swift, Q2MixQuantization.swift, Q2HyperConnection.swift, Q2FloatProjection.swift, Q2GatedDelta.swift, Q2MoE.swift, Q2PLE.swift, Q2Attention.swift, DFlashSelector.swift and DFlashVerifyBudget.swift. The native Swift/MLX adapters replace Splash allocation and dispatch.
 
 Splash contains the third-party material below, which keeps its own license.
 The SemIf code in server/judgments.py carries its MIT notice in that file.

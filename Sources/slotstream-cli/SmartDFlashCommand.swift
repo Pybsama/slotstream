@@ -8,15 +8,16 @@ import Slotstream
 /// sampler and cache. This explicit instrument does not promote a new default.
 struct SmartDFlashCheck: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "smart-dflash-check",
-        abstract: "Compare native Smart plain, MTP and DFlash on explicit local cases")
+        abstract: "Compare native Fast or Smart generation on explicit local cases")
     @Option var method: String = "dflash"
     @Option var memoryGB: Double = 10
+    @Option var maxContext: Int = 32768
     @Option var cases: String
     @Option var output: String
     @Option var model: String = PinnedModel.name
     @Option var dumpFirstDraft: String?
     @Option var prefixCacheDir: String?
-    @Flag(help: "Download the pinned Smart draft before the comparison") var installDraft = false
+    @Flag(help: "Download the selected pinned draft before the comparison") var installDraft = false
     @Flag(help: "Diagnostic target-only control, retaining the same priced memory plan") var disableDraft = false
 
     struct Probe: Decodable {
@@ -44,8 +45,10 @@ struct SmartDFlashCheck: ParsableCommand {
         }
     }
     func run() throws {
-        guard ["plain", "mtp", "dflash", "q2"].contains(method), memoryGB.isFinite,
-              (10...33).contains(memoryGB) else { throw ValidationError("Use plain, mtp, dflash or q2 and a 10–33 GB explicit budget") }
+        guard ["plain", "mtp", "dflash", "q2", "fast"].contains(method), memoryGB.isFinite,
+              (10...33).contains(memoryGB), [8192, 32768].contains(maxContext) else {
+            throw ValidationError("Use plain, mtp, dflash, q2 or fast, a 10–33 GB explicit budget, and 8192 or 32768 context tokens")
+        }
         let probes = try JSONDecoder().decode([Probe].self, from: Data(contentsOf: URL(fileURLWithPath: cases)))
         guard !probes.isEmpty, probes.count <= 100,
               probes.allSatisfy({ !$0.id.isEmpty && (1...4096).contains($0.maxTokens) && $0.prompt.utf8.count <= 500_000 && ($0.imagePaths?.count ?? 0) <= 1 }) else {
@@ -55,24 +58,29 @@ struct SmartDFlashCheck: ParsableCommand {
               dumpFirstDraft.map({ !FileManager.default.fileExists(atPath: $0) }) ?? true else {
             throw ValidationError("Use new receipt and draft-dump paths; existing evidence is never overwritten")
         }
-        guard ["dflash", "q2"].contains(method) || (!installDraft && dumpFirstDraft == nil) else {
-            throw ValidationError("Draft installation and capture require --method dflash")
+        guard ["dflash", "q2", "fast"].contains(method) || (!installDraft && dumpFirstDraft == nil) else {
+            throw ValidationError("Draft installation and capture require --method dflash, q2 or fast")
         }
-        let modelDirectory = ModelLocator.resolve(model)
+        let modelDirectory = ModelLocator.resolve(method == "fast" ? PinnedFastModel.name : model)
+        if method == "fast" {
+            let store = DFlashDeployment.store(for: modelDirectory)
+            if installDraft { try store.download(log: { print($0) }) }
+            try store.verify()
+        }
         if method == "dflash" || method == "q2" {
             let store = SmartDFlashDeployment.store(for: modelDirectory)
             if installDraft { try store.download(log: { print($0) }) }
             try store.verify()
         }
         let hasImages = probes.contains { !($0.imagePaths?.isEmpty ?? true) }
-        let resources: PackMemoryProfile = method == "q2" ? .q2 : method == "dflash" ? .smartDFlash : .original
+        let resources: PackMemoryProfile = method == "fast" ? .fast : method == "q2" ? .q2 : method == "dflash" ? .smartDFlash : .original
         let machine = Machine.current()
         guard let availableGB = machine.availableGB, availableGB >= memoryGB + 3 else { throw ModelError("Comparison needs target plus 3 GB reclaimable memory") }
         let plan = try Planner.plan(resources: resources, expertsPerLayer: nil, poolGB: nil, memoryGB: memoryGB,
             ramGB: machine.ramGB, workingSetGB: machine.workingSetGB, availableGB: machine.availableGB,
             mtp: method == "mtp" ? .on : .off, mtpAvailable: method == "mtp",
             vision: hasImages ? .on : .off, visionAvailable: hasImages,
-            maxContextTokens: 32768, qualification: false,
+            maxContextTokens: maxContext, qualification: false,
             decodeLookahead: .off, mtpExperts: .automatic)
         print(plan.banner())
         let sem = DispatchSemaphore(value: 0)

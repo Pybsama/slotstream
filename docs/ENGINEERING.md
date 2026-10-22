@@ -23,6 +23,13 @@ and raw runs. `PLAN.md` and `MEASUREMENTS.md` are generated from its records.
 For AI agents, [llms.txt](../llms.txt) is the index and
 [llms-full.txt](../llms-full.txt) combines the documentation.
 
+The [Fast and Splash execution comparison](../db/records/measurements/fast-splash-execution-comparison.md)
+matches checkpoint bytes, actual expert slots, prompt tokens, context and
+sampling, and warms both engines before timing. It includes quality controls,
+native app workflows and unsuccessful experiments. Equal memory flags do not
+establish equal cache sizes or process footprints. Cached target execution,
+SSD waits and draft overhead need separate measurements before choosing a port.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)

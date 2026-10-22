@@ -588,3 +588,6 @@ Port and qualify native Q2 expert/resident kernels, upstream precision, verifica
 ## [2026-10-22 19:53] update | records/measurements/native-q2-splash-execution-comparison.md
 Add the archived clean-pair cycle-cost derivation: similar accepted draft counts, slower native execution per cycle. Capture the retained-source rebuild, exact tested default CLI restoration, 107 passing rebuilt catalogue checks and hosted status without treating still-running engine/app CI as passes. Performance parity stays open.
 
+## [2026-10-22 21:12] update | records/measurements/fast-splash-execution-comparison.md
+Compared exact Fast checkpoints with Splash on the 48 GiB Mac at matched slots and prompt IDs. Ported native draft selection and bounded scheduling; kept ineligible timings and remaining target execution gap explicit. Equal 20/24 semantic scores; original and final real app runtimes pass four of six jobs with the same code-staging and history failures. Full static and scripted app suites pass. Final brain validation has zero errors and warnings; generated projections, claims and new local links pass. No public release or model-default promotion.
+

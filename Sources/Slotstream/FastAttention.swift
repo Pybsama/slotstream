@@ -6,6 +6,8 @@ final class FastAttention {
     let cfg: ModelConfig
     let q: QLinear, k: QLinear, v: QLinear, output: QLinear
     let qNorm: RMSNorm, kNorm: RMSNorm
+    var fusedPrefillAttention = false
+    private(set) var fusedPrefillAttentionTiles = 0
 
     init(_ weights: ResidentWeights, layer: Int) {
         cfg = weights.config
@@ -31,7 +33,9 @@ final class FastAttention {
         keys = rope.rotate(keys, cosine.expandedDimensions(axis: 1), sine.expandedDimensions(axis: 1))
         let retained = cache.updateAndFetch(keys, values)
         let attended = QSAAttention.attend(q: queries, k: retained.0, v: retained.1,
-            sparse: nil, base: offset, scale: 1 / Float(width).squareRoot(), block: 256)
+            sparse: nil, base: offset, scale: 1 / Float(width).squareRoot(), block: 256,
+            fusedPrefillAttention: fusedPrefillAttention,
+            onFused: { [weak self] in self?.fusedPrefillAttentionTiles += 1 })
         return output(attended.transposed(0, 2, 1, 3)
             .reshaped([batch, count, cfg.numAttentionHeads * width]) * sigmoid(gate))
     }

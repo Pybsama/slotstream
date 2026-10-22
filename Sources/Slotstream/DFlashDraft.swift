@@ -125,11 +125,12 @@ package final class DFlashDraft {
             let first = max(0, joinedK.dim(2) - Self.window)
             let k = contiguous(joinedK[0..., 0..., first..., 0...])
             let v = contiguous(joinedV[0..., 0..., first..., 0...])
-            eval(k, v)
             if context.keys.count > index { context.keys[index] = k; context.values[index] = v }
             else { context.keys.append(k); context.values.append(v) }
         }
-        eval(context.hidden!)
+        // Each layer projects the same captured features independently.
+        // Materialize the bounded update together instead of six host waits.
+        eval([context.hidden!] + context.keys + context.values)
     }
 
     package private(set) var proposalConfidence: [Float] = []
@@ -146,6 +147,13 @@ package final class DFlashDraft {
         debugSink?("candidate_scores", unary)
         debugSink?("anchor", MLXArray([anchor]))
         let selectedHidden = selector(hidden)
+        if ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH_SELECTOR"] != "0" {
+            let selected = DFlashSelector.select(indices: indices, unary: unary, hidden: selectedHidden,
+                predecessor: predecessor, successor: successor, anchor: anchor, depth: depth)
+            if captureConfidence { proposalConfidence = selected.confidence }
+            debugSink?("draft_proposals", MLXArray(selected.tokens))
+            return selected.tokens
+        }
         var previous = anchor, path: [Int] = []
         for position in 0..<depth {
             let candidates = indices[0, position]
@@ -195,7 +203,6 @@ package final class DFlashDraft {
             let (mlpInput, mlpKernel) = layer.mlpConv.prepare(layer.postNorm(hidden))
             let mlp = layer.down(dflashSwiGLU(layer.gate(mlpInput), layer.up(mlpInput)))
             hidden = hidden + layer.mlpConv.finish(mlp, dynamic: mlpKernel)
-            eval(hidden)
         }
         hidden = finalNorm(hidden[0..., 1..<(depth + 1), 0...])
         debugSink?("draft_hidden", hidden)

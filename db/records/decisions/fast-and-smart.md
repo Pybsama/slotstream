@@ -2,7 +2,7 @@
 type: decision
 id: 01m5fjxv27w5ch7he3qj0qw3jb
 created: 2026-10-21T15:57:53.095657+00:00
-updated: 2026-10-21T21:49:26.863056+00:00
+updated: 2026-10-22T21:12:59.922815+00:00
 summary: Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 decided_on: 2026-10-21
 reversible_if: Complete native workflow and hardware evidence supports changing the maintained models or defaults.
@@ -45,11 +45,14 @@ Do not reuse Smart's speed curve for this different architecture.
 
 DFlash keeps at most 2,047 prior feature positions and proposes within an
 eight-row block. Target verification owns every emitted token. Rejected state
-rolls back through the existing checked recurrent/KV path. The request samples
-plain decoding cost, then reduces draft depth or stops drafting if its measured
-cost per emitted token is worse. Short requests can still pay calibration cost.
-The development `SLOTSTREAM_DFLASH=0` control exists for comparisons, not as a
-product requirement or a remedy for unreliable scheduling.
+rolls back through the existing checked recurrent/KV path. Fast now uses one confidence/cost controller to choose the useful
+verified prefix, including an anchor-only target pass. Periodic exploration lets it
+recover after expensive early passes. The earlier outer calibration controller
+could permanently reduce or stop drafting after cold compilation; it no longer
+competes with this controller. The draft still runs to supply candidate confidence,
+so an anchor-only pass is not a promise of zero drafting overhead. The development
+`SLOTSTREAM_DFLASH=0` control exists for comparisons, not as a product requirement
+or a remedy for unreliable scheduling.
 
 No GPU keepalive, host-step spin or undocumented scheduling mechanism is
 ported. The source/reference licenses are recorded in THIRD_PARTY_NOTICES.md.
@@ -95,3 +98,16 @@ Acceptance checks must match the user contract. An unspecified JSON amount may c
 
 ## Smart draft follow-up
 The native Smart DFlash investigation and direct upstream Q2 comparison are recorded in [[records/measurements/smart-dflash-native-and-q2-review]]. Keep draft acceleration separate from target quantization, as specified in [[records/decisions/smart-dflash-and-target-quantization]]. The app continues to use its established Smart deployment while the candidate is qualified.
+
+## Matched Fast execution follow-up
+
+The [Fast and Splash comparison](../measurements/fast-splash-execution-comparison.md) records native GPU candidate selection, batched draft/context evaluation, bounded target barriers, shared-expert overlap, fused recurrent recording and short-prefill/attention integration. It preserves the unchanged target and draft checkpoints. Exact target verification remains mandatory.
+
+Match actual expert slots, prompt IDs and warmed request conditions. The final engine and upstream have equal scores on the small frozen quality suite, including the same arithmetic mistakes; disabling the draft reproduces those mistakes. This is measured compatibility on the suite, not general quality equivalence. The timing protocols did not obtain an entirely clean ABBA aggregate, and observed larger-cache results still favor Splash. Keep that limitation explicit.
+
+The rebuilt app passes its scripted UI/runtime suite and verified input identity.
+The same real jobs in the original and final app runtime pass writing, PDF,
+receipt and CSV work, but fail code-edit staging and an older-history lookup.
+Both preserve review boundaries. Keep these product limitations alongside the
+engine checks; a passing transport/kernel suite does not make a complete user
+job pass. Receipts: [[sources/runs/2026/10/2026-10-22-fast-splash-app-validation]].

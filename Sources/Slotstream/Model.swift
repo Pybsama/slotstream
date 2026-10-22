@@ -99,7 +99,9 @@ public final class Qwen4ExpModel {
     }
     /// Scheduled upstream fused prefill tiles; evaluated results prove completion.
     public var fusedPrefillAttentionTiles: Int {
-        qsa.values.reduce(0) { $0 + $1.fusedPrefillAttentionTiles } + (mtpHead?.attn.fusedPrefillAttentionTiles ?? 0)
+        qsa.values.reduce(0) { $0 + $1.fusedPrefillAttentionTiles }
+            + fastAttention.values.reduce(0) { $0 + $1.fusedPrefillAttentionTiles }
+            + (mtpHead?.attn.fusedPrefillAttentionTiles ?? 0)
     }
     /// Multi-row verify passes (per attention layer) that took the split or exact vector-kernel path.
     public var multiRowSplits: Int {
@@ -125,6 +127,7 @@ public final class Qwen4ExpModel {
         mtpHead?.attn.selectedAttention = selected
         let fused = optimizations.fusedPrefillAttention == true && FusedPrefillAttention.available
         for layer in qsa.values { layer.fusedPrefillAttention = fused }
+        for layer in fastAttention.values { layer.fusedPrefillAttention = fused }
         mtpHead?.attn.fusedPrefillAttention = fused
         pool.directReadHandles = optimizations.directReadHandles
         ngram.directReadHandles = optimizations.directReadHandles
@@ -340,6 +343,17 @@ public final class Qwen4ExpModel {
         if index.config.isFast || index.q2 != nil {
             self.optimizations.automaticReadScope = false
             self.optimizations.layerExpertWorkspace = false
+            if index.config.isFast {
+                // Bound outstanding expert readers to four layers, with
+                // DecodeLookahead's existing row/pool-capacity fallback.
+                self.decodeBarrierLayers = Self.environmentBarrierLayers ?? 4
+                if ProcessInfo.processInfo.environment["SLOTSTREAM_OPT_SHARED_OVERLAP"] == nil {
+                    self.optimizations.overlapSharedExpert = true
+                }
+                if ProcessInfo.processInfo.environment["SLOTSTREAM_OPT_GDN_RECORD"] == nil {
+                    self.optimizations.fusedGDNRecording = true
+                }
+            }
             if index.q2 != nil {
                 // Q2 keeps only four layers pinned between barriers, bounded
                 // by DecodeLookahead.barrierPeriod when the pool is smaller.
@@ -668,17 +682,35 @@ public final class Qwen4ExpModel {
         capturedDraftLayers.removeAll()
         if cfg.isFast {
             guard vision.isEmpty else { throw ModelError("Fast currently accepts text and extracted image text, not image embeddings") }
+            let period = DecodeLookahead.barrierPeriod(requested: decodeBarrierLayers, rows: ids.count,
+                topK: cfg.topK, experts: cfg.numExperts, slots: pool.slots, reservedSlots: 0)
+            pool.pinGenerations = period > 1 ? period + 1 : 1
+            prepareOptimizationKernels(using: optimizations)
+            state.compactStateWindows = optimizations.compactStateWindows
+            let groupSmallPrefill = ProcessInfo.processInfo.environment["SLOTSTREAM_FAST_SMALL_SWEEP"] != "0"
             var hidden = try resident.embedChecked(ids, shape: [1, ids.count]).asType(.bfloat16)
             for layer in 0..<runLayers {
                 if shouldContinue?() == false { return nil }
+                gdn[layer]?.fusedRecording = optimizations.fusedGDNRecording
+                moe[layer]!.overlapShared = optimizations.overlapSharedExpert
+                moe[layer]!.overlapResident = optimizations.overlapResidentExperts
+                // Short prompts still contain enough routes to reuse an
+                // expert's weights across rows. Verification stays separate.
+                moe[layer]!.smallPrefillSweep = groupSmallPrefill && !state.recordingEnabled
                 let input = fastInputNorm[layer](hidden)
+                contextNumericsObserver?(layer, "input", input)
                 let attended = gdn[layer].map { $0(input, cache: state.linear[layer]) }
                     ?? fastAttention[layer]!(input, rope: rope, cache: state.kv[layer]!)
+                contextNumericsObserver?(layer, "attention", attended)
                 hidden = hidden + attended
                 hidden = hidden + (try moe[layer]!(fastMLPNorm[layer](hidden)))
-                eval(hidden)
-                if optimizations.compactStateWindows, !state.recordingEnabled { state.linear[layer]?.compactWindows() }
-                pool.unpinAll()
+                contextNumericsObserver?(layer, "output", hidden)
+                // The next router readback completes earlier readers. Keep
+                // their slots pinned until the bounded generation expires.
+                if period <= 1 || layer == runLayers - 1 || (layer + 1) % period == 0 { eval(hidden) }
+                if optimizations.compactStateWindows, ids.count > 1, !state.recordingEnabled {
+                    state.linear[layer]?.compactWindows()
+                }
                 captureDraftLayer(layer, hidden: hidden)
                 perLayerHook?(layer, hidden)
             }

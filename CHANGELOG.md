@@ -8,6 +8,13 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Reduce Fast's draft and target scheduling overhead with native GPU candidate
+  selection, bounded deferred evaluation, fused recurrent verification and
+  grouped short-prefill work. Use one verification controller that can recover
+  after expensive early passes. Preserve target verification and memory limits;
+  the [matched Splash comparison](db/records/measurements/fast-splash-execution-comparison.md)
+  records the remaining gap and qualification limits.
+
 - Preserve literal JSON brackets in saved conversations and tool results. Table
   output no longer becomes an accidental db.md link, and interrupted saves recover.
 

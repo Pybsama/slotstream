@@ -8,11 +8,12 @@ import Slotstream
 /// the normal graph. Neither arm is a completed-request speed claim.
 struct Q2ProfileCheck: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "q2-profile",
-        abstract: "Attribute native Q2 target work on a bounded fixed-token replay")
+        abstract: "Attribute native Fast or Q2 target work on a bounded fixed-token replay")
     @Option var fixture: String
     @Option var output: String
     @Option var memoryGB: Double = 10
     @Option var rounds: Int = 3
+    @Option var model: String = "smart-q2"
 
     func run() throws {
         guard (10...20).contains(memoryGB), (1...5).contains(rounds),
@@ -33,9 +34,13 @@ struct Q2ProfileCheck: ParsableCommand {
         }
         let machine = Machine.current()
         guard (machine.availableGB ?? 0) >= memoryGB + 3 else {
-            throw ModelError("Q2 profile needs its target plus 3 GB reclaimable")
+            throw ModelError("Target profile needs its budget plus 3 GB reclaimable")
         }
-        let plan = try Planner.plan(resources: .q2, expertsPerLayer: nil, poolGB: nil, memoryGB: memoryGB,
+        guard model == "smart-q2" || model == "fast" else {
+            throw ValidationError("Profile supports smart-q2 or fast")
+        }
+        let selectedPack = model
+        let plan = try Planner.plan(resources: model == "fast" ? .fast : .q2, expertsPerLayer: nil, poolGB: nil, memoryGB: memoryGB,
             ramGB: machine.ramGB, workingSetGB: machine.workingSetGB, availableGB: machine.availableGB,
             mtp: .off, mtpAvailable: false, vision: .off, visionAvailable: false,
             maxContextTokens: 8192, qualification: false, decodeLookahead: .off, mtpExperts: .automatic)
@@ -43,7 +48,7 @@ struct Q2ProfileCheck: ParsableCommand {
         var outcome: Result<Void, Error> = .success(())
         Task {
             do {
-                let engine = try await Engine(modelDir: ModelLocator.resolve(PinnedQ2Model.name), plan: plan)
+                let engine = try await Engine(modelDir: ModelLocator.resolve(selectedPack), plan: plan)
                 func checkMemory() throws {
                     guard ProcessMemory.peakResidentGB <= memoryGB,
                           (ProcessMemory.vmActivity()?.reclaimableBytes ?? 0) > 1_000_000_000 else {

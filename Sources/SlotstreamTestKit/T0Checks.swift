@@ -61,6 +61,7 @@ extension Catalogue {
             Check("vision-check", tier: .t0) { Diagnostics.vision() },
             Check("prefill-read-policy", tier: .t0) { Diagnostics.fusedWorkspaceReservation() },
             // T1: touches MLX, so it needs the Metal library beside the runner.
+            Check("dflash-selector", tier: .t1) { Diagnostics.dflashSelector() },
             Check("fused-prefill-attention", tier: .t1) { Diagnostics.fusedPrefillAttention() },
             Check("sampler-behaviour", tier: .t1) { try Diagnostics.samplerBehaviour() },
             Check("expert-lookahead-adoption", tier: .t1) { try Diagnostics.expertLookaheadAdoption() },

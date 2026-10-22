@@ -74,6 +74,15 @@ speculative state once it is committed, and preserve every rollback boundary.
 Keep unsuccessful experiments and memory-limit failures. Diagnostic timing
 instrumentation must not enter production builds or stand in for passing runs.
 
+The [Fast comparison](db/records/measurements/fast-splash-execution-comparison.md)
+also requires symmetric warmup and exact prompt IDs. Audit model-specific
+branches for skipped shared optimizations. Keep one adaptive controller per
+decision, with recovery after expensive early passes. Compare old, new and
+upstream quality on the same frozen tasks; reproduce failures without drafting
+before blaming speculation. A smaller-cache result cannot establish parity at
+a larger cache, and clean individual requests do not rescue a failed aggregate
+timing protocol.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).
