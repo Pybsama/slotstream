@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-21T17:01:20.183785+00:00
+updated: 2026-10-22T03:34:58.966645+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -16,7 +16,7 @@ Implementation started September 14, 2026, at Carlos's request. A functional nat
 | Swift runtime | Direct in-process Slotstream inference, bounded successful-turn tool gating, serial queue, durable acceptance/nonces, stop signalling, drafts with revision checks, explicit memory admission/correction/Forget, thread scopes and Incognito. Combined context and save-race fixtures pass. | Strict load/stop quiescence, idle/pressure lifecycle, event cursor/replay completeness, large-Home scaling and longitudinal personal-loop fixtures remain open. |
 | First complete job | Real local model read both public Cedar fixtures, produced a cited briefing satisfying the frozen rubric, stopped for review, then the synthetic reviewer committed the exact proposed bytes. Reopening recovered the artifact and completed thread. Source excerpts are preserved for new runs. | The separate native audit subsequently verified Save and reopening its earlier real-model proposal. Neither run certifies broad task reliability, model comparisons or arbitrary source types. The receipt identifies the exact tested binary; later draft/memory changes have separate targeted checks. |
 | Persistence | Official dbmd mutations, compact Home index, independent thread/draft records, immutable conversation/excerpt events, native hash/recovery ledger, create-only artifact publication. Actual process termination at intent/documents/artifact/record seams recovers idempotently. External edits pause writes and preserve bytes. | Complete export and inert restore, interactive reconciliation, cross-implementation schema conformance, full source-folder closure and power-loss proof remain pending. A process-crash test is not a storage power-loss test. |
-| Local CLI | Separate slotstream-local consumer uses the same runtime. Authenticated bounded Unix IPC, same-user peers, long Home paths, ephemeral capability, duplicate acceptance and detached completion pass; unbound Incognito access is refused. The CLI can reopen the completed real-test Home. | Full CLI grammar, historical event replay and the optional authenticated network server are not complete. |
+| Home data and integrations | The native Data browser groups saved records, sources, conversations, activity, schemas, log and advanced state. `slotstream-home` shares the app Home registry, queries with or without an open app, and submits AI through the open owner. Bundled CLI and Codex/Claude Code skill installers and a Home-bound MCP stdio server are implemented. Deterministic subprocess/IPC checks, official MCP SDK access, real-model ask and packaged native Data interactions are recorded below. | SQL and a remote HTTP server are outside this scope. Broad large-Home scaling, event replay, clean-machine distribution and public-release qualification remain separate gates. |
 | Model setup | Settings is wired to explicit pinned WeightStore inspection/download/resume/repair; model maintenance excludes inference. Startup does not download. Existing verified model inference was exercised. | Fresh acquisition/repair/cancellation, automatic maintained hardware selection and the same-hardware model-value comparison remain unqualified. |
 | Build and brand | Independent apps/macos package preserves the root engine package. Local source/dependency hashes stay identical across the app build; dbmd, Metal and licensed Inter/Poppins resources are bundled and ad-hoc signature verification passes. Native Observer geometry and a multiresolution bundled ICNS are included, with the same image in About. The Xcode project is now explicitly included despite the general ignore rule. App/CLI/check products compile; Xcode project and Info.plist parse. | Full Xcode is absent on this host. Since September 21, CI builds the Xcode app target in Release for Apple silicon, ad hoc signed, and verifies the bundle; see Repository validation. Modern layered-icon and Finder/Dock-shell appearance qualification remain open. Developer ID, notarization, installed updater/rollback, clean-machine compatibility, voluntary feedback, external users and all release gates remain pending. |
 
@@ -289,3 +289,39 @@ The native app and engine now implement explicit Fast and Smart roles, with Fast
 The full native UI/runtime suite passed, including real db.md persistence and crash recovery. Real Fast workflows covered writing, translation, decisions, documents, OCR, deterministic tables, code review, folder search and meeting notes. The corrected OCR and code-edit checks passed, including exact approved file application. Actual built-app Fast/Smart/Fast clicks and answers preserved conversation state and the custom memory ceiling. The complete Fast installation verified through Settings. Prefix restore and private-cache exclusion passed. Raw evidence: [[sources/runs/2026/10/2026-10-21-fast-smart-integration]] and [[sources/runs/2026/10/2026-10-21-fast-smart-delivered-app]].
 
 This is not a clean model-quality sweep: Fast exceeded two requested word limits and missed an old fact within deliberately repetitive history, both with and without DFlash. Smart retrieved the fact. These remain quality limitations, distinct from successful data preservation and switching. Physical tests used the owned 48 GB Mac with smaller budgets; 16–64 GB coverage outside it is simulated planning. No new public Desktop release, installed-release certification, sustained throughput comparison or physical 16/64 GB proof is claimed.
+
+## Home data, global command and agent connections (October 21, 2026)
+
+Implemented at Carlos's request without SQL. The visible Home switcher and
+shared device registry keep app, CLI and server selection consistent. A running
+server remains pinned to its original Home. The Data view offers collection,
+type, literal text and field filters, explicit pages and counts, record content,
+expandable fields, relationships and fingerprints. Memory and Journal keep
+native editing and admission controls. Compact, Light and Dark layouts and
+real record selection were checked.
+
+The app bundles `slotstream-home` and a repository-owned agent skill. Connections
+can install the global command and either Codex or Claude Code skill while
+preserving unrelated/custom files, and provides a Home-specific MCP config.
+The installed CLI was exercised from outside the repository, attached to the
+running packaged app, and used after it closed. Both skill copies matched the
+bundled source. MCP default tools are read-only; enabling AI permits submission,
+observation and stopping, with review still in the native app. The official
+Python MCP client completed discovery and reads. Incognito, path confinement,
+revision changes, cross-Home isolation, concurrent registry changes, durable
+nonces and pending review have executable regression checks.
+
+A real local inference owner answered a CLI question by reading the attached
+workshop fixture and citing Friday and the prototype correctly. This is one
+complete functional request, not broad model quality. Packaged app checks
+separately exercised native Data navigation, row selection, fields, Connections
+and the CLI installer. No inference behavior, public release or remote service
+was changed.
+
+All functional suites in the local Mac run passed. Its final source-identity
+guard caught an edit during the run; the final native Data checks and complete
+bundle were rebuilt and passed with stable inputs afterward. Hosted full-suite
+checks are pending at this receipt. The evidence retains the fixture repairs,
+PATH lookup bug, actual question/answer, final bundle hashes and test scope.
+
+[[sources/runs/2026/10/2026-10-21-slotstream-home-data-integrations]]

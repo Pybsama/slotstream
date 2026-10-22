@@ -567,3 +567,6 @@ Record pinned native DFlash reference parity, full native requests, retained qua
 ## [2026-10-21 22:24] update | records/measurements/smart-dflash-native-and-q2-review.md
 Record successful engine, native Mac app and context-proxy CI for final code ed0c6c9. Keep exact hosted receipts separate from local model tests, app adoption and release status.
 
+## [2026-10-22 03:34] update | records/design/sevra-spec/implementation-status.md
+Implement native Home data browsing, shared Home registry, global CLI, installed Codex/Claude skills and Home-bound MCP stdio. Preserve SQL exclusion and native review; record real-model, packaged-app, SDK and regression evidence with hosted checks pending.
+

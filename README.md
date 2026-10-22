@@ -28,6 +28,11 @@ for harder tasks. Fast is the default for new installs; existing choices stay
 saved. The engine exposes the same `fast` and `smart` aliases. See
 [choosing a model](docs/MODELS.md) for setup and current limits.
 
+The development Mac app also has a **Data** browser for its separate Homes,
+with search, field filters, record details and relationships. Its bundled
+`slotstream-home` command, agent skill and local MCP server use those same
+Homes. See [Homes and integrations](docs/SLOTSTREAM-HOMES.md).
+
 [Get started](#install) · [Speed](#speed) · [Guides](#guides) · [Get help](#support)
 
 ## Who it's for

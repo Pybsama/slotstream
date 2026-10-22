@@ -15,6 +15,7 @@ python3 Tools/mac_build_inputs.py "$DBMD" > "$STAGE/before.json"
 python3 Tools/prepare_slotstream_build.py --configuration "$CONFIG"
 swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --product SlotstreamDesktop -j 2
 swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --product slotstream-extract -j 2
+swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --product slotstream-home -j 2
 OUT=$(swift build --disable-build-manifest-caching --package-path apps/macos -c "$CONFIG" --show-bin-path)
 python3 Tools/mac_build_inputs.py "$DBMD" > "$STAGE/after.json"
 if ! cmp -s "$STAGE/before.json" "$STAGE/after.json"; then
@@ -24,14 +25,17 @@ fi
 BUNDLE="$STAGE/Slotstream.app"
 mkdir -p "$BUNDLE/Contents/MacOS" "$BUNDLE/Contents/Resources" "$BUNDLE/Contents/Helpers"
 cp -R apps/macos/Resources/Fonts "$BUNDLE/Contents/Resources/"
+cp -R apps/macos/Resources/Skills "$BUNDLE/Contents/Resources/"
 cp -R apps/macos/Resources/Licenses "$BUNDLE/Contents/Resources/"
 cp apps/macos/Resources/Slotstream.icns "$BUNDLE/Contents/Resources/"
 cp "$OUT/SlotstreamDesktop" "$BUNDLE/Contents/MacOS/Slotstream"
 cp Tools/lib/mlx-0.32.2.metallib "$BUNDLE/Contents/MacOS/mlx.metallib"
 cp "$DBMD" "$BUNDLE/Contents/Helpers/dbmd"
+cp "$OUT/slotstream-home" "$BUNDLE/Contents/Helpers/slotstream-home"
 cp "$OUT/slotstream-extract" "$BUNDLE/Contents/Helpers/slotstream-extract"
 cp apps/macos/Info.plist "$BUNDLE/Contents/Info.plist"
 cp "$STAGE/before.json" "$BUNDLE/Contents/Resources/build-inputs.json"
+codesign --force --sign - "$BUNDLE/Contents/Helpers/slotstream-home"
 codesign --force --sign - "$BUNDLE/Contents/Helpers/dbmd"
 codesign --force --sign - "$BUNDLE/Contents/Helpers/slotstream-extract"
 codesign --force --sign - "$BUNDLE/Contents/MacOS/mlx.metallib"

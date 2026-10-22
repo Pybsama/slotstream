@@ -711,7 +711,7 @@ public final class HomeStore {
         if let d = object as? [String: Any], let text = d["body"] as? String { return text.trimmingCharacters(in: .newlines) }
         throw AppRuntimeError.unavailable("Unexpected db.md response for a record body.")
     }
-    @discardableResult private func command(_ arguments: [String]) throws -> Data {
+    @discardableResult func command(_ arguments: [String]) throws -> Data {
         guard lockFD >= 0 else { throw AppRuntimeError.refused("This Home is closed.") }
         let p = Process(); p.executableURL = dbmd; p.arguments = arguments; p.currentDirectoryURL = root.appendingPathComponent("db")
         p.environment = ["HOME": NSHomeDirectory(), "PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8"]

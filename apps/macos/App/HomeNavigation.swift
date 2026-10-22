@@ -10,20 +10,31 @@ import SlotstreamRuntime
     @Published var showing = false
     @Published var error: String?
     let initialIntent: HomeOpenIntent
+    let selectionError: String?
     private let defaults: UserDefaults
     private let remembersSelection: Bool
+    private let registry: HomeRegistry
     weak var model: AppModel?
     var didOpen: ((AppModel) -> Void)?
     /// Native checks replace inference only; storage and switching stay real.
     var makeRuntime: ((URL) async throws -> SlotstreamRuntime)?
 
-    init(defaults: UserDefaults = .standard, environment: [String: String] = ProcessInfo.processInfo.environment) {
+    init(defaults: UserDefaults = .standard, environment: [String: String] = ProcessInfo.processInfo.environment, registry: HomeRegistry = HomeRegistry()) {
         self.defaults = defaults
+        self.registry = registry
+        var registryState: HomeRegistryState?
+        var registryError: String?
+        if environment["SLOTSTREAM_HOME"] == nil {
+            do {
+                try registry.migrate(selected: defaults.string(forKey: "homes.selected.v1"), recent: defaults.stringArray(forKey: "homes.recent.v1") ?? [])
+                registryState = try registry.read()
+            } catch { registryError = error.localizedDescription }
+        }
         if let explicit = environment["SLOTSTREAM_HOME"] {
             current = URL(fileURLWithPath: explicit, isDirectory: true).standardizedFileURL
             initialIntent = .initial
             remembersSelection = false
-        } else if let saved = defaults.string(forKey: "homes.selected.v1") {
+        } else if let saved = registryState?.selected ?? defaults.string(forKey: "homes.selected.v1") {
             current = URL(fileURLWithPath: saved, isDirectory: true).standardizedFileURL
             initialIntent = .existing
             remembersSelection = true
@@ -32,7 +43,9 @@ import SlotstreamRuntime
             initialIntent = .initial
             remembersSelection = true
         }
-        recent = (defaults.stringArray(forKey: "homes.recent.v1") ?? []).map { URL(fileURLWithPath: $0, isDirectory: true).standardizedFileURL }
+        recent = (registryState?.homes.map(\.path) ?? defaults.stringArray(forKey: "homes.recent.v1") ?? []).map { URL(fileURLWithPath: $0, isDirectory: true).standardizedFileURL }
+        error = registryError
+        selectionError = registryError
     }
 
     func opened(_ url: URL) {
@@ -41,14 +54,23 @@ import SlotstreamRuntime
         recent = [current] + recent.filter { $0.path != current.path }
         recent = Array(recent.prefix(12))
         guard remembersSelection else { return }
+        do { try registry.register(current, select: true) }
+        catch { self.error = error.localizedDescription }
         defaults.set(url.path, forKey: "homes.selected.v1")
         defaults.set(recent.map(\.path), forKey: "homes.recent.v1")
     }
 
     func forget(_ url: URL) {
         guard url.path != current.path else { return }
+        do { try registry.forget(url) } catch { self.error = error.localizedDescription; return }
         recent.removeAll { $0.path == url.path }
         defaults.set(recent.map(\.path), forKey: "homes.recent.v1")
+    }
+
+    func refreshRegistry() {
+        guard remembersSelection else { return }
+        do { recent = try registry.read().homes.map { URL(fileURLWithPath: $0.path) } }
+        catch { self.error = error.localizedDescription }
     }
 
     func chooseNew() {
@@ -143,7 +165,7 @@ import SlotstreamRuntime
 struct HomeSwitcher: View {
     @ObservedObject var homes: HomeNavigation
     var body: some View {
-        Button { homes.showing.toggle() } label: {
+        Button { homes.refreshRegistry(); homes.showing.toggle() } label: {
             HStack(spacing: 9) {
                 Image(systemName: "house").accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {

@@ -202,9 +202,12 @@ struct ContentView: View {
             if covered { panelContent.frame(maxWidth: .infinity, maxHeight: .infinity) }
         }
     }
-    private static let panels: Set<String> = ["Settings", "Search", "Needs you", "Knowledge", "Journal", "Rename", "Artifact", "Context", "Home changes", "Changes", "App review", "Skill review", "Apps", "App"]
+    private static let panels: Set<String> = ["Data", "Settings", "Search", "Needs you", "Knowledge", "Journal", "Rename", "Artifact", "Context", "Home changes", "Changes", "App review", "Skill review", "Apps", "App"]
     @ViewBuilder private var panelContent: some View {
         switch model.panel {
+        case "Data":
+            if model.runtime != nil { DataBrowser(model: model) }
+            else { ProgressView("Opening Home…").frame(maxWidth: .infinity, maxHeight: .infinity) }
         case "Settings": settings
         case "Search": search
         case "Needs you": needsYou

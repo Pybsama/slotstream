@@ -82,6 +82,8 @@ not establish a trusted public distribution.
 
 ### Homes
 
+The **Data** browser, global `slotstream-home` CLI, agent skill and local MCP server share the app’s Homes. See [Homes, data and integrations](SLOTSTREAM-HOMES.md) for setup, querying and connection examples.
+
 The **Current Home** control at the top of the sidebar shows where you are.
 Open it to switch between recent Homes, create a **New Home…**, or **Open Home…**
 from another folder. Each entry shows its path so identically named folders are
@@ -677,7 +679,7 @@ apps/macos/.build/release/slotstream-local chat --home "$HOME/Slotstream/Home" -
 The app must already own that Home for these commands. A CLI connection may
 detach while the app continues its accepted job. Preserve the printed nonce
 to reconcile uncertain submission; a lost response is not permission to retry
-with a new request id. The optional network server is not implemented.
+with a new request id. The local MCP stdio server is available through `slotstream-home serve`; see [Homes, data and integrations](SLOTSTREAM-HOMES.md). An HTTP listener remains outside this implementation.
 
 The real-model fixture additionally exercises source reading, citation review,
 create-only document publication and reopening its durable Home. Run it only

@@ -11,6 +11,7 @@ Task {
     // Signal last, after every cleanup in this task has run.
     defer { sem.signal() }
     do {
+        if try await homeOwnerFixtureIfRequested() { return }
         if try await crashApplyChildIfRequested() { return }
         if try seedAuditUIIfRequested() { return }
         if try seedUIIfRequested() { return }
@@ -29,6 +30,8 @@ Task {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
+        try homeIntegrationInstallerChecks(root: root.appendingPathComponent("integration-installers"))
+        if CommandLine.arguments.contains("--home-installers") { return }
         if CommandLine.arguments.contains("--external-drafts") { try await externalDraftChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--archive") { try await archiveChecks(root: root, dbmd: dbmd); return }
         if CommandLine.arguments.contains("--context-window") { try await longConversationChecks(root: root, dbmd: dbmd); return }

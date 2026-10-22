@@ -35,7 +35,7 @@ print(f"Xcode built the {len(pinned)} pinned package versions")
 PY
 
 APP=.build/xcode/Build/Products/$CONFIG/Slotstream.app
-for part in Contents/MacOS/Slotstream Contents/MacOS/mlx.metallib Contents/Helpers/dbmd Contents/Helpers/slotstream-extract; do
+for part in Contents/MacOS/Slotstream Contents/MacOS/mlx.metallib Contents/Helpers/dbmd Contents/Helpers/slotstream-extract Contents/Helpers/slotstream-home Contents/Resources/Skills/slotstream-home/SKILL.md; do
   [ -s "$APP/$part" ] || { echo "the bundle is missing $part" >&2; exit 1; }
 done
 codesign --verify --deep --strict "$APP"
