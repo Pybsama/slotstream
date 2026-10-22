@@ -43,7 +43,7 @@ func realCapabilitiesIfRequested() async throws -> Bool {
     let selection: ModelPackSelection = args.contains("--q2") ? .pack(ModelPackRegistry.q2Candidate.id)
         : args.contains("--smart") ? .pack(ModelPackRegistry.baseline.id) : .pack(ModelPackRegistry.fast.id)
     let preferences = PerformancePreferences(budget: .custom, customGB: budget, quantization: selection)
-    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: budget), performancePreferences: preferences, helper: helper)
+    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(preferences: preferences), performancePreferences: preferences, helper: helper)
     var expectedPackID = try ModelPackRegistry.resolve(selection).pack.id
     var rows: [[String: Any]] = [], failures: [String] = []
     func expect(_ passed: Bool, _ label: String) {

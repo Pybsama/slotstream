@@ -29,8 +29,11 @@ extension Engine {
     /// Engine initialization. Legacy load and serving entry points are intact.
     public func appliedConfiguration(pack: ModelPack, liveMemory: LiveMemoryManagement) throws -> AppliedModelConfiguration {
         try withExclusive {
-            guard ModelPackRegistry.supported.contains(where: { $0.id == pack.id && $0.manifestDigest == pack.manifestDigest }),
+            // An explicit candidate can identify its verified load without
+            // joining normal setup or automatic incumbent selection.
+            guard (ModelPackRegistry.supported + [ModelPackRegistry.q2Candidate]).contains(where: { $0.id == pack.id && $0.manifestDigest == pack.manifestDigest }),
                   let plan = currentPlan else { throw ModelError("Cannot identify an unsupported or unplanned product configuration") }
+            try pack.validateLoadPlan(plan)
             let arithmetic = try PersistentPrefixIdentity.make(model: model, modelDirectory: modelDir)
             let ledger = try JSONSerialization.data(withJSONObject: plan.json(), options: [.sortedKeys])
             let startup = try startupExecutionIdentity(pack: pack, liveMemory: liveMemory)
