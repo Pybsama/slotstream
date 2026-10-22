@@ -54,6 +54,7 @@ struct ContentView: View {
     private var ready: Bool { model.composer.ready }
     private var selectedModelRole: String {
         guard let pack = try? ModelPackRegistry.resolve(model.performancePreferences.quantization).pack else { return "unavailable" }
+        if pack.id == PinnedQ2Model.name { return PinnedQ2Model.name }
         return pack.id == PinnedFastModel.name ? "fast" : "smart"
     }
     var body: some View {
@@ -445,6 +446,7 @@ struct ContentView: View {
                     })) {
                         Text("Fast").tag("fast")
                         Text("Smart").tag("smart")
+                        if selectedModelRole == PinnedQ2Model.name { Text("Q2 candidate").tag(PinnedQ2Model.name) }
                         if selectedModelRole == "unavailable" { Text("Unavailable").tag("unavailable") }
                     }.fixedSize().disabled(!ready || model.working)
                         .accessibilityIdentifier("model-role")
