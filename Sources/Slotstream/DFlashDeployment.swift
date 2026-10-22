@@ -36,14 +36,18 @@ package enum SmartDFlashDeployment {
 }
 
 public extension ModelPack {
-    var usesDFlash: Bool { id == PinnedFastModel.name }
-    var installationBytes: Int64 { totalBytes + (usesDFlash ? DFlashDeployment.deployment.totalBytes : 0) }
+    var usesDFlash: Bool { id == PinnedFastModel.name || id == PinnedQ2Model.name }
+    var draftFiles: [PinnedModel.File] { id == PinnedQ2Model.name ? SmartDFlashDeployment.files : DFlashDeployment.files }
+    var installationBytes: Int64 { totalBytes + (usesDFlash ? draftFiles.reduce(0) { $0 + $1.size } : 0)
+        + (id == PinnedQ2Model.name ? PinnedQ2Model.metadataDeployment.totalBytes : 0) }
     func installationStores(at directory: URL) -> [WeightStore] {
-        [WeightStore(modelDirectory: directory, pack: self)] + (usesDFlash ? [DFlashDeployment.store(for: directory)] : [])
+        [WeightStore(modelDirectory: directory, pack: self)]
+            + (id == PinnedQ2Model.name ? [WeightStore(modelDirectory: directory, deployment: PinnedQ2Model.metadataDeployment)] : [])
+            + (usesDFlash ? [id == PinnedQ2Model.name ? SmartDFlashDeployment.store(for: directory) : DFlashDeployment.store(for: directory)] : [])
     }
     func installationFiles(at directory: URL) -> [URL] {
-        files.map { directory.appendingPathComponent($0.path) } + (usesDFlash
-            ? DFlashDeployment.files.map { DFlashDeployment.directory(for: directory).appendingPathComponent($0.path) } : [])
+        (files + (id == PinnedQ2Model.name ? PinnedQ2Model.metadataFiles : [])).map { directory.appendingPathComponent($0.path) } + (usesDFlash
+            ? draftFiles.map { DFlashDeployment.directory(for: directory).appendingPathComponent($0.path) } : [])
     }
     func installationStatus(at directory: URL, shouldContinue: @escaping () -> Bool = { true }) throws -> WeightStatus {
         let states = try installationStores(at: directory).map { try $0.status(shouldContinue: shouldContinue) }
@@ -51,7 +55,10 @@ public extension ModelPack {
         let remaining = states.reduce(Int64(0)) { $0 + $1.bytesToFetch }
         let free = WeightStore.freeDiskBytes(near: directory)
         let corrupt = states.enumerated().flatMap { index, status -> [String] in
-            if case .corrupt(let paths, _, _) = status { return paths.map { (index == 0 ? "" : "dflash/") + $0 } }
+            if case .corrupt(let paths, _, _) = status {
+                let isDraft = usesDFlash && index == states.count - 1
+                return paths.map { (isDraft ? "dflash/" : "") + $0 }
+            }
             return []
         }
         if !corrupt.isEmpty { return .corrupt(paths: corrupt, repairBytes: remaining, freeDiskBytes: free) }

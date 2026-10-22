@@ -190,6 +190,12 @@ public final class NgramStore {
         let padded = (total + div - 1) / div * div
         self.rowsPerShard = Int((padded + Int64(cfg.splitNgramParts) - 1) / Int64(cfg.splitNgramParts))
 
+        if index.q2 != nil {
+            self.wRowBytes = 90; self.sRowBytes = 0
+            self.rowReader = RowReader(index: index, rowsPerShard: rowsPerShard, headDim: headDim, qGroup: cfg.ngramQGroup,
+                wRefs: [], sRefs: [], bRefs: [], wRowBytes: 90, sRowBytes: 0)
+            return
+        }
         for s in 0 ..< cfg.splitNgramParts {
             let b = base + "ngram_embedding.shard_\(s)."
             wRefs.append(index.ref(b + "weight"))
@@ -254,6 +260,11 @@ public final class NgramStore {
         let wRowBytes: Int
         let sRowBytes: Int
         func read(_ gid: Int64,handles: [[TensorReadHandle]]?,fault: ReadFault?,shouldContinue: () -> Bool = { true }) throws -> [Float] {
+            if let q2 = index.q2 {
+                guard shouldContinue() else { throw CheckpointReadError.cancelled }
+                try fault?.beforeRead()
+                return try q2.pleRow(gid)
+            }
             guard let value = Int(exactly: gid), value >= 0, value / rowsPerShard < wRefs.count,
                 value % rowsPerShard < wRefs[value / rowsPerShard].shape[0]
             else { throw CheckpointReadError.invalidRange }

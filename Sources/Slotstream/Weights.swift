@@ -6,23 +6,25 @@
 import Foundation
 import MLX
 
-/// A linear layer read from the checkpoint: quantized (weight+scales+biases)
-/// or plain bf16, decided by whether `<name>.scales` exists.
+/// A linear layer read from the checkpoint. Affine weights expose separate
+/// scales/biases; GGUF weights retain their opaque block representation.
 public struct QLinear {
     public let w: MLXArray
     public let scales: MLXArray?
     public let biases: MLXArray?
     public let groupSize: Int
     public let bits: Int
+    package var gguf: Q2GGUFLinear? = nil
 
     package init(w: MLXArray, scales: MLXArray?, biases: MLXArray?, groupSize: Int, bits: Int) {
         self.w = w; self.scales = scales; self.biases = biases
         self.groupSize = groupSize; self.bits = bits
     }
 
-    public var isQuantized: Bool { scales != nil }
+    public var isQuantized: Bool { scales != nil || gguf != nil }
 
     public func callAsFunction(_ x: MLXArray) -> MLXArray {
+        if let gguf { return gguf(x) }
         if let s = scales {
             if RowInvariantMatmul.enabled {
                 let rows = x.size / x.dim(-1)
@@ -82,6 +84,11 @@ extension TensorSource {
     }
 
     public func linear(_ base: String, groupSize: Int? = nil, bits: Int? = nil) -> QLinear {
+        if let packed = (self as? ResidentWeights)?.ggufLinears[base] {
+            var value = QLinear(w: packed.bytes, scales: nil, biases: nil,
+                groupSize: packed.format.block, bits: packed.format.nominalBits)
+            value.gguf = packed; return value
+        }
         let w = tensor(base + ".weight")
         let s = optionalTensor(base + ".scales")
         let b = optionalTensor(base + ".biases")
@@ -103,7 +110,9 @@ public final class ResidentWeights: TensorSource {
         packedGDNProjections.values.reduce(0) { $0 + $1.payloadBytes }
     }
     private let embeddingRows: EmbeddingRows?
-    public var usesEmbeddingRows: Bool { embeddingRows != nil }
+    private let q2: Q2Checkpoint?
+    package let ggufLinears: [String: Q2GGUFLinear]
+    public var usesEmbeddingRows: Bool { embeddingRows != nil || q2 != nil }
     package var embeddingReadFault: ReadFault? {
         get { embeddingRows?.readFault }
         set { embeddingRows?.readFault = newValue }
@@ -125,6 +134,14 @@ public final class ResidentWeights: TensorSource {
         // run/serve or they can silently stack underneath another model.
         try ModelProcessGuard.acquire()
         self.config = index.config
+        self.q2 = index.q2
+        if let q2 = index.q2 {
+            self.embeddingRows = nil; self.packedGDNProjections = [:]
+            let loaded = try q2.residents()
+            self.arrays = loaded.arrays; self.ggufLinears = loaded.linears
+            return
+        }
+        self.ggufLinears = [:]
         let setting = ProcessInfo.processInfo.environment["SLOTSTREAM_EMBEDDING_ROWS"] ?? "1"
         guard setting == "0" || setting == "1" else { throw ModelError("SLOTSTREAM_EMBEDDING_ROWS must be 0 or 1") }
         let useRows = embeddingRowCache ?? (setting == "1")
@@ -194,6 +211,7 @@ public final class ResidentWeights: TensorSource {
     /// callers are split only for independent row lookup/dequantization; no
     /// model arithmetic or chronological prefill boundary is changed.
     public func embedChecked(_ ids: MLXArray) throws -> MLXArray {
+        if let q2 { return try q2.embedding(ids.asType(.int64).asArray(Int64.self).map(Int.init), shape: ids.shape) }
         if let embeddingRows {
             guard [.uint8, .uint16, .uint32, .uint64, .int8, .int16, .int32, .int64].contains(ids.dtype) else {
                 throw ModelError("embedding row IDs must be integers")
@@ -221,6 +239,7 @@ public final class ResidentWeights: TensorSource {
     /// Main and draft callers already own CPU token IDs. Avoid uploading them
     /// merely to synchronize a cast/readback in the row-cache path.
     package func embedChecked(_ ids: [Int], shape: [Int]) throws -> MLXArray {
+        if let q2 { return try q2.embedding(ids, shape: shape) }
         guard ids.allSatisfy({ $0 >= 0 && $0 < config.vocabSize }) else {
             throw ModelError("embedding row ID outside vocabulary")
         }

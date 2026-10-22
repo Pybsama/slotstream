@@ -457,3 +457,30 @@ for tested source identities, failures and unfinished qualification. The
 separates draft acceleration from replacing the target with a more compressed
 checkpoint. A draft acceptance rate is not a model-quality score or a speed
 claim.
+
+## Native compressed Smart candidate
+
+The exact GSQ-RCO checkpoint used by Splash is available to engineers as
+`smart-q2`. Slotstream loads its pinned files directly and runs its packed
+weights, SSD streaming and Smart DFlash component through Swift, MLX and Metal.
+The product does not launch Splash or Python. Installation includes the target,
+tokenizer metadata and draft, each with pinned hashes:
+
+```sh
+slotstream model-packs --selection smart-q2 --json
+slotstream pull smart-q2
+slotstream run --model smart-q2 --prompt "Explain how a disk cache works."
+```
+
+Use the CLI's explicit memory limit for controlled qualification runs. The app
+runtime can load the same explicit pack, and `slotstream-mac-checks
+--real-capabilities --q2` exercises it through real app jobs in a disposable
+Home. The normal app picker and automatic selection continue to use maintained
+Fast and Smart choices. Existing saved candidate settings retain their title.
+
+This candidate has not earned promotion to Smart. It lacks the original vision
+tower, and native speed still falls short of the upstream implementation.
+Document OCR is a separate native tool. See the
+[qualification record](../db/records/measurements/native-exact-q2-qualification.md)
+for exact source identities, quality failures, app results, memory evidence and
+remaining work. Component reference checks live in [bench/q2](../bench/q2/README.md).

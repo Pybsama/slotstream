@@ -129,6 +129,10 @@ extension ModelPack {
             value.fusedPrefillWorkspace = false
             value.automaticReadScope = false
         }
+        if memoryProfile == .q2 {
+            value.layerExpertWorkspace = false
+            value.fusedGDNProjection = false
+        }
         if memoryProfile == .affine3Native, plan.mtpEnabled {
             value.rowInvariantProjection = true
             value.verifySplitAttention = true

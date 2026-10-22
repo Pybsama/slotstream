@@ -60,6 +60,13 @@ public struct ModelPackStartupDefaults: Sendable {
         shortPromptTokens: 1536, shortPromptChunk: 512,
         reference: "db/records/decisions/fast-and-smart.md")
 
+    package static let q2 = Self(id: "gsq-q2-native-startup-v1",
+        automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
+        draftMode: .off, draftPlacement: .automatic, draftDepth: 0,
+        lookahead: .off, prefixCacheEnabled: true,
+        shortPromptTokens: 1536, shortPromptChunk: 256,
+        reference: "db/records/decisions/smart-dflash-and-target-quantization.md")
+
     package static let original = Self(id: "original-desktop-startup-v2",
         automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
         draftMode: .auto, draftPlacement: .automatic, draftDepth: 2,

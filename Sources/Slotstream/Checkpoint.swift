@@ -406,6 +406,7 @@ public final class CheckpointIndex {
     /// One descriptor per replica, in replica order, with `dir`'s own copy
     /// first. Replicas hold identical bytes, so a read may use any of them.
     private var fds: [URL: [Int32]] = [:]
+    package private(set) var q2: Q2Checkpoint?
     private let authenticatedFiles: [URL: VQTensorFile]
     package let affineExpertArtifact: AffineExpertControl.Artifact?
     package let authenticatedStorageIdentity: String?
@@ -458,6 +459,23 @@ public final class CheckpointIndex {
         }
         try requireExpectedTensors()
         try requireIdenticalMirrors(files)
+    }
+
+    package init(q2Directory directory: URL, shouldContinue: () -> Bool = { true }) throws {
+        let source = try Q2Checkpoint(directory: directory, shouldContinue: shouldContinue)
+        self.q2 = source; self.dir = directory; self.config = source.config
+        self.mirrorDirs = []; self.mirror = MirrorRouter(replicaCount: 1)
+        self.authenticatedFiles = [:]; self.affineExpertArtifact = nil
+        self.authenticatedStorageIdentity = PinnedQ2Model.revision
+        for (name, tensor) in source.mapped where name.contains(".switch_mlp.") {
+            tensors[name] = TensorRef(file: tensor.file.url, dtype: "U8",
+                shape: [512, tensor.shape[1], tensor.rowBytes], byteOffset: tensor.offset, byteCount: tensor.byteCount)
+        }
+        for file in source.files {
+            let descriptor = dup(file.fd)
+            guard descriptor >= 0 else { throw ModelError("Cannot retain Q2 read descriptor") }
+            fds[file.url] = [descriptor]
+        }
     }
 
     /// Tensor offsets from the primary are reused on every replica. Check
@@ -526,6 +544,7 @@ public final class CheckpointIndex {
     }
 
     package func verifyAuthenticatedFilesUnchanged() throws {
+        for file in q2?.files ?? [] { try file.verifyUnchanged() }
         for file in authenticatedFiles.values { try file.verifyUnchanged() }
     }
 
@@ -809,6 +828,7 @@ public final class CheckpointIndex {
     /// opened: it and the router are both sized from `mirrorDirs`.
     fileprivate func readRouted(_ descriptors: [Int32], into dst: UnsafeMutableRawPointer,
         absolute: Int, count: Int, shouldContinue: () -> Bool) throws {
+        for file in q2?.files ?? [] { try file.verifyUnchanged() }
         // A single copy skips the router: there is no choice to make, and its
         // lock would otherwise be taken by every read of an unmirrored run.
         let routed = mirror.replicaCount > 1
@@ -825,6 +845,7 @@ public final class CheckpointIndex {
             throw error
         }
         if routed { mirror.release(replica, byteCount: count, completed: true) }
+        for file in q2?.files ?? [] { try file.verifyUnchanged() }
     }
 
     /// Compatibility wrapper. A corrupt checkpoint still fails closed; it

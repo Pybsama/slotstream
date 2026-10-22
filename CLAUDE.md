@@ -55,6 +55,14 @@ to measure against useful work, not an automatic veto or a negligible cost.
 The [exact Q2 follow-up](db/records/measurements/exact-q2-performance-and-quality-followup.md)
 supersedes the earlier DFlash-first priority while preserving its frozen evidence.
 
+The [native Q2 qualification](db/records/measurements/native-exact-q2-qualification.md)
+keeps the exact compressed target as an explicit engineering candidate. Smaller
+weights do not prove faster completed work. Check independent format arithmetic,
+actual memory, full app jobs and missing capabilities before changing Smart.
+Keep candidates outside normal setup and automatic incumbent retention; do not
+weaken selection regressions to admit them. Profile routed expert computation
+and dispatch as well as SSD waits before attributing a performance gap.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

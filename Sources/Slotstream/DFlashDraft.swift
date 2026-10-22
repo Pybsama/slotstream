@@ -132,7 +132,10 @@ package final class DFlashDraft {
         eval(context.hidden!)
     }
 
-    package func propose(anchor: Int, depth: Int, target: Qwen4ExpModel, context: Context) throws -> [Int] {
+    package private(set) var proposalConfidence: [Float] = []
+    package func propose(anchor: Int, depth: Int, target: Qwen4ExpModel, context: Context,
+                         captureConfidence: Bool = false) throws -> [Int] {
+        proposalConfidence.removeAll(keepingCapacity: true)
         guard (1...7).contains(depth), context.keys.count == layers.count else { return [] }
         let noise = try target.resident.embedChecked([anchor] + Array(repeating: maskToken, count: 7), shape: [1, 8]).asType(.bfloat16)
         let hidden = try hiddenStates(noise: noise, depth: depth, context: context)
@@ -148,7 +151,13 @@ package final class DFlashDraft {
             let candidates = indices[0, position]
             let edges = sum(predecessor[previous].asType(.float32) * selectedHidden[0, position].asType(.float32)
                 * successor[candidates].asType(.float32), axis: -1)
-            let choice = argMax(unary[0, position] + edges).item(Int.self)
+            let scores = unary[0, position] + edges
+            let choice = argMax(scores).item(Int.self)
+            if captureConfidence {
+                let values = scores.asArray(Float.self), best = values[choice]
+                let mass = values.reduce(Float(0)) { $0 + exp($1 - best) }
+                proposalConfidence.append(1 / mass)
+            }
             previous = candidates[choice].item(Int.self); path.append(previous)
         }
         debugSink?("draft_proposals", MLXArray(path))

@@ -576,3 +576,6 @@ Preserve exact Q2 recipe and normal production controls, sixteen-GB Q2 scaling, 
 ## [2026-10-22 03:47] update | records/design/sevra-spec/implementation-status.md
 Close the local stable-source regression gate and verify CLI/MCP compatibility with pinned dbmd 0.14.0; retain hosted verification as a separate pending receipt.
 
+## [2026-10-22 07:26] update | records/measurements/native-exact-q2-qualification.md
+Implement the exact native Q2 candidate with pinned mixed formats, bounded streaming and DFlash verification cost control. Preserve independent numerical fixtures, quality failures, memory evidence and excluded timing. Keep Fast/Smart defaults unchanged; final real app qualification remains in progress.
+

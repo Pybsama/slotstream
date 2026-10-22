@@ -2,10 +2,10 @@
 type: decision
 id: 01m5g6zxj15k238q4qc7zw0ajr
 created: 2026-10-21T21:48:32.705335+00:00
-updated: 2026-10-22T03:43:47.106411+00:00
+updated: 2026-10-22T07:25:24.302773+00:00
 summary: Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 decided_on: 2026-10-21
-evidence: '[[records/measurements/smart-dflash-native-and-q2-review]], [[records/measurements/exact-q2-performance-and-quality-followup]]'
+evidence: '[[records/measurements/smart-dflash-native-and-q2-review]], [[records/measurements/exact-q2-performance-and-quality-followup]], [[records/measurements/native-exact-q2-qualification]]'
 reversible_if: Complete native workflows show the exact Q2 candidate loses more useful work than its speed benefit justifies, or another qualified configuration provides a better measured tradeoff.
 title: Smart DFlash and compressed Smart targets
 status: standing
@@ -84,3 +84,10 @@ separate results. Hardware simulations remain planning checks.
 Evidence and the exact remaining checks are recorded in
 [[records/measurements/smart-dflash-native-and-q2-review]]. The earlier product
 choices remain at [[records/decisions/fast-and-smart]].
+
+## Native implementation, October 22, 2026
+The exact target now has a native Swift/MLX/Metal implementation, pinned installation, bounded SSD streaming and a native DFlash verification budget. Keep it explicit as `smart-q2`. It remains outside the normal supported list, app picker and automatic incumbent retention; Smart keeps its current target and Fast remains the new-install default.
+
+Component references and bounded CLI functional checks pass. The small quality suite retains real Q2 failures, and observed native generation remains far behind the earlier upstream results. Smaller expert bytes are not sufficient evidence of a faster whole runtime. Profile routed expert compute and dispatch alongside disk waits. No vision tower is present in this exact artifact. Final real-model app qualification remains in progress at this implementation checkpoint.
+
+[[records/measurements/native-exact-q2-qualification]] records tested identities, failures, memory limits and remaining work. Preserve current Smart until the complete measured tradeoff justifies promotion; zero regressions is not the criterion, but neither is a successful port alone.

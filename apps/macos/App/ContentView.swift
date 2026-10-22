@@ -944,7 +944,7 @@ struct PerformanceSettings: View {
                 }
                 if case .pack(let id) = model.performancePreferences.quantization,
                    !ModelPackRegistry.supported.contains(where: { $0.id == id }) {
-                    Text("Unavailable saved pack").tag(ModelPackSelection.pack(id))
+                    Text(ModelPackRegistry.alias(id)?.title ?? "Unavailable saved pack").tag(ModelPackSelection.pack(id))
                 }
             }.disabled(status == nil).help("Fast is the default for everyday work. Smart uses the larger model for harder tasks. Switching keeps your conversation.")
             if let reason = status?.selectionReason {
@@ -1048,7 +1048,7 @@ struct PerformanceSettings: View {
                 Text(status.detail).font(.callout).foregroundStyle(.secondary)
                 DisclosureGroup("Memory details", isExpanded: $showMemoryDetails) {
                     if let configuration = status.configuration {
-                        LabeledContent("Active model", value: ModelPackRegistry.supported.first(where: { $0.id == configuration.packID })?.title ?? configuration.packID)
+                        LabeledContent("Active model", value: ModelPackRegistry.alias(configuration.packID)?.title ?? configuration.packID)
                         LabeledContent("Context window", value: configuration.contextTokens.formatted() + " tokens")
                         LabeledContent("Speculative decoding", value: configuration.dflash == true ? "DFlash (adaptive)" : configuration.mtp ? "MTP" : "Off")
                         LabeledContent("Live adjustment", value: configuration.liveMemory == .automatic ? "Automatic" : "Fixed capacity")

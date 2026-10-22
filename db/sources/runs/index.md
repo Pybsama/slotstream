@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T03:47:41.272093Z
+updated: 2026-10-22T07:25:24.200581Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-22-native-q2-timing-exclusions]] — Retain paging-affected native Q2 timing diagnostics and failed/intermediate attempts without clean speed claims
+- [[sources/runs/2026/10/2026-10-22-native-q2-port]] — Native exact Q2 source, numerical reference, functional, quality, memory and regression evidence
 - [[sources/runs/2026/10/2026-10-21-slotstream-home-stable-checks]] — Complete stable-source Mac suite and pinned dbmd Home integration compatibility
 - [[sources/runs/2026/10/2026-10-21-exact-q2-timing-exclusions]] — Retained timing exclusions, thermal interruption and real-headroom refusals
 - [[sources/runs/2026/10/2026-10-21-exact-q2-tradeoff]] — Exact Q2 recipe, production controls, cache scaling and bounded quality receipts
@@ -505,10 +507,8 @@ updated: 2026-10-22T03:47:41.272093Z
 - [[sources/runs/2026/09/2026-09-09-optimization-explicit-startup-swapin-method-and-full-freeze]] — Explicit whole-pair startup swap-in exclusion with unchanged hard limits and fresh full cohorts
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-repeat-startup-swapin-stop]] — Second 12 GB startup swap-in stop with ample headroom, preserved incomplete cohort
 - [[sources/runs/2026/09/2026-09-09-optimization-qualified-fixture-full-planner-cohorts-freeze]] — Full 12 and 16 GB original planner cohorts frozen after independent fixture delivery
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-continuation-delivery-pass]] — Corrected 16 GB planner fixtures pass four-response functional delivery, no timing qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-continuation-fixture-and-full-cohort-preparation]] — Prospective 4099-token continuation delivery and full original cohort adapter preparation
 
 ## More
 
-This folder has 927 files. The 500 most recent are listed above.
+This folder has 929 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

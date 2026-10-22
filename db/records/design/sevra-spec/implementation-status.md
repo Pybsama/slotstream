@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-22T03:47:41.343358+00:00
+updated: 2026-10-22T07:25:24.328464+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -327,3 +327,8 @@ PATH lookup bug, actual question/answer, final bundle hashes and test scope.
 [[sources/runs/2026/10/2026-10-21-slotstream-home-data-integrations]]
 
 The final stable-source rerun of the complete Mac suite passed on implementation commit `0c6f328`, including its final input-identity guard. Home integration checks also passed independently with CI-pinned dbmd 0.14.0. This closes the earlier local aggregate-run refusal; hosted checks remain tracked separately. [[sources/runs/2026/10/2026-10-21-slotstream-home-stable-checks]]
+
+## Native Q2 candidate, October 22, 2026
+The exact GSQ-RCO Q2 checkpoint is implemented as an explicit native engine and app-runtime candidate. Packed mixed-format weights, SSD expert and embedding reads, pinned metadata/draft installation, target-verified DFlash and bounded cost-aware verification use Swift/MLX/Metal. Normal setup and automatic incumbent retention exclude the candidate. Fast and Smart remain unchanged.
+
+Independent component fixtures, the final engine catalogue and bounded CLI workflows pass. The full v2 scripted native UI/runtime suite passed; final app delivery and six real Q2 workflows are still being checked. Retain the smaller quality suite's failures and the paging-affected speed diagnostics. The exact target has no vision tower. See [[records/measurements/native-exact-q2-qualification]] for the current evidence and limits. No release or default promotion is claimed.

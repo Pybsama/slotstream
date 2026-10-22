@@ -32,6 +32,12 @@ struct RMSNorm {
     }
 
     func callAsFunction(_ x: MLXArray, compiledFinish: Bool = false) -> MLXArray {
+        if weight.dtype == .float32 {
+            let value = x.asType(.float32)
+            let grouped = groupSize.map { value.reshaped(Array(x.shape.dropLast()) + [-1, $0]) } ?? value
+            let normalized = grouped * rsqrt(grouped.square().mean(axis: -1, keepDims: true) + eps)
+            return (normalized.reshaped(x.shape) * weight).asType(x.dtype)
+        }
         guard let g = groupSize else {
             return MLXFast.rmsNorm(x, weight: weight, eps: eps)
         }
@@ -59,7 +65,7 @@ struct RMSNormGated {
     let sigmoidGate: Bool
 
     func callAsFunction(_ x: MLXArray, gate: MLXArray) -> MLXArray {
-        let out = MLXFast.rmsNorm(x, weight: weight, eps: eps)
+        let out = MLXFast.rmsNorm(weight.dtype == .float32 ? x.asType(.float32) : x, weight: weight, eps: eps)
         let gf = gate.asType(.float32)
         let g = sigmoidGate ? sigmoid(gf) : MLXNN.silu(gf)
         return (g * out.asType(.float32)).asType(x.dtype)
@@ -1629,6 +1635,15 @@ final class MoELayer {
         return concatenated(outs, axis: 0).reshaped([B, S, H])
     }
 
+    private func q2Experts(_ x: MLXArray, weights: [MLXArray], ids: MLXArray, repeatInput: Int) -> MLXArray {
+        let g = Q2GGUFLinear.gather(x, bytes: weights[0], format: .q20, rows: cfg.moeIntermediate,
+            columns: cfg.hiddenSize, indices: ids, repeatInput: repeatInput)
+        let u = Q2GGUFLinear.gather(x, bytes: weights[1], format: .q20, rows: cfg.moeIntermediate,
+            columns: cfg.hiddenSize, indices: ids, repeatInput: repeatInput)
+        return Q2GGUFLinear.gather(MLXNN.silu(g) * u, bytes: weights[2], format: .q20, rows: cfg.hiddenSize,
+            columns: cfg.moeIntermediate, indices: ids, repeatInput: 1)
+    }
+
     /// The pool path: pin the routed experts in the slot pool and gather over
     /// it, one matvec per (token, expert). Returns every expert's output,
     /// (B,S,topK,H).
@@ -1647,6 +1662,10 @@ final class MoELayer {
             let count = slotIds.count / (B * S)
             let slotIdx = MLXArray(slotIds, [B, S, count])
             let xe = x.expandedDimensions(axes: [-2, -3])
+            if pool.expertStore.isQ2 {
+                return q2Experts(x, weights: pool.pools, ids: slotIdx, repeatInput: count)
+                    .reshaped([B, S, count, cfg.hiddenSize])
+            }
             let g = gatherQuantizedMM(
                 xe, pool.pools[0], scales: pool.pools[1], biases: pool.pools[2],
                 rhsIndices: slotIdx, transpose: true, groupSize: pool.expertStore.quantization.groupSize, bits: pool.expertStore.quantization.bits)
@@ -1799,15 +1818,20 @@ final class MoELayer {
                             [xg, broadcast(xg[(n - 1) ..< n], to: [pad, 1, H])], axis: 0)
                     }
                     let ridx = MLXArray(local)
+                    let dAll: MLXArray
+                    if pool.expertStore.isQ2 {
+                        dAll = q2Experts(xg, weights: w, ids: ridx, repeatInput: 1).expandedDimensions(axis: 1)
+                    } else {
                     let g = gatherQuantizedMM(
                         xg, w[0], scales: w[1], biases: w[2], rhsIndices: ridx, transpose: true,
                         groupSize: pool.expertStore.quantization.groupSize, bits: pool.expertStore.quantization.bits, sortedIndices: true)
                     let u = gatherQuantizedMM(
                         xg, w[3], scales: w[4], biases: w[5], rhsIndices: ridx, transpose: true,
                         groupSize: pool.expertStore.quantization.groupSize, bits: pool.expertStore.quantization.bits, sortedIndices: true)
-                    let dAll = gatherQuantizedMM(
+                    dAll = gatherQuantizedMM(
                         MLXNN.silu(g) * u, w[6], scales: w[7], biases: w[8], rhsIndices: ridx,
                         transpose: true, groupSize: pool.expertStore.downQuantization.groupSize, bits: pool.expertStore.downQuantization.bits, sortedIndices: true)
+                    }
                     let d = pad > 0 ? dAll[0 ..< n] : dAll
                     let completed: MLXArray
                     if let output = orderedOutput {
@@ -1972,7 +1996,7 @@ final class PLELayer {
             }
         }
         let window = full[0..., (full.dim(1) - (stateLen + S))..., 0...]
-        return MLXNN.silu(conv1d(window, convWeight, dilation: dilation, groups: convWeight.dim(0)))
+        return MLXNN.silu(conv1d(window.asType(convWeight.dtype), convWeight, dilation: dilation, groups: convWeight.dim(0))).asType(x.dtype)
     }
 
     /// hidden (B,S,hc*H); ids/prevCtx handled CPU-side via NgramStore.

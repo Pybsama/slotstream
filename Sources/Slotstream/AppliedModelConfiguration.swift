@@ -38,7 +38,7 @@ extension Engine {
                 "pack": pack.manifestDigest, "arithmetic": arithmetic.digest,
                 "plan": String(decoding: ledger, as: UTF8.self), "live_memory": liveMemory.rawValue]
             if let startup { components["schema"] = "product-configuration-v2"; components["startup_policy"] = startup.digest }
-            components["dflash"] = model.dflash == nil ? "off" : DFlashDeployment.revision
+            components["dflash"] = model.dflash == nil ? "off" : (pack.id == PinnedQ2Model.name ? SmartDFlashDeployment.revision : DFlashDeployment.revision)
             let identity = PersistentPrefixIdentity(components: components).digest
             return AppliedModelConfiguration(generation: UUID(), identity: identity, packID: pack.id,
                 manifestDigest: pack.manifestDigest, contextTokens: plan.maxContextTokens,

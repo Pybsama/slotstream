@@ -66,6 +66,11 @@ package struct PackMemoryProfile: Equatable, Sendable {
     /// the bounded feature window. Preserve the original fixed allowance;
     /// do not load MTP or inherit its throughput evidence. Physical tests
     /// determine whether this conservative envelope can become a default.
+    package static let q2 = Self(identity: "gsq-q2-native-memory-v1",
+        expertRecordBytes: 1_382_400, residentReserveBytes: 1_600_000_000,
+        maximumPrefill: 512, maximumContext: 32_768, usesBaselineSpeedEvidence: false,
+        supportsStreamedDraft: false, supportsVision: false, automaticOptimizations: false)
+
     package static let smartDFlash = Self(identity: "smart-dflash2-memory-v1",
         expertRecordBytes: 2_764_800, residentReserveBytes: 1_600_000_000,
         maximumPrefill: 512, maximumContext: 32_768,

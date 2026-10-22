@@ -1,4 +1,5 @@
 import ArgumentParser
+import CryptoKit
 import Foundation
 import MLX
 import Slotstream
@@ -16,6 +17,7 @@ struct SmartDFlashCheck: ParsableCommand {
     @Option var dumpFirstDraft: String?
     @Option var prefixCacheDir: String?
     @Flag(help: "Download the pinned Smart draft before the comparison") var installDraft = false
+    @Flag(help: "Diagnostic target-only control, retaining the same priced memory plan") var disableDraft = false
 
     struct Probe: Decodable {
         let id: String
@@ -27,6 +29,7 @@ struct SmartDFlashCheck: ParsableCommand {
         var cancelAfter: Int?
         var tool: ProbeTool?
         var imagePaths: [String]?
+        var conversation: String?
     }
     struct ProbeTool: Decodable {
         let name: String
@@ -41,8 +44,8 @@ struct SmartDFlashCheck: ParsableCommand {
         }
     }
     func run() throws {
-        guard ["plain", "mtp", "dflash"].contains(method), memoryGB.isFinite,
-              (10...33).contains(memoryGB) else { throw ValidationError("Use plain, mtp or dflash and a 10–33 GB explicit budget") }
+        guard ["plain", "mtp", "dflash", "q2"].contains(method), memoryGB.isFinite,
+              (10...33).contains(memoryGB) else { throw ValidationError("Use plain, mtp, dflash or q2 and a 10–33 GB explicit budget") }
         let probes = try JSONDecoder().decode([Probe].self, from: Data(contentsOf: URL(fileURLWithPath: cases)))
         guard !probes.isEmpty, probes.count <= 100,
               probes.allSatisfy({ !$0.id.isEmpty && (1...4096).contains($0.maxTokens) && $0.prompt.utf8.count <= 500_000 && ($0.imagePaths?.count ?? 0) <= 1 }) else {
@@ -52,17 +55,17 @@ struct SmartDFlashCheck: ParsableCommand {
               dumpFirstDraft.map({ !FileManager.default.fileExists(atPath: $0) }) ?? true else {
             throw ValidationError("Use new receipt and draft-dump paths; existing evidence is never overwritten")
         }
-        guard method == "dflash" || (!installDraft && dumpFirstDraft == nil) else {
+        guard ["dflash", "q2"].contains(method) || (!installDraft && dumpFirstDraft == nil) else {
             throw ValidationError("Draft installation and capture require --method dflash")
         }
         let modelDirectory = ModelLocator.resolve(model)
-        if method == "dflash" {
+        if method == "dflash" || method == "q2" {
             let store = SmartDFlashDeployment.store(for: modelDirectory)
             if installDraft { try store.download(log: { print($0) }) }
             try store.verify()
         }
         let hasImages = probes.contains { !($0.imagePaths?.isEmpty ?? true) }
-        let resources: PackMemoryProfile = method == "dflash" ? .smartDFlash : .original
+        let resources: PackMemoryProfile = method == "q2" ? .q2 : method == "dflash" ? .smartDFlash : .original
         let machine = Machine.current()
         guard let availableGB = machine.availableGB, availableGB >= memoryGB + 3 else { throw ModelError("Comparison needs target plus 3 GB reclaimable memory") }
         let plan = try Planner.plan(resources: resources, expertsPerLayer: nil, poolGB: nil, memoryGB: memoryGB,
@@ -78,6 +81,7 @@ struct SmartDFlashCheck: ParsableCommand {
             do {
                 let launched = Date()
                 let engine = try await Engine(modelDir: modelDirectory, plan: plan)
+                if disableDraft { engine.generator.speculationEnabled = false }
                 // Identical, explicitly priced pass shapes in all methods.
                 engine.generator.prefillChunk = min(256, plan.prefillChunk)
                 engine.generator.footprintSampling = true
@@ -103,6 +107,7 @@ struct SmartDFlashCheck: ParsableCommand {
                 }
                 let loadSeconds = Date().timeIntervalSince(launched)
                 var rows: [[String: Any]] = []
+                var conversations: [String: [ChatMessage]] = [:]
                 for probe in probes {
                     let control = try engine.beginRequest()
                     let tools = probe.tool.map { [$0.definition] } ?? []
@@ -120,7 +125,9 @@ struct SmartDFlashCheck: ParsableCommand {
                         }
                         return data.base64EncodedString()
                     }
-                    let (ids, vision) = try engine.encodeChatWithVision([message], tools: tools, thinking: false, request: control)
+                    let history = probe.conversation.flatMap { conversations[$0] } ?? []
+                    let messages = history + [message]
+                    let (ids, vision) = try engine.encodeChatWithVision(messages, tools: tools, thinking: false, request: control)
                     var params = SampleParams.greedy
                     params.maxTokens = probe.maxTokens
                     params.temperature = probe.temperature ?? 0
@@ -147,6 +154,10 @@ struct SmartDFlashCheck: ParsableCommand {
                             return probe.cancelAfter.map { callbacks < $0 } ?? true
                         }, request: control)
                     let after = ProcessMemory.vmActivity()
+                    if let conversation = probe.conversation, stats.finishReason == "stop",
+                       stats.runtimeError == nil, probe.cancelAfter == nil {
+                        conversations[conversation] = messages + [ChatMessage(role: "assistant", content: text)]
+                    }
                     collect(splitter.flush())
                     let statsJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(stats))
                     rows.append(["id": probe.id, "prompt_ids": ids, "text": text, "tokens": tokens,
@@ -155,7 +166,7 @@ struct SmartDFlashCheck: ParsableCommand {
                         "elapsed_seconds": Date().timeIntervalSince(start),
                         "swapins_delta": (after?.swapins ?? 0) - (before?.swapins ?? 0),
                         "swapouts_delta": (after?.swapouts ?? 0) - (before?.swapouts ?? 0)])
-                    let receipt: [String: Any] = ["method": method, "memory_gb": memoryGB,
+                    let receipt: [String: Any] = ["method": method, "memory_gb": memoryGB, "draft_disabled": disableDraft,
                         "plan": plan.json(), "load_seconds": loadSeconds, "runs": rows,
                         "draft_dumped": didDump, "complete": rows.count == probes.count]
                     try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])
@@ -218,4 +229,140 @@ struct SmartDFlashReplay: ParsableCommand {
         try save(arrays: arrays, url: URL(fileURLWithPath: output))
         print("Replayed \(chunks.count) context chunks and \(oldHidden.dim(1)) draft rows without target weights")
     }
+}
+
+/// Independent GGML fixture comparison without allocating a model. The
+/// fixture supplies decoded reference values, never inferred from our kernel.
+struct Q2FormatCheck: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "q2-format-check",
+        abstract: "Check native packed Q2 deployment formats against independent fixtures")
+    @Option var fixtures: String
+    @Option var policyFixtures: String?
+    struct PolicyFixture: Decodable { let confidence: [Float]; let depth: Int; let accepted: Int; let seconds: Double }
+    struct Fixture: Decodable {
+        let format: UInt32
+        let bytes: String
+        let columns: Int
+        let rows: Int
+        let expected: [Float]
+        let input: [Float]
+        let product: [Float]
+        let source: String
+    }
+    func run() throws {
+        try admissionChecks()
+        let cases = try JSONDecoder().decode([Fixture].self, from: Data(contentsOf: URL(fileURLWithPath: fixtures)))
+        guard cases.count == Q2GGUFFormat.allCases.count,
+              Set(cases.map(\.format)) == Set(Q2GGUFFormat.allCases.map(\.rawValue)) else {
+            throw ValidationError("Fixtures must cover every admitted deployment format")
+        }
+        MLX.Memory.cacheLimit = 64 << 20
+        for f in cases {
+            guard let format = Q2GGUFFormat(rawValue: f.format), let data = Data(base64Encoded: f.bytes),
+                  (1...32).contains(f.rows), f.columns == 256,
+                  f.expected.count == f.rows * f.columns, f.input.count == f.columns,
+                  f.product.count == f.rows, data.count == f.rows * f.columns / format.block * format.bytes else {
+                throw ValidationError("Invalid bounded format fixture")
+            }
+            let bytes = MLXArray(data, [data.count], dtype: .uint8)
+            let decoded = Q2GGUFLinear.decode(bytes, format: format, count: f.expected.count).asArray(Float.self)
+            let difference = zip(decoded, f.expected).map { abs($0 - $1) }.max()!
+            let scale = f.expected.map(abs).max()!
+            guard decoded.allSatisfy(\.isFinite), difference <= max(1e-7, scale * 2e-6) else {
+                throw ValidationError("Format \(format): decoder error \(difference)")
+            }
+            let linear = Q2GGUFLinear(bytes: bytes, format: format, rows: f.rows, columns: f.columns)
+            let actual = linear(MLXArray(f.input, [1, f.columns])).asArray(Float.self)
+            let productError = zip(actual, f.product).map { abs($0 - $1) }.max()!
+            guard actual.allSatisfy(\.isFinite), productError <= max(1e-5, f.product.map(abs).max()! * 2e-5) else {
+                throw ValidationError("Format \(format): matvec error \(productError)")
+            }
+            let routes: [Int32] = [1, 0, 1, 0, 1, 0]
+            let batched = Q2GGUFLinear.gather(MLXArray(f.input + f.input + f.input, [3, f.columns]),
+                bytes: bytes, format: format, rows: f.rows / 2, columns: f.columns,
+                indices: MLXArray(routes), repeatInput: 2).asArray(Float.self)
+            let routedExpected = routes.flatMap { id in
+                Array(f.product[(Int(id) * f.rows / 2)..<((Int(id) + 1) * f.rows / 2)])
+            }
+            guard zip(batched, routedExpected).allSatisfy({ abs($0 - $1) <= max(1e-5, abs($1) * 2e-5) }) else {
+                throw ValidationError("Routed projection mismatch for \(format)")
+            }
+            var halfReference: [Float] = []
+            for row in 0..<f.rows {
+                var sum: Float = 0
+                for col in 0..<f.columns {
+                    let w = Float(Float16(f.expected[row * f.columns + col]))
+                    let x = Float(Float16(f.input[col]))
+                    sum += w * x
+                }
+                halfReference.append(sum)
+            }
+            for count in [2, 3, 5] {
+                let tile = linear(MLXArray(Array(repeating: f.input, count: count).flatMap { $0 }, [count, f.columns])).asArray(Float.self)
+                guard zip(tile, Array(repeating: halfReference, count: count).flatMap({ $0 })).allSatisfy({
+                    $0.isFinite && abs($0 - $1) <= max(2e-5, abs($1) * 5e-5)
+                }) else { throw ValidationError("Staged matrix mismatch for \(format) at \(count) rows") }
+            }
+            print("\(format): decode \(difference), matvec \(productError), routed batch PASS")
+        }
+        if let policyFixtures {
+            let sequence = try JSONDecoder().decode([PolicyFixture].self,
+                from: Data(contentsOf: URL(fileURLWithPath: policyFixtures)))
+            guard (128...4096).contains(sequence.count) else { throw ValidationError("Bounded policy sequence required") }
+            var policy = DFlashVerifyBudget()
+            for (i, row) in sequence.enumerated() {
+                guard row.confidence.count == 7, policy.depth(confidence: row.confidence) == row.depth else {
+                    throw ValidationError("Upstream verify-budget mismatch at cycle \(i)")
+                }
+                policy.observe(confidence: row.confidence, verified: row.depth,
+                    accepted: row.accepted, seconds: row.seconds)
+            }
+            print("Verify budget matches upstream across \(sequence.count) cycles and online refits")
+        }
+    }
+    private func admissionChecks() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("q2-admission-" + UUID().uuidString)
+        try fm.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? fm.removeItem(at: root) }
+        let file = root.appendingPathComponent("fixture.gguf")
+        func fixture(alignment: UInt64? = nil) -> Data {
+            var bytes = Data()
+            func integer<T: FixedWidthInteger>(_ number: T) {
+                var value = number.littleEndian
+                withUnsafeBytes(of: &value) { bytes.append(contentsOf: $0) }
+            }
+            func string(_ value: String) { integer(UInt64(value.utf8.count)); bytes.append(contentsOf: value.utf8) }
+            integer(UInt32(0x46554747)); integer(UInt32(3)); integer(UInt64(1)); integer(UInt64(alignment == nil ? 0 : 1))
+            if let alignment { string("general.alignment"); integer(UInt32(10)); integer(alignment) }
+            string("fixture"); integer(UInt32(2)); integer(UInt64(4)); integer(UInt64(1)); integer(UInt32(0)); integer(UInt64(0))
+            while !bytes.count.isMultiple(of: 32) { bytes.append(0) }
+            for value: Float in [1, 2, 3, 4] { integer(value.bitPattern) }
+            return bytes
+        }
+        func refuses(_ name: String, _ action: () throws -> Void) throws {
+            do { try action() } catch { return }
+            throw ValidationError("Q2 admission accepted \(name)")
+        }
+        let data = fixture(), digest = SHA256.hash(data: fixture()).map { String(format: "%02x", $0) }.joined()
+        try data.write(to: file)
+        let owner = try Q2GGUFFile(url: file, expectedSize: Int64(data.count), expectedSHA256: digest)
+        try owner.verifyUnchanged()
+        try refuses("wrong hash") { _ = try Q2GGUFFile(url: file, expectedSHA256: String(repeating: "0", count: 64)) }
+        try refuses("wrong length") { _ = try Q2GGUFFile(url: file, expectedSize: Int64(data.count + 1)) }
+        try refuses("cancelled authentication") { _ = try Q2GGUFFile(url: file, expectedSHA256: digest, shouldContinue: { false }) }
+        let link = root.appendingPathComponent("link.gguf")
+        try fm.createSymbolicLink(at: link, withDestinationURL: file)
+        try refuses("symlink") { _ = try Q2GGUFFile(url: link) }
+        let handle = try FileHandle(forWritingTo: file)
+        try handle.seek(toOffset: UInt64(data.count - 1)); try handle.write(contentsOf: Data([1])); try handle.close()
+        try refuses("mutated owned payload") { try owner.verifyUnchanged() }
+        for (name, bad) in [("short header", Data(data.prefix(20))), ("truncated tensor", Data(data.dropLast())),
+                            ("overflowing alignment", fixture(alignment: UInt64.max))] {
+            try bad.write(to: file)
+            try refuses(name) { _ = try Q2GGUFFile(url: file) }
+        }
+        print("Q2 admission: complete hash, cancellation, truncation, overflow, symlink and mutation PASS")
+    }
+
 }

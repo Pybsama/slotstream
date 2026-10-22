@@ -34,6 +34,8 @@ public enum SlotPoolError: Error, CustomStringConvertible {
 
 public final class ExpertStore {
     public let index: CheckpointIndex
+    package var isQ2: Bool { index.q2 != nil }
+    package var pieceCount: Int { refs[0].count }
     package let quantization: AffineQuantization
     package let downQuantization: AffineQuantization
     private let cfg: ModelConfig
@@ -174,8 +176,8 @@ public final class ExpertStore {
 
     /// Row shape and dtype of each staging piece, for single-record adoption.
     package var stagingPieceSpecs: [(shape: [Int], dtype: DType)] {
-        refs[0][0 ..< 9].map { r in
-            (Array(r.shape.dropFirst()), r.dtype == "U32" ? DType.uint32 : DType.bfloat16)
+        refs[0].map { r in
+            (Array(r.shape.dropFirst()), r.dtype == "U8" ? DType.uint8 : r.dtype == "U32" ? DType.uint32 : DType.bfloat16)
         }
     }
 
@@ -205,6 +207,15 @@ public final class ExpertStore {
             throw ModelError("mixed expert projections require the exact admitted research artifact")
         }
         self.downQuantization = down
+        if index.q2 != nil {
+            for layer in 0..<cfg.numLayers {
+                refs.append(["gate_proj", "up_proj", "down_proj"].map {
+                    index.ref("model.layers.\(layer).mlp.switch_mlp." + $0 + ".weight")
+                })
+            }
+            pieceRowBytes = refs[0].map { $0.rowBytes }
+            return
+        }
         let g = affine.groupSize
         let hiddenWords = try affine.packedWords(columns: h)
         let intermediateWords = try down.packedWords(columns: ff)
@@ -315,7 +326,7 @@ public final class ExpertStore {
         }
         let failure = JoinedReadFailure()
         // 9n reads, spread across worker lanes
-        let jobs: [(piece: Int, slot: Int)] = (0 ..< n).flatMap { s in (0 ..< 9).map { (piece: $0, slot: s) } }
+        let jobs: [(piece: Int, slot: Int)] = (0 ..< n).flatMap { s in (0 ..< pieceCount).map { (piece: $0, slot: s) } }
         let lanes = min(max(queueDepth, 1), jobs.count)
         DispatchQueue.concurrentPerform(iterations: lanes) { lane in
             var j = lane
@@ -348,7 +359,7 @@ public final class ExpertStore {
                                       queueDepth: Int = ExpertStore.poolQueueDepth,
                                       finishReaders: (() -> Void)? = nil) throws {
         let n = keys.count
-        guard n > 0, slots.count == n, bases.count == 9, pieceRowBytes.count == 9, !supportsRecordReads else {
+        guard n > 0, slots.count == n, bases.count == pieceCount, pieceRowBytes.count == pieceCount, !supportsRecordReads else {
             throw CheckpointReadError.invalidRange
         }
         for key in keys where key.layer < 0 || key.layer >= cfg.numLayers || key.expert < 0 || key.expert >= cfg.numExperts {
@@ -357,7 +368,7 @@ public final class ExpertStore {
         let failure = JoinedReadFailure()
         let rowBytes = pieceRowBytes
         // 9n reads spread across worker lanes in the staging path's order.
-        let jobs = n * 9
+        let jobs = n * pieceCount
         let lanes = min(max(queueDepth, 1), jobs)
         if let finishReaders {
             // Diagnostic overlap variant: keep disk reads independent of the
@@ -370,7 +381,7 @@ public final class ExpertStore {
             DispatchQueue.concurrentPerform(iterations: lanes) { lane in
                 var j = lane
                 while j < jobs {
-                    let (record, piece) = (j / 9, j % 9)
+                    let (record, piece) = (j / pieceCount, j % pieceCount)
                     let key = keys[record], bytes = rowBytes[piece]
                     do { try read(into: buffers[piece] + record * bytes, layer: key.layer,
                                   piece: piece, offset: key.expert * bytes, count: bytes) }
@@ -385,7 +396,7 @@ public final class ExpertStore {
             DispatchQueue.concurrentPerform(iterations: lanes) { lane in
                 var j = lane
                 while j < jobs {
-                    let (record, piece) = (j / 9, j % 9), bytes = rowBytes[piece]
+                    let (record, piece) = (j / pieceCount, j % pieceCount), bytes = rowBytes[piece]
                     memcpy(bases[piece] + slots[record] * bytes, buffers[piece] + record * bytes, bytes)
                     j += lanes
                 }
@@ -400,7 +411,7 @@ public final class ExpertStore {
             defer { scratch.release(buffer, temporary: temporary) }
             var j = lane
             while j < jobs {
-                let (record, piece) = (j / 9, j % 9)
+                let (record, piece) = (j / pieceCount, j % pieceCount)
                 let key = keys[record]
                 let bytes = rowBytes[piece]
                 do {
@@ -449,8 +460,8 @@ public final class ExpertStore {
         }
         // One job per (run, piece), largest first so the lanes finish together.
         var jobs: [(piece: Int, row: Int, len: Int)] = []
-        jobs.reserveCapacity(runs.count * 9)
-        for r in runs { for p in 0 ..< 9 { jobs.append((p, r.row, r.len)) } }
+        jobs.reserveCapacity(runs.count * pieceCount)
+        for r in runs { for p in 0 ..< pieceCount { jobs.append((p, r.row, r.len)) } }
         jobs.sort { $0.len * pieceRowBytes[$0.piece] > $1.len * pieceRowBytes[$1.piece] }
         let lanes = min(max(queueDepth, 1), jobs.count)
         let lock = NSLock()
@@ -512,10 +523,11 @@ public final class ExpertStore {
         let profile = transferProfile
         let start = profile == nil ? 0 : RuntimeClock.now()
         var out: [MLXArray] = []
-        for (p, r) in refs[0][0 ..< 9].enumerated() {
+        for (p, r) in refs[0].enumerated() {
             let shape = [n] + Array(r.shape.dropFirst())
             let dtype: DType
             switch r.dtype {
+            case "U8": dtype = .uint8
             case "U32": dtype = .uint32
             case "BF16": dtype = .bfloat16
             default:
@@ -967,13 +979,13 @@ public final class SlotPool {
             func adoptTickets(_ ready: [ExpertKey: ExpertPrefetchTicket]) -> [Int] {
                 var fallback: [Int] = []
                 var adoptedSlots: [Int32] = []
-                var stagedPieces: [[MLXArray]] = Array(repeating: [], count: 9)
+                var stagedPieces: [[MLXArray]] = Array(repeating: [], count: pools.count)
                 for (j, k) in missKeys.enumerated() where ready[k] != nil {
                     guard let ticket = ready[k], let staged = ticket.makeStagingArrays(shapes: specs) else {
                         fallback.append(j); continue
                     }
                     let s = Int(slotIdx[j])
-                    for p in 0 ..< 9 { stagedPieces[p].append(staged[p]) }
+                    for p in 0 ..< pools.count { stagedPieces[p].append(staged[p]) }
                     if let old = keyOf[s] { map.removeValue(forKey: old) }
                     keyOf[s] = k
                     map[k] = s
@@ -987,7 +999,7 @@ public final class SlotPool {
                     // buffers (their finalizers fire once it has), so the pool
                     // write is a single indexed assignment instead of one per record.
                     let idx = MLXArray(adoptedSlots)
-                    for p in 0 ..< 9 {
+                    for p in 0 ..< pools.count {
                         pools[p][idx] = stagedPieces[p].count == 1 ? stagedPieces[p][0] : concatenated(stagedPieces[p], axis: 0)
                     }
                     poolWriteEpoch &+= 1
@@ -1096,24 +1108,24 @@ public final class SlotPool {
                     let tScatter = RuntimeClock.now()
                     let destinations = batchIndices.map { slotIdx[$0] }
                     if cpuSlotWrites {
-                        for p in 0..<9 { pools[p] = try CPUSlotWrite.apply(to: pools[p], from: batch[p], slots: destinations) }
+                        for p in 0..<pools.count { pools[p] = try CPUSlotWrite.apply(to: pools[p], from: batch[p], slots: destinations) }
                         slotCPUBatches += 1
                     } else if wordSlotWrites {
                         let idx = MLXArray(destinations)
                         var eligible = 0
-                        for p in 0 ..< 9 {
+                        for p in 0 ..< pools.count {
                             if WordSlotWrite.eligible(pools[p], batch[p]) { eligible += 1 }
                             pools[p] = WordSlotWrite.apply(to: pools[p], from: batch[p], at: idx)
                         }
                         if eligible > 0 { slotWordBatches += 1; slotWordBuffers += eligible }
                         slotScatterBatches += 1
                     } else if contiguousSlotWrites, let runs = SlotWriteRun.plan(destinations, capacity: slots) {
-                        for p in 0 ..< 9 { SlotWriteRun.apply(runs, to: pools[p], from: batch[p]) }
+                        for p in 0 ..< pools.count { SlotWriteRun.apply(runs, to: pools[p], from: batch[p]) }
                         slotSliceBatches += 1
                         slotSliceRuns += runs.count
                     } else {
                         let idx = MLXArray(destinations)
-                        for p in 0 ..< 9 { pools[p][idx] = batch[p] }
+                        for p in 0 ..< pools.count { pools[p][idx] = batch[p] }
                         slotScatterBatches += 1
                     }
                     poolWriteEpoch &+= 1
@@ -1236,7 +1248,7 @@ public final class SlotPool {
     /// a piece is not contiguous, which never happens for a zeros-allocated pool.
     private func currentPoolBases() -> [UnsafeMutableRawPointer]? {
         if let cached = basesCache, cached.epoch == poolWriteEpoch { return cached.bases }
-        guard pools.count == 9 else { return nil }
+        guard pools.count == store.pieceCount else { return nil }
         var out: [UnsafeMutableRawPointer] = []
         for piece in pools {
             let wrapped = piece.asData(access: .noCopyIfContiguous)
@@ -1272,7 +1284,7 @@ public final class SlotPool {
         inFlightCount += 1
         speculativeSlotReservations += 1
         let rowBytes = store.pieceRowBytes
-        let destinations = (0 ..< 9).map { bases[$0] + s * rowBytes[$0] }
+        let destinations = (0 ..< pools.count).map { bases[$0] + s * rowBytes[$0] }
         return SpeculativeSlotReservation(slot: s, destinations: destinations, pieceBytes: rowBytes, bases: bases,
             onLeave: { [weak self] slot in self?.returnSpeculativeSlot(slot) })
     }
@@ -1467,7 +1479,7 @@ public final class SlotPool {
         asyncEval(picked)
         let dst = MLXArray(victims)
         let start = RuntimeClock.now()
-        for p in 0 ..< 9 {
+        for p in 0 ..< pools.count {
             pools[p][dst] = picked[p]
             if admissionPiecewiseWrites {
                 eval(pools[p])

@@ -19,11 +19,13 @@ func realCapabilitiesIfRequested() async throws -> Bool {
         }
         budget = value
     }
-    var selectedCase: String?
+    var selectedCases: Set<String>?
     if let i = args.firstIndex(of: "--case") {
-        let names = ["ocr_receipt", "code_edit", "history_recall"]
-        guard i + 1 < args.count, names.contains(args[i + 1]) else { throw AppRuntimeError.refused("Choose a known capability case.") }
-        selectedCase = args[i + 1]
+        let names: Set<String> = ["writing", "translation", "learning", "decision", "creative", "memory", "web_limit", "pdf", "ocr_receipt", "csv", "code_edit", "folder_search", "bulk_csv", "history_recall", "meeting_notes"]
+        guard i + 1 < args.count else { throw AppRuntimeError.refused("Choose known capability cases separated by commas.") }
+        let requested = Set(args[i + 1].split(separator: ",", omittingEmptySubsequences: false).map(String.init))
+        guard !requested.isEmpty, requested.isSubset(of: names) else { throw AppRuntimeError.refused("Choose known capability cases separated by commas.") }
+        selectedCases = requested
     }
     let available = Machine.current().availableGB ?? 0
     guard available >= budget + 3 else { throw AppRuntimeError.refused("The \(budget) GB test requires 3 GB additional headroom.") }
@@ -38,7 +40,8 @@ func realCapabilitiesIfRequested() async throws -> Bool {
     seed.threads[0].messages = [Message(role: "user", text: "The workshop storage code is ORCHARD-9157.")]
     for n in 0..<60 { seed.threads[0].messages.append(Message(role: n % 2 == 0 ? "assistant" : "user", text: String(repeating: "Unrelated later conversation \(n). ", count: 20))) }
     do { let store = try HomeStore(root: root.appendingPathComponent("Home"), dbmd: dbmd); try store.save(seed) }
-    let selection: ModelPackSelection = args.contains("--smart") ? .pack(ModelPackRegistry.baseline.id) : .pack(ModelPackRegistry.fast.id)
+    let selection: ModelPackSelection = args.contains("--q2") ? .pack(ModelPackRegistry.q2Candidate.id)
+        : args.contains("--smart") ? .pack(ModelPackRegistry.baseline.id) : .pack(ModelPackRegistry.fast.id)
     let preferences = PerformancePreferences(budget: .custom, customGB: budget, quantization: selection)
     let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(memoryGB: budget), performancePreferences: preferences, helper: helper)
     var expectedPackID = try ModelPackRegistry.resolve(selection).pack.id
@@ -48,10 +51,10 @@ func realCapabilitiesIfRequested() async throws -> Bool {
         if !passed { failures.append(label) }
     }
     func save() throws {
-        try JSONSerialization.data(withJSONObject: ["budget_gb": budget, "thinking": false, "initial_available_gb": available, "case": selectedCase ?? "all", "dflash_disabled": ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] == "0", "runs": rows, "failures": failures], options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("results.json"), options: .atomic)
+        try JSONSerialization.data(withJSONObject: ["budget_gb": budget, "thinking": false, "initial_available_gb": available, "case": selectedCases?.sorted().joined(separator: ",") ?? "all", "dflash_disabled": ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] == "0", "runs": rows, "failures": failures], options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("results.json"), options: .atomic)
     }
     func run(_ name: String, _ prompt: String, source: URL? = nil, editable: Bool = false, existingThread: String? = nil) async throws -> WorkThread? {
-        if let selectedCase, name != selectedCase { return nil }
+        if let selectedCases, !selectedCases.contains(name) { return nil }
         let id: String
         if let existingThread { id = existingThread } else { id = try await runtime.newThread(title: name) }
         if let source {

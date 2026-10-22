@@ -22,6 +22,10 @@ public final class Qwen4ExpModel {
     package let affineExpertArtifact: AffineExpertControl.Artifact?
     private let authenticatedStorageIdentity: String?
     package var authenticatedArtifactIdentity: String? {
+        if let q2 = pool.expertStore.index.q2 {
+            return "gsq-q2-native-v1:" + PinnedQ2Model.files.map { $0.sha256! }.joined(separator: ":")
+                + ":" + SmartDFlashDeployment.revision + ":" + String(q2.config.admittedExpertRecordBytes)
+        }
         guard let artifact = affineExpertArtifact else { return nil }
         if affineNativeArithmetic {
             return "native-affine3-v1:" + artifact.manifestSHA256 + ":standalone:" + authenticatedStorageIdentity!
@@ -333,9 +337,13 @@ public final class Qwen4ExpModel {
             ? affineControlContextLimit : ContextPolicy.modelLimit
         let arithmetic: BlockArithmeticProfile = affineControlReferenceArithmetic ? .vqPR1788 : .deployed
         self.optimizations = try InferenceOptimizations.environment()
-        if index.config.isFast {
+        if index.config.isFast || index.q2 != nil {
             self.optimizations.automaticReadScope = false
             self.optimizations.layerExpertWorkspace = false
+            if index.q2 != nil {
+                self.optimizations.fusedGDNProjection = false
+                self.optimizations.fusedPrefillWorkspace = false
+            }
         }
         if affineControlReferenceArithmetic {
             // The independent PR1788 reference lets MLX select attention.

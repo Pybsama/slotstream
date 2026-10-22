@@ -18,6 +18,8 @@ extension Generator {
         }
         model.draftPrefillFeatures = nil
         var policy = AdaptiveSpeculationPolicy(maximumDepth: 7)
+        var verifyBudget: DFlashVerifyBudget? = model.pool.expertStore.isQ2
+            && ProcessInfo.processInfo.environment["SLOTSTREAM_Q2_VERIFY_BUDGET"] != "0" ? .init() : nil
         guard params.maxTokens > 0, shouldContinue() else { reason = "stop"; return }
         let first = sample(logits, params: params, generated: generated)
         if eosIds.contains(first) { reason = "stop"; return }
@@ -58,7 +60,10 @@ extension Generator {
             let started = RuntimeClock.now(), emittedBefore = out.count
             try checkAllocation(state.tokenCount, 64_000_000, "DFlash proposal workspace")
             let draftStart = RuntimeClock.now()
-            let proposals = try draft.propose(anchor: token, depth: depth, target: model, context: context)
+            let guesses = try draft.propose(anchor: token, depth: depth, target: model, context: context,
+                captureConfidence: verifyBudget != nil)
+            let chosen = verifyBudget.map { $0.depth(confidence: draft.proposalConfidence) } ?? guesses.count
+            let proposals = Array(guesses.prefix(chosen))
             stats.draftSeconds += RuntimeClock.seconds(since: draftStart)
             stats.draftedTokens += proposals.count
             guard shouldContinue() else { reason = "stop"; break }
@@ -92,7 +97,10 @@ extension Generator {
                 draft.append(captured.rows[0..., 0..<kept.count, 0...], endingAt: state.tokenCount, to: context)
             }
             stats.reconciliationSeconds += RuntimeClock.seconds(since: reconcileStart)
-            stats.acceptedDrafts += accepted; stats.adaptiveDraftDepths.append(depth)
+            stats.acceptedDrafts += accepted; stats.adaptiveDraftDepths.append(proposals.count)
+            verifyBudget?.observe(confidence: draft.proposalConfidence, verified: proposals.count,
+                accepted: accepted, seconds: RuntimeClock.seconds(since: started),
+                labelsValid: pending != nil && shouldContinue())
             policy.observeDraft(seconds: RuntimeClock.seconds(since: started), emitted: out.count - emittedBefore,
                 drafted: proposals.count, accepted: accepted)
         }

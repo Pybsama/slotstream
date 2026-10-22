@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-22T03:43:30.723757Z
+updated: 2026-10-22T07:24:35.452353Z
 ---
 
 # records/measurements
 
+- [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 port passes component and bounded CLI checks; preserve quality losses and speed gap, with final app qualification pending
 - [[records/measurements/smart-dflash-native-and-q2-review]] — Historical native Smart DFlash reference and small-task review; Q2 performance and the adoption priority are corrected by the exact-recipe follow-up.
 - [[records/measurements/exact-q2-performance-and-quality-followup]] — Exact upstream Q2 is substantially faster in bounded coding controls; preserve capability failures and prioritize native qualification over the earlier DFlash-only conclusion
 - [[records/measurements/release-0-2-30-published-2026-10-19]] — v0.2.30 published and accepted; mirror contributor notified

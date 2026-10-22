@@ -10,6 +10,8 @@ import tempfile
 import unittest
 
 SCRIPT = Path(__file__).with_name("static_gates.sh").resolve()
+Q2_CHECK = ['q2-format-check', '--fixtures', 'bench/q2/formats.json',
+            '--policy-fixtures', 'bench/q2/verify-budget.json']
 OPTIMIZATION_SUITES = [
     'build_identity', 'optimization_build', 'optimization_serial_build', 'optimization_readiness',
     'thermal_readiness', 'prefill_bench', 'expert_layout_probe',
@@ -87,6 +89,8 @@ import json, os, sys
 with open(os.environ['SLOTSTREAM_SELECTION_TRACE'], 'a') as output:
     output.write(json.dumps({{'selected': {name!r}, 'arguments': sys.argv[1:],
         'BIN': os.environ.get('BIN'), 'SLOTSTREAM_TEST_BINARY': os.environ.get('SLOTSTREAM_TEST_BINARY')}})+'\\n')
+if sys.argv[1:2] == ['q2-format-check'] and os.environ.get('SLOTSTREAM_FAIL_Q2_FORMAT') == '1':
+    raise SystemExit(23)
 raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
 ''')
 
@@ -110,9 +114,9 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
     def expect_selected(self, changes, name):
         p, rows = self.run_entry(changes)
         self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
-        self.assertEqual([row['selected'] for row in rows], [name]*3)
+        self.assertEqual([row['selected'] for row in rows], [name]*4)
         self.assertEqual([row['arguments'] for row in rows],
-                         [['runtime-check'], ['pull-check'], ['doctor', '--json']])
+                         [['runtime-check'], Q2_CHECK, ['pull-check'], ['doctor', '--json']])
         expected = str(self.binaries[name]) if name != 'release' else '.build/release/slotstream'
         self.assertTrue(all(row['BIN'] == expected and row['SLOTSTREAM_TEST_BINARY'] == expected
                             for row in rows), rows)
@@ -163,15 +167,20 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(rows, [])
 
+    def test_failed_q2_format_check_stops_acceptance(self):
+        result, rows = self.run_entry({'SLOTSTREAM_FAIL_Q2_FORMAT': '1'})
+        self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], Q2_CHECK])
+
     def test_failed_native_memory_regression_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_NATIVE_MEMORY': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
-        self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], Q2_CHECK])
 
     def test_failed_mirror_thread_regression_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_MIRROR_THREAD': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
-        self.assertEqual([row['arguments'] for row in rows], [['runtime-check']])
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], Q2_CHECK])
 
     def test_failed_launch_deadline_regression_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_LAUNCH_DEADLINE': '1'})
@@ -186,29 +195,29 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
     def test_failed_memory_override_matrix_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_MEMORY_OVERRIDES': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
-        self.assertEqual(len(rows), 3)
+        self.assertEqual(len(rows), 4)
 
     def test_failed_pull_interrupt_gate_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_PULL_INTERRUPT': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
-        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], ['pull-check']])
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], Q2_CHECK, ['pull-check']])
 
     def test_failed_pack_selection_stops_acceptance(self):
         result, rows = self.run_entry({'SLOTSTREAM_FAIL_PACK_SELECTION': '1'})
         self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
-        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], ['pull-check']])
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], Q2_CHECK, ['pull-check']])
 
     def test_missing_pack_selection_stops_acceptance(self):
         (self.root/'Tools/slotpack/cli_checks.py').unlink()
         result, rows = self.run_entry({})
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], ['pull-check']])
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], Q2_CHECK, ['pull-check']])
 
     def test_missing_pull_interrupt_gate_stops_acceptance(self):
         (self.root/'Tools/pull_interrupt_gate.py').unlink()
         result, rows = self.run_entry({})
         self.assertNotEqual(result.returncode, 0)
-        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], ['pull-check']])
+        self.assertEqual([row['arguments'] for row in rows], [['runtime-check'], Q2_CHECK, ['pull-check']])
 
     def test_legacy_bin_override_is_used_and_forwarded(self):
         self.expect_selected({'BIN': str(self.binaries['legacy'])}, 'legacy')
@@ -264,7 +273,7 @@ raise SystemExit(int(os.environ.get('SLOTSTREAM_SELECTION_EXIT', '0')))
         suites = [json.loads(line) for line in self.suite_trace.read_text().splitlines()] \
             if self.suite_trace.exists() else []
         self.assertEqual(suites, OPTIMIZATION_SUITES)
-        self.assertEqual(len(rows), 3)
+        self.assertEqual(len(rows), 4)
 
     def test_failed_consumer_fixture_stops_before_native_checks(self):
         p, rows = self.run_entry({'SLOTSTREAM_FAIL_CONSUMER': '1'})

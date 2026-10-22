@@ -97,12 +97,14 @@ public final class Engine {
     /// Metadata follows the authenticated loaded artifact, independent of
     /// mutable memory settings. Preserve existing identities for legacy clients.
     package var modelQuantization: String {
+        if resources == .q2 { return "GSQ-RCO mixed precision / Q2_0 experts" }
         if resources == .gsq224GroupedControl || resources == .gsq224GroupedVisionControl {
             return "2bit gate/up / original 4bit down, dense and PLE"
         }
         return resources == .fast || resources == .smartDFlash || resources == .original || resources == .originalCandidateControl ? "4bit" : "3bit experts / original dense and PLE"
     }
     package var modelDigest: String {
+        if resources == .q2 { return "sha256:" + ModelPackRegistry.q2Candidate.manifestDigest }
         if resources == .fast { return "sha256:" + ModelPackRegistry.fast.manifestDigest }
         guard let identity = model.authenticatedArtifactIdentity else {
             return "slotstream-qwen38-flash-next-4bit"
@@ -111,6 +113,7 @@ public final class Engine {
         return "sha256:" + SHA256.hash(data: Data(deployed.utf8)).map { String(format: "%02x", $0) }.joined()
     }
     package func acceptsModelName(_ requested: String) -> Bool {
+        if resources == .q2 { return [modelName, "smart-q2", PinnedQ2Model.directoryName].contains(requested) }
         if resources == .fast { return [modelName, "fast", PinnedFastModel.directoryName].contains(requested) }
         if requested == "smart", resources == .original { return true }
         if [modelName, "qwen3.8-flash-next", "qwen3.8-flash-next:latest"].contains(requested) { return true }
@@ -514,11 +517,11 @@ public final class Engine {
         }
         let resources: PackMemoryProfile = originalCandidateControl ? .originalCandidateControl
             : (affineSource?.resources ?? (plan?.resources == .fast ? .fast :
-                (plan?.resources == .smartDFlash ? .smartDFlash : .original)))
+                (plan?.resources == .q2 ? .q2 : (plan?.resources == .smartDFlash ? .smartDFlash : .original))))
         guard plan?.resources == resources || (plan == nil && affineSource == nil) else {
             throw SlotstreamError.invalidPlan("the loader and memory plan must describe the same pack")
         }
-        if resources == .smartDFlash, plan?.mtpEnabled != false {
+        if resources == .smartDFlash || resources == .q2, plan?.mtpEnabled != false {
             throw SlotstreamError.invalidPlan("Smart DFlash uses one draft component; its plan must disable MTP")
         }
         let candidateProcessBudget: UInt64?
@@ -569,7 +572,7 @@ public final class Engine {
             maxTokens: plan?.prefixCacheTokens
                 ?? Planner.prefixCacheTokensFor(poolBudgetGB: Geometry.gb(poolSlots)),
             enabled: env != "0" && (plan?.runtimeAllocationPolicy?.prefixCacheEnabled ?? true))
-        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast {
+        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast || resources == .q2 {
             prefixCache.setBudgetLimit(p.prefixCacheTokens)
         }
         // MLX's allocator otherwise retains freed transients (KV caches,
@@ -583,7 +586,7 @@ public final class Engine {
             ? 2 << 30 : 128_000_000
         self.modelName = affineSource?.nativeArithmetic == true
             ? PinnedAffineStandalone.id
-            : affineSource?.artifact.modelName ?? (resources == .fast ? PinnedFastModel.name : PinnedModel.name)
+            : affineSource?.artifact.modelName ?? (resources == .q2 ? PinnedQ2Model.name : resources == .fast ? PinnedFastModel.name : PinnedModel.name)
         let t0 = Date()
         let index: CheckpointIndex
         if let affineSource {
@@ -597,6 +600,12 @@ public final class Engine {
                     artifact: affineSource.artifact,
                     shouldContinue: { (try? initial.check(phase: "authenticated model loading")) != nil })
             }
+        } else if resources == .q2 {
+            guard mirrors.isEmpty else { throw ModelError("Q2 checkpoint mirrors are not supported") }
+            _ = try PinnedTokenizerMetadata(directory: modelDir)
+            index = try CheckpointIndex(q2Directory: modelDir, shouldContinue: {
+                (try? initial.check(phase: "authenticated Q2 loading")) != nil
+            })
         } else { index = try CheckpointIndex(dir: modelDir, mirrors: mirrors) }
         // Expert Lookahead: an explicitly requested pack is validated against
         // the checkpoint geometry before the model allocates anything. A plan
@@ -674,8 +683,8 @@ public final class Engine {
             model.optimizations.verifySplitAttention = true
             model.optimizations.verifySplitMinContext = 0
         }
-        if resources == .smartDFlash || (resources == .fast && ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] != "0") {
-            let store = resources == .smartDFlash ? SmartDFlashDeployment.store(for: modelDir) : DFlashDeployment.store(for: modelDir)
+        if resources == .smartDFlash || resources == .q2 || (resources == .fast && ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] != "0") {
+            let store = resources == .smartDFlash || resources == .q2 ? SmartDFlashDeployment.store(for: modelDir) : DFlashDeployment.store(for: modelDir)
             guard store.status().isReady else {
                 throw ModelError("The selected DFlash component is missing or invalid; verify its pinned installation")
             }
@@ -725,7 +734,7 @@ public final class Engine {
                         .data(using: .utf8)!) }
             }
         }
-        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast {
+        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast || resources == .q2 {
             generator.setPrefillBudgetCeiling(p.prefillChunk)
             generator.prefillChunk = p.prefillChunk
         }

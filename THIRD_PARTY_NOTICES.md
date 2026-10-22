@@ -33,3 +33,10 @@ implementations at `bb0d5b048f02e14dbf8f2d7bb1a20911a295470a`.
 `1482f6bbc2abf12375332725302019594150b6cb` was also reviewed as an
 implementation reference. Slotstream does not run Splash or its host-step
 GPU scheduling mechanism.
+
+The native GSQ-RCO Q2 checkpoint decoder and single-request DFlash verification
+budget adapt Splash's GGUF format readers and `VerifyBudget` at the revision
+above, under [Apache-2.0](Licenses/splash-Apache-2.0.txt). The original notices
+and a description of the adaptations are retained in
+[the Splash notice](Licenses/splash-NOTICE.txt). Exact packed model bytes remain
+separately downloaded artifacts; this source license is not their license.

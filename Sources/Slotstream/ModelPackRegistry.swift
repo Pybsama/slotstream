@@ -44,11 +44,11 @@ public struct ModelPack: Sendable {
         let rows = files.sorted { $0.path < $1.path }.map {
             [$0.path, String($0.size), $0.sha256 ?? "missing", $0.optional ? "optional" : "required"]
         }
-        let draftRows = usesDFlash ? DFlashDeployment.files.sorted { $0.path < $1.path }.map {
+        let draftRows = usesDFlash ? draftFiles.sorted { $0.path < $1.path }.map {
             ["dflash/" + $0.path, String($0.size), $0.sha256 ?? "missing", "required"]
         } : []
         let object: [String: Any] = ["schema": 1, "id": id, "checkpoint": checkpointRevision,
-            "conversion": conversionRevision, "layout": layout, "compatibility": compatibility, "files": rows + draftRows]
+            "conversion": conversionRevision, "layout": layout, "compatibility": compatibility, "files": rows + draftRows + (id == PinnedQ2Model.name ? PinnedQ2Model.metadataFiles.map { [$0.path, String($0.size), $0.sha256!, "required"] } : [])]
         let bytes = try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
         return SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
     }
@@ -98,10 +98,23 @@ public enum ModelPackRegistry {
         supportEvidence: ["db/records/decisions/fast-and-smart.md"],
         qualifiedAutomaticProfiles: [], decodeForecastFiles: [])
 
+    /// Explicit qualification candidate. The Smart alias remains unchanged
+    /// until complete native workflow, speed and quality gates pass.
+    public static let q2Candidate = ModelPack(id: PinnedQ2Model.name, title: "Smart Q2 candidate",
+        checkpointRevision: baseline.checkpointRevision, conversionRevision: PinnedQ2Model.revision,
+        deployment: PinnedQ2Model.deployment, memoryProfile: .q2, startupDefaults: .q2,
+        directoryName: PinnedQ2Model.directoryName, layout: "gsq-rco-mixed-gguf-q2-native-v1",
+        compatibility: "slotstream-qwen38-gsq-q2-v1",
+        supportEvidence: ["db/records/decisions/smart-dflash-and-target-quantization.md"],
+        qualifiedAutomaticProfiles: [], decodeForecastFiles: [])
+
+    // Explicit candidates can use the native loader without entering normal
+    // setup, automatic selection or incumbent retention before qualification.
     public static let supported: [ModelPack] = [fast, baseline]
 
     public static func alias(_ name: String) -> ModelPack? {
         switch name.lowercased() {
+        case "smart-q2", PinnedQ2Model.name, PinnedQ2Model.directoryName: return q2Candidate
         case "fast", PinnedFastModel.name, PinnedFastModel.directoryName: return fast
         case "smart", PinnedModel.name, PinnedModel.dirName: return baseline
         default: return nil
@@ -232,7 +245,7 @@ extension ModelPack {
         guard plan.resources == memoryProfile else {
             throw PlanError("The selected model pack and load plan have different resource contracts")
         }
-        let admitted = [ModelPackRegistry.fast, ModelPackRegistry.baseline, ModelPackRegistry.researchStandalone]
+        let admitted = [ModelPackRegistry.fast, ModelPackRegistry.baseline, ModelPackRegistry.q2Candidate, ModelPackRegistry.researchStandalone]
         guard admitted.contains(where: { $0.id == id && $0.manifestDigest == manifestDigest }) else {
             throw PlanError("The selected model pack has no supported loader in this build")
         }
