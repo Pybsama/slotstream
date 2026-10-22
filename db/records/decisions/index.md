@@ -2,13 +2,13 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-21T21:49:26.863056Z
+updated: 2026-10-22T03:43:47.106411Z
 ---
 
 # records/decisions
 
+- [[records/decisions/smart-dflash-and-target-quantization]] — Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 - [[records/decisions/fast-and-smart]] — Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
-- [[records/decisions/smart-dflash-and-target-quantization]] — Qualify native draft acceleration independently of lower-bit target weights; keep the maintained Smart deployment until complete app and memory evidence supports promotion.
 - [[records/decisions/slotstream-app-identity]] — Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 - [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
 - [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.

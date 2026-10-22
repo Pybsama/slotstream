@@ -2,12 +2,13 @@
 type: measurement
 id: 01m5g6zxhaae830aswm9h9rffy
 created: 2026-10-21T21:48:32.682233+00:00
-updated: 2026-10-21T22:23:54.970227+00:00
-summary: Native Smart DFlash preserves this small task set with a modest timing gain; direct Q2 comparison adds failures and does not justify replacing Smart.
+updated: 2026-10-22T03:43:30.723757+00:00
+summary: Historical native Smart DFlash reference and small-task review; Q2 performance and the adoption priority are corrected by the exact-recipe follow-up.
 date: 2026-10-21
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
+note: 'The follow-up corrects the interpretation of the Q2 smoke score and supersedes the DFlash-first engineering priority: [[records/measurements/exact-q2-performance-and-quality-followup]]. Original measurements and frozen verdicts remain preserved.'
 order: '1860'
 runs: '[[sources/runs/2026/10/2026-10-21-smart-dflash-review]], [[sources/runs/2026/10/2026-10-21-smart-dflash-final-code-ci]]'
 title: Smart DFlash native comparison and Q2 checkpoint review

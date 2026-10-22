@@ -2,12 +2,13 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-21T22:23:54.970227Z
+updated: 2026-10-22T03:43:30.723757Z
 ---
 
 # records/measurements
 
-- [[records/measurements/smart-dflash-native-and-q2-review]] — Native Smart DFlash preserves this small task set with a modest timing gain; direct Q2 comparison adds failures and does not justify replacing Smart.
+- [[records/measurements/smart-dflash-native-and-q2-review]] — Historical native Smart DFlash reference and small-task review; Q2 performance and the adoption priority are corrected by the exact-recipe follow-up.
+- [[records/measurements/exact-q2-performance-and-quality-followup]] — Exact upstream Q2 is substantially faster in bounded coding controls; preserve capability failures and prioritize native qualification over the earlier DFlash-only conclusion
 - [[records/measurements/release-0-2-30-published-2026-10-19]] — v0.2.30 published and accepted; mirror contributor notified
 - [[records/measurements/mirrored-checkpoint-review-2026-10-18]] — Mirrored checkpoint reads: final review corrections and three-arm comparison
 - [[records/measurements/issue54-native-boundary-probe-2026-10-13]] — Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff

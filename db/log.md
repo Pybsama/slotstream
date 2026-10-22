@@ -570,3 +570,6 @@ Record successful engine, native Mac app and context-proxy CI for final code ed0
 ## [2026-10-22 03:34] update | records/design/sevra-spec/implementation-status.md
 Implement native Home data browsing, shared Home registry, global CLI, installed Codex/Claude skills and Home-bound MCP stdio. Preserve SQL exclusion and native review; record real-model, packaged-app, SDK and regression evidence with hosted checks pending.
 
+## [2026-10-22 03:44] update | records/measurements/exact-q2-performance-and-quality-followup.md
+Preserve exact Q2 recipe and normal production controls, sixteen-GB Q2 scaling, capability failures with BF16 KV, timing exclusions and refused larger controls. Correct the earlier DFlash-only interpretation and prioritize exact native Q2 qualification without changing the app default.
+

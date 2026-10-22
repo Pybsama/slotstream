@@ -2,15 +2,54 @@
 type: decision
 id: 01m5g6zxj15k238q4qc7zw0ajr
 created: 2026-10-21T21:48:32.705335+00:00
-updated: 2026-10-21T21:48:32.705335+00:00
-summary: Qualify native draft acceleration independently of lower-bit target weights; keep the maintained Smart deployment until complete app and memory evidence supports promotion.
+updated: 2026-10-22T03:43:47.106411+00:00
+summary: Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 decided_on: 2026-10-21
-evidence: '[[records/measurements/smart-dflash-native-and-q2-review]]'
-reversible_if: A broader same-target workflow comparison and delivered-app memory qualification justify promotion; a pinned lower-bit checkpoint independently passes the required quality tradeoff.
+evidence: '[[records/measurements/smart-dflash-native-and-q2-review]], [[records/measurements/exact-q2-performance-and-quality-followup]]'
+reversible_if: Complete native workflows show the exact Q2 candidate loses more useful work than its speed benefit justifies, or another qualified configuration provides a better measured tradeoff.
 title: Smart DFlash and compressed Smart targets
 status: standing
 ---
 # Smart DFlash and compressed Smart targets
+
+## Q2 follow-up: prioritize the exact candidate
+
+The follow-up requested by Carlos changes the engineering priority. The earlier
+small DFlash timing gain compared draft methods on the same four-bit target;
+it was not a speed measurement of the upstream Q2 recipe. A formatting miss
+also cannot be described as a second wrong answer. Preserve those frozen
+results, with their correction linked in the historical record.
+
+Prioritize an exact native implementation of the pinned GSQ-RCO Q2_0 candidate
+for qualification. Test whether its substantially smaller streamed experts,
+greater residency and useful speculative verification improve completed work
+enough to justify measured capability losses. A zero-new-regression rule is not
+the adoption criterion. Neither a speed headline nor this small task set makes
+the capability loss negligible. The maintained app choice remains unchanged
+until the native candidate passes complete workflow, memory and delivery checks.
+
+Use normal production settings at the same requested context as the primary
+product baseline. A diagnostic command that forces MTP, disables read-ahead or
+changes prefill chunks answers a narrower question. Report that configuration
+explicitly. Compare actual physical footprints as well as requested budgets;
+an allocation limit and a process target are different contracts. Repeated
+pairs, completed tasks, first response latency, sustained decode, startup and
+long prompt processing answer different questions and must stay separate.
+
+The useful port is a maintained native target, including mixed precision,
+exact FP16 scales, sparse lookup-table access and packed decode/prefill kernels.
+Do not turn this into a public format catalog or embed a Python/Splash service.
+Preserve source licensing and notices. Cost-aware verification and better cache
+retention are separate candidates to measure; do not import GPU spin. Their
+wall-clock decisions may change greedy output through floating-point batching,
+so document that limit instead of promising deterministic tokens from a seed.
+
+The follow-up evidence is
+[[records/measurements/exact-q2-performance-and-quality-followup]]. It supports
+the engineering priority, not a released default, physical testing of every
+supported Mac, or a promise of the publisher's fully resident throughput.
+
+## Initial review, preserved as history
 
 Keep the app's existing Smart checkpoint and MTP policy while the native DFlash
 candidate is qualified. DFlash and the lower-bit target checkpoint are separate

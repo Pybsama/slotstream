@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T03:35:09.014289Z
+updated: 2026-10-22T03:43:12.591614Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-21-exact-q2-timing-exclusions]] — Retained timing exclusions, thermal interruption and real-headroom refusals
+- [[sources/runs/2026/10/2026-10-21-exact-q2-tradeoff]] — Exact Q2 recipe, production controls, cache scaling and bounded quality receipts
 - [[sources/runs/2026/10/2026-10-21-slotstream-home-data-integrations]] — Native Home data browser, global CLI, bundled skills and MCP integration verification
 - [[sources/runs/2026/10/2026-10-21-smart-dflash-final-code-ci]] — Hosted engine, Mac app and context checks pass for the final native Smart DFlash code
 - [[sources/runs/2026/10/2026-10-21-smart-dflash-review]] — Smart DFlash native and upstream comparison receipts
@@ -505,10 +507,8 @@ updated: 2026-10-22T03:35:09.014289Z
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-continuation-delivery-pass]] — Corrected 16 GB planner fixtures pass four-response functional delivery, no timing qualification
 - [[sources/runs/2026/09/2026-09-09-optimization-continuation-fixture-and-full-cohort-preparation]] — Prospective 4099-token continuation delivery and full original cohort adapter preparation
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-first-fixture-short-stop]] — Original 16 GB first fixture stopped at one output; early work guard preserved evidence and drained
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-fixture-delivery-pass]] — Corrected 12 GB planner fixture passes four-response functional delivery, no timing qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-first-work-guard-and-fixture-delivery-preparation]] — Early original first-work enforcement and bounded prospective fixture delivery preparation
 
 ## More
 
-This folder has 924 files. The 500 most recent are listed above.
+This folder has 926 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

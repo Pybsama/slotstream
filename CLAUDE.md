@@ -47,6 +47,13 @@ Separate draft acceleration from target quantization. The
 requires independent quality and complete-request evidence for each. Keep
 published BF16 comparisons distinct from local deployed-model comparisons;
 small smoke suites and draft acceptance do not establish negligible quality loss.
+Use normal production settings and matched requested context as the primary
+product baseline; forced draft modes and disabled read-ahead answer narrower
+questions. Report actual memory alongside configured budgets, and count
+read-ahead traffic separately from demand reads. A capability loss is a tradeoff
+to measure against useful work, not an automatic veto or a negligible cost.
+The [exact Q2 follow-up](db/records/measurements/exact-q2-performance-and-quality-followup.md)
+supersedes the earlier DFlash-first priority while preserving its frozen evidence.
 
 ## App identity (October 16, 2026)
 
