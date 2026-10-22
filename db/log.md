@@ -573,3 +573,6 @@ Implement native Home data browsing, shared Home registry, global CLI, installed
 ## [2026-10-22 03:44] update | records/measurements/exact-q2-performance-and-quality-followup.md
 Preserve exact Q2 recipe and normal production controls, sixteen-GB Q2 scaling, capability failures with BF16 KV, timing exclusions and refused larger controls. Correct the earlier DFlash-only interpretation and prioritize exact native Q2 qualification without changing the app default.
 
+## [2026-10-22 03:47] update | records/design/sevra-spec/implementation-status.md
+Close the local stable-source regression gate and verify CLI/MCP compatibility with pinned dbmd 0.14.0; retain hosted verification as a separate pending receipt.
+

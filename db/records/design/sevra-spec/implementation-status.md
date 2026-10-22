@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-22T03:34:58.966645+00:00
+updated: 2026-10-22T03:47:41.343358+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -325,3 +325,5 @@ checks are pending at this receipt. The evidence retains the fixture repairs,
 PATH lookup bug, actual question/answer, final bundle hashes and test scope.
 
 [[sources/runs/2026/10/2026-10-21-slotstream-home-data-integrations]]
+
+The final stable-source rerun of the complete Mac suite passed on implementation commit `0c6f328`, including its final input-identity guard. Home integration checks also passed independently with CI-pinned dbmd 0.14.0. This closes the earlier local aggregate-run refusal; hosted checks remain tracked separately. [[sources/runs/2026/10/2026-10-21-slotstream-home-stable-checks]]

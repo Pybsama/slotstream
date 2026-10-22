@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T03:43:12.591614Z
+updated: 2026-10-22T03:47:41.272093Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-21-slotstream-home-stable-checks]] — Complete stable-source Mac suite and pinned dbmd Home integration compatibility
 - [[sources/runs/2026/10/2026-10-21-exact-q2-timing-exclusions]] — Retained timing exclusions, thermal interruption and real-headroom refusals
 - [[sources/runs/2026/10/2026-10-21-exact-q2-tradeoff]] — Exact Q2 recipe, production controls, cache scaling and bounded quality receipts
 - [[sources/runs/2026/10/2026-10-21-slotstream-home-data-integrations]] — Native Home data browser, global CLI, bundled skills and MCP integration verification
@@ -506,9 +507,8 @@ updated: 2026-10-22T03:43:12.591614Z
 - [[sources/runs/2026/09/2026-09-09-optimization-qualified-fixture-full-planner-cohorts-freeze]] — Full 12 and 16 GB original planner cohorts frozen after independent fixture delivery
 - [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-continuation-delivery-pass]] — Corrected 16 GB planner fixtures pass four-response functional delivery, no timing qualification
 - [[sources/runs/2026/09/2026-09-09-optimization-continuation-fixture-and-full-cohort-preparation]] — Prospective 4099-token continuation delivery and full original cohort adapter preparation
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-first-fixture-short-stop]] — Original 16 GB first fixture stopped at one output; early work guard preserved evidence and drained
 
 ## More
 
-This folder has 926 files. The 500 most recent are listed above.
+This folder has 927 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
