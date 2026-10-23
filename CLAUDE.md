@@ -92,6 +92,8 @@ resident preparation, preserve public-call extents and invalidate incompatible
 prefix state. Porting kernels does not make execution schedules identical;
 native language choice alone does not establish a speed advantage. Keep full
 workflow failures and instrumentation limits separate from passing kernel checks.
+CPU samples locate waits, not GPU idle time. Do not add parallel worker samples
+into request-wall-time percentages or treat an instrumented run as a speed test.
 
 ## App identity (October 16, 2026)
 

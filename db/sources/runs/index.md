@@ -2,11 +2,15 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-23T00:11:34.544622Z
+updated: 2026-10-23T01:25:27.565003Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-22-native-execution-ci]] — Exact implementation commit passes engine and native app CI
+- [[sources/runs/2026/10/2026-10-22-native-q2-host-profile]] — Native Q2 CPU handoff diagnostic after the kernel port
+- [[sources/runs/2026/10/2026-10-22-native-execution-final-comparisons]] — Final matched native Fast and Q2 comparison attempts
+- [[sources/runs/2026/10/2026-10-22-native-execution-final-validation]] — Final native Fast and Q2 validation
 - [[sources/runs/2026/10/2026-10-22-native-execution-kernels]] — Native Fast and Q2 execution kernels and rejected experiments
 - [[sources/runs/2026/10/2026-10-22-fast-splash-app-validation]] — Fast app bundle identity, final gates and original/final real-workflow failures preserved
 - [[sources/runs/2026/10/2026-10-22-fast-splash-exclusions]] — Ineligible timing aggregates, memory refusals and rejected selector experiments preserved
@@ -503,12 +507,8 @@ updated: 2026-10-23T00:11:34.544622Z
 - [[sources/runs/2026/09/2026-09-09-optimization-offline-client-fixture-preparation]] — Pinned Hermes explicit scanner path prevents auxiliary download while preserving all original local client assertions
 - [[sources/runs/2026/09/2026-09-09-optimization-final-resource-pass-and-client-installer-stop]] — Final resource suite passes all seven gates; original Hermes client remains failed for a blocked scanner download attempt
 - [[sources/runs/2026/09/2026-09-09-optimization-final-quiet-resource-repetition-preparation]] — One complete quiet resource repeat preserves every original guard after the recorded global swap-in stop
-- [[sources/runs/2026/09/2026-09-09-optimization-final-resource-global-swapin-stop]] — Original final resource suite retains six passes and an incomplete MTP check after four global swap-ins
-- [[sources/runs/2026/09/2026-09-09-optimization-final-resource-client-exact-binding]] — Original resource and client families bind the exact final binary and seven native proofs
-- [[sources/runs/2026/09/2026-09-09-optimization-final-composition-static-and-external-pass]] — Final exact-source static suite and independent public-library consumer both pass
-- [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-binding-preparation]] — Exact final lifetime adapter retains both original60request workloads and passes12 model-free checks
 
 ## More
 
-This folder has 939 files. The 500 most recent are listed above.
+This folder has 943 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

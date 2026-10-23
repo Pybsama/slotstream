@@ -2,14 +2,14 @@
 type: measurement
 id: 01m5k3eweq9dq3d64w0kg18j3e
 created: 2026-10-23T00:44:32.086907+00:00
-updated: 2026-10-23T00:44:32.086907+00:00
+updated: 2026-10-23T01:26:00.953530+00:00
 summary: Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
 date: 2026-10-22
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
 order: '1878'
-runs: '[[sources/runs/2026/10/2026-10-22-native-execution-kernels]]'
+runs: '[[sources/runs/2026/10/2026-10-22-native-execution-kernels]], [[sources/runs/2026/10/2026-10-22-native-execution-final-validation]], [[sources/runs/2026/10/2026-10-22-native-execution-final-comparisons]], [[sources/runs/2026/10/2026-10-22-native-q2-host-profile]], [[sources/runs/2026/10/2026-10-22-native-execution-ci]]'
 title: Native Fast and Q2 execution kernels
 status: measured
 ---
@@ -123,3 +123,130 @@ preparation memory, and preserve both ordinary and speculative execution.
 A small quality suite can show a regression or no observed regression; it
 cannot prove negligible quantization loss, universal task quality, full
 hardware-range qualification or permission to silently promote a candidate.
+
+## Final matched-request observations
+
+The [final comparison receipt](../../sources/runs/2026/10/2026-10-22-native-execution-final-comparisons.md)
+contains both refused sixteen-GB launches and both completed fifteen-GB ABBA
+studies. The larger launches failed the twenty-GB headroom preflight before
+loading. The new fifteen-GB protocol was frozen before running and requires
+nineteen GB of reclaimable memory. It keeps existing user applications open.
+
+Both engines use the same target/draft checkpoints, exact prompt IDs, greedy
+sampling, thinking off, BF16 KV, an 8,192-token context and identical actual
+expert slots. Every fresh process receives two symmetric warmup requests,
+followed by one coding and one prose request, each capped at 512 output tokens.
+Every timed request emits 512 tokens and reports zero reused prompt positions.
+Loading and warmups are excluded from the following observations. Both before
+and after thermal readings are nominal for every arm; cooldown requires three
+nominal samples ten seconds apart. Actual process memory stays within budget.
+
+**Both complete ABBA studies are excluded from clean timing claims because
+some timed requests observe global paging.** The table preserves the median
+observations, not a qualified speed ratio. Clean individual requests do not
+rescue either aggregate. This is the owned M5 Pro, 20 GPU cores and 48 GiB,
+not evidence for every machine in the target range.
+
+| Model / actual expert slots | Native code tok/s | Splash code tok/s | Native prose tok/s | Splash prose tok/s |
+|---|---:|---:|---:|---:|
+| Fast / 4,184 | 56.9 | 55.8 | 46.2 | 48.2 |
+| Exact Q2 / 4,244 | 23.1 | 36.3 | 21.2 | 31.3 |
+
+Median complete request times, including prompt processing, are 9.64 versus
+9.79 seconds for Fast code and 11.79 versus 11.31 for Fast prose. Q2 is 23.44
+versus 15.14 seconds for code and 25.28 versus 17.49 for prose. These have the
+same exclusion as the throughput table. Maximum observed process footprints
+are 11.710 GB native versus 12.563 GB Splash for Fast, and 12.430 versus
+14.252 GB for Q2. Splash includes its frontend process. Both use the exact
+same number of expert slots; equal slot counts do not imply equal total
+process footprints.
+
+Fast is close in these observations. Q2 still has a substantial gap, so the
+requested complete speed match is not achieved. The generated text is not
+byte-identical between engines; the quality comparison uses the independent
+frozen task rubric, not token identity as a substitute for quality.
+
+### What remains slower in Q2
+
+The first timed coding pair accepts 372 native drafts versus 375 upstream,
+with 140 versus 135 verification cycles. Native decode takes 23.080 seconds,
+including 8.878 seconds charged to demand reads and their CPU preparation,
+1.187 seconds of drafting, and 21.568 seconds of verification, which includes
+the demand I/O. These fields overlap and must not be summed. Splash decode
+takes 13.942 seconds. Native demand traffic is 85.384 GB; Splash's decode
+read counter rises 116.657 GB and includes read-ahead. More bytes read does
+not imply a longer critical-path wait.
+
+Similar draft acceptance rules out a large draft-acceptance deficit in this
+pair. Cached target replays and the source comparison point to target
+execution and expert-read preparation/handoffs as the remaining work. Splash
+uses a pre-encoded command graph, event-based host/GPU handoffs and further
+projection/input-preparation fusion. Those complete scheduling mechanisms are
+not present in this MLX port. The phase counters have different scopes and
+execution can overlap, so they do not isolate a single exact cause or prove
+that one proposed change will close the whole gap. Repeating the previously
+rejected read-ahead or scatter experiments without a new scheduling mechanism
+is not evidence of progress.
+
+The next qualification target is that remaining native execution schedule,
+with bounded buffer ownership, cancellation and target verification preserved,
+followed by the same cache-matched comparison. The maintained Smart deployment
+is unchanged; Q2 has neither complete parity nor general quality qualification.
+
+## Final implementation and app qualification
+
+The final v7 engine SHA-256 is
+`34086eff685e1ebf1b1c6065955c9c5d28fc19604c55b1167870420092f9754f`.
+Its frozen source archive and build inputs are retained in the
+[final validation receipt](../../sources/runs/2026/10/2026-10-22-native-execution-final-validation.md). The complete static gates pass, as does the check catalogue with
+108 checks and 41,385 assertions, no failures or skips. Independent tests cover
+lossless CPU/GPU transposition, original-byte projection arithmetic, actual
+Fast/Q2 geometries, all admitted resident quantization formats, register/staged
+boundaries, route ties and ordered mixing, long public sweeps, recurrent
+snapshots and continuation after rollback. The app's scripted UI/runtime suite
+also passes, and its newly built ad-hoc signature and embedded source manifest
+verify. This is a development bundle, not an installed public release receipt.
+
+The final quality run executes 32 requests per model at a twelve-GB ceiling.
+On the frozen 24-task semantic rubric Fast remains at 20/24 and Q2 at 19/24;
+both have 12/24 exact-format passes. The failed task identities are unchanged:
+Fast misses order-total, stock, tax and Spanish; Q2 also misses the gap-finding
+code task. Each passes all nine functional checks for streaming, native tool
+arguments, recall, cancellation and recovery, stop handling, bounded memory,
+long retrieval and prefix reuse. Observed combined physical peaks are 7.979 GB
+and 9.118 GB. Both processes observe global paging; these are functional results,
+not clean timing evidence. The bounded ordinary acceptance matrix also passes
+at its explicit small budgets, including the unchanged maintained Smart target.
+A small suite does not establish general quality equivalence or negligible Q2
+quantization loss against BF16 or the maintained Smart checkpoint.
+
+Through the actual app runtime at a ten-GB ceiling, Fast passes writing, PDF,
+receipt extraction and computed CSV work. It still fails to stage the requested
+code edit and retrieve the older-history detail, the same two job failures as
+the preceding original/final study. Q2 passes all six jobs, including the exact
+review/apply operation and the older-history lookup. The requested pack and
+memory ceiling are asserted in every job. App plus extraction-helper peaks are
+6.563 GB for Fast and 6.614 GB for Q2. Passing direct retrieval checks does not
+cancel Fast's failure to choose the history tool in the full application.
+Physical 16 GB and 64 GB machines are not tested by this study.
+
+### Instrumentation limitation
+
+The full expert suite passes Metal API validation. Full GPU shader validation
+cannot run the fused recurrent fixture: instrumentation expands its declared
+17,510-byte threadgroup scratch to 35,030 bytes, above this device's 32,768-byte
+limit, and aborts before a passing result. Preserve that failure; it is not a
+passing full instrumented suite. Isolated new expert and register kernels pass
+both Metal API and GPU shader validation. Instrumented timings are not speed
+measurements. The ordinary recurrent tests pass against their CPU reference,
+including both gate types and the saved rollback states.
+
+### Host-side diagnostic
+
+The [Q2 CPU sample](../../sources/runs/2026/10/2026-10-22-native-q2-host-profile.md) captures a guarded run after two warmup requests. It locates recurring blocking at MoELayer routing readback through MLXArray.asArray and GPU events, expert-reader workers in pread and CPU repacking, and MLX graph/command encoding. Kernel-source hashing also appears, but the sample does not establish it as the dominant remaining cost. This narrows the next investigation to the execution and read handoffs already identified in the source comparison.
+
+A CPU thread waiting for a GPU event is not proof that the GPU is idle. Samples across parallel worker threads cannot be summed into request-wall-time percentages. This instrumented run supplies call-site evidence only; it neither changes the earlier timing exclusions nor establishes the gain from a proposed scheduling rewrite. The guarded process and sampler both complete, and input hashes match the committed engine and app sources.
+
+### Implementation CI
+
+The [exact-commit CI receipt](../../sources/runs/2026/10/2026-10-22-native-execution-ci.md) records passing engine, native app, documentation and context workflows for fa398816ece5b85ca7a20ba601befc64bc1fde38. Engine goldens, the full catalogue, instrumented coverage, external library consumption and tested-candidate byte verification pass. App scripted checks, offscreen snapshots and the Xcode build pass. The frozen local engine and app input hashes match the committed implementation. Hosted CI has no real model weights and does not qualify another physical memory tier; its existing optional OCR policy is separate from the passing local OCR jobs. Later changes in this study are documentation and evidence only.

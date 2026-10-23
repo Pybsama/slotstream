@@ -594,3 +594,6 @@ Compared exact Fast checkpoints with Splash on the 48 GiB Mac at matched slots a
 ## [2026-10-23 00:44] update | records/measurements/native-fast-q2-execution-kernels
 Ported compressed expert tiles, fused Fast recurrence/routing and GPU-aware Q2 register projections; preserved original-byte references, failed experiments and scope limits. Final workflow and matched-request receipts follow in the same study.
 
+## [2026-10-23 01:26] update | records/measurements/native-fast-q2-execution-kernels
+Preserved final matched-cache observations and exclusions, final quality and app jobs, CPU wait-site diagnostics, exact build identities and passing implementation CI. Fast is close in observations, Q2 remains slower, and complete speed parity and Smart promotion remain unqualified.
+
