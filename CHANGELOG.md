@@ -8,6 +8,13 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Port compressed expert tiles and fused gate/up work into both native Fast
+  and the explicit Q2 candidate. Fast also uses fused recurrent processing and
+  prepared routing weights; Q2 adds narrow register projections with GPU-aware
+  reduction splits. Preserve bounded streaming, portable fallbacks and prefix
+  compatibility. The [kernel port study](db/records/measurements/native-fast-q2-execution-kernels.md)
+  records the tests, rejected experiments and remaining comparison limits.
+
 - Reduce Fast's draft and target scheduling overhead with native GPU candidate
   selection, bounded deferred evaluation, fused recurrent verification and
   grouped short-prefill work. Use one verification controller that can recover

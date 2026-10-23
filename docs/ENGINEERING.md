@@ -30,6 +30,13 @@ native app workflows and unsuccessful experiments. Equal memory flags do not
 establish equal cache sizes or process footprints. Cached target execution,
 SSD waits and draft overhead need separate measurements before choosing a port.
 
+The [native kernel port](../db/records/measurements/native-fast-q2-execution-kernels.md)
+extends that work to compressed expert tiles, Fast's fused recurrent processing
+and Q2's narrow resident projections. It documents exact-byte arithmetic
+references, capability gates, actual app results and the remaining differences
+from Splash's execution schedule. Kernel compatibility alone is not complete
+runtime equivalence or a promise of equal speed.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)

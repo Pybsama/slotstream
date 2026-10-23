@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-22T21:11:30.952101Z
+updated: 2026-10-23T00:11:34.544622Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-22-native-execution-kernels]] — Native Fast and Q2 execution kernels and rejected experiments
 - [[sources/runs/2026/10/2026-10-22-fast-splash-app-validation]] — Fast app bundle identity, final gates and original/final real-workflow failures preserved
 - [[sources/runs/2026/10/2026-10-22-fast-splash-exclusions]] — Ineligible timing aggregates, memory refusals and rejected selector experiments preserved
 - [[sources/runs/2026/10/2026-10-22-fast-splash-execution]] — Matched Fast/Splash execution, native scheduling ports, quality controls and preserved failures
@@ -506,9 +507,8 @@ updated: 2026-10-22T21:11:30.952101Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-resource-client-exact-binding]] — Original resource and client families bind the exact final binary and seven native proofs
 - [[sources/runs/2026/09/2026-09-09-optimization-final-composition-static-and-external-pass]] — Final exact-source static suite and independent public-library consumer both pass
 - [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-binding-preparation]] — Exact final lifetime adapter retains both original60request workloads and passes12 model-free checks
-- [[sources/runs/2026/09/2026-09-09-optimization-final-composition-seven-native-pass-and-serving-freeze]] — All5556 final native assertions pass and the original final serving matrix is bound
 
 ## More
 
-This folder has 938 files. The 500 most recent are listed above.
+This folder has 939 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -52,8 +52,11 @@ package struct PackMemoryProfile: Equatable, Sendable {
     // resident target, quantized DFlash, bounded draft KV/features and loading
     // transients. First native 9 GB runs peaked below 4.2 GB (engineering
     // decision fast-and-smart); no Smart throughput estimate is inherited.
-    package static let fast = Self(identity: "qwen36-fast-memory-v1",
-        expertRecordBytes: 1_769_472, maximumPrefill: 512,
+    /// FP32 router and shared-gate preparation replaces 8-bit originals: an
+    /// additional 61,844,480 bytes at the maintained geometry, rounded to 64 MB.
+    /// Reserved on portable hardware too so cache policy stays conservative.
+    package static let fast = Self(identity: "qwen36-fast-memory-v2",
+        expertRecordBytes: 1_769_472, residentReserveBytes: 64_000_000, maximumPrefill: 512,
         maximumContext: 32_768, usesBaselineSpeedEvidence: false,
         supportsStreamedDraft: false, supportsVision: false, automaticOptimizations: false)
 

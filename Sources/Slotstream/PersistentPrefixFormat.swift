@@ -131,8 +131,12 @@ public struct PersistentPrefixIdentity: Equatable {
             "optimizations": String(decoding: try encoder.encode(model.optimizations), as: UTF8.self),
             "attention_backend": FusedPrefillAttention.cacheIdentity,
             "context_arithmetic": String(PromptCheckpointKey.currentContextArithmetic),
-            "q2_preparation": Q2PackedExperts.enabled ? "planes-mpp-hc-q80-bf16-gdn-float-split-moe-ple-qkv-v7" : "raw-gdn-float-moe-ple-qkv-v5",
+            "fast_experts": model.pool.expertStore.nativeAffineTiles ? "affine4-column-staged-fused-gdn-float-routes-v3" : "mlx-qmm-v1",
+            "q2_preparation": Q2PackedExperts.enabled ? "planes-mpp-hc-q80-bf16-gdn-float-column-moe-ple-qkv-register-v9" : "raw-gdn-float-moe-ple-qkv-v5",
         ]
+        if model.pool.expertStore.isQ2 && Q2PackedExperts.enabled {
+            components["q2_projection_policy"] = "cores:\(NativeProjectionPolicy.device.cores);apple10:\(NativeProjectionPolicy.device.apple10)"
+        }
         if model.authenticatedArtifactIdentity != nil {
             components["tokenizer_metadata"] = PinnedModel.files
                 .filter { PinnedTokenizerMetadata.names.contains($0.path) }

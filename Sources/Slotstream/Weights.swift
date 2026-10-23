@@ -101,7 +101,7 @@ extension TensorSource {
             w: w, scales: s, biases: b,
             groupSize: groupSize ?? descriptor?.groupSize ?? config.qGroup,
             bits: bits ?? descriptor?.bits ?? config.qBits)
-        if (self as? ResidentWeights)?.usesQ2 == true, s == nil {
+        if ((self as? ResidentWeights)?.usesQ2 == true || (config.isFast && Q2PackedExperts.enabled)), s == nil {
             value.ggufDenseOutput = base.contains(".indexer.") || base.hasSuffix(".gate")
                 || base.hasSuffix(".shared_expert_gate") ? .float32 : .bfloat16
         }
@@ -177,6 +177,26 @@ public final class ResidentWeights: TensorSource {
                     var key = rawKey
                     if key.hasPrefix("language_model.") { key.removeFirst("language_model.".count) }
                     if wanted(key) { kept[key] = arr }
+                }
+            }
+        }
+        if config.isFast && Q2PackedExperts.enabled {
+            // Splash prepares these small affine projections as FP32. Decode
+            // the original codes once, without an intermediate BF16 rounding.
+            // Replace the compressed tensors instead of retaining both copies;
+            // PackMemoryProfile.fast reserves the bounded increase separately.
+            for layer in 0..<config.numLayers {
+                for suffix in ["gate", "shared_expert_gate"] {
+                    let base = "model.layers.\(layer).mlp.\(suffix)"
+                    guard let w = kept[base + ".weight"], let scales = kept[base + ".scales"],
+                          let biases = kept[base + ".biases"] else { continue }
+                    let q = config.quantizationOverrides[base]
+                    let value = dequantized(w, scales: scales.asType(.float32), biases: biases.asType(.float32),
+                        groupSize: q?.groupSize ?? config.qGroup, bits: q?.bits ?? config.qBits)
+                    eval(value)
+                    kept[base + ".weight"] = value
+                    kept.removeValue(forKey: base + ".scales")
+                    kept.removeValue(forKey: base + ".biases")
                 }
             }
         }

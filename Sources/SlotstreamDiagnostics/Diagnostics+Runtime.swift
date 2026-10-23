@@ -108,6 +108,11 @@ extension Diagnostics {
             c.equal("fused capability \(arch)/\(major).\(minor)",
                 FusedPrefillAttention.supportsNAX(architecture: arch, major: major, minor: minor), expected)
         }
+        for (family, major, minor, expected) in [(true, 26, 1, true), (false, 26, 4, false),
+            (true, 26, 0, false), (true, 15, 9, false), (true, 27, 0, true)] {
+            c.equal("MPP capability family9=\(family) / \(major).\(minor)",
+                Q2PackedExperts.supportsMPP(appleFamily9: family, major: major, minor: minor), expected)
+        }
         c.expect("backend arithmetic overrides separate cache identity",
             FusedPrefillAttention.environmentIdentity(["MLX_ENABLE_TF32": "0"])
                 != FusedPrefillAttention.environmentIdentity(["MLX_ENABLE_TF32": "1"]))

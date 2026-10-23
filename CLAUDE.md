@@ -83,6 +83,16 @@ before blaming speculation. A smaller-cache result cannot establish parity at
 a larger cache, and clean individual requests do not rescue a failed aggregate
 timing protocol.
 
+The [native kernel port](db/records/measurements/native-fast-q2-execution-kernels.md)
+requires independent references from the original quantized bytes, including
+each algorithm's intermediate precision. Match actual cache slots after plane
+alignment, staging and metadata charges, before running comparison requests.
+Gate hardware-specific kernels by GPU capability as well as OS version. Charge
+resident preparation, preserve public-call extents and invalidate incompatible
+prefix state. Porting kernels does not make execution schedules identical;
+native language choice alone does not establish a speed advantage. Keep full
+workflow failures and instrumentation limits separate from passing kernel checks.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

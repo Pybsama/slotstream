@@ -390,7 +390,7 @@ public final class Qwen4ExpModel {
                 "expert-pool slot count must be between 1 and \(Geometry.totalRecords), got \(poolSlots)")
         }
         self.runLayers = selectedLayers
-        let store = try ExpertStore(index: index)
+        let store = try ExpertStore(index: index, nativeAffineTiles: index.config.isFast)
         // Reject a wrong/custom checkpoint before allocating the 3.8 GB
         // resident trunk or the expert pool.
         try Geometry.check(against: index.config, recordBytes: store.recordBytes)

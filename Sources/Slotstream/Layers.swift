@@ -1271,11 +1271,12 @@ final class GDNLayer {
                 c.convStates = (0 ..< S).map { t in convInput[0..., (t + 1) ..< (t + K), 0...] }
             }
         }
-        if q2Arithmetic {
+        if q2Arithmetic || (cfg.isFast && Q2PackedExperts.enabled) {
             let fused = Q2GatedDelta.apply(convInput: convInput, convWeight: convWeight,
                 a: aProj, b: bProj, z: z, aLog: aLog, dtBias: dtBias, norm: norm.weight,
                 state: cache?.ssmState, keyHeads: cfg.linearNumKHeads,
-                valueHeads: cfg.linearNumVHeads, record: cache?.record == true)
+                valueHeads: cfg.linearNumVHeads, record: cache?.record == true,
+                sigmoidGate: cfg.outputGateType == "sigmoid")
             cache?.ssmState = fused.state
             if cache?.record == true { cache?.ssmStates = fused.states }
             return outProj(fused.output.reshaped([B, S, valueDim]), minimumRows: minimumProjectionRows)
@@ -1455,7 +1456,7 @@ final class MoELayer {
     private func sharedActivation(_ input: MLXArray) -> MLXArray {
         let g = sharedGateProj(input, minimumRows: minimumProjectionRows)
         let u = sharedUpProj(input, minimumRows: minimumProjectionRows)
-        return pool.expertStore.isQ2 ? Q2HyperConnection.swiGLU([g, u])[0] : MLXNN.silu(g) * u
+        return (pool.expertStore.isQ2 || pool.expertStore.nativeAffineTiles) ? Q2HyperConnection.swiGLU([g, u])[0] : MLXNN.silu(g) * u
     }
 
     func sharedExpertParts(_ input: MLXArray) -> (MLXArray, MLXArray) {
@@ -1480,8 +1481,9 @@ final class MoELayer {
         } else { logits = routerProjection(x) }
         contextNumericsObserver?("router", logits)
         let idx: MLXArray, weights: MLXArray, q2SharedWeight: MLXArray?
-        if pool.expertStore.isQ2 {
-            let route = Q2MoE.route(scores: logits, input: x, sharedGate: sharedGate.w)
+        if pool.expertStore.isQ2 || pool.expertStore.nativeAffineTiles {
+            let route = Q2MoE.route(scores: logits, input: x, sharedGate: sharedGate.w,
+                experts: cfg.numExperts, topK: cfg.topK)
             idx = route.indices; weights = route.weights; q2SharedWeight = route.sharedWeight
         } else {
             idx = RouterSelection.indices(logits, k: cfg.topK, enabled: specializedRouter)
@@ -1740,6 +1742,11 @@ final class MoELayer {
                 return q2Experts(x, weights: pool.pools, ids: slotIds, repeatInput: count)
                     .reshaped([B, S, count, cfg.hiddenSize])
             }
+            if pool.expertStore.nativeAffineTiles {
+                return NativeExpertTiles.apply(x, weights: pool.pools, ids: slotIds, repeatInput: count,
+                    hidden: cfg.hiddenSize, intermediate: cfg.moeIntermediate, affine: true)
+                    .reshaped([B, S, count, cfg.hiddenSize])
+            }
             let g = gatherQuantizedMM(
                 xe, pool.pools[0], scales: pool.pools[1], biases: pool.pools[2],
                 rhsIndices: slotIdx, transpose: true, groupSize: pool.expertStore.quantization.groupSize, bits: pool.expertStore.quantization.bits)
@@ -1882,7 +1889,8 @@ final class MoELayer {
                     let n = end - row
                     // Preserve the grouped kernel dispatch even for a short
                     // tile. Padding repeats its last real row and expert.
-                    let pad = max(0, max(16, 4 * group.count) - n)
+                    let nativeTiles = pool.expertStore.nativeAffineTiles || (pool.expertStore.isQ2 && Q2PackedExperts.enabled)
+                    let pad = nativeTiles ? 0 : max(0, max(16, 4 * group.count) - n)
                     var local = order[row ..< end].map { localOf[Int(expertIds[Int($0)])] }
                     local.append(contentsOf: repeatElement(local.last!, count: pad))
                     var xg = xsAll.map { $0[row ..< end] }
@@ -1895,6 +1903,9 @@ final class MoELayer {
                     let dAll: MLXArray
                     if pool.expertStore.isQ2 {
                         dAll = q2Experts(xg, weights: w, ids: local, repeatInput: 1).expandedDimensions(axis: 1)
+                    } else if pool.expertStore.nativeAffineTiles {
+                        dAll = NativeExpertTiles.apply(xg, weights: w, ids: local, repeatInput: 1,
+                            hidden: H, intermediate: cfg.moeIntermediate, affine: true).expandedDimensions(axis: 1)
                     } else {
                     let g = gatherQuantizedMM(
                         xg, w[0], scales: w[1], biases: w[2], rhsIndices: ridx, transpose: true,

@@ -35,6 +35,7 @@ public enum SlotPoolError: Error, CustomStringConvertible {
 public final class ExpertStore {
     public let index: CheckpointIndex
     package var isQ2: Bool { index.q2 != nil }
+    package let nativeAffineTiles: Bool
     package var pieceCount: Int { refs[0].count }
     package let quantization: AffineQuantization
     package let downQuantization: AffineQuantization
@@ -144,17 +145,17 @@ public final class ExpertStore {
               key.expert >= 0, key.expert < cfg.numExperts else { throw SlotPoolError.invalidKey(key) }
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
         let bytes = pieceRowBytes[piece]
-        if isQ2 && Q2PackedExperts.enabled {
+        if nativeAffineTiles || (isQ2 && Q2PackedExperts.enabled) {
             // A speculative ticket must publish the same representation as a
             // demand miss. Keep file I/O in private host memory, then transform
             // into the ticket's destination before it can become visible.
             guard let raw = malloc(bytes) else { throw ModelError("out of memory for Q2 speculative read") }
             defer { free(raw) }
-            try read(into: raw, layer: key.layer, piece: piece, offset: key.expert * bytes, count: bytes)
+            if usePackedLayout, let packedLayout {
+                try packedLayout.readPiece(key, piece: piece, into: raw)
+            } else { try read(into: raw, layer: key.layer, piece: piece, offset: key.expert * bytes, count: bytes) }
             guard shouldContinue() else { throw CheckpointReadError.cancelled }
-            Q2PackedExperts.repackCPU(raw, into: destination,
-                rows: piece == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
-                columns: piece == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+            repackPieceCPU(raw, into: destination, piece: piece)
             return
         }
         if usePackedLayout, let packedLayout {
@@ -185,6 +186,29 @@ public final class ExpertStore {
             throw ModelError("whole-record speculative reads require the packed layout")
         }
         try packedLayout.readRecord(key, into: destination)
+        if nativeAffineTiles || (isQ2 && Q2PackedExperts.enabled) {
+            guard let scratch = malloc(pieceRowBytes.max()!) else { throw ModelError("out of memory preparing an expert record") }
+            defer { free(scratch) }
+            var offset = 0
+            for (piece, bytes) in pieceRowBytes.enumerated() {
+                guard shouldContinue() else { throw CheckpointReadError.cancelled }
+                memcpy(scratch, destination + offset, bytes)
+                repackPieceCPU(scratch, into: destination + offset, piece: piece)
+                offset += bytes
+            }
+        }
+    }
+
+    private func repackPieceCPU(_ raw: UnsafeRawPointer, into destination: UnsafeMutableRawPointer, piece: Int) {
+        if nativeAffineTiles {
+            NativeAffineExperts.repackCPU(raw, into: destination,
+                rows: piece >= 6 ? cfg.hiddenSize : cfg.moeIntermediate,
+                columns: piece >= 6 ? cfg.moeIntermediate : cfg.hiddenSize, codes: piece.isMultiple(of: 3))
+        } else {
+            Q2PackedExperts.repackCPU(raw, into: destination,
+                rows: piece == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
+                columns: piece == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+        }
     }
 
     /// Row shape and dtype of each staging piece, for single-record adoption.
@@ -205,7 +229,11 @@ public final class ExpertStore {
         return total
     }
 
-    public init(index: CheckpointIndex) throws {
+    public convenience init(index: CheckpointIndex) throws {
+        try self.init(index: index, nativeAffineTiles: false)
+    }
+
+    package init(index: CheckpointIndex, nativeAffineTiles: Bool) throws {
         self.index = index
         self.cfg = index.config
         let h = cfg.hiddenSize
@@ -220,6 +248,8 @@ public final class ExpertStore {
             throw ModelError("mixed expert projections require the exact admitted research artifact")
         }
         self.downQuantization = down
+        self.nativeAffineTiles = nativeAffineTiles && Q2PackedExperts.enabled && cfg.isFast
+            && index.q2 == nil && affine.bits == 4 && affine.groupSize == 64 && down == affine
         if index.q2 != nil {
             for layer in 0..<cfg.numLayers {
                 refs.append(["gate_proj", "up_proj", "down_proj"].map {
@@ -379,10 +409,8 @@ public final class ExpertStore {
             throw SlotPoolError.invalidKey(key)
         }
         func copyPiece(_ from: UnsafeRawPointer, _ to: UnsafeMutableRawPointer, _ piece: Int) {
-            if isQ2 && Q2PackedExperts.enabled {
-                Q2PackedExperts.repackCPU(from, into: to,
-                    rows: piece == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
-                    columns: piece == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+            if nativeAffineTiles || (isQ2 && Q2PackedExperts.enabled) {
+                repackPieceCPU(from, into: to, piece: piece)
             } else { memcpy(to, from, pieceRowBytes[piece]) }
         }
         let failure = JoinedReadFailure()
@@ -569,6 +597,12 @@ public final class ExpertStore {
             out = out.enumerated().map { p, raw in
                 Q2PackedExperts.repack(raw, rows: p == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
                     columns: p == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+            }
+        }
+        if nativeAffineTiles {
+            out = out.enumerated().map { p, raw in
+                NativeAffineExperts.repack(raw, rows: p >= 6 ? cfg.hiddenSize : cfg.moeIntermediate,
+                    columns: p >= 6 ? cfg.moeIntermediate : cfg.hiddenSize, codes: p.isMultiple(of: 3))
             }
         }
         let evalStart = profile == nil ? 0 : RuntimeClock.now()

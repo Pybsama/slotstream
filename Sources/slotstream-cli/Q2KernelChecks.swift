@@ -31,50 +31,55 @@ func checkQ2NativeKernels() throws {
         print("Q2 \(type) float projection: CPU FP64 oracle error \(error), row invariance PASS")
     }
 
-    let routeRows = 3, hidden = 2560
-    var scores = [Float](repeating:0,count:routeRows*512)
-    for row in 1..<routeRows { for col in 0..<512 { scores[row*512+col] = Float((col * (row+7)) % 71 - 35) / 16 } }
-    let input: [Float] = (0..<(routeRows*hidden)).map { Float(($0*17)%101-50)/128 }
-    let gate: [Float] = (0..<hidden).map { Float(($0*7)%73-36)/2048 }
-    let route = Q2MoE.route(scores: MLXArray(scores,[1,routeRows,512]),
-        input: MLXArray(input,[1,routeRows,hidden]).asType(.bfloat16), sharedGate:MLXArray(gate,[1,hidden]))
-    let selected = route.indices.asArray(Int32.self), weights = route.weights.asArray(Float.self)
-    let sharedWeights = route.sharedWeight.asArray(Float.self)
-    for row in 0..<routeRows {
-        let sorted = (0..<512).sorted { a,b in
-            scores[row*512+a] == scores[row*512+b] ? a < b : scores[row*512+a] > scores[row*512+b]
+    for (expertCount, topK) in [(256,8),(512,10)] {
+        let routeRows = 3, hidden = 2560
+        var scores = [Float](repeating:0,count:routeRows*expertCount)
+        for row in 1..<routeRows { for col in 0..<expertCount { scores[row*expertCount+col] = Float((col * (row+7)) % 71 - 35) / 16 } }
+        let input: [Float] = (0..<(routeRows*hidden)).map { Float(($0*17)%101-50)/128 }
+        let gate: [Float] = (0..<hidden).map { Float(($0*7)%73-36)/2048 }
+        let route = Q2MoE.route(scores: MLXArray(scores,[1,routeRows,expertCount]),
+            input: MLXArray(input,[1,routeRows,hidden]).asType(.bfloat16), sharedGate:MLXArray(gate,[1,hidden]), experts:expertCount, topK:topK)
+        let selected = route.indices.asArray(Int32.self), weights = route.weights.asArray(Float.self)
+        let sharedWeights = route.sharedWeight.asArray(Float.self)
+        for row in 0..<routeRows {
+            let sorted = (0..<expertCount).sorted { a,b in
+                scores[row*expertCount+a] == scores[row*expertCount+b] ? a < b : scores[row*expertCount+a] > scores[row*expertCount+b]
+            }
+            guard Array(selected[row*topK..<(row+1)*topK]) == sorted.prefix(topK).map(Int32.init) else {
+                throw ValidationError("Q2 routing order or tie break differs")
+            }
+            let top = Double(scores[row*expertCount+sorted[0]])
+            let exponent = sorted.prefix(topK).map { exp(Double(scores[row*expertCount+$0])-top) }
+            let denom = exponent.reduce(0,+)
+            for j in 0..<topK { guard abs(Double(weights[row*topK+j])-exponent[j]/denom)<2e-7 else {
+                throw ValidationError("Q2 routing weight differs")
+            } }
+            var dot = 0.0
+            for j in 0..<hidden { dot += Double(input[row*hidden+j])*Double(gate[j]) }
+            guard abs(Double(sharedWeights[row])-1/(1+exp(-dot)))<2e-7 else {
+                throw ValidationError("Q2 shared gate differs from FP64 dot")
+            }
         }
-        guard Array(selected[row*10..<(row+1)*10]) == sorted.prefix(10).map(Int32.init) else {
-            throw ValidationError("Q2 routing order or tie break differs")
+        // A normalized routed mixture exactly at a BF16 midpoint, followed by a
+        // positive shared contribution. Rounding the routed sum early loses it.
+        var ev = [Float](repeating:0,count:topK*256)
+        for i in 0..<256 { ev[i] = 2 }
+        let ew: [Float] = [0.501953125,0.498046875]+[Float](repeating:0,count:topK-2)
+        let combined = Q2MoE.combine(experts:MLXArray(ev,[1,1,topK,256]).asType(.bfloat16),
+            weights:MLXArray(ew,[1,1,topK]),shared:MLXArray.ones([1,1,256],dtype:.bfloat16),
+            sharedWeight:MLXArray([Float(1.1920928955078125e-7)],[1,1,1]))
+        guard (combined.asType(.float32) .== Float(1.0078125)).all().item(Bool.self) else {
+            throw ValidationError("Q2 mixture rounded before the shared contribution")
         }
-        let top = Double(scores[row*512+sorted[0]])
-        let exponent = sorted.prefix(10).map { exp(Double(scores[row*512+$0])-top) }
-        let denom = exponent.reduce(0,+)
-        for j in 0..<10 { guard abs(Double(weights[row*10+j])-exponent[j]/denom)<2e-7 else {
-            throw ValidationError("Q2 routing weight differs")
-        } }
-        var dot = 0.0
-        for j in 0..<hidden { dot += Double(input[row*hidden+j])*Double(gate[j]) }
-        guard abs(Double(sharedWeights[row])-1/(1+exp(-dot)))<2e-7 else {
-            throw ValidationError("Q2 shared gate differs from FP64 dot")
-        }
-    }
-    // A normalized routed mixture exactly at a BF16 midpoint, followed by a
-    // positive shared contribution. Rounding the routed sum early loses it.
-    var ev = [Float](repeating:0,count:10*256)
-    for i in 0..<256 { ev[i] = 2 }
-    let ew: [Float] = [0.501953125,0.498046875]+[Float](repeating:0,count:8)
-    let combined = Q2MoE.combine(experts:MLXArray(ev,[1,1,10,256]).asType(.bfloat16),
-        weights:MLXArray(ew,[1,1,10]),shared:MLXArray.ones([1,1,256],dtype:.bfloat16),
-        sharedWeight:MLXArray([Float(1.1920928955078125e-7)],[1,1,1]))
-    guard (combined.asType(.float32) .== Float(1.0078125)).all().item(Bool.self) else {
-        throw ValidationError("Q2 mixture rounded before the shared contribution")
-    }
-    print("Q2 MoE: sorted top-10 ties, FP64 routing/gate references and single-round mixture PASS")
+        print("Q2 MoE: sorted top-\(topK) ties, FP64 routing/gate references and single-round mixture PASS")
 
+    }
+
+    if Q2PackedExperts.enabled {
     let rn = 320, rk = 10240
     var raw = Data(count: rn * rk / 32 * 34)
     var decoded = [Float](repeating: 0, count: rn * rk)
+    var exactWeights = decoded
     let scale = Float16(0.001193)
     for block in 0..<(rn * rk / 32) {
         raw[block * 34] = UInt8(truncatingIfNeeded: scale.bitPattern)
@@ -83,21 +88,25 @@ func checkQ2NativeKernels() throws {
             let code = Int8((block * 19 + j * 7) % 255 - 127)
             raw[block * 34 + 2 + j] = UInt8(bitPattern: code)
             decoded[block * 32 + j] = Float(Float16(Float(scale) * Float(code)))
+            exactWeights[block * 32 + j] = Float(scale) * Float(code)
         }
     }
     let packed = Q2ResidentWeights(raw: MLXArray(raw,[raw.count],dtype:.uint8), format:.q80, rows:rn, columns:rk)!
-    for count in [1,8,17] {
+    for count in [1,2,4,8,17] {
         let input: [Float] = (0..<(count*rk)).map { Float(($0 * 17) % 101 - 50) / 128 }
         let x = MLXArray(input,[count,rk]).asType(.bfloat16)
         let actual = packed(x,outputType:.float32).asArray(Float.self)
+        let reference = NativeProjectionPolicy.useRegister(rows: rn, columns: rk, batch: count, format: .q80) ? exactWeights : decoded
         var error: Double = 0
         for r in 0..<count { for col in 0..<rn {
             var sum: Double = 0
-            for j in 0..<rk { sum += Double(input[r*rk+j]) * Double(decoded[col*rk+j]) }
+            for j in 0..<rk { sum += Double(input[r*rk+j]) * Double(reference[col*rk+j]) }
             error = max(error,abs(Double(actual[r*rn+col])-sum))
         } }
         guard error < 2e-5 else { throw ValidationError("Q2 split projection CPU error \(error)") }
         print("Q2 split projection \(count) rows: CPU FP64 error \(error) PASS")
+    }
+
     }
 
     let hk = 2, hv = 6, d = 128, c = (2*hk+hv)*d, count = 33
@@ -155,6 +164,7 @@ func checkQ2NativeKernels() throws {
         let v = bf(value); return bf(v / (1 + exp(-v)))
     }
     var expectedState = initial.asArray(Float.self), expectedOutput = [Float](repeating:0,count:hv*d)
+    var expectedSilu = expectedOutput
     for h in 0..<hv {
         let keyHead = h / (hv/hk)
         var q = (0..<d).map { channel(keyHead*d+$0) }
@@ -175,12 +185,33 @@ func checkQ2NativeKernels() throws {
             output[v] = bf(out)
         }
         let inv = 1/sqrt(output.reduce(Float(0)) { $0+$1*$1 }/Float(d)+1e-6)
-        for v in 0..<d { expectedOutput[h*d+v] = bf(bf(output[v]*inv)/(1+exp(-zv[h*d+v]))) }
+        for v in 0..<d {
+            expectedOutput[h*d+v] = bf(bf(output[v]*inv)/(1+exp(-zv[h*d+v])))
+            expectedSilu[h*d+v] = bf(bf(output[v]*inv)*(zv[h*d+v]/(1+exp(-zv[h*d+v]))))
+        }
     }
     let stateError = abs(all.states[0]-MLXArray(expectedState,initial.shape)).max().item(Float.self)
     let outputError = abs(all.output[0,0].asType(.float32)-MLXArray(expectedOutput,[hv,d])).max().item(Float.self)
     guard stateError < 2e-6, outputError <= 0.015625 else {
         throw ValidationError("Q2 GDN CPU oracle state \(stateError), output \(outputError)")
     }
+    func fast(_ start: Int, _ end: Int, _ state: MLXArray, _ record: Bool) -> (output: MLXArray, state: MLXArray, states: [MLXArray]) {
+        Q2GatedDelta.apply(convInput: conv[0...,start..<(end+3)],convWeight:weight,
+            a:a[0...,start..<end],b:b[0...,start..<end],z:z[0...,start..<end],aLog:alog,dtBias:bias,
+            norm:norm,state:state,keyHeads:hk,valueHeads:hv,record:record,sigmoidGate:false)
+    }
+    let fastAll=fast(0,count,initial,true)
+    let siluError=abs(fastAll.output[0,0].asType(.float32)-MLXArray(expectedSilu,[hv,d])).max().item(Float.self)
+    guard siluError <= 0.015625, (fastAll.state .== all.state).all().item(Bool.self) else {
+        throw ValidationError("Fast fused GDN scalar oracle or shared recurrence differs: \(siluError)")
+    }
+    for kept in [1,4,8,16,17,32] {
+        let continued=fast(kept,count,fastAll.states[kept-1],false)
+        guard (continued.output .== fastAll.output[0...,kept...]).all().item(Bool.self),
+              (continued.state .== fastAll.state).all().item(Bool.self) else {
+            throw ValidationError("Fast fused GDN rollback differs after \(kept)")
+        }
+    }
+    print("Fast SiLU GDN: scalar CPU oracle error \(siluError), shared recurrent states and rollback continuations PASS")
     print("Q2 GDN: scalar CPU oracle state \(stateError), output \(outputError); all 33 recorded states and rollback continuations PASS")
 }

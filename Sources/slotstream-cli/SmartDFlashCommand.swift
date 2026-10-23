@@ -324,11 +324,16 @@ struct Q2FormatCheck: ParsableCommand {
                 for count in [1, 2, 3, 8, 9] {
                     let inputs = MLXArray(Array(repeating: f.input, count: count).flatMap { $0 }, [count, f.columns]).asType(.bfloat16)
                     let rounded = inputs[0].asType(.float32).asArray(Float.self)
+                    let register = NativeProjectionPolicy.useRegister(rows: 64, columns: f.columns,
+                        batch: count, format: format)
                     var expected: [Float] = []
                     for row in 0..<64 {
                         var sum: Float = 0
                         for col in 0..<f.columns {
-                            sum += rounded[col] * Float(Float16(f.expected[(row % f.rows) * f.columns + col]))
+                            let decoded = f.expected[(row % f.rows) * f.columns + col]
+                            // Register kernels apply coefficients in FP32;
+                            // staged tiles materialize weights through FP16.
+                            sum += rounded[col] * (register ? decoded : Float(Float16(decoded)))
                         }
                         expected.append(sum)
                     }

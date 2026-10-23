@@ -32,6 +32,8 @@ package struct Q2ResidentWeights {
         }
     }
 
+    package static func decoder(_ format: Q2GGUFFormat) -> String? { layout(format)?.decoder }
+
     package init?(raw: MLXArray, format: Q2GGUFFormat, rows: Int, columns: Int) {
         guard Q2PackedExperts.enabled, let layout = Self.layout(format),
               rows > 0, columns > 0, rows.isMultiple(of: 64),
@@ -51,13 +53,18 @@ package struct Q2ResidentWeights {
 
     package func callAsFunction(_ input: MLXArray, outputType: DType? = nil) -> MLXArray {
         let n = input.size / columns
-        // Small output grids with a long reduction otherwise leave most
-        // cores idle. Four partitions improve the measured 320 x 10240 Q8
-        // mixing projection. Restrict this to short passes and long, narrow
-        // matrices; large prefills already provide parallel rows. The bound
-        // is a dispatch policy, not a memory-capacity or throughput estimate.
-        let parts = n <= 17 && rows < 1024 && columns >= 4096 && columns.isMultiple(of: 128) ? 4 : 1
         let dtype = outputType ?? input.dtype
+        if input.dtype == .bfloat16,
+           NativeProjectionPolicy.useRegister(rows: rows, columns: columns, batch: n, format: format) {
+            let parts = NativeProjectionPolicy.splits(rows: rows, columns: columns,
+                cores: NativeProjectionPolicy.device.cores, register: true, apple10: true)
+            return Q2RegisterProjection.apply(input, weight: self, splits: parts, outputType: dtype)
+        }
+        // Split narrow reductions enough to occupy the GPU. Prefill already
+        // supplies parallel row tiles and keeps the unsplit arithmetic.
+        let parts = n <= 32 ? NativeProjectionPolicy.splits(rows: rows, columns: columns,
+            cores: NativeProjectionPolicy.device.cores, register: false,
+            apple10: NativeProjectionPolicy.device.apple10) : 1
         let result = Kernels.shared.matrix(format)([contiguous(input.reshaped([n, columns])), bytes],
             template: [("T", input.dtype), ("Y", parts > 1 ? DType.float32 : dtype), ("IN", columns), ("OUT", rows),
                        ("P1", plane1), ("META", meta), ("PARTS", parts)],

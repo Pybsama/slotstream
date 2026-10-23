@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-22T21:12:04.677798Z
+updated: 2026-10-23T00:44:32.086907Z
 ---
 
 # records/measurements
 
+- [[records/measurements/native-fast-q2-execution-kernels]] — Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
 - [[records/measurements/fast-splash-execution-comparison]] — Fast native scheduling ports preserve measured quality; matched-cache observations still show a larger-cache Splash gap and exclude clean aggregate speed claims
 - [[records/measurements/native-q2-splash-execution-comparison]] — Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs
 - [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain

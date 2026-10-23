@@ -9,7 +9,7 @@ package enum Q2GatedDelta {
     package static func apply(convInput: MLXArray, convWeight: MLXArray,
         a: MLXArray, b: MLXArray, z: MLXArray, aLog: MLXArray, dtBias: MLXArray,
         norm: MLXArray, state: MLXArray?, keyHeads: Int, valueHeads: Int,
-        record: Bool) -> (output: MLXArray, state: MLXArray, states: [MLXArray]) {
+        record: Bool, sigmoidGate: Bool = true) -> (output: MLXArray, state: MLXArray, states: [MLXArray]) {
         let batch = a.dim(0), count = a.dim(1), taps = convWeight.dim(1)
         precondition(count > 0 && taps == 4 && valueHeads.isMultiple(of: keyHeads))
         let dim = (2 * keyHeads + valueHeads) * 128
@@ -25,7 +25,7 @@ package enum Q2GatedDelta {
                         a[0..., start..<end], b[0..., start..<end], z[0..., start..<end],
                         aLog, dtBias, norm, current]
             let result = kernel(args.map { contiguous($0) },
-                template: [("HK", keyHeads), ("HV", valueHeads), ("RECORD", record)],
+                template: [("HK", keyHeads), ("HV", valueHeads), ("RECORD", record), ("SIGMOID_GATE", sigmoidGate)],
                 grid: (valueHeads * 256, batch, 1), threadGroup: (256, 1, 1),
                 outputShapes: [[batch, rows, valueHeads, 128],
                                [batch, valueHeads, 128, 128],
@@ -123,7 +123,10 @@ package enum Q2GatedDelta {
           float inv=rsqrt(sum/D+1e-6f);
           for(uint g=0;g<4;++g){uint d=g*32+lane;size_t pos=((size_t(batch)*T+t)*HV+head)*D+d;
             bfloat normalized=bfloat((v[g]*inv)*float(norm[d]));
-            y[pos]=bfloat(float(normalized)/(1.0f+fast::exp2(-1.44269504089f*float(z[pos]))));
+            float gate=float(z[pos]);
+            float gated=SIGMOID_GATE ? 1.0f/(1.0f+fast::exp2(-1.44269504089f*gate))
+                : gate/(1.0f+fast::exp2(-1.44269504089f*gate));
+            y[pos]=bfloat(float(normalized)*gated);
           }
         }
         """#, header: #"""

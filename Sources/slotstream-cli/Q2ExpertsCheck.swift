@@ -8,12 +8,19 @@ struct Q2ExpertsCheck: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "q2-experts-check",
         abstract: "Check lossless expert tiles and grouped projections against raw Q2 arithmetic")
     func run() throws {
-        guard Q2PackedExperts.enabled else {
-            print("Packed expert checks require macOS 26.1; this OS uses the existing raw kernels")
-            return
-        }
         MLX.Memory.cacheLimit = 128 << 20
         try checkQ2NativeKernels()
+        guard Q2PackedExperts.enabled else {
+            print("Packed expert checks require Apple GPU family 9 and macOS 26.1; using portable kernels")
+            return
+        }
+        guard NativeProjectionPolicy.splits(rows: 320, columns: 10240, cores: 20, register: true, apple10: true) == 16,
+              NativeProjectionPolicy.splits(rows: 2560, columns: 2560, cores: 20, register: false, apple10: true) == 4,
+              NativeProjectionPolicy.splits(rows: 131072, columns: 2560, cores: 20, register: false, apple10: true) == 1 else {
+            throw ValidationError("Native projection partition policy differs from upstream")
+        }
+        print("Projection device: \(NativeProjectionPolicy.device.cores) cores; Apple10 \(NativeProjectionPolicy.device.apple10)")
+        try checkNativeAffineExperts()
         for rows in [1, 8, 17] {
             let h = 2560, width = 10240
             let inputValues: [Float] = (0..<(rows * width)).map { index in
@@ -104,10 +111,14 @@ struct Q2ExpertsCheck: ParsableCommand {
             }
             raw.append(a); packed.append(b)
         }
-        for repeatInput in [1, 3] {
+        let routeCases: [(Int, [Int32])] = [
+            (1, [2]), (1, [1, 1]), (1, [2, 0, 2]),
+            (1, Array(repeating: 2, count: 9)),
+            (1, (0..<30).map { $0.isMultiple(of: 3) ? 2 : $0.isMultiple(of: 5) ? 1 : 0 }),
+            (3, (0..<30).map { $0.isMultiple(of: 3) ? 2 : $0.isMultiple(of: 5) ? 1 : 0 })]
+        for (repeatInput, ids) in routeCases {
             // Duplicates, unsorted slots, partial tiles and more than eight
             // routes to one expert exercise padding and inverse permutation.
-            let ids: [Int32] = (0..<30).map { $0.isMultiple(of: 3) ? 2 : $0.isMultiple(of: 5) ? 1 : 0 }
             let input = (0..<(ids.count / repeatInput * h)).map { Float(($0 * 17) % 101 - 50) / 64 }
             let x = MLXArray(input, [ids.count / repeatInput, h]).asType(.bfloat16)
             let indices = MLXArray(ids)

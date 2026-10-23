@@ -660,6 +660,13 @@ native app workflows and unsuccessful experiments. Equal memory flags do not
 establish equal cache sizes or process footprints. Cached target execution,
 SSD waits and draft overhead need separate measurements before choosing a port.
 
+The [native kernel port](../db/records/measurements/native-fast-q2-execution-kernels.md)
+extends that work to compressed expert tiles, Fast's fused recurrent processing
+and Q2's narrow resident projections. It documents exact-byte arithmetic
+references, capability gates, actual app results and the remaining differences
+from Splash's execution schedule. Kernel compatibility alone is not complete
+runtime equivalence or a promise of equal speed.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)
@@ -6639,6 +6646,13 @@ Version headings can be prepared before publication. The
 determines which version the installer downloads.
 
 ## Unreleased
+
+- Port compressed expert tiles and fused gate/up work into both native Fast
+  and the explicit Q2 candidate. Fast also uses fused recurrent processing and
+  prepared routing weights; Q2 adds narrow register projections with GPU-aware
+  reduction splits. Preserve bounded streaming, portable fallbacks and prefix
+  compatibility. The [kernel port study](db/records/measurements/native-fast-q2-execution-kernels.md)
+  records the tests, rejected experiments and remaining comparison limits.
 
 - Reduce Fast's draft and target scheduling overhead with native GPU candidate
   selection, bounded deferred evaluation, fused recurrent verification and
