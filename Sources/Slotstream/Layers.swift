@@ -1414,6 +1414,8 @@ final class MoELayer {
     private(set) var residentJoins = 0
     private(set) var residentJoinSeconds = 0.0
     var routerObserver: ((Int, [Int32]) -> Void)?
+    var inputForecastNext: MoELayer?
+    var inputForecastScheduler: ExpertPrefetchScheduler?
     /// Work deferred between decode barriers that rides this layer's routing
     /// readback. Nil at barrier period 1, the original path.
     var readbackQueue: RoutingReadbackQueue?
@@ -1454,6 +1456,11 @@ final class MoELayer {
     /// The shared expert's two matmul outputs on `input`, without observers:
     /// the operations `callAsFunction` would otherwise build after routing.
     private func sharedActivation(_ input: MLXArray) -> MLXArray {
+        if input.size / input.dim(-1) >= minimumProjectionRows,
+           let gate = sharedGateProj.gguf, let up = sharedUpProj.gguf,
+           let (g, u) = Q2GGUFLinear.pair(input, gate, up) {
+            return Q2HyperConnection.swiGLU([g, u])[0]
+        }
         let g = sharedGateProj(input, minimumRows: minimumProjectionRows)
         let u = sharedUpProj(input, minimumRows: minimumProjectionRows)
         return (pool.expertStore.isQ2 || pool.expertStore.nativeAffineTiles) ? Q2HyperConnection.swiGLU([g, u])[0] : MLXNN.silu(g) * u
@@ -1495,6 +1502,15 @@ final class MoELayer {
         // decode barriers is evaluated in this same wait and finished before
         // these routes reach any observer.
         let routeIndices = idx.asType(.int32)
+        var predicted: (indices: MLXArray, weights: MLXArray)?
+        if q2SharedWeight != nil, let next = inputForecastNext, inputForecastScheduler != nil, B * S <= 8 {
+            let forecast = Q2MoE.route(scores: next.routerProjection(x), input: x,
+                sharedGate: next.sharedGate.w, experts: cfg.numExperts, topK: cfg.topK)
+            predicted = (forecast.indices, forecast.weights)
+            // Both selectors share this layer's input. No extra host readback
+            // or next-layer hyper-connection projection is needed.
+            asyncEval(routeIndices, forecast.indices, forecast.weights)
+        }
         if let queue = readbackQueue, !queue.isEmpty {
             let waitStart = RuntimeClock.now()
             eval([routeIndices] + queue.arrays)
@@ -1518,7 +1534,17 @@ final class MoELayer {
                 observe("routed", (experts.asType(.float32) * weights.expandedDimensions(axis: -1)).sum(axis: -2))
                 observe("sharedValue", sharedValue); observe("sharedGate", q2SharedWeight)
             }
-            return Q2MoE.combine(experts: experts, weights: weights, shared: sharedValue, sharedWeight: q2SharedWeight)
+            let result = Q2MoE.combine(experts: experts, weights: weights, shared: sharedValue, sharedWeight: q2SharedWeight)
+            if let predicted, let scheduler = inputForecastScheduler {
+                // Read-ahead starts after demand and GPU submission so its
+                // workers cannot delay the current layer's SSD demand.
+                asyncEval(result)
+                let order = NativeInputReadAhead.ranked(ids: predicted.indices.asArray(Int32.self),
+                    weights: predicted.weights.asArray(Float.self), experts: cfg.numExperts)
+                scheduler.layerCompleted(layer)
+                scheduler.forecast(target: layer + 1, ids: order, margins: [])
+            }
+            return result
         }
         func sharedParts(_ input: MLXArray) -> (MLXArray, MLXArray) {
             let value = sharedDownProj(sharedActivation(input), minimumRows: minimumProjectionRows)

@@ -377,7 +377,10 @@ public struct MemoryPlan {
                 prefixCacheTokens, PrefixCache.maxEntries,
                 Planner.prefixCacheCostGB(tokens: prefixCacheTokens)))
         }
-        if decodeLookahead {
+        if decodeLookahead, resources.nativeInputReadAheadReserveBytes > 0 {
+            l.append(String(format: "  lookahead: next-input expert reads with bounded host staging (%.0f MiB, charged above)",
+                Double(lookaheadReserveBytes) / Double(1 << 20)))
+        } else if decodeLookahead {
             l.append(String(format: "  lookahead: on, expert prefetch %@, router cache and a GPU barrier every %d layers (%.0f MiB, charged above)",
                 mtpEnabled ? "with the draft head" : "in plain decode",
                 DecodeLookahead.barrierLayers, Double(lookaheadReserveBytes) / Double(1 << 20)))
@@ -1181,6 +1184,10 @@ public enum Planner {
         guard resources.supportsDecodeLookahead || retainedLookahead != true else {
             throw PlanError("decode lookahead is not admitted for this pack")
         }
+        if retainedLookahead == true, resources.nativeInputReadAheadReserveBytes > 0,
+           fixedLookaheadBytes < resources.nativeInputReadAheadReserveBytes {
+            throw PlanError("native input read-ahead requires its complete staging reserve")
+        }
         if resources == .affine3GroupedLookaheadControl {
             guard retainedLookahead == true, fixedLookaheadBytes == DecodeLookahead.reserveBytes else {
                 throw PlanError("experimental affine lookahead requires its exact explicit full reserve")
@@ -1312,13 +1319,20 @@ public enum Planner {
         /// floor. Its bytes then come out of the pool.
         func resolveLookahead(mtpOn: Bool, streamed: Bool, slotsAfterHead: Int) -> Bool {
             if let retainedLookahead { return retainedLookahead }
+            if resources.nativeInputReadAheadReserveBytes > 0 {
+                // Fully resident expert weights have nothing to read ahead.
+                return slotsAfterHead < resources.totalRecords
+            }
             guard resources.automaticOptimizations else { return false }
             return Geometry.perLayer(slotsAfterHead)
                 >= (mtpOn ? headFloor(streamed: streamed) : plainLookaheadFloorPerLayer)
         }
+        let automaticLookaheadBytes = resources.nativeInputReadAheadReserveBytes > 0
+            ? resources.nativeInputReadAheadReserveBytes
+            : DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes)
         /// Budget the automatic lookahead takes when it is on.
         func lookaheadChargeGB(_ on: Bool) -> Double {
-            on && retainedLookahead == nil ? Double(DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes)) / 1e9 : 0
+            on && retainedLookahead == nil ? Double(automaticLookaheadBytes) / 1e9 : 0
         }
 
         func finish(
@@ -1364,7 +1378,7 @@ public enum Planner {
                 notes: notes,
                 simulated: simulated, contextQualification: qualification,
                 lookaheadReserveBytes: fixedLookaheadBytes
-                    + (lookaheadOn && retainedLookahead == nil ? DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes) : 0),
+                    + (lookaheadOn && retainedLookahead == nil ? automaticLookaheadBytes : 0),
                 decodeLookahead: lookaheadOn, memoryLimitGB: memoryLimitGB, mtpStreamedExperts: mtpOn && mtpStreamed, resources: resources)
             let resolved = try runtimePolicy.map { try applyingRuntimePolicy(base, policy: $0) } ?? base
             let bytes = resolved.memoryLedger.expectedPeakBytes

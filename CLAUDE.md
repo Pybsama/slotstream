@@ -95,6 +95,16 @@ workflow failures and instrumentation limits separate from passing kernel checks
 CPU samples locate waits, not GPU idle time. Do not add parallel worker samples
 into request-wall-time percentages or treat an instrumented run as a speed test.
 
+The [native scheduling study](db/records/measurements/native-fast-q2-scheduling.md)
+qualifies bounded input read-ahead for the explicit Q2 candidate and rejects
+its Fast default and an additional buffer pool. Follow the
+[read-ahead decision](db/records/decisions/native-input-read-ahead.md): predictions
+may arrange reads but must not evict useful cache entries. Charge staging before
+sizing the cache, verify the actual app startup recipe, and prove each tested
+forward branch issued work. A faster target can have less time to hide reads;
+reuse the mechanism only where complete requests justify it. Preserve rejected
+experiments and excluded timing aggregates instead of claiming Splash parity.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

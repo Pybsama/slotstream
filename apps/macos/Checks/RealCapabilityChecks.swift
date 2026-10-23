@@ -70,7 +70,12 @@ func realCapabilitiesIfRequested() async throws -> Bool {
                 let configuration = job.metrics?.configurations?.last
                 expect(configuration?.packID == expectedPackID, name + " uses the selected model")
                 expect(configuration?.memoryCeilingGB == budget, name + " preserves the explicit test budget")
-                let row: [String: Any] = ["model_pack": configuration?.packID ?? "missing", "name": name, "prompt": prompt, "state": job.state.rawValue, "status": job.status, "answer": answer, "seconds": Date().timeIntervalSince(start), "trace": job.trace,
+                let expectedRecipe = try ModelPackRegistry.resolve(.pack(expectedPackID)).pack.startupDefaults
+                expect(configuration?.startupPolicyID == expectedRecipe.id, name + " applies the selected startup recipe")
+                let row: [String: Any] = ["model_pack": configuration?.packID ?? "missing",
+                    "startup_policy": configuration?.startupPolicyID ?? "missing",
+                    "execution_policy_identity": configuration?.executionPolicyIdentity ?? "missing",
+                    "name": name, "prompt": prompt, "state": job.state.rawValue, "status": job.status, "answer": answer, "seconds": Date().timeIntervalSince(start), "trace": job.trace,
                     "excerpts": (job.excerpts ?? []).map { ["id": $0.id, "path": $0.path, "method": $0.method ?? "", "content": $0.content ?? "", "sha256": $0.hash] }, "changes": (job.changes?.changes ?? []).map { ["path": $0.display, "content": $0.content] }]
                 rows.append(row); try save()
                 print("FINISH \(name) \(job.state.rawValue)\n\(answer)"); fflush(stdout)

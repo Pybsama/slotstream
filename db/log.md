@@ -597,3 +597,6 @@ Ported compressed expert tiles, fused Fast recurrence/routing and GPU-aware Q2 r
 ## [2026-10-23 01:26] update | records/measurements/native-fast-q2-execution-kernels
 Preserved final matched-cache observations and exclusions, final quality and app jobs, CPU wait-site diagnostics, exact build identities and passing implementation CI. Fast is close in observations, Q2 remains slower, and complete speed parity and Smart promotion remain unqualified.
 
+## [2026-10-23 18:33] update | records/measurements/native-fast-q2-scheduling.md
+Captured native scheduling ablations and final qualification: bounded Q2 input read-ahead retained; Fast read-ahead and persistent buffers rejected. Exact plain outputs, unchanged frozen quality, app startup identity and full static gates verified. Preserve Fast workflow limits and excluded Splash timing aggregates; Smart remains unchanged. Brain gates pass with zero errors and warnings.
+

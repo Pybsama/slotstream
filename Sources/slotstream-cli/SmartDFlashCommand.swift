@@ -19,6 +19,7 @@ struct SmartDFlashCheck: ParsableCommand {
     @Option var prefixCacheDir: String?
     @Flag(help: "Download the selected pinned draft before the comparison") var installDraft = false
     @Flag(help: "Diagnostic target-only control, retaining the same priced memory plan") var disableDraft = false
+    @Option(help: "Diagnostic next-input read-ahead: off, reserve (capacity control), on") var nativeReadAhead = "off"
 
     struct Probe: Decodable {
         let id: String
@@ -45,6 +46,10 @@ struct SmartDFlashCheck: ParsableCommand {
         }
     }
     func run() throws {
+        guard ["off", "reserve", "on"].contains(nativeReadAhead),
+              nativeReadAhead == "off" || ["fast", "q2"].contains(method) else {
+            throw ValidationError("Native read-ahead requires Fast/Q2 and off, reserve or on")
+        }
         guard ["plain", "mtp", "dflash", "q2", "fast"].contains(method), memoryGB.isFinite,
               (10...33).contains(memoryGB), [8192, 32768].contains(maxContext) else {
             throw ValidationError("Use plain, mtp, dflash, q2 or fast, a 10–33 GB explicit budget, and 8192 or 32768 context tokens")
@@ -81,7 +86,8 @@ struct SmartDFlashCheck: ParsableCommand {
             mtp: method == "mtp" ? .on : .off, mtpAvailable: method == "mtp",
             vision: hasImages ? .on : .off, visionAvailable: hasImages,
             maxContextTokens: maxContext, qualification: false,
-            decodeLookahead: .off, mtpExperts: .automatic)
+            decodeLookahead: nativeReadAhead == "off" ? .off : .reserved(bytes: NativeInputReadAhead.reserveBytes),
+            mtpExperts: .automatic)
         print(plan.banner())
         let sem = DispatchSemaphore(value: 0)
         var outcome: Result<Void, Error> = .success(())
@@ -89,6 +95,9 @@ struct SmartDFlashCheck: ParsableCommand {
             do {
                 let launched = Date()
                 let engine = try await Engine(modelDir: modelDirectory, plan: plan)
+                if nativeReadAhead == "on" {
+                    try engine.model.enableNativeInputReadAhead(reservedBytes: plan.lookaheadReserveBytes)
+                }
                 if disableDraft { engine.generator.speculationEnabled = false }
                 // Identical, explicitly priced pass shapes in all methods.
                 engine.generator.prefillChunk = min(256, plan.prefillChunk)
@@ -175,6 +184,7 @@ struct SmartDFlashCheck: ParsableCommand {
                         "swapins_delta": (after?.swapins ?? 0) - (before?.swapins ?? 0),
                         "swapouts_delta": (after?.swapouts ?? 0) - (before?.swapouts ?? 0)])
                     let receipt: [String: Any] = ["method": method, "memory_gb": memoryGB, "draft_disabled": disableDraft,
+                        "native_input_read_ahead": nativeReadAhead,
                         "plan": plan.json(), "load_seconds": loadSeconds, "runs": rows,
                         "draft_dumped": didDump, "complete": rows.count == probes.count]
                     try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys])

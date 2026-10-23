@@ -668,6 +668,16 @@ public final class Qwen4ExpModel {
         }
     }
 
+    /// Both maintained forward architectures share read-ahead ownership. A
+    /// prefill/state-only pass clears the prior narrow pass's forecast links.
+    private func configureMoELookahead(layer: Int, rows: Int) {
+        let inputForecast = lookahead?.prefetch?.configuration.inputForecast == true
+            && lookahead?.inMainPass == true && rows <= 8
+        moe[layer]!.routerObserver = combinedRouterObserver
+        moe[layer]!.inputForecastNext = inputForecast ? moe[layer + 1] : nil
+        moe[layer]!.inputForecastScheduler = inputForecast ? lookahead?.prefetch : nil
+    }
+
     private func runHiddenMulti(
         _ ids: [Int], state: State, vision: [VisionRun] = [],
         perLayerHook: ((Int, MLXArray) -> Void)? = nil,
@@ -691,6 +701,7 @@ public final class Qwen4ExpModel {
             var hidden = try resident.embedChecked(ids, shape: [1, ids.count]).asType(.bfloat16)
             for layer in 0..<runLayers {
                 if shouldContinue?() == false { return nil }
+                configureMoELookahead(layer: layer, rows: ids.count)
                 gdn[layer]?.fusedRecording = optimizations.fusedGDNRecording
                 moe[layer]!.overlapShared = optimizations.overlapSharedExpert
                 moe[layer]!.overlapResident = optimizations.overlapResidentExperts
@@ -794,6 +805,7 @@ public final class Qwen4ExpModel {
         let attentionTaps = self.lookahead?.attentionForecastTaps ?? []
         for l in 0 ..< runLayers {
             if shouldContinue?() == false { return nil }
+            configureMoELookahead(layer: l, rows: S)
             if MemTrace.on { MemTrace.enterLayer(l, kind: gdn[l] != nil ? "gdn" : "qsa") }
             moe[l]!.specializedRouter = optimizations.routerTopK
             moe[l]!.overlapShared = optimizations.overlapSharedExpert
@@ -980,7 +992,6 @@ public final class Qwen4ExpModel {
             contextNumericsObserver?(l, "x2", x2)
             contextNumericsObserver?(l, "inj2", inj2!)
             MemTrace.mark("hc2", x2)
-            moe[l]!.routerObserver = combinedRouterObserver
             moe[l]!.useLayerWorkspace = optimizations.layerExpertWorkspace
             moe[l]!.disjointOutput = optimizations.disjointSweepOutput
             moe[l]!.boundedRows = optimizations.boundedSweepRows

@@ -149,13 +149,24 @@ public final class ExpertStore {
             // A speculative ticket must publish the same representation as a
             // demand miss. Keep file I/O in private host memory, then transform
             // into the ticket's destination before it can become visible.
-            guard let raw = malloc(bytes) else { throw ModelError("out of memory for Q2 speculative read") }
+            let capacity = bytes + 2 * ExactRead.pageBytes
+            var allocation: UnsafeMutableRawPointer?
+            guard posix_memalign(&allocation, ExactRead.pageBytes, capacity) == 0, let raw = allocation else {
+                throw ModelError("out of memory for a speculative expert read")
+            }
             defer { free(raw) }
+            let payload: UnsafeRawPointer
             if usePackedLayout, let packedLayout {
                 try packedLayout.readPiece(key, piece: piece, into: raw)
-            } else { try read(into: raw, layer: key.layer, piece: piece, offset: key.expert * bytes, count: bytes) }
+                payload = UnsafeRawPointer(raw)
+            } else {
+                try readFault?.beforeRead()
+                let handle = readHandles?[key.layer][piece] ?? index.readHandle(for: refs[key.layer][piece])
+                payload = try handle.readPageAlignedChecked(into: raw, capacity: capacity,
+                    offset: key.expert * bytes, count: bytes, shouldContinue: shouldContinue)
+            }
             guard shouldContinue() else { throw CheckpointReadError.cancelled }
-            repackPieceCPU(raw, into: destination, piece: piece)
+            repackPieceCPU(payload, into: destination, piece: piece)
             return
         }
         if usePackedLayout, let packedLayout {
@@ -463,8 +474,11 @@ public final class ExpertStore {
                 let key = keys[record]
                 let bytes = rowBytes[piece]
                 do {
-                    try read(into: buffer, layer: key.layer, piece: piece, offset: key.expert * bytes, count: bytes)
-                    copyPiece(buffer, bases[piece] + slots[record] * bytes, piece)
+                    try readFault?.beforeRead()
+                    let handle = readHandles?[key.layer][piece] ?? index.readHandle(for: refs[key.layer][piece])
+                    let payload = try handle.readPageAlignedChecked(into: buffer, capacity: scratch.bytes,
+                        offset: key.expert * bytes, count: bytes)
+                    copyPiece(payload, bases[piece] + slots[record] * bytes, piece)
                 } catch { failure.record(error) }
                 j += lanes
             }
@@ -655,8 +669,10 @@ public final class SlotPool {
     package var diagnosticOverlapDirectCopies = false
     package private(set) var readyTicketPrelaunchRecords = 0
     package private(set) var overlapDirectBatches = 0
-    /// One piece-sized host buffer per demand lane, plus a few spare.
-    private lazy var demandScratch = ExpertPrefetchScratch(pieceBytes: store.pieceRowBytes.max() ?? 1,
+    /// A piece plus two pages per demand lane, including spares. The extra
+    /// 1.125 MiB at the default 36 lanes is covered by the conservative fixed
+    /// runtime/staging allowance. Only scratch is widened; slots stay exact.
+    private lazy var demandScratch = ExpertPrefetchScratch(pieceBytes: (store.pieceRowBytes.max() ?? 1) + 2 * ExactRead.pageBytes,
                                                            count: ExpertStore.poolQueueDepth + 4)
     public private(set) var slotDirectBatches = 0
     package var denseLookup = false {
@@ -1040,7 +1056,24 @@ public final class SlotPool {
                 var fallback: [Int] = []
                 var adoptedSlots: [Int32] = []
                 var stagedPieces: [[MLXArray]] = Array(repeating: [], count: pools.count)
+                var copied = 0
                 for (j, k) in missKeys.enumerated() where ready[k] != nil {
+                    if session?.prefetch?.configuration.inputForecast == true,
+                       let ticket = ready[k], let bases = currentPoolBases(), let raw = ticket.adoptRaw() {
+                        // Demand selected and pinned this slot; GPU readers
+                        // joined before adoption. The ticket owns already
+                        // prepared bytes. Wrong predictions never evict slots.
+                        let s = Int(slotIdx[j])
+                        if let old = keyOf[s] { map.removeValue(forKey: old); keyOf[s] = nil }
+                        for p in 0..<pools.count {
+                            memcpy(bases[p] + s * store.pieceRowBytes[p], raw.buffers[p], store.pieceRowBytes[p])
+                        }
+                        raw.release()
+                        keyOf[s] = k; map[k] = s; refBit[s] = true
+                        event?.adoptedExperts.append(Int32(k.expert))
+                        copied += 1
+                        continue
+                    }
                     guard let ticket = ready[k], let staged = ticket.makeStagingArrays(shapes: specs) else {
                         fallback.append(j); continue
                     }
@@ -1053,6 +1086,7 @@ public final class SlotPool {
                     adoptedSlots.append(Int32(s))
                     event?.adoptedExperts.append(Int32(k.expert))
                 }
+                if copied > 0 { recordsAdopted += copied; slotCPUBatches += 1 }
                 if !adoptedSlots.isEmpty {
                     // One scatter per piece for the whole adopted batch, like the
                     // demand path: the concatenation reads each ticket's own

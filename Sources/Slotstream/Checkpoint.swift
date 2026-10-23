@@ -396,6 +396,21 @@ package struct TensorReadHandle {
         do { try readChecked(into: dst, offset: offset, count: count) }
         catch { preconditionFailure(String(describing: error)) }
     }
+
+    /// Private aligned scratch only, never a live GPU slot. Authenticated
+    /// tensors keep their exact verified read boundary.
+    package func readPageAlignedChecked(into dst: UnsafeMutableRawPointer, capacity: Int,
+        offset: Int, count: Int, shouldContinue: () -> Bool = { true }) throws -> UnsafeRawPointer {
+        guard capacity >= count else { throw CheckpointReadError.invalidRange }
+        let span = try ExactRead.pageSpan(base: base, length: length, offset: offset,
+            count: count, capacity: capacity)
+        if verifiedFile != nil || Int(bitPattern: dst) % ExactRead.pageBytes != 0 {
+            try readChecked(into: dst, offset: offset, count: count, shouldContinue: shouldContinue)
+            return UnsafeRawPointer(dst)
+        }
+        try readChecked(into: dst, offset: span.offset, count: span.count, shouldContinue: shouldContinue)
+        return UnsafeRawPointer(dst + span.skip)
+    }
 }
 
 /// Parses every shard header once; provides absolute (file, offset) for any tensor.

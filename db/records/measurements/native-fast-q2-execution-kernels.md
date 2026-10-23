@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5k3eweq9dq3d64w0kg18j3e
 created: 2026-10-23T00:44:32.086907+00:00
-updated: 2026-10-23T01:26:00.953530+00:00
+updated: 2026-10-23T18:31:27.836204+00:00
 summary: Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
 date: 2026-10-22
 doc: measurements
@@ -250,3 +250,7 @@ A CPU thread waiting for a GPU event is not proof that the GPU is idle. Samples 
 ### Implementation CI
 
 The [exact-commit CI receipt](../../sources/runs/2026/10/2026-10-22-native-execution-ci.md) records passing engine, native app, documentation and context workflows for fa398816ece5b85ca7a20ba601befc64bc1fde38. Engine goldens, the full catalogue, instrumented coverage, external library consumption and tested-candidate byte verification pass. App scripted checks, offscreen snapshots and the Xcode build pass. The frozen local engine and app input hashes match the committed implementation. Hosted CI has no real model weights and does not qualify another physical memory tier; its existing optional OCR policy is separate from the passing local OCR jobs. Later changes in this study are documentation and evidence only.
+
+## Scheduling follow-up, October 23
+
+The [native scheduling study](native-fast-q2-scheduling.md) adds bounded page-aligned reads, shared Q2 input preparation and next-input read-ahead with private staging. Its clean ablation supports Q2; a clean Fast regression and slower buffer-reuse experiment are retained and rejected. Final matched comparisons remain excluded for paging or thermal failures. The full app and quality checks retain their prior capability limits. This later schedule does not rewrite the unsuccessful earlier read-ahead experiments or establish complete Splash parity.

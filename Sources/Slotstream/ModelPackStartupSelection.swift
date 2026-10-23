@@ -87,6 +87,9 @@ public extension ModelPack {
         case .off:
             guard !plan.decodeLookahead else { return nil }
             forecast = "off"
+        case .nativeInput:
+            guard !plan.decodeLookahead || plan.lookaheadReserveBytes == memoryProfile.nativeInputReadAheadReserveBytes else { return nil }
+            forecast = plan.decodeLookahead ? "next-input-v1" : "off"
         case .uncorrected:
             guard plan.decodeLookahead, plan.lookaheadReserveBytes == DecodeLookahead.reserveBytes else { return nil }
             forecast = "uncorrected"
@@ -124,21 +127,29 @@ extension ModelPack {
         let platform = OptimizationPlatform(machineModel: hardware.model, chip: hardware.chip,
             osBuild: hardware.osBuild, nativeARM64: hardware.nativeARM64)
         var value = InferenceOptimizations.deploymentCandidate(on: platform)
-        if !memoryProfile.automaticOptimizations && memoryProfile != .affine3Native {
+        if !memoryProfile.automaticOptimizations && memoryProfile != .affine3Native
+            && memoryProfile != .fast && memoryProfile != .q2 {
             value.fusedPrefillAttention = nil
             value.fusedPrefillWorkspace = false
             value.automaticReadScope = false
         }
+        if memoryProfile == .fast || memoryProfile == .q2 {
+            value.automaticReadScope = false
+            value.layerExpertWorkspace = false
+            value.overlapSharedExpert = true
+        }
+        if memoryProfile == .fast { value.fusedGDNRecording = true }
         if memoryProfile == .q2 {
             value.layerExpertWorkspace = false
             value.fusedGDNProjection = false
+            value.fusedPrefillWorkspace = false
         }
         if memoryProfile == .affine3Native, plan.mtpEnabled {
             value.rowInvariantProjection = true
             value.verifySplitAttention = true
             value.verifySplitMinContext = 0
         }
-        if plan.decodeLookahead { value.cachedRouterWeights = true }
+        if plan.decodeLookahead, memoryProfile.nativeInputReadAheadReserveBytes == 0 { value.cachedRouterWeights = true }
         return value
     }
 }

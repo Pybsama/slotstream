@@ -18,6 +18,27 @@ extension Diagnostics {
                 runtimePolicy: policy, decodeLookahead: lookahead, mtpExperts: placement)
         }
         let original = try plan(.original)
+        for target in [10.0, 13, 22] {
+            let native = try plan(.q2, target: target)
+            let reserved = try plan(.q2, target: target,
+                lookahead: .reserved(bytes: DecodeLookahead.stagingReserveBytes))
+            let disabled = try plan(.q2, target: target, lookahead: .off)
+            c.expect("Q2 next-input staging is charged inside target/\(target)",
+                native.decodeLookahead && native.lookaheadReserveBytes == DecodeLookahead.stagingReserveBytes
+                    && native.expectedPeakGB <= target)
+            c.equal("Q2 capacity control has exactly the same slots/\(target)", native.slots, reserved.slots)
+            c.expect("Q2 explicit off recovers staging capacity/\(target)",
+                !disabled.decodeLookahead && disabled.lookaheadReserveBytes == 0 && disabled.slots > native.slots)
+            let retained = try plan(.q2, target: target,
+                lookahead: .retained(enabled: native.decodeLookahead, bytes: native.lookaheadReserveBytes))
+            c.equal("Q2 replan charges staging only once/\(target)", retained.slots, native.slots)
+            c.expect("Q2 does not inherit original throughput evidence/\(target)",
+                native.json()["est_warm_tok_s"] is NSNull)
+        }
+        do {
+            _ = try plan(.q2, lookahead: .retained(enabled: true, bytes: DecodeLookahead.stagingReserveBytes - 1))
+            c.expect("Q2 cannot activate with an underfunded reservation", false)
+        } catch { c.expect("Q2 cannot activate with an underfunded reservation", true) }
         let mixed = PackMemoryProfile.gsq224GroupedControl
         for slots in [640, 1000, 7000, Geometry.totalRecords] {
             c.equal("GSQ224 record counts retained four-bit down/\(slots)", mixed.poolBytes(slots), slots * 1_945_600)

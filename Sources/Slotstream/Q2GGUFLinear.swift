@@ -12,10 +12,10 @@ package struct Q2GGUFLinear {
     let columns: Int
     let prepared: Q2ResidentWeights?
     var inputOrder: MLXArray?
-    var outputOrder: MLXArray?
+    package var outputOrder: MLXArray?
     /// Vocabulary scores stay FP32 through selection, as in Splash. Hidden
     /// projections retain the activation dtype and its established rounding.
-    var outputType: DType?
+    package var outputType: DType?
     var inputType: DType?
 
     package init(bytes: MLXArray, format: Q2GGUFFormat, rows: Int, columns: Int, prepare: Bool = false) {
@@ -45,6 +45,32 @@ package struct Q2GGUFLinear {
         }
         let output = projected.reshaped(Array(x.shape.dropLast()) + [rows])
         return outputOrder.map { take(output, $0, axis: -1) } ?? output
+    }
+
+    /// Gate/up projections have the same activation. Share only its Table16
+    /// preparation, preserving each matrix's split policy and rounding. An
+    /// input permutation or different precision needs its own preparation.
+    package static func pair(_ x: MLXArray, _ first: Q2GGUFLinear,
+                              _ second: Q2GGUFLinear) -> (MLXArray, MLXArray)? {
+        guard first.columns == second.columns, x.dim(-1) == first.columns,
+              first.inputOrder == nil, second.inputOrder == nil,
+              first.inputType == second.inputType,
+              let a = first.prepared, let b = second.prepared else { return nil }
+        let input = first.inputType.map { x.asType($0) } ?? x
+        let count = input.size / first.columns
+        guard input.dtype == .bfloat16,
+              NativeProjectionPolicy.useRegister(rows: a.rows, columns: a.columns, batch: count, format: a.format),
+              NativeProjectionPolicy.useRegister(rows: b.rows, columns: b.columns, batch: count, format: b.format)
+        else { return nil }
+        let prepared = Q2RegisterProjection.Input(input, columns: first.columns)
+        func project(_ linear: Q2GGUFLinear, _ weight: Q2ResidentWeights) -> MLXArray {
+            let parts = NativeProjectionPolicy.splits(rows: weight.rows, columns: weight.columns,
+                cores: NativeProjectionPolicy.device.cores, register: true, apple10: true)
+            let output = Q2RegisterProjection.apply(prepared, weight: weight, splits: parts,
+                outputType: linear.outputType ?? x.dtype).reshaped(Array(x.shape.dropLast()) + [weight.rows])
+            return linear.outputOrder.map { take(output, $0, axis: -1) } ?? output
+        }
+        return (project(first, a), project(second, b))
     }
 
     package static func gather(_ x: MLXArray, bytes: MLXArray, format: Q2GGUFFormat,

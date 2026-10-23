@@ -118,7 +118,7 @@ package final class ExpertPrefetchAccounting {
 package final class ExpertPrefetchScratch {
     private let lock = NSLock()
     private var free: [UnsafeMutableRawPointer] = []
-    private let bytes: Int
+    package let bytes: Int
     package private(set) var temporaries = 0
 
     /// True when each buffer is sized for a complete record, so a worker may
@@ -594,6 +594,9 @@ package struct ExpertPrefetchConfiguration: Equatable {
     /// layer's demand reads so the readout's GPU work runs while they are in
     /// flight (true). Meaningful with the attention-readout tap only.
     package var readoutAfterDemand = false
+    /// Diagnostic next-input recipe: GPU-selected routes ordered by summed
+    /// weights, issued after current expert compute, on four serial readers.
+    package var inputForecast = false
     package var correctionBytes = 0
     /// Incremental runtime reservation charged before expert capacity is solved.
     package var reserveBytes = 0
@@ -754,6 +757,8 @@ package final class ExpertPrefetchScheduler {
     private var closed = false
     private var observationValue = ExpertPrefetchObservation()
     private let workerQueue: DispatchQueue
+    /// Fixed readers avoid parking one GCD worker for every predicted record.
+    private let orderedReaderQueues: [DispatchQueue]
     /// Slot mode: host scratch for the file reads (see `ExpertPrefetchScratch`).
     /// Record mode buys one buffer per lane at record size; piece mode keeps the
     /// original piece-sized buffers. `usesRecordReads` gates both together so a
@@ -789,8 +794,11 @@ package final class ExpertPrefetchScheduler {
         self.recordBytes = pieceBytes.reduce(0, +)
         self.lanes = IOLaneBudget(speculativeLanes: configuration.lanes)
         self.accounting = ExpertPrefetchAccounting(capBytes: min(configuration.capRecords,
-            ExpertPrefetchConfiguration.maximumCapRecords) * recordBytes)
+            configuration.inputForecast ? 64 : ExpertPrefetchConfiguration.maximumCapRecords) * recordBytes)
         self.workerQueue = workerQueue
+        orderedReaderQueues = configuration.inputForecast ? (0..<configuration.lanes).map {
+            DispatchQueue(label: "slotstream.expert-input-reader.\($0)", qos: .userInitiated)
+        } : []
         observationValue.mode = configuration.shadow ? "shadow" : (configuration.enabled ? "on" : "diagnostic")
         observationValue.adoption = configuration.adoption.rawValue
         observationValue.readShape = configuration.readShape.rawValue
@@ -804,6 +812,10 @@ package final class ExpertPrefetchScheduler {
                 : configuration.tap == .boundary
                     ? "router-reuse:strides=\(configuration.strides.map(String.init).joined(separator: ","))"
                     : "router-reuse:tap=\(configuration.tap.rawValue)\(correctionIdentity)")
+        if configuration.inputForecast {
+            observationValue.predictorIdentity = "next-input:gpu-topk:sum-weights:four-readers"
+            observationValue.forecastTap = "next-input"
+        }
     }
 
     /// The corrected attention tap's factors (`ExpertPrefetchConfiguration.correctionPath`),
@@ -911,8 +923,17 @@ package final class ExpertPrefetchScheduler {
         observationValue.scheduleSeconds += RuntimeClock.seconds(since: scheduleStart)
     }
 
-    /// Main-pass router IDs, for the recent-routes policy only.
+    /// Drop wrong next-input predictions before demand begins. In particular,
+    /// a serial reader must not park an unneeded ticket ahead of a promoted
+    /// demand ticket while the demand lane budget is active.
     package func observeRoutes(layer: Int, ids: [Int32]) {
+        if configuration.inputForecast {
+            let needed = Set(ids)
+            for (key, ticket) in tickets where key.layer == layer && !needed.contains(Int32(key.expert)) {
+                retire(ticket, key: key)
+            }
+            return
+        }
         guard configuration.policy == .recent, layer >= 0, layer < layers else { return }
         if layer == 0 || recentRoutes.isEmpty {
             recentRoutes.append(Array(repeating: [], count: layers))
@@ -1035,7 +1056,9 @@ package final class ExpertPrefetchScheduler {
             }
             tickets[key] = ticket
             let wholeRecord = usesRecordReads && ticket.isSlotMode
-            ticket.start(reader: reader, lanes: lanes, queue: workerQueue,
+            let queue = orderedReaderQueues.isEmpty ? workerQueue
+                : orderedReaderQueues[issuedPerTarget[layer] % orderedReaderQueues.count]
+            ticket.start(reader: reader, lanes: lanes, queue: queue,
                          scratch: ticket.isSlotMode ? scratch : nil,
                          recordReader: wholeRecord ? recordReader : nil)
             if wholeRecord { observationValue.recordReads += 1 } else { observationValue.pieceModeReads += 1 }

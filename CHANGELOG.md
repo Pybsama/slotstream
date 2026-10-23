@@ -8,6 +8,13 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Add bounded next-input expert read-ahead to the explicit Q2 candidate's
+  native engine and app recipe, with charged staging and demand-owned cache
+  admission. Share eligible Q2 projection preparation and align bounded expert
+  reads. Keep Fast's existing recipe after its read-ahead experiment regressed
+  prose. The [scheduling study](db/records/measurements/native-fast-q2-scheduling.md)
+  preserves the measurements, app results and remaining Splash comparison limits.
+
 - Port compressed expert tiles and fused gate/up work into both native Fast
   and the explicit Q2 candidate. Fast also uses fused recurrent processing and
   prepared routing weights; Q2 adds narrow register projections with GPU-aware

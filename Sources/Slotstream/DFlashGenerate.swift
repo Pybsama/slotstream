@@ -45,8 +45,10 @@ extension Generator {
                 }
                 try checkAllocation(state.tokenCount + 1, 1_300_000, "plain target decode")
                 let started = RuntimeClock.now()
+                model.lookahead?.beginPass(phase: .mainPlain, tokens: [token], features: [])
                 let next = try model.lastLogitsChecked([token], state: state)
                 eval(next)
+                model.lookahead?.endPass()
                 consumed.append(token)
                 stats.decodeForwardPasses += 1; stats.decodeModelTokens += 1
                 let sampled = sample(next, params: params, generated: generated)
@@ -76,6 +78,7 @@ extension Generator {
                 ContextWorkspace.prefillBytes(pass: input.count, context: state.tokenCount + input.count), "DFlash target verification")
             state.setRecording(true)
             let verifyStart = RuntimeClock.now()
+            model.lookahead?.beginPass(phase: .mainVerify, tokens: input, features: [])
             let result = try model.allLogitsWithMultiChecked(input, state: state)
             eval(result.logits)
             stats.verifySeconds += RuntimeClock.seconds(since: verifyStart)
@@ -96,6 +99,8 @@ extension Generator {
             let reconcileStart = RuntimeClock.now()
             let kept = [token] + Array(proposals.prefix(accepted))
             try state.rollbackChecked(keeping: kept.count, of: input, from: checkpoint, ngramWindow: model.cfg.ngramSize - 1)
+            model.lookahead?.passReconciled(kept: kept.count)
+            model.lookahead?.endPass()
             consumed.append(contentsOf: kept)
             if let captured {
                 draft.append(captured.rows[0..., 0..<kept.count, 0...], endingAt: state.tokenCount, to: context)

@@ -5,6 +5,11 @@ import Slotstream
 
 /// Small independent arithmetic and state-transition checks, without weights.
 func checkQ2NativeKernels() throws {
+    guard NativeInputReadAhead.ranked(ids: [3,1,3,2], weights: [0.125,0.5,0.25,0.75], experts: 4) == [2,1,3],
+          NativeInputReadAhead.ranked(ids: [3,1,3,2,-1,4], weights: [0.25,0.5,0.25,0.5,1,1], experts: 4) == [3,1,2],
+          NativeInputReadAhead.ranked(ids: [1,2], weights: [.nan,-1], experts: 4).isEmpty else {
+        throw ValidationError("Native next-input forecast lost weight sums, stable ties or bounds")
+    }
     try checkQ2PLE()
     try checkQ2Attention()
     for type in [DType.bfloat16, .float32] {
@@ -92,6 +97,17 @@ func checkQ2NativeKernels() throws {
         }
     }
     let packed = Q2ResidentWeights(raw: MLXArray(raw,[raw.count],dtype:.uint8), format:.q80, rows:rn, columns:rk)!
+    let first = Q2GGUFLinear(bytes: MLXArray(raw,[raw.count],dtype:.uint8), format:.q80, rows:rn, columns:rk, prepare:true)
+    var secondRaw = raw
+    for block in 0..<(rn * rk / 32) {
+        for j in 0..<32 {
+            secondRaw[block * 34 + 2 + j] = UInt8(bitPattern: Int8((block * 11 + j * 13) % 255 - 127))
+        }
+    }
+    var second = Q2GGUFLinear(bytes: MLXArray(secondRaw,[secondRaw.count],dtype:.uint8),
+        format:.q80, rows:rn, columns:rk, prepare:true)
+    second.outputType = .float32
+    second.outputOrder = MLXArray((0..<rn).reversed().map(Int32.init))
     for count in [1,2,4,8,17] {
         let input: [Float] = (0..<(count*rk)).map { Float(($0 * 17) % 101 - 50) / 128 }
         let x = MLXArray(input,[count,rk]).asType(.bfloat16)
@@ -104,6 +120,20 @@ func checkQ2NativeKernels() throws {
             error = max(error,abs(Double(actual[r*rn+col])-sum))
         } }
         guard error < 2e-5 else { throw ValidationError("Q2 split projection CPU error \(error)") }
+        if let (a, b) = Q2GGUFLinear.pair(x, first, second) {
+            guard (a .== first(x)).all().item(Bool.self), (b .== second(x)).all().item(Bool.self) else {
+                throw ValidationError("Q2 shared preparation changes projection output or permutation")
+            }
+            // The next request owns another preparation, including noncontiguous
+            // views. No previously prepared activation may leak into it.
+            let view = (x + 0.125).reshaped([count, rk / 2, 2]).transposed(0, 2, 1).reshaped([count, rk])
+            let (nextA, nextB) = Q2GGUFLinear.pair(view, first, second)!
+            guard (nextA .== first(view)).all().item(Bool.self), (nextB .== second(view)).all().item(Bool.self) else {
+                throw ValidationError("Q2 shared preparation reused a different input")
+            }
+        } else if NativeProjectionPolicy.useRegister(rows: rn, columns: rk, batch: count, format: .q80) {
+            throw ValidationError("Q2 shared preparation skipped an eligible pair")
+        }
         print("Q2 split projection \(count) rows: CPU FP64 error \(error) PASS")
     }
 

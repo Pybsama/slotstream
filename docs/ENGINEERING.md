@@ -37,6 +37,12 @@ references, capability gates, actual app results and the remaining differences
 from Splash's execution schedule. Kernel compatibility alone is not complete
 runtime equivalence or a promise of equal speed.
 
+The [native scheduling follow-up](../db/records/measurements/native-fast-q2-scheduling.md)
+measures bounded Q2 input read-ahead, shared input preparation and aligned
+expert reads. It retains the rejected Fast read-ahead and buffer-reuse
+experiments, exact output checks and actual app startup identities. Final
+comparisons affected by paging or heat remain excluded from parity claims.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)

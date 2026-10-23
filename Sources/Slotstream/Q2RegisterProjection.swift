@@ -5,15 +5,30 @@ import MLX
 /// rows share exact BF16 code operands; FP32 scale application follows each
 /// coefficient group. It avoids rounding dequantized weights through FP16.
 package enum Q2RegisterProjection {
+    /// Request-local preparation, explicitly passed to projections of this
+    /// same input. No retained/global cache or reuse across decoding steps.
+    package struct Input {
+        let rows: Int, columns: Int
+        let table: MLXArray, sums: MLXArray
+        init(_ input: MLXArray, columns k: Int) {
+            rows = input.size / k; columns = k
+            precondition((1...8).contains(rows) && input.dtype == .bfloat16 && input.size % k == 0)
+            let prepared = prepare([contiguous(input.reshaped([rows, k]))],
+                template: [("IN", k), ("COUNT", rows)], grid: (k / 64 * 8 / 4 * 128, 1, 1),
+                threadGroup: (128, 1, 1), outputShapes: [[k * 8], [k / 16 * 8 + k / 32 * 8]],
+                outputDTypes: [.bfloat16, .float32])
+            table = prepared[0]; sums = prepared[1]
+        }
+    }
     package static func apply(_ input: MLXArray, weight: Q2ResidentWeights,
                               splits: Int, outputType: DType) -> MLXArray {
-        let rows = input.size / weight.columns, k = weight.columns, n = weight.rows
-        precondition((1...8).contains(rows) && input.dtype == .bfloat16)
-        let prepared = prepare([contiguous(input.reshaped([rows, k]))],
-            template: [("IN", k), ("COUNT", rows)], grid: (k / 64 * 8 / 4 * 128, 1, 1),
-            threadGroup: (128, 1, 1), outputShapes: [[k * 8], [k / 16 * 8 + k / 32 * 8]],
-            outputDTypes: [.bfloat16, .float32])
-        let partials = Kernels.shared.matrix(weight.format)([prepared[0], prepared[1], weight.bytes],
+        apply(Input(input, columns: weight.columns), weight: weight, splits: splits, outputType: outputType)
+    }
+    package static func apply(_ input: Input, weight: Q2ResidentWeights,
+                              splits: Int, outputType: DType) -> MLXArray {
+        let rows = input.rows, k = weight.columns, n = weight.rows
+        precondition(input.columns == k)
+        let partials = Kernels.shared.matrix(weight.format)([input.table, input.sums, weight.bytes],
             template: [("IN", k), ("OUT", n), ("SPLITS", splits), ("P1", weight.plane1), ("META", weight.meta)],
             grid: (n / 64 * 128, splits, 1), threadGroup: (128, 1, 1),
             outputShapes: [[splits, 8, n]], outputDTypes: [.float32])[0]

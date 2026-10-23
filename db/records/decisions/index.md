@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-23T00:48:11.249215Z
+updated: 2026-10-23T18:32:36.356764Z
 ---
 
 # records/decisions
 
+- [[records/decisions/native-input-read-ahead]] — Keep measured bounded Q2 input read-ahead, reject its Fast default and buffer reuse, and require actual app recipe and branch evidence
 - [[records/decisions/fast-and-smart]] — Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 - [[records/decisions/smart-dflash-and-target-quantization]] — Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 - [[records/decisions/slotstream-app-identity]] — Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website

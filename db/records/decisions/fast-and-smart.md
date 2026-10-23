@@ -2,7 +2,7 @@
 type: decision
 id: 01m5fjxv27w5ch7he3qj0qw3jb
 created: 2026-10-21T15:57:53.095657+00:00
-updated: 2026-10-23T00:48:11.249215+00:00
+updated: 2026-10-23T18:31:27.859575+00:00
 summary: Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 decided_on: 2026-10-21
 reversible_if: Complete native workflow and hardware evidence supports changing the maintained models or defaults.
@@ -117,3 +117,7 @@ job pass. Receipts: [[sources/runs/2026/10/2026-10-22-fast-splash-app-validation
 The [native Fast and Q2 kernel study](../measurements/native-fast-q2-execution-kernels.md) records compressed expert tiles, fused Fast recurrent processing and Q2 register projections. Keep checkpoint bytes and precision references distinct from execution scheduling: importing an algorithm does not import a complete runtime, and Swift/MLX is not automatically faster than native C++/Metal.
 
 Match cache allocation after alignment, staging and metadata, then assert the actual slot count before timing. Preserve public model-call extents separately from generator limits, charge prepared resident weights, and check the GPU family as well as the operating system before admitting specialized kernels. Keep rejected experiments and whole-app quality failures visible. No candidate promotion follows solely from passing kernel or transport checks.
+
+## Native scheduling follow-up, October 23
+
+Follow [[records/decisions/native-input-read-ahead]] and [[records/measurements/native-fast-q2-scheduling]]. The Q2 engineering candidate gains bounded input read-ahead with a new startup identity; Fast retains its existing recipe because the same schedule regresses prose. The actual app startup recipe and complete jobs are checked alongside the CLI. Maintained aliases and the new-install default remain unchanged, and Q2 is not promoted to Smart.

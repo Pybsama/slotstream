@@ -16,6 +16,11 @@ extension Diagnostics {
             c.expect("Fast bounded hardware proposal/\(ram)", plan.simulated && plan.slots <= 40 * 256
                 && plan.expectedPeakGB <= (plan.targetGB ?? 0) && !plan.mtpEnabled && !plan.visionEnabled)
             c.expect("Fast keeps unknown speed evidence/\(ram)", !plan.resources.usesBaselineSpeedEvidence)
+            let q2 = try ModelPackRegistry.q2Candidate.startupPlan(on: machine)
+            try Planner.validateMemoryBudget(q2, availableGB: machine.availableGB)
+            c.expect("Q2 startup prices native read-ahead within hardware proposal/\(ram)",
+                q2.simulated && q2.decodeLookahead && q2.lookaheadReserveBytes == DecodeLookahead.stagingReserveBytes
+                    && q2.expectedPeakGB <= (q2.targetGB ?? 0) && !q2.mtpEnabled)
         }
         let pack = ModelPackRegistry.baseline
         let request = PlanRequest(mtp: .auto, vision: .off, maxContextTokens: 32768)

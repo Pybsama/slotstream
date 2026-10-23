@@ -332,6 +332,10 @@ public final class Engine {
                   policy.lookahead != .off || !plan.decodeLookahead,
                   policy.lookahead != .uncorrected || (plan.decodeLookahead
                     && model.lookahead?.prefetch?.configuration == .qualifiedDecode),
+                  policy.lookahead != .nativeInput || (plan.decodeLookahead
+                    ? model.lookahead?.prefetch?.configuration == NativeInputReadAhead.configuration(
+                        reservedBytes: plan.lookaheadReserveBytes, topK: model.cfg.topK)
+                    : model.lookahead?.prefetch == nil),
                   (plan.runtimeAllocationPolicy?.prefixCacheEnabled ?? true) == policy.prefixCacheEnabled else {
                 throw ModelError("Loaded resources differ from this pack's startup recipe")
             }
@@ -613,7 +617,10 @@ public final class Engine {
         // no explicit prefetch switch, a plan that chose the decode lookahead
         // gets exactly the qualified configuration.
         let processEnvironment = ProcessInfo.processInfo.environment
+        let nativeInputLookahead = plan?.decodeLookahead == true
+            && resources.nativeInputReadAheadReserveBytes > 0
         let qualifiedLookahead = plan?.decodeLookahead == true
+            && !nativeInputLookahead
             && !ExpertPrefetchConfiguration.explicitlyConfigured(processEnvironment)
         // The qualified default carries the checkpoint's shipped tap correction
         // when one is located next to the weights (measured file only).
@@ -634,6 +641,9 @@ public final class Engine {
             throw SlotstreamError.invalidPlan("expert lookahead is not admitted for the affine control")
         }
         var predictor: ExpertPredictor? = nil
+        guard !nativeInputLookahead || !prefetchConfiguration.active else {
+            throw SlotstreamError.invalidPlan("native input read-ahead cannot share an experimental prefetch scheduler")
+        }
         if prefetchConfiguration.active {
             guard plan == nil || (plan?.lookaheadReserveBytes ?? 0) >= prefetchConfiguration.reserveBytes else {
                 throw SlotstreamError.invalidPlan("expert prefetch needs a plan that charged its lookahead reserve")
@@ -689,6 +699,9 @@ public final class Engine {
                 throw ModelError("The selected DFlash component is missing or invalid; verify its pinned installation")
             }
             self.model.dflash = try DFlashDraft(directory: DFlashDeployment.directory(for: modelDir), target: model.cfg)
+        }
+        if nativeInputLookahead {
+            try model.enableNativeInputReadAhead(reservedBytes: plan?.lookaheadReserveBytes ?? 0)
         }
         self.generator = Generator(model: model)
         if prefetchConfiguration.active {
