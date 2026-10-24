@@ -2,14 +2,14 @@
 type: measurement
 id: 01m5r0a94ksxdkhq6njd3v3d77
 created: 2026-10-24T22:25:47.667458+00:00
-updated: 2026-10-24T22:48:48.964959+00:00
+updated: 2026-10-24T23:40:16.402573+00:00
 summary: 'Native prepared execution on the 48 GiB Mac: qualified Fast speed, cache-dependent Q2 results, ownership checks and preserved workflow failures'
 date: 2026-10-24
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
 order: '1880'
-runs: '[[sources/runs/2026/10/2026-10-24-native-prepared-execution]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]]'
+runs: '[[sources/runs/2026/10/2026-10-24-native-prepared-execution]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-cooled-confirmation]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]]'
 title: Native prepared GPU execution
 status: measured
 ---
@@ -349,3 +349,37 @@ changes. The original failed CI artifact, exact repair and passing local
 receipts are preserved in
 [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]].
 The hosted repair result is pending at this capture.
+
+
+## Bounded confirmation after local builds
+
+One additional attempt per Q2 budget was declared before execution after
+local builds finished and the GPU cooled. No inference source or binary
+changed. The 15 GB protocol is refused before first-arm model loading because
+17.28 GB reclaimable does not meet the 18 GB launch guard. The 12 GB protocol
+finishes all four arms with nominal thermal observations, but one Splash arm
+pages during its timed code request. The whole protocol is excluded, and its
+diagnostic aggregate also misses parity. The other clean arms are not used
+as a replacement aggregate. No further retry is selected. The complete plan,
+outputs, exclusions and cleanup are retained in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-cooled-confirmation]].
+The final conclusion remains qualified Fast improvement and unresolved
+consistent Q2 parity. Earlier smaller-cache parity is historical evidence,
+not a guarantee repeated by the final v68 confirmations.
+
+
+## Complete hosted validation
+
+All engine, public-library, coverage, context-contract and documentation jobs
+pass on commit `42cce1ef6d74feae3060e100b4349699a49cea72`. The Mac app's
+scripted checks and Xcode build pass on `5b4e18fe9c19e4f16488404bbba7112571f937c1`;
+all 581 frozen app inputs are unchanged by the context-harness repair. All
+509 runtime inputs match the selected v68 source identity and committed
+repair source. Full job results and source checks are preserved in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]].
+
+The initial context failure is fixed and retained as evidence. The original
+engine run was explicitly cancelled after the replacement queued; it is not
+counted as a pass. Hosted validation confirms the software checks, not broad
+Q2 speed parity or successful Fast history recall. The measured limitations,
+unchanged Smart alias and absence of a public release remain explicit.

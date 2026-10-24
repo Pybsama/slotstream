@@ -124,6 +124,10 @@ input owner through the native call, then let MLX own asynchronous work. Test
 fresh temporary inputs and early plan release, not only long-lived model weights.
 Reject larger prepared blocks when complete requests do not earn their added
 complexity, even if component timing and exact arithmetic checks pass.
+When allocation policy gains a native dependency, run the isolated context
+contracts too. Extract production declarations, inject platform observations
+and test both capability states; do not duplicate the memory constants in a
+test stub. A passing full build does not prove the isolated proxy still compiles.
 
 ## App identity (October 16, 2026)
 

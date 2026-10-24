@@ -609,3 +609,9 @@ Captured complete passing local static gates, 420-case memory override matrix, i
 ## [2026-10-24 22:49] update | records/measurements/native-prepared-execution.md
 Preserved the first hosted context-proxy compilation failure and repaired its isolated source extraction. Both injected GPU capability states pass the complete source-contract suite; production inference source and measured v68 binaries are unchanged. Brain validation, projections and claims pass with zero errors and warnings. Recorded earlier direct GPU-shared read stalls as unresolved safety evidence for any future copy-removal experiment. Hosted repair CI is pending.
 
+## [2026-10-24 23:18] update | records/measurements/native-prepared-execution.md
+Preserved a bounded, preregistered cooled confirmation after local builds: the 15 GB Q2 launch is refused before loading at 17.28 GB reclaimable, and the complete 12 GB ABBA is excluded by one Splash arm paging. No clean subset or additional retry replaces the full protocol. Consistent Q2 parity remains unresolved; all owned model/monitor processes are drained. Brain validation and claims remain clean.
+
+## [2026-10-24 23:40] update | records/measurements/native-prepared-execution.md
+Complete hosted engine, library, coverage, context and docs checks pass on 42cce1e; app scripted checks and Xcode build pass on unchanged 5b4e18f inputs. Archived job results and verified all 509 frozen runtime inputs and 581 app inputs. Local brain validation, projections, claim needles, added links and whitespace checks pass. Preserved the bounded excluded Q2 confirmations. Fast speed is qualified; Q2 parity and Fast recall remain unresolved. Next work is a focused matched Q2 verification diagnosis, with Fast performance held stable.
+

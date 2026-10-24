@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-24T22:48:48.866581Z
+updated: 2026-10-24T23:40:16.309082Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]] — Complete hosted CI for the native prepared execution port and unchanged app inputs
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-cooled-confirmation]] — Excluded cooled Q2 confirmations with unchanged final native binary
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]] — Native prepared execution context proxy repair
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]] — Native prepared execution final local validation
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution]] — Native prepared execution evidence and complete comparison protocols
@@ -505,10 +507,8 @@ updated: 2026-10-24T22:48:48.866581Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-dispositions-and-readiness-checkpoint]] — All37 dispositions retain exact current evidence; bounded readiness observer prepares no model run
 - [[sources/runs/2026/09/2026-09-09-optimization-exact-final-activation-preparation]] — Unapplied final V519 activation patch matches all150source inputs and passes the real workspace apply check
 - [[sources/runs/2026/09/2026-09-09-optimization-final-continuation-and-remaining-delivery-preparation]] — Exact final continuation reuses the passed short cohort and prepares unchanged lifetime, sustained-TPS and activation work
-- [[sources/runs/2026/09/2026-09-09-optimization-final-unique-prose-thermal-stop]] — Original final unique-prose cohort remains unqualified after nominal-state exclusions make five clean pairs impossible
-- [[sources/runs/2026/09/2026-09-09-optimization-final-short-one-complete-pass]] — Exact final composition passes the complete original short-one paired request and startup gates
 
 ## More
 
-This folder has 948 files. The 500 most recent are listed above.
+This folder has 950 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
