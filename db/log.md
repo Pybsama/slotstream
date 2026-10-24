@@ -603,3 +603,9 @@ Captured native scheduling ablations and final qualification: bounded Q2 input r
 ## [2026-10-24 22:35] update | records/measurements/native-prepared-execution.md
 Ported bounded reusable native GPU execution plans, event leases, charged Q2 staging, cache replacement and checked state folding. Frozen v68 passes 108 core checks and matches upstream small-suite quality. Final clean Fast comparison beats Splash; earlier clean Q2 12 GB parity does not repair larger-cache failures or excluded final confirmations. Q2 passes six app jobs; Fast history and return-to-Fast recall fail and remain explicit. Raw protocols, rejected candidates and exact source identities are preserved. Brain validation, claims, projections, added local links and source identity pass. Full static suite is still running; hosted CI is pending. No release or Smart promotion.
 
+## [2026-10-24 22:39] update | records/measurements/native-prepared-execution.md
+Captured complete passing local static gates, 420-case memory override matrix, installer checks, zero-error and zero-warning brain validation, all 354 claim needles, local file-link repair and frozen v68 source/default-binary identity. Preserve earlier failed link check. Full hosted CI remains pending; Q2 parity and Fast recall limitations are unchanged.
+
+## [2026-10-24 22:49] update | records/measurements/native-prepared-execution.md
+Preserved the first hosted context-proxy compilation failure and repaired its isolated source extraction. Both injected GPU capability states pass the complete source-contract suite; production inference source and measured v68 binaries are unchanged. Brain validation, projections and claims pass with zero errors and warnings. Recorded earlier direct GPU-shared read stalls as unresolved safety evidence for any future copy-removal experiment. Hosted repair CI is pending.
+

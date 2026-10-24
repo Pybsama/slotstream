@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-24T22:26:46.767375Z
+updated: 2026-10-24T22:48:48.866581Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]] — Native prepared execution context proxy repair
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]] — Native prepared execution final local validation
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution]] — Native prepared execution evidence and complete comparison protocols
 - [[sources/runs/2026/10/2026-10-23-native-scheduling-excluded-comparisons]] — Excluded final native and Splash timing comparisons
 - [[sources/runs/2026/10/2026-10-23-native-scheduling]] — Native scheduling ablations and qualification
@@ -505,10 +507,8 @@ updated: 2026-10-24T22:26:46.767375Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-continuation-and-remaining-delivery-preparation]] — Exact final continuation reuses the passed short cohort and prepares unchanged lifetime, sustained-TPS and activation work
 - [[sources/runs/2026/09/2026-09-09-optimization-final-unique-prose-thermal-stop]] — Original final unique-prose cohort remains unqualified after nominal-state exclusions make five clean pairs impossible
 - [[sources/runs/2026/09/2026-09-09-optimization-final-short-one-complete-pass]] — Exact final composition passes the complete original short-one paired request and startup gates
-- [[sources/runs/2026/09/2026-09-09-optimization-final-eight-paired-serial-preparation]] — Original eight exact final paired studies are queued sequentially with unchanged full work and acceptance
-- [[sources/runs/2026/09/2026-09-09-optimization-final-offline-client-full-pass]] — Exact final candidate passes the complete original Hermes and Ollama client family with isolated offline scanner configuration
 
 ## More
 
-This folder has 946 files. The 500 most recent are listed above.
+This folder has 948 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -2,14 +2,14 @@
 type: measurement
 id: 01m5r0a94ksxdkhq6njd3v3d77
 created: 2026-10-24T22:25:47.667458+00:00
-updated: 2026-10-24T22:31:23.819465+00:00
+updated: 2026-10-24T22:48:48.964959+00:00
 summary: 'Native prepared execution on the 48 GiB Mac: qualified Fast speed, cache-dependent Q2 results, ownership checks and preserved workflow failures'
 date: 2026-10-24
 doc: measurements
 level: '2'
 machines: '[[records/machines/macbook-pro-m5-pro-48gb]]'
 order: '1880'
-runs: '[[sources/runs/2026/10/2026-10-24-native-prepared-execution]]'
+runs: '[[sources/runs/2026/10/2026-10-24-native-prepared-execution]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]], [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]]'
 title: Native prepared GPU execution
 status: measured
 ---
@@ -306,3 +306,46 @@ No public release or Smart promotion is made by this study. Broad Q2 parity
 remains unresolved until repeated matched complete-request gates pass at the
 larger cache as well as smaller budgets, with quality and real app jobs kept
 as independent acceptance criteria.
+
+
+## Final local validation
+
+The complete static suite passes against the frozen v68 binary. The current
+source and default local build match its archived identity. Brain validation
+reports zero errors and warnings, generated documents and all claim needles
+pass, and added local file links and Git whitespace checks pass. The original
+link-check failure and repair are preserved in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]].
+Hosted CI is pending at this capture; these checks do not turn the remaining
+Q2 timing exclusions or Fast workflow failures into passes.
+
+
+## Direct-read constraint from earlier evidence
+
+The earlier [[records/measurements/expert-lookahead-2-slot-adoption-screen-2026-09-12]]
+records kernel-level file-read stalls after an experiment reading directly into
+GPU-shared pool storage. It did not isolate the cause. Removing the current
+private scratch copy is therefore not an established safe speedup. A future
+read-scheduler experiment must preserve bounded buffer ownership, completion
+and failure draining, and separately qualify any changed file-read destination.
+The remaining shared-reader scheduling hypothesis can be tested without first
+reintroducing that destination change.
+
+The final upstream logs explicitly report that the host-step spin library is
+absent and GPU keepawake is disabled. The comparison harness asserts the
+library is absent before each arm. The observed Q2 gap is not evidence that
+this study accidentally compared against an enabled upstream GPU keepalive.
+
+
+## Context proxy repair
+
+The first hosted context check fails because the isolated planner compilation
+omits the native schedule policy that the new Q2 memory profile references.
+The proxy now extracts the production declaration verbatim and injects the
+platform capability. It runs both states in fresh processes and independently
+checks the complete expert staging geometry, profile identity and reserve.
+The complete local proxy suite passes; no inference source or benchmark binary
+changes. The original failed CI artifact, exact repair and passing local
+receipts are preserved in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]].
+The hosted repair result is pending at this capture.
