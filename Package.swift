@@ -22,10 +22,12 @@ let package = Package(
     ],
     targets: [
         .target(name: "CSlotpack"),
+        .target(name: "CNativeSchedule", exclude: ["README.md", "MLX-LICENSE.txt", "Metal-CPP-LICENSE.txt", "vendor-manifest.json", "splash-manifest.json"], cxxSettings: [.headerSearchPath("vendor"), .headerSearchPath("splash")]),
         .target(
             name: "Slotstream",
             dependencies: [
                 "CSlotpack",
+                "CNativeSchedule",
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXNN", package: "mlx-swift"),
                 .product(name: "MLXFast", package: "mlx-swift"),
@@ -61,5 +63,6 @@ let package = Package(
             dependencies: ["SlotstreamTestKit"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-    ]
+    ],
+    cxxLanguageStandard: .cxx20
 )

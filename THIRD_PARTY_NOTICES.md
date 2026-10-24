@@ -31,13 +31,31 @@ The target architecture was checked against Apple's
 implementations at `bb0d5b048f02e14dbf8f2d7bb1a20911a295470a`.
 [Splash](https://github.com/incoai/splash) at
 `1482f6bbc2abf12375332725302019594150b6cb` was also reviewed as an
-implementation reference. Slotstream does not run Splash or its host-step
-GPU scheduling mechanism.
+implementation reference. Slotstream implements event-gated execution through
+its own MLX stream and allocator; it does not launch the Splash runtime.
 
 The native GSQ-RCO Q2 checkpoint decoder, GPU DFlash candidate selector and
-single-request verification budget adapt Splash's GGUF format readers,
+bounded verification budget adapt Splash's GGUF format readers,
 candidate edge reductions and `VerifyBudget` at the revision
 above, under [Apache-2.0](Licenses/splash-Apache-2.0.txt). The original notices
 and a description of the adaptations are retained in
 [the Splash notice](Licenses/splash-NOTICE.txt). Exact packed model bytes remain
 separately downloaded artifacts; this source license is not their license.
+The fused draft convolution and packed QKV, context KV and gate/up layouts
+also follow this revision. The packing keeps the MLX projection arithmetic;
+it is not the upstream staged affine kernel.
+The bounded adaptive cache metadata in `Sources/CNativeSchedule/splash/model/`
+is unmodified from that same revision. Its source hashes are recorded in
+`splash-manifest.json`; the Slotstream adapter preserves physical slots,
+longer-lived GPU pins and failed-read publication boundaries.
+
+## MLX native execution extension
+
+`Sources/CNativeSchedule` uses pinned MLX C++ and metal-cpp headers to execute
+prepared expert and projection plans on the same MLX stream and allocator.
+The unmodified header hashes and dependency revision are recorded in its
+`vendor-manifest.json`; the SwiftPM dependency provides the implementation.
+MLX is Copyright Apple Inc. and MIT licensed, reproduced in
+[MLX-LICENSE.txt](Licenses/MLX-LICENSE.txt). metal-cpp is Copyright Apple Inc.
+and Apache-2.0 licensed, reproduced in
+[Metal-CPP-LICENSE.txt](Licenses/Metal-CPP-LICENSE.txt).

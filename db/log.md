@@ -600,3 +600,6 @@ Preserved final matched-cache observations and exclusions, final quality and app
 ## [2026-10-23 18:33] update | records/measurements/native-fast-q2-scheduling.md
 Captured native scheduling ablations and final qualification: bounded Q2 input read-ahead retained; Fast read-ahead and persistent buffers rejected. Exact plain outputs, unchanged frozen quality, app startup identity and full static gates verified. Preserve Fast workflow limits and excluded Splash timing aggregates; Smart remains unchanged. Brain gates pass with zero errors and warnings.
 
+## [2026-10-24 22:35] update | records/measurements/native-prepared-execution.md
+Ported bounded reusable native GPU execution plans, event leases, charged Q2 staging, cache replacement and checked state folding. Frozen v68 passes 108 core checks and matches upstream small-suite quality. Final clean Fast comparison beats Splash; earlier clean Q2 12 GB parity does not repair larger-cache failures or excluded final confirmations. Q2 passes six app jobs; Fast history and return-to-Fast recall fail and remain explicit. Raw protocols, rejected candidates and exact source identities are preserved. Brain validation, claims, projections, added local links and source identity pass. Full static suite is still running; hosted CI is pending. No release or Smart promotion.
+

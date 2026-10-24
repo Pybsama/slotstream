@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5h7yp7wb4k7xaf2n47wrzex
 created: 2026-10-22T07:24:35.452353+00:00
-updated: 2026-10-22T19:06:51.575912+00:00
+updated: 2026-10-24T22:31:23.797689+00:00
 summary: Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
 date: 2026-10-22
 doc: measurements
@@ -176,3 +176,15 @@ Evidence: [[sources/runs/2026/10/2026-10-22-native-q2-port]],
 [[sources/runs/2026/10/2026-10-22-native-q2-timing-exclusions]] and
 [[sources/runs/2026/10/2026-10-22-native-q2-app]]. Prior upstream comparisons:
 [[records/measurements/exact-q2-performance-and-quality-followup]].
+
+## Controller and prepared execution follow-up, October 24, 2026
+
+The original 160-cycle oracle above proves its target-only, truncated controller
+interface. It did not cover the complete runtime's anchor-only and bonus-token
+observations or cross-request calibration. The
+[prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) retains that evidence,
+adds complete-controller fixtures and actual-path checks, and distinguishes
+successful calibration experiments from a later clean confirmation failure.
+It also preserves the rejected timing-filter experiment and the subsequent
+pipeline-parameter implementation. Q2 remains an explicit engineering candidate;
+these checks do not establish negligible quantization loss or promote Smart.

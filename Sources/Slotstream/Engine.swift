@@ -229,7 +229,7 @@ public final class Engine {
     /// Release the retained conversation state. Takes the generation lock, so
     /// never call it from inside `generate`.
     public func dropPrefixCache() {
-        withExclusive { prefixCache.drop() }
+        withExclusive { prefixCache.drop(); generator.dflashVerifyCalibration = nil }
     }
 
     /// Return allocator-held reusable buffers after the embedding owner has

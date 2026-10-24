@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5n0gfs94bpkm1arf04fh690
 created: 2026-10-23T18:31:27.785692+00:00
-updated: 2026-10-23T18:31:27.785692+00:00
+updated: 2026-10-24T22:31:23.722937+00:00
 summary: Bounded Q2 read-ahead improves clean native comparisons; Fast read-ahead and buffer reuse are rejected, with full app and timing limits retained
 date: 2026-10-23
 doc: measurements
@@ -210,3 +210,13 @@ All 339 engine build inputs still match the tested source manifest.
 Physical 16 GB and 64 GB Macs are unavailable;
 planner checks across 16/24/32/48/64 GB and explicit small budgets on this Mac
 are narrower evidence than physical hardware qualification.
+
+## Prepared execution follow-up, October 24, 2026
+
+The [prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) preserves the next
+native schedule port, independent correctness checks, final app checks, clean
+comparisons and excluded attempts. The wording above describing Splash as
+pre-encoded command replay is corrected: Splash reuses immutable execution
+plans and pipelines, then encodes fresh Metal commands each cycle. The native
+port uses the existing MLX allocator and stream with bounded ownership. Neither
+implementation language nor a cached target replay establishes serving parity.

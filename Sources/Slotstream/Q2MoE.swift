@@ -27,6 +27,47 @@ package enum Q2MoE {
             outputShapes:[shared.shape],outputDTypes:[.bfloat16])[0]
     }
 
+    /// A grouped projection can be reduced in original router rank order
+    /// without first copying every expert row back to that order.
+    package struct Mixture {
+        let weights: MLXArray, shared: MLXArray, sharedWeight: MLXArray
+        package init(weights: MLXArray, shared: MLXArray, sharedWeight: MLXArray) {
+            self.weights = weights; self.shared = shared; self.sharedWeight = sharedWeight
+        }
+        package func apply(_ experts: MLXArray, inverse: [Int32]? = nil) -> MLXArray {
+            guard let inverse else {
+                return Q2MoE.combine(experts: experts, weights: weights, shared: shared, sharedWeight: sharedWeight)
+            }
+            let hidden = shared.dim(-1), rows = shared.size / hidden, topK = weights.dim(-1)
+            precondition((topK == 8 || topK == 10) && weights.size == rows * topK
+                && sharedWeight.size == rows && inverse.count == rows * topK
+                && experts.ndim == 2 && experts.dim(1) == hidden
+                && inverse.allSatisfy { $0 >= 0 && $0 < experts.dim(0) })
+            return applyGrouped(experts, inverse: MLXArray(inverse))
+        }
+        private func applyGrouped(_ experts: MLXArray, inverse: MLXArray) -> MLXArray {
+            let hidden = shared.dim(-1), rows = shared.size / hidden, topK = weights.dim(-1)
+            precondition((topK == 8 || topK == 10) && weights.size == rows * topK
+                && sharedWeight.size == rows && inverse.size == rows * topK && inverse.dtype == .int32
+                && experts.ndim == 2 && experts.dim(1) == hidden)
+            return Q2MoE.groupedCombination([contiguous(experts), inverse, contiguous(weights),
+                contiguous(shared), contiguous(sharedWeight)], template: [("H", hidden), ("K", topK)],
+                grid: (hidden, rows, 1), threadGroup: (256, 1, 1),
+                outputShapes: [shared.shape], outputDTypes: [.bfloat16])[0]
+        }
+    }
+
+    // Original-rank indices are checked before constructing this graph. The
+    // expert output retains the host-ready event and normal MLX dependencies.
+    private static let groupedCombination = MLXFast.metalKernel(name: "slotstream_q2_grouped_moe_combine",
+        inputNames: ["experts", "inverse", "weights", "shared", "shared_weight"], outputNames: ["y"], source: #"""
+        uint d=thread_position_in_grid.x,row=thread_position_in_grid.y;if(d>=H)return;
+        float value=0;
+        for(uint rank=0;rank<K;++rank)value+=weights[row*K+rank]*float(experts[size_t(inverse[row*K+rank])*H+d]);
+        value+=shared_weight[row]*float(shared[row*H+d]);
+        y[row*H+d]=bfloat(value);
+        """#, header: "#pragma clang fp reassociate(off)\n")
+
     private static let routing = MLXFast.metalKernel(name: "slotstream_q2_routes",
         inputNames:["scores","input","shared_gate"],outputNames:["selected","routing_weights","shared_weight"],
         source: #"""

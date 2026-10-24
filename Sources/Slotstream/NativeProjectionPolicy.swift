@@ -35,6 +35,15 @@ package enum NativeProjectionPolicy {
         return (cores ?? 32, apple10)
     }()
 
+    /// Splash's one-lane unsplit staged policy. Sixteen-row MPP tiles can
+    /// compute the same live rows with less scheduling cost on Apple10.
+    /// Count scales and metadata in the stored bits; Q4_K is exactly 4.5 and
+    /// therefore stays on eight rows. Bounds in the input tensor mask padding.
+    package static func stagedTileRows(batch: Int, parts: Int, format: Q2GGUFFormat) -> Int {
+        device.apple10 && (1...8).contains(batch) && parts == 1
+            && format.bytes * 16 < format.block * 9 ? 16 : 8
+    }
+
     package static func splits(rows: Int, columns: Int, cores: Int, register: Bool, apple10: Bool) -> Int {
         let tiers = register ? [(4, 256, 8), (32, 1024, 8), (3, 512, 16)]
             : apple10 ? [(6, 512, 8)] : [(4, 256, 8), (32, 1024, 8)]

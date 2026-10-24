@@ -13,7 +13,8 @@ package enum Q2RegisterProjection {
         init(_ input: MLXArray, columns k: Int) {
             rows = input.size / k; columns = k
             precondition((1...8).contains(rows) && input.dtype == .bfloat16 && input.size % k == 0)
-            let prepared = prepare([contiguous(input.reshaped([rows, k]))],
+            let x = contiguous(input.reshaped([rows, k]))
+            let prepared = NativeProjectionSchedule.prepare(x, rows: rows, columns: k) ?? prepare([x],
                 template: [("IN", k), ("COUNT", rows)], grid: (k / 64 * 8 / 4 * 128, 1, 1),
                 threadGroup: (128, 1, 1), outputShapes: [[k * 8], [k / 16 * 8 + k / 32 * 8]],
                 outputDTypes: [.bfloat16, .float32])
@@ -28,8 +29,12 @@ package enum Q2RegisterProjection {
                               splits: Int, outputType: DType) -> MLXArray {
         let rows = input.rows, k = weight.columns, n = weight.rows
         precondition(input.columns == k)
-        let partials = Kernels.shared.matrix(weight.format)([input.table, input.sums, weight.bytes],
-            template: [("IN", k), ("OUT", n), ("SPLITS", splits), ("P1", weight.plane1), ("META", weight.meta)],
+        let plane1 = weight.plane1, meta = weight.meta
+        if let result = NativeProjectionSchedule.register([input.table, input.sums, weight.bytes], format: weight.format,
+            k: k, n: n, rows: rows, splits: splits, p1: plane1, meta: meta, dtype: outputType) { return result }
+        let kernel = Kernels.shared.matrix(weight.format)
+        let partials = kernel([input.table, input.sums, weight.bytes],
+            template: [("IN", k), ("OUT", n), ("SPLITS", splits), ("P1", plane1), ("META", meta)],
             grid: (n / 64 * 128, splits, 1), threadGroup: (128, 1, 1),
             outputShapes: [[splits, 8, n]], outputDTypes: [.float32])[0]
         return reduce([partials], template: [("T", outputType), ("N", n), ("ROWS", rows), ("PARTS", splits)],

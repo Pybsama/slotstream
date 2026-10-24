@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5jg2vf02zjt7ejz23530m55
 created: 2026-10-22T19:05:54.912043+00:00
-updated: 2026-10-22T19:52:45.581112+00:00
+updated: 2026-10-24T22:31:23.774768+00:00
 summary: Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs
 date: 2026-10-22
 doc: measurements
@@ -246,3 +246,18 @@ The source restoration after the rejected v18 experiment is hash-checked
 against both the CLI and app build identities.
 
 The code checkpoint is pushed as 3b6a307. The exact qualified v17 CLI is also restored as the default local build output. Local rebuild and catalogue receipts, the derived cycle-cost audit, and a hosted-status snapshot are in [[sources/runs/2026/10/2026-10-22-native-q2-execution-closeout]]. At that capture, documentation, context contracts and the external-library job pass; full engine and Mac app CI remain pending. They are not counted as passes.
+
+## Prepared execution follow-up, October 24, 2026
+
+The [prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) adds reusable
+native execution descriptions, pipeline sharing across batch widths, checked
+state folding and cache integration. It preserves the earlier timing failures
+and distinguishes cold preparation, steady work, controller behavior and actual
+app outcomes. Its complete-request results have their own matched cache,
+warmup and exclusion rules; they do not retroactively qualify this study's
+excluded observations.
+
+The original 160-cycle controller oracle covered its truncated observation
+interface. It did not independently prove the complete runtime's anchor-only,
+bonus-observation and cross-request calibration wiring. The new study includes
+those separate fixture and executed-path checks.

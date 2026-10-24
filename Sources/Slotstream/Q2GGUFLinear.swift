@@ -16,7 +16,7 @@ package struct Q2GGUFLinear {
     /// Vocabulary scores stay FP32 through selection, as in Splash. Hidden
     /// projections retain the activation dtype and its established rounding.
     package var outputType: DType?
-    var inputType: DType?
+    package var inputType: DType?
 
     package init(bytes: MLXArray, format: Q2GGUFFormat, rows: Int, columns: Int, prepare: Bool = false) {
         prepared = prepare ? Q2ResidentWeights(raw: bytes, format: format, rows: rows, columns: columns) : nil
@@ -63,6 +63,18 @@ package struct Q2GGUFLinear {
               NativeProjectionPolicy.useRegister(rows: b.rows, columns: b.columns, batch: count, format: b.format)
         else { return nil }
         let prepared = Q2RegisterProjection.Input(input, columns: first.columns)
+        let parts = [a, b].map { weight in
+            NativeProjectionPolicy.splits(rows: weight.rows, columns: weight.columns,
+                cores: NativeProjectionPolicy.device.cores, register: true, apple10: true)
+        }
+        if let values = NativeProjectionSchedule.registerPair(prepared, first: a, second: b,
+            splits: parts, types: [first.outputType ?? x.dtype, second.outputType ?? x.dtype]) {
+            func finish(_ value: MLXArray, _ linear: Q2GGUFLinear) -> MLXArray {
+                let output = value.reshaped(Array(x.shape.dropLast()) + [linear.rows])
+                return linear.outputOrder.map { take(output, $0, axis: -1) } ?? output
+            }
+            return (finish(values[0], first), finish(values[1], second))
+        }
         func project(_ linear: Q2GGUFLinear, _ weight: Q2ResidentWeights) -> MLXArray {
             let parts = NativeProjectionPolicy.splits(rows: weight.rows, columns: weight.columns,
                 cores: NativeProjectionPolicy.device.cores, register: true, apple10: true)
@@ -71,6 +83,33 @@ package struct Q2GGUFLinear {
             return linear.outputOrder.map { take(output, $0, axis: -1) } ?? output
         }
         return (project(first, a), project(second, b))
+    }
+
+    /// Wide GDN QKV and gate projections preserve their staged arithmetic.
+    /// Register projections retain their separate qualified path above.
+    package static func stagedPair(_ x: MLXArray, _ first: Q2GGUFLinear,
+                                   _ second: Q2GGUFLinear) -> (MLXArray, MLXArray)? {
+        guard first.columns == second.columns, x.dim(-1) == first.columns,
+              first.inputOrder == nil, second.inputOrder == nil,
+              first.inputType == second.inputType,
+              let a = first.prepared, let b = second.prepared else { return nil }
+        let input = first.inputType.map { x.asType($0) } ?? x
+        let count = input.size / first.columns
+        guard (1...8).contains(count), input.dtype == .bfloat16,
+              !NativeProjectionPolicy.useRegister(rows: a.rows, columns: a.columns, batch: count, format: a.format),
+              !NativeProjectionPolicy.useRegister(rows: b.rows, columns: b.columns, batch: count, format: b.format) else { return nil }
+        let parts = [a,b].map {
+            NativeProjectionPolicy.splits(rows: $0.rows, columns: $0.columns,
+                cores: NativeProjectionPolicy.device.cores, register: false,
+                apple10: NativeProjectionPolicy.device.apple10)
+        }
+        guard let values = NativeProjectionSchedule.stagedPair(input, first: a, second: b,
+            splits: parts, types: [first.outputType ?? x.dtype, second.outputType ?? x.dtype]) else { return nil }
+        func finish(_ value: MLXArray, _ linear: Q2GGUFLinear) -> MLXArray {
+            let output = value.reshaped(Array(x.shape.dropLast()) + [linear.rows])
+            return linear.outputOrder.map { take(output, $0, axis: -1) } ?? output
+        }
+        return (finish(values[0],first),finish(values[1],second))
     }
 
     package static func gather(_ x: MLXArray, bytes: MLXArray, format: Q2GGUFFormat,

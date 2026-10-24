@@ -6,20 +6,32 @@ uses NumPy FP16 scales and the published `scale * (code - 1)` formula. Inputs
 and dot products are independent CPU references. Run:
 
 ```
-.build/release/slotstream q2-format-check --fixtures bench/q2/formats.json --policy-fixtures bench/q2/verify-budget.json --mix-fixtures bench/q2/mix-quantization.json
+.build/release/slotstream q2-format-check --fixtures bench/q2/formats.json --policy-fixtures bench/q2/verify-budget.json --policy-fixtures bench/q2/verify-budget-complete.json --mix-fixtures bench/q2/mix-quantization.json
 .build/release/slotstream q2-experts-check
 ```
 
 The command also checks routed batches and rejects corrupted, truncated,
 mutated, symbolic-link and cancelled GGUF inputs with tiny synthetic files.
 
-`verify-budget.json` was produced by Splash's `VerifyBudget.cpp` at
-1482f6bbc2abf12375332725302019594150b6cb, with single-lane confidence selection.
-It exercises anchor-only verification, exploration and online refitting. This
-controller alone chooses Q2's verification length, so another policy cannot
-permanently truncate its exploration. Unverified proposals are never training
-labels. Upstream observations use NaN
-for these unverified positions to make the reference contract match.
+`verify-budget.json` preserves the original truncated-observation fixture from
+Splash's `VerifyBudget.cpp` at
+1482f6bbc2abf12375332725302019594150b6cb. Its driver forced at least one draft
+and replaced later confidences with NaN. It checks that narrower API and
+online refitting, but does not test anchor-only selection or the runtime's
+complete observations.
+
+`verify-budget-complete.json` adds an independent driver around the same
+unmodified upstream implementation. It retains all confidences, permits
+anchor-only passes, and checks selected depths and retained label counts
+through exploration, refitting and replacement of the bounded label history.
+`Tools/reference/q2_verify_budget.cpp` is the driver; the measurement archive
+preserves the upstream sources and build command.
+
+A target pass also evaluates the final bonus prediction. Comparing it with
+the corresponding draft guess supplies a label without consuming additional
+model state or accepting an unverified output token. Production checks also
+verify calibration reuse between requests and reset at the embedding owner's
+privacy boundary. Kernel and policy fixtures alone cannot prove that wiring.
 
 `mix-quantization.json` uses a separate C++ reference for upstream Q8_0
 preparation of BF16 and F16 mixing matrices. It includes zeros, signed ties and

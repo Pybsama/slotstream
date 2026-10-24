@@ -45,15 +45,15 @@ package enum Q2GGUFFormat: UInt32, CaseIterable {
 
 package struct Q2GGUFTensor {
     let name: String
-    let shape: [Int]
-    let format: Q2GGUFFormat
+    package let shape: [Int]
+    package let format: Q2GGUFFormat
     let offset: Int
     unowned let file: Q2GGUFFile
-    var columns: Int { shape.last! }
-    var rows: Int { shape.dropLast().reduce(1, *) }
+    package var columns: Int { shape.last! }
+    package var rows: Int { shape.dropLast().reduce(1, *) }
     var rowBytes: Int { columns / format.block * format.bytes }
     var byteCount: Int { rows * rowBytes }
-    func read(offset relative: Int = 0, count: Int? = nil) throws -> Data {
+    package func read(offset relative: Int = 0, count: Int? = nil) throws -> Data {
         let n = count ?? byteCount
         let absolute = try ExactRead.tensorOffset(base: offset, length: byteCount, offset: relative, count: n)
         return try file.read(at: absolute, count: n)

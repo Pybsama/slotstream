@@ -105,6 +105,26 @@ forward branch issued work. A faster target can have less time to hide reads;
 reuse the mechanism only where complete requests justify it. Preserve rejected
 experiments and excluded timing aggregates instead of claiming Splash parity.
 
+The [prepared execution study](db/records/measurements/native-prepared-execution.md)
+requires bounded plan, pipeline, event and staging ownership on the existing MLX
+stream. Reuse immutable execution descriptions, and release mutable storage only
+after its actual readers finish. A forecast cannot choose cache victims. Verify
+both original compressed-byte arithmetic and the adapter's real cache trace;
+correct policy code can still be wired in the wrong order. Match complete requests
+and actual cache capacity, preserve the whole timing protocol's exclusions, and
+retain app-quality failures independently of passing integration checks. Splash
+encodes fresh commands each cycle; do not call its plans pre-encoded GPU replay.
+Compiler, host-wait and device-path differences are hypotheses until tested.
+Keep request-varying extents in bounded dispatch parameters when they do not
+change arithmetic geometry. A cached plan can still trigger repeated pipeline
+compilation. Measure preparation and steady execution separately, keep all
+request time, and confirm final defaults after a favorable experiment.
+Borrowed C context pointers do not keep Swift tensor wrappers alive. Hold every
+input owner through the native call, then let MLX own asynchronous work. Test
+fresh temporary inputs and early plan release, not only long-lived model weights.
+Reject larger prepared blocks when complete requests do not earn their added
+complexity, even if component timing and exact arithmetic checks pass.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

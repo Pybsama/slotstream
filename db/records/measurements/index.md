@@ -2,16 +2,17 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-23T18:31:27.836204Z
+updated: 2026-10-24T22:31:23.819465Z
 ---
 
 # records/measurements
 
+- [[records/measurements/native-prepared-execution]] — Native prepared execution on the 48 GiB Mac: qualified Fast speed, cache-dependent Q2 results, ownership checks and preserved workflow failures
+- [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
+- [[records/measurements/native-q2-splash-execution-comparison]] — Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs
 - [[records/measurements/native-fast-q2-execution-kernels]] — Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
 - [[records/measurements/native-fast-q2-scheduling]] — Bounded Q2 read-ahead improves clean native comparisons; Fast read-ahead and buffer reuse are rejected, with full app and timing limits retained
 - [[records/measurements/fast-splash-execution-comparison]] — Fast native scheduling ports preserve measured quality; matched-cache observations still show a larger-cache Splash gap and exclude clean aggregate speed claims
-- [[records/measurements/native-q2-splash-execution-comparison]] — Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs
-- [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
 - [[records/measurements/smart-dflash-native-and-q2-review]] — Historical native Smart DFlash reference and small-task review; Q2 performance and the adoption priority are corrected by the exact-recipe follow-up.
 - [[records/measurements/exact-q2-performance-and-quality-followup]] — Exact upstream Q2 is substantially faster in bounded coding controls; preserve capability failures and prioritize native qualification over the earlier DFlash-only conclusion
 - [[records/measurements/release-0-2-30-published-2026-10-19]] — v0.2.30 published and accepted; mirror contributor notified

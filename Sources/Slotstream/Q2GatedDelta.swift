@@ -1,3 +1,4 @@
+import Foundation
 import MLX
 
 /// Fuses the exact Q2 convolution, Q/K normalization, gates, recurrence and
@@ -6,15 +7,39 @@ import MLX
 /// per-position states: only the accepted state is materialized. Public cache,
 /// rollback and persistence contracts continue to expose full FP32 states.
 package enum Q2GatedDelta {
+    /// A bounded retained prefix of one already prepared recurrence. Its
+    /// full FP32 public state remains available through the ordinary lazy
+    /// recovery array. The next narrow GPU pass can consume this tape in the
+    /// same dispatch, matching Splash's pending-state schedule.
+    private static let pendingLock = NSLock()
+    private static var pendingFolds = 0
+    package static var pendingFoldCount: Int { pendingLock.withLock { pendingFolds } }
+    package struct Pending {
+        let initial: MLXArray
+        let keys: MLXArray, values: MLXArray, decay: MLXArray, beta: MLXArray
+        let rows: Int, kept: Int
+        package func materialized() -> MLXArray {
+            Q2GatedDelta.recover([contiguous(initial), keys, values, decay, beta],
+                template: [("HV", initial.dim(1)), ("T", rows), ("KEEP", kept)],
+                grid: (initial.dim(1) * 256, initial.dim(0), 1), threadGroup: (256, 1, 1),
+                outputShapes: [initial.shape], outputDTypes: [.float32])[0]
+        }
+    }
+
     package static func apply(convInput: MLXArray, convWeight: MLXArray,
         a: MLXArray, b: MLXArray, z: MLXArray, aLog: MLXArray, dtBias: MLXArray,
         norm: MLXArray, state: MLXArray?, keyHeads: Int, valueHeads: Int,
-        record: Bool, sigmoidGate: Bool = true) -> (output: MLXArray, state: MLXArray, states: [MLXArray]) {
+        record: Bool, sigmoidGate: Bool = true, pending: Pending? = nil,
+        deferred: (([Pending]) -> Void)? = nil, lazyRecording: Bool = false) -> (output: MLXArray, state: MLXArray, states: [MLXArray]) {
         let batch = a.dim(0), count = a.dim(1), taps = convWeight.dim(1)
         precondition(count > 0 && taps == 4 && valueHeads.isMultiple(of: keyHeads))
         let dim = (2 * keyHeads + valueHeads) * 128
         precondition(convInput.shape == [batch, count + taps - 1, dim])
-        let initial = state ?? MLXArray.zeros([batch, valueHeads, 128, 128], dtype: .float32)
+        precondition(pending == nil || count <= 8)
+        let deferState = (deferred != nil || pending != nil) && record && count <= 8
+        let initial = pending?.initial ?? state ?? MLXArray.zeros([batch, valueHeads, 128, 128], dtype: .float32)
+        var pendingStates: [Pending] = []
+        if pending != nil { pendingLock.withLock { pendingFolds += 1 } }
         var current = initial, outputs: [MLXArray] = [], recorded: [MLXArray] = []
         // At most 17 rows of Q/K/V/output scratch use 18 KiB per head. Larger
         // prefills share the projected rows but carry the recurrence through
@@ -23,9 +48,13 @@ package enum Q2GatedDelta {
             let end = min(count, start + 17), rows = end - start
             let args = [convInput[0..., start..<(end + taps - 1)], convWeight,
                         a[0..., start..<end], b[0..., start..<end], z[0..., start..<end],
-                        aLog, dtBias, norm, current]
+                        aLog, dtBias, norm, current,
+                        pending?.keys ?? convWeight, pending?.values ?? convWeight,
+                        pending?.decay ?? aLog, pending?.beta ?? convWeight,
+                        MLXArray([Int32(pending?.kept ?? 0), Int32(pending?.rows ?? 1)])]
             let result = kernel(args.map { contiguous($0) },
-                template: [("HK", keyHeads), ("HV", valueHeads), ("RECORD", record), ("SIGMOID_GATE", sigmoidGate)],
+                template: [("HK", keyHeads), ("HV", valueHeads), ("RECORD", record), ("SIGMOID_GATE", sigmoidGate), ("MAX_T", rows <= 8 ? 8 : 17),
+                           ("DEFER", deferState), ("HAS_PENDING", pending != nil)],
                 grid: (valueHeads * 256, batch, 1), threadGroup: (256, 1, 1),
                 outputShapes: [[batch, rows, valueHeads, 128],
                                [batch, valueHeads, 128, 128],
@@ -36,31 +65,54 @@ package enum Q2GatedDelta {
                 outputDTypes: [.bfloat16, .float32, .bfloat16, .bfloat16, .float32, .bfloat16])
             outputs.append(result[0])
             if record {
-                let before = current
+                let before = deferState ? result[1] : current
                 // These arrays are lazy graph nodes. Rejected positions are
                 // dropped without evaluating their state-recovery kernels.
-                for kept in 1..<rows {
-                    recorded.append(recover([contiguous(before),result[2],result[3],result[4],result[5]],
-                        template:[("HV",valueHeads),("T",rows),("KEEP",kept)],
-                        grid:(valueHeads*256,batch,1),threadGroup:(256,1,1),
-                        outputShapes:[before.shape],outputDTypes:[.float32])[0])
+                for kept in 1..<(deferState ? rows + 1 : rows) {
+                    let position = Pending(initial: before, keys: result[2], values: result[3],
+                        decay: result[4], beta: result[5], rows: rows, kept: kept)
+                    if !deferState || !lazyRecording || kept == rows {
+                        recorded.append(position.materialized())
+                    }
+                    if deferState { pendingStates.append(position) }
                 }
-                recorded.append(result[1])
+                if !deferState { recorded.append(result[1]) }
             }
-            current = result[1]
+            current = deferState ? recorded.last! : result[1]
         }
-        return (outputs.count == 1 ? outputs[0] : concatenated(outputs, axis: 1), current, recorded)
+        deferred?(pendingStates)
+        return (outputs.count == 1 ? outputs[0] : concatenated(outputs, axis: 1), current,
+                deferState && lazyRecording ? [] : recorded)
     }
 
     private static let kernel = MLXFast.metalKernel(name: "slotstream_q2_gdn",
-        inputNames: ["conv", "weight", "a", "b", "z", "alog", "bias", "norm", "initial"],
+        inputNames: ["conv", "weight", "a", "b", "z", "alog", "bias", "norm", "initial", "pending_keys", "pending_values", "pending_decay", "pending_beta", "pending_control"],
         outputNames: ["y", "states", "tape_keys", "tape_values", "tape_decay", "tape_beta"], source: #"""
         constexpr uint D=128,C=(2*HK+HV)*D;
         uint head=threadgroup_position_in_grid.x, batch=threadgroup_position_in_grid.y;
         uint lane=thread_index_in_simdgroup, sg=simdgroup_index_in_threadgroup;
         uint T=a_shape[1], B=a_shape[0], kh=head/(HV/HK);
-        threadgroup bfloat queries[17*D],keys[17*D],values[17*D],rows[17*D],beta[17];
-        threadgroup float decay[17];
+        threadgroup bfloat queries[MAX_T*D],keys[MAX_T*D],values[MAX_T*D],rows[MAX_T*D],beta[MAX_T];
+        threadgroup float decay[MAX_T];
+        // Splash's pending tape is staged once per head. Reusing these
+        // threadgroup rows avoids rereading device memory in every value-row
+        // block. Only the narrow continuation specialization owns this 4 KiB.
+        threadgroup bfloat previous_keys[HAS_PENDING ? 8*D : 1];
+        threadgroup bfloat previous_values[HAS_PENDING ? 8*D : 1];
+        threadgroup float previous_decay[HAS_PENDING ? 8 : 1];
+        threadgroup bfloat previous_beta[HAS_PENDING ? 8 : 1];
+        const uint pendingCount=HAS_PENDING ? uint(pending_control[0]) : 0;
+        if constexpr(HAS_PENDING){
+          const uint pendingRows=uint(pending_control[1]);
+          for(uint t=sg;t<pendingCount;t+=8){
+            size_t tp=(size_t(batch)*pendingRows+t)*HV+head;
+            for(uint j=0;j<4;++j){uint d=j*32+lane;
+              previous_keys[t*D+d]=pending_keys[tp*D+d];
+              previous_values[t*D+d]=pending_values[tp*D+d];
+            }
+            if(lane==0){previous_decay[t]=pending_decay[tp];previous_beta[t]=pending_beta[tp];}
+          }
+        }
         for(uint t=sg;t<T;t+=8){
           float q[4],k[4];
           for(uint g=0;g<4;++g){
@@ -94,10 +146,37 @@ package enum Q2GatedDelta {
           }
         }
         // Two value rows per SIMD group overlap independent reductions.
+        float st[2][4];
+        for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
+          st[r][j]=initial[((size_t(batch)*HV+head)*D+r*8+sg)*D+lane*4+j];
         for(uint block=0;block<16;block+=2){
-          float st[2][4];
-          for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
-            st[r][j]=initial[((size_t(batch)*HV+head)*D+(block+r)*8+sg)*D+lane*4+j];
+          // Issue independent next-state loads before the current arithmetic
+          // and stores, preserving each row's FP32 operation order.
+          float upcoming[2][4] = {};
+          if(block+2<16)for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
+            upcoming[r][j]=initial[((size_t(batch)*HV+head)*D+(block+2+r)*8+sg)*D+lane*4+j];
+          // Same FP32 order as the independent recovery kernel. Fold only
+          // the accepted previous prefix, then process the current rows.
+          if constexpr(HAS_PENDING){
+            for(uint t=0;t<pendingCount;++t){
+              float memory[2]={0,0};
+              for(uint r=0;r<2;++r){
+                for(uint j=0;j<4;++j){
+                  st[r][j]*=previous_decay[t];
+                  memory[r]+=st[r][j]*float(previous_keys[t*D+lane*4+j]);
+                }
+                memory[r]=simd_sum(memory[r]);
+              }
+              for(uint r=0;r<2;++r){uint vd=(block+r)*8+sg;
+                float delta=(float(previous_values[t*D+vd])-memory[r])*float(previous_beta[t]);
+                for(uint j=0;j<4;++j)st[r][j]+=float(previous_keys[t*D+lane*4+j])*delta;
+              }
+            }
+          }
+          if constexpr(DEFER){
+            for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
+              states[((size_t(batch)*HV+head)*D+(block+r)*8+sg)*D+lane*4+j]=st[r][j];
+          }
           for(uint t=0;t<T;++t){
             float memory[2]={0,0},out[2]={0,0};
             for(uint r=0;r<2;++r){
@@ -109,12 +188,13 @@ package enum Q2GatedDelta {
               for(uint j=0;j<4;++j){
                 st[r][j]+=float(keys[t*D+lane*4+j])*delta;
                 out[r]+=st[r][j]*float(queries[t*D+lane*4+j]);
-                if(t+1==T)states[((size_t(batch)*HV+head)*D+vd)*D+lane*4+j]=st[r][j];
+                if(!DEFER && t+1==T)states[((size_t(batch)*HV+head)*D+vd)*D+lane*4+j]=st[r][j];
               }
               out[r]=simd_sum(out[r]);
               if(lane==0)rows[t*D+vd]=bfloat(out[r]);
             }
           }
+          for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)st[r][j]=upcoming[r][j];
         }
         threadgroup_barrier(mem_flags::mem_threadgroup);
         for(uint t=sg;t<T;t+=8){
@@ -143,10 +223,15 @@ package enum Q2GatedDelta {
         constexpr uint D=128;
         uint head=threadgroup_position_in_grid.x,batch=threadgroup_position_in_grid.y;
         uint lane=thread_index_in_simdgroup,sg=simdgroup_index_in_threadgroup;
+        float st[2][4];
+        for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
+          st[r][j]=initial[((size_t(batch)*HV+head)*D+r*8+sg)*D+lane*4+j];
         for(uint block=0;block<16;block+=2){
-          float st[2][4];
-          for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
-            st[r][j]=initial[((size_t(batch)*HV+head)*D+(block+r)*8+sg)*D+lane*4+j];
+          // Issue independent next-state loads before the current arithmetic
+          // and stores, preserving each row's FP32 operation order.
+          float upcoming[2][4] = {};
+          if(block+2<16)for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
+            upcoming[r][j]=initial[((size_t(batch)*HV+head)*D+(block+2+r)*8+sg)*D+lane*4+j];
           for(uint t=0;t<KEEP;++t){
             size_t tp=(size_t(batch)*T+t)*HV+head;
             float memory[2]={0,0};
@@ -161,6 +246,7 @@ package enum Q2GatedDelta {
           }
           for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)
             state[((size_t(batch)*HV+head)*D+(block+r)*8+sg)*D+lane*4+j]=st[r][j];
+          for(uint r=0;r<2;++r)for(uint j=0;j<4;++j)st[r][j]=upcoming[r][j];
         }
         """#,header:"#pragma clang fp reassociate(off)\n")
 

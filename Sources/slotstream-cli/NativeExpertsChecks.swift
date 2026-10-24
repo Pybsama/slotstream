@@ -54,6 +54,9 @@ func checkNativeAffineExperts() throws {
         let input:[Float]=(0..<(ids.count*h)).map{bf(Float(($0*17)%101-50)/64)}
         let x=MLXArray(input,[ids.count,h]).asType(.bfloat16)
         let got=NativeExpertTiles.apply(x,weights:packed,ids:ids,repeatInput:1,hidden:h,intermediate:m,affine:true).asArray(Float.self)
+        let schedule = try NativeExpertSchedule.plan(hidden: h, intermediate: m, affine: true)
+        let scheduled = try schedule.apply(x, weights: packed, ids: ids, repeatInput: 1).asArray(Float.self)
+        guard got == scheduled else { throw ValidationError("Native Metal affine schedule changed grouped output") }
         var expected=[Float](repeating:0,count:ids.count*h)
         for (r,e) in ids.enumerated() {
             var active=[Float](repeating:0,count:m)
@@ -77,6 +80,39 @@ func checkNativeAffineExperts() throws {
         }
         print("Affine grouped \(ids.count) routes: original bits exact; FP64 oracle error \(error), scale \(scale) PASS")
     }
+    // Multiple live leases with reverse publication. Stay below MLX's
+    // active-task backpressure limit while the first GPU wait is unresolved.
+    // No newer command may reuse an unpublished event.
+    let schedule = try NativeExpertSchedule.plan(hidden: h, intermediate: m, affine: true)
+    let eventInput = MLXArray((0..<h).map { bf(Float($0 % 17 - 8) / 64) }, [1, h]).asType(.bfloat16)
+    let eventReference = NativeExpertTiles.apply(eventInput, weights: packed, ids: [1], repeatInput: 1,
+        hidden: h, intermediate: m, affine: true).asArray(Float.self)
+    let beforeHits = NativeExpertSchedule.eventStats.created
+    for _ in 0..<4 {
+        guard try schedule.apply(eventInput, weights: packed, ids: [1], repeatInput: 1).asArray(Float.self) == eventReference else {
+            throw ValidationError("All-hit event-free dispatch changed output")
+        }
+    }
+    guard NativeExpertSchedule.eventStats.created == beforeHits else {
+        throw ValidationError("All-hit commands allocated host-ready events")
+    }
+    for _ in 0..<24 {
+        var pending: [NativeExpertSchedule.Pending] = []
+        for _ in 0..<3 {
+            pending.append(try schedule.submit(eventInput, weights: packed, ids: [1], repeatInput: 1, awaitingReads: true))
+        }
+        var outputs: [MLXArray] = []
+        for command in pending.reversed() { outputs.append(try command.value()) }
+        eval(outputs)
+        for output in outputs where output.asArray(Float.self) != eventReference {
+            throw ValidationError("Out-of-order publication crossed event leases")
+        }
+    }
+    let eventStats = NativeExpertSchedule.eventStats
+    guard eventStats.reused > 0, eventStats.cached <= 64 else {
+        throw ValidationError("Host-ready event cache did not reuse a bounded set")
+    }
+    print("Native ready events: hit elision, concurrent leases, reverse publication, reuse and bound PASS")
     let wideRoutes = [Int32](repeating: 2, count: 641 * 8)
     let wide = NativeExpertTiles.apply(MLXArray.zeros([641, h], dtype: .bfloat16),
         weights: packed, ids: wideRoutes, repeatInput: 8, hidden: h, intermediate: m, affine: true)

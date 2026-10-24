@@ -6,12 +6,12 @@ import MLX
 /// tiles share each decoded group across eight activation rows, with bounded
 /// double buffering inside a SIMD group. Weights remain compressed.
 package struct Q2ResidentWeights {
-    let bytes: MLXArray
+    package let bytes: MLXArray
     let format: Q2GGUFFormat
     let rows: Int
     let columns: Int
-    let plane1: Int
-    let meta: Int
+    package let plane1: Int
+    package let meta: Int
 
     private struct Layout {
         let id: Int, decoder: String, p0: Int, p1: Int, meta: Int, groups: Int
@@ -65,15 +65,21 @@ package struct Q2ResidentWeights {
         let parts = n <= 32 ? NativeProjectionPolicy.splits(rows: rows, columns: columns,
             cores: NativeProjectionPolicy.device.cores, register: false,
             apple10: NativeProjectionPolicy.device.apple10) : 1
-        let result = Kernels.shared.matrix(format)([contiguous(input.reshaped([n, columns])), bytes],
-            template: [("T", input.dtype), ("Y", parts > 1 ? DType.float32 : dtype), ("IN", columns), ("OUT", rows),
-                       ("P1", plane1), ("META", meta), ("PARTS", parts)],
-            grid: (rows, (n + 7) / 8, parts), threadGroup: (64, 1, 1),
-            outputShapes: [[parts, n, rows]], outputDTypes: [parts > 1 ? .float32 : dtype])[0]
-        guard parts > 1 else { return result.reshaped([n, rows]) }
-        return Self.reduce([result], template: [("T", dtype), ("N", n * rows), ("PARTS", parts)],
-            grid: (n * rows, 1, 1), threadGroup: (256, 1, 1),
-            outputShapes: [[n, rows]], outputDTypes: [dtype])[0]
+        let k = columns, width = rows, p1 = plane1, metadata = meta, inputType = input.dtype
+        let values = [contiguous(input.reshaped([n, k])), bytes]
+        if let result = NativeProjectionSchedule.staged(values, format: format, k: k, n: width, rows: n,
+            parts: parts, p1: p1, meta: metadata, dtype: dtype) { return result }
+        let kernel = Kernels.shared.matrix(format)
+        let result = kernel(values,
+            template: [("T", inputType), ("Y", parts > 1 ? DType.float32 : dtype), ("IN", k), ("OUT", width),
+                       ("P1", p1), ("META", metadata), ("PARTS", parts),
+                       ("TILE_ROWS", NativeProjectionPolicy.stagedTileRows(batch: n, parts: parts, format: format))],
+            grid: (width, (n + 7) / 8, parts), threadGroup: (64, 1, 1),
+            outputShapes: [[parts, n, width]], outputDTypes: [parts > 1 ? .float32 : dtype])[0]
+        guard parts > 1 else { return result.reshaped([n, width]) }
+        return Self.reduce([result], template: [("T", dtype), ("N", n * width), ("PARTS", parts)],
+            grid: (n * width, 1, 1), threadGroup: (256, 1, 1),
+            outputShapes: [[n, width]], outputDTypes: [dtype])[0]
     }
 
     private static let reduce = MLXFast.metalKernel(name: "slotstream_q2_split_sum",

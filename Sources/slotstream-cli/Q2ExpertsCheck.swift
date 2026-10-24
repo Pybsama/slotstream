@@ -7,13 +7,58 @@ import Slotstream
 struct Q2ExpertsCheck: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "q2-experts-check",
         abstract: "Check lossless expert tiles and grouped projections against raw Q2 arithmetic")
+    @Option(name: .long, help: "Also check scheduled read failure, retry and resize using installed fast or smart-q2 expert files")
+    var poolModel: String?
+    @Flag(help: "Run only installed Q2 shared-expert arithmetic checks, for targeted shader validation")
+    var sharedOnly = false
+    @Flag(help: "Run only native draft convolution arithmetic, for targeted shader validation")
+    var draftOnly = false
+    @Flag(help: "Run only bounded concurrent forecast-reader ownership checks")
+    var pieceOnly = false
     func run() throws {
+        if pieceOnly {
+            guard !draftOnly, !sharedOnly, poolModel == nil else { throw ValidationError("Piece-only checks do not load pools") }
+            try checkNativePieceReaders()
+            return
+        }
+        try checkNativePieceReaders()
+        try checkAdaptiveSlotReplacement()
         MLX.Memory.cacheLimit = 128 << 20
+        if draftOnly {
+            guard !sharedOnly, poolModel == nil else { throw ValidationError("Draft-only checks do not load expert pools") }
+            try checkNativeDraftConvolution()
+            try checkNativeDraftPacking()
+            return
+        }
+        if sharedOnly {
+            guard poolModel == "smart-q2", NativeProjectionSchedule.enabled, Q2PackedExperts.enabled,
+                  NativeProjectionPolicy.device.apple10 else {
+                throw ValidationError("Shared-only checks require installed smart-q2 weights and Apple10 native schedules")
+            }
+            let index = try CheckpointIndex(q2Directory: ModelLocator.resolve("smart-q2"))
+            try checkNativeSharedExperts(index: index)
+            return
+        }
+        try checkNativeDraftConvolution()
+        try checkNativeDraftPacking()
         try checkQ2NativeKernels()
+        if NativeProjectionSchedule.enabled {
+            guard NativeProjectionSchedule.callCount > 0, NativeProjectionSchedule.failureCount == 0 else {
+                throw ValidationError("Native projection schedule failed or was not exercised")
+            }
+            guard NativeProjectionSchedule.pipelineReuseCount > 0 else {
+                throw ValidationError("Identical projection shaders were not reused across row-count plans")
+            }
+            print("Native projection schedule: \(NativeProjectionSchedule.callCount) exact-reference calls PASS")
+        }
         guard Q2PackedExperts.enabled else {
             print("Packed expert checks require Apple GPU family 9 and macOS 26.1; using portable kernels")
             return
         }
+        try checkNativeProgramBoundaries()
+        try checkNativeHyperConnections()
+        if let poolModel { try checkNativeSchedulePool(model: poolModel) }
+
         guard NativeProjectionPolicy.splits(rows: 320, columns: 10240, cores: 20, register: true, apple10: true) == 16,
               NativeProjectionPolicy.splits(rows: 2560, columns: 2560, cores: 20, register: false, apple10: true) == 4,
               NativeProjectionPolicy.splits(rows: 131072, columns: 2560, cores: 20, register: false, apple10: true) == 1 else {
@@ -100,10 +145,10 @@ struct Q2ExpertsCheck: ParsableCommand {
                 for row in 0..<n {
                     for block in 0..<(k / 64) {
                         let from = e * recordBytes + (row * (k / 64) + block) * 18
-                        let meta = e * recordBytes + n * k / 4 + ((row / 32 * (k / 64) + block) * 32 + row % 32) * 2
+                        let meta = e * recordBytes + n * k / 4 + ((row / 64 * (k / 64) + block) * 64 + row % 64) * 2
                         guard actual[meta] == data[from], actual[meta + 1] == data[from + 1] else { throw ValidationError("Scale repack mismatch") }
                         for j in 0..<16 {
-                            let to = e * recordBytes + ((row / 32 * (k / 32) + block * 2 + j / 8) * 32 + row % 32) * 8 + j % 8
+                            let to = e * recordBytes + ((row / 64 * (k / 32) + block * 2 + j / 8) * 64 + row % 64) * 8 + j % 8
                             guard actual[to] == data[from + 2 + j] else { throw ValidationError("Code repack mismatch") }
                         }
                     }
@@ -126,6 +171,42 @@ struct Q2ExpertsCheck: ParsableCommand {
             let u = Q2GGUFLinear.gather(x, bytes: raw[1], format: .q20, rows: m, columns: h, indices: indices, repeatInput: repeatInput)
             let expected = Q2GGUFLinear.gather((MLXNN.silu(g.asType(.float32)) * u.asType(.float32)).asType(.bfloat16), bytes: raw[2], format: .q20, rows: h, columns: m, indices: indices, repeatInput: 1)
             let actual = Q2PackedExperts.apply(x, weights: packed, ids: ids, repeatInput: repeatInput, hidden: h, intermediate: m)
+            let schedule = try NativeExpertSchedule.plan(hidden: h, intermediate: m, affine: false)
+            let scheduled = try schedule.apply(x, weights: packed, ids: ids, repeatInput: repeatInput)
+            guard (actual .== scheduled).all().item(Bool.self) else {
+                throw ValidationError("Native Metal expert schedule changed grouped output")
+            }
+            let waiting = try schedule.submit(x, weights: packed, ids: ids, repeatInput: repeatInput, awaitingReads: true)
+            let released = try waiting.value()
+            guard (actual .== released).all().item(Bool.self), (actual .== scheduled).all().item(Bool.self) else {
+                throw ValidationError("Event-gated native experts changed output or reused live output storage")
+            }
+            let cancelled = try schedule.submit(x, weights: packed, ids: ids, repeatInput: repeatInput, awaitingReads: true)
+            cancelled.cancel(); cancelled.cancel()
+            do {
+                _ = try cancelled.value()
+                throw ValidationError("Cancelled native experts exposed output")
+            } catch is ModelError {}
+            // Dropping an unreleased event must drain it, allowing the next
+            // queued invocation to finish rather than hanging the queue.
+            do {
+                _ = try schedule.submit(x, weights: packed, ids: ids, repeatInput: repeatInput, awaitingReads: true)
+            }
+            let recovered = try schedule.apply(x + MLXArray(Float(0), dtype: .bfloat16),
+                weights: packed, ids: ids, repeatInput: repeatInput)
+            guard (actual .== recovered).all().item(Bool.self) else { throw ValidationError("Native expert cancellation did not recover") }
+            let otherStream = try Stream.withNewDefaultStream(device: .gpu) {
+                try schedule.apply(x, weights: packed, ids: ids, repeatInput: repeatInput)
+            }
+            guard (actual .== otherStream).all().item(Bool.self) else {
+                throw ValidationError("Native expert schedule ignored the current MLX stream")
+            }
+            do {
+                _ = try Stream.withNewDefaultStream(device: .cpu) {
+                    try schedule.apply(x, weights: packed, ids: ids, repeatInput: repeatInput)
+                }
+                throw ValidationError("Native expert schedule accepted a CPU stream")
+            } catch is ModelError {}
             let error = abs(actual.asType(.float32) - expected.asType(.float32)).max().item(Float.self)
             let scale = abs(expected.asType(.float32)).max().item(Float.self)
             guard error <= max(1e-6, scale * 0.015), isFinite(actual).all().item(Bool.self) else {
@@ -133,5 +214,38 @@ struct Q2ExpertsCheck: ParsableCommand {
             }
             print("repeat \(repeatInput): all packed bytes exact; grouped error \(error), reference scale \(scale)")
         }
+        // Independent old scatter-plus-combine path versus direct grouped
+        // combination, including duplicate experts and partial group tiles.
+        let schedule = try NativeExpertSchedule.plan(hidden: h, intermediate: m, affine: false)
+        let groupedBefore = NativeExpertSchedule.groupedSubmissionCount
+        for topK in [8, 10] {
+            for count in [1, 2, 8] {
+                let ids = (0..<(count * topK)).map { Int32(($0 * 7 + $0 / 3) % records) }
+                let x = MLXArray((0..<(count * h)).map { Float(($0 * 17) % 101 - 50) / 64 },
+                    [count, h]).asType(.bfloat16)
+                let shared = MLXArray((0..<(count * h)).map { Float(($0 * 29) % 83 - 41) / 64 },
+                    [1, count, h]).asType(.bfloat16)
+                let weights = MLXArray((0..<(count * topK)).map { Float(($0 * 13) % 31 + 1) / 128 },
+                    [1, count, topK])
+                let sharedWeight = MLXArray((0..<count).map { Float($0 + 1) / 16 }, [1, count, 1])
+                let mixture = Q2MoE.Mixture(weights: weights, shared: shared, sharedWeight: sharedWeight)
+                let routed = try schedule.apply(x, weights: packed, ids: ids, repeatInput: topK)
+                    .reshaped([1, count, topK, h])
+                let expected = mixture.apply(routed)
+                for waiting in [false, true] {
+                    let pending = try schedule.submit(x, weights: packed, ids: ids, repeatInput: topK,
+                        awaitingReads: waiting, groupedOutput: true)
+                    guard let inverse = pending.inverse else { throw ValidationError("Grouped expert map is missing") }
+                    let actual = mixture.apply(try pending.value(), inverse: inverse)
+                    guard actual.shape == expected.shape, (actual .== expected).all().item(Bool.self) else {
+                        throw ValidationError("Direct grouped combination changed original router rank order")
+                    }
+                }
+            }
+        }
+        guard NativeExpertSchedule.groupedSubmissionCount == groupedBefore + 12 else {
+            throw ValidationError("Grouped combination checks did not submit every case")
+        }
+        print("Direct grouped mixture: exact at 8/10 routes, 1/2/8 rows, lazy/event-gated PASS")
     }
 }

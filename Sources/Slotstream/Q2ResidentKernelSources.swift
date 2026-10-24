@@ -837,9 +837,9 @@ threadgroup half *ws=stages+sg*2*32*32;
 auto a=tensor(const_cast<device T*>(x)+b0*IN,dextents<int,2>{IN,min(8,int(batchCount-b0))},array<int,2>{1,IN});
 tensor<threadgroup half,dextents<int,2>,tensor_inline> b(ws,dextents<int,2>{32,32},array<int,2>{1,32});
 tensor<threadgroup half,dextents<int,2>,tensor_inline> b1(ws+32*32,dextents<int,2>{32,32},array<int,2>{1,32});
-constexpr auto desc=matmul2d_descriptor(8,32,32,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
+constexpr auto desc=matmul2d_descriptor(TILE_ROWS,32,32,false,true,false,matmul2d_descriptor::mode::multiply_accumulate);
 matmul2d<desc,execution_simdgroups<1>> op;
-auto as=a.template slice<32,8>(0,0);auto bs=b.template slice<32,32>(0,0);auto bs1=b1.template slice<32,32>(0,0);
+auto as=a.template slice<32,TILE_ROWS>(0,0);auto bs=b.template slice<32,32>(0,0);auto bs1=b1.template slice<32,32>(0,0);
 auto acc=op.template get_destination_cooperative_tensor<decltype(as),decltype(bs),float>();
 for(ushort i=0;i<acc.get_capacity();++i)acc[i]=0;
 uint row=row0+lane,groups=IN/32;
@@ -854,7 +854,7 @@ for(uint g=first;g<last;++g){
  simdgroup_barrier(mem_flags::mem_threadgroup);
  if(g+1<last){payload=F::load(p0+size_t(g+1)*64*F::P0,p1+size_t(g+1)*64*F::P1);
  if((g+1)/F::MetaGroups!=g/F::MetaGroups)meta=F::loadMeta(mt+size_t((g+1)/F::MetaGroups)*64*F::MetaBytes);}
- auto at=a.template slice<32,8>(g*32,0);
+ auto at=a.template slice<32,TILE_ROWS>(g*32,0);
  if(g%2)op.run(at,bs1,acc);else op.run(at,bs,acc);
 }
 for(ushort i=0;i<acc.get_capacity();++i){

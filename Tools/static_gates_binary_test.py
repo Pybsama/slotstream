@@ -12,6 +12,7 @@ import unittest
 SCRIPT = Path(__file__).with_name("static_gates.sh").resolve()
 Q2_CHECK = ['q2-format-check', '--fixtures', 'bench/q2/formats.json',
             '--policy-fixtures', 'bench/q2/verify-budget.json',
+            '--policy-fixtures', 'bench/q2/verify-budget-complete.json',
             '--mix-fixtures', 'bench/q2/mix-quantization.json']
 Q2_EXPERT_CHECK = ['q2-experts-check']
 OPTIMIZATION_SUITES = [
@@ -53,7 +54,8 @@ BIN=${BIN:-.build/release/slotstream}
                      'Tools/verify_binary_test.py',
                      'Tools/adaptive_memory_e2e_test.py',
                      'Tools/sampler_gates_test.py',
-                     'Tools/reference/fixture.py', 'Tools/slotpack/checks.py']:
+                     'Tools/reference/fixture.py', 'Tools/slotpack/checks.py',
+                     'Tools/native_schedule_headers_gate.py', 'Tools/native_schedule_headers_gate_test.py']:
             self.write(path, '# Model-free dependency fixture.\n')
         self.write('Tools/e2e_release_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_E2E') == '1' else 0)\n")
         self.write('Tools/parity_comparison_test.py', "import os\nraise SystemExit(23 if os.environ.get('SLOTSTREAM_FAIL_PARITY') == '1' else 0)\n")

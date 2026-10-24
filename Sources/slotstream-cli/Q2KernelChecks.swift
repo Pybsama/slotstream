@@ -10,6 +10,37 @@ func checkQ2NativeKernels() throws {
           NativeInputReadAhead.ranked(ids: [1,2], weights: [.nan,-1], experts: 4).isEmpty else {
         throw ValidationError("Native next-input forecast lost weight sums, stable ties or bounds")
     }
+    // Independent CPU FP64 reference over representable BF16 inputs. A
+    // fast exponential may straddle one BF16 rounding boundary, but must not
+    // alter the activation's sign, finiteness or precision by more than one ULP.
+    do {
+        let gateValues = (-1024...1024).map { Float($0) / 32 }
+        let upValues = (0..<gateValues.count).map { Float(($0 * 19) % 127 - 63) / 16 }
+        let g = MLXArray(gateValues, [3, 683]).asType(.bfloat16)
+        let u = MLXArray(upValues, g.shape).asType(.bfloat16)
+        let x = g.asArray(Float.self), uv = u.asArray(Float.self)
+        func rounded(_ value: Double) -> UInt32 {
+            let bits = Float(value).bitPattern
+            return (bits &+ 0x7fff &+ ((bits >> 16) & 1)) >> 16
+        }
+        for low in [false, true] {
+            let actual = (low ? Q2HyperConnection.low(g)
+                : Q2HyperConnection.targetSwiGLU([g, u])[0]).asArray(Float.self)
+            var worst = 0
+            for i in x.indices {
+                let v = Double(x[i]) / (low ? 4 : 1)
+                let expected = v / (1 + exp(-v)) * (low ? 1 : Double(uv[i]))
+                let bits = rounded(expected), got = actual[i].bitPattern >> 16
+                let difference = actual[i] == 0 && Float(bitPattern: bits << 16) == 0
+                    ? 0 : abs(Int(got) - Int(bits))
+                guard actual[i].isFinite, difference <= 1 else {
+                    throw ValidationError("Q2 target activation FP64 oracle failed at \(i), low=\(low)")
+                }
+                worst = max(worst, difference)
+            }
+            print("Q2 target activation \(low ? "low" : "gate/up"): 2049 FP64 samples, maximum \(worst) BF16 ULP PASS")
+        }
+    }
     try checkQ2PLE()
     try checkQ2Attention()
     for type in [DType.bfloat16, .float32] {
@@ -120,7 +151,34 @@ func checkQ2NativeKernels() throws {
             error = max(error,abs(Double(actual[r*rn+col])-sum))
         } }
         guard error < 2e-5 else { throw ValidationError("Q2 split projection CPU error \(error)") }
+        if NativeProjectionSchedule.enabled, count <= 8 {
+            let parts = NativeProjectionPolicy.splits(rows: rn, columns: rk,
+                cores: NativeProjectionPolicy.device.cores, register: false, apple10: NativeProjectionPolicy.device.apple10)
+            guard let staged = NativeProjectionSchedule.staged([x, packed.bytes], format: .q80, k: rk, n: rn,
+                rows: count, parts: parts, p1: packed.plane1, meta: packed.meta, dtype: .float32),
+                  let rounded = NativeProjectionSchedule.staged([x, packed.bytes], format: .q80, k: rk, n: rn,
+                rows: count, parts: parts, p1: packed.plane1, meta: packed.meta, dtype: .bfloat16) else {
+                throw ValidationError("Native staged fixture fell back before exercising its kernel")
+            }
+            let values = staged.asArray(Float.self)
+            var stagedError = 0.0
+            for row in 0..<count { for col in 0..<rn {
+                var sum = 0.0
+                for j in 0..<rk { sum += Double(input[row * rk + j]) * Double(decoded[col * rk + j]) }
+                stagedError = max(stagedError, abs(Double(values[row * rn + col]) - sum))
+            } }
+            guard stagedError < 2e-5, (rounded .== staged.asType(.bfloat16)).all().item(Bool.self) else {
+                throw ValidationError("Native staged FP64/rounding reference failed: \(stagedError)")
+            }
+            print("Native staged \(count) rows: FP64 oracle \(stagedError), BF16 rounding PASS")
+        }
+        let nativePairCalls = NativeProjectionSchedule.callCount
         if let (a, b) = Q2GGUFLinear.pair(x, first, second) {
+            if NativeProjectionSchedule.enabled {
+                guard NativeProjectionSchedule.callCount - nativePairCalls == 2 else {
+                    throw ValidationError("Native pair must use one preparation and one combined program")
+                }
+            }
             guard (a .== first(x)).all().item(Bool.self), (b .== second(x)).all().item(Bool.self) else {
                 throw ValidationError("Q2 shared preparation changes projection output or permutation")
             }
@@ -179,6 +237,69 @@ func checkQ2NativeKernels() throws {
             throw ValidationError("Q2 GDN rollback continuation differs after \(kept)")
         }
     }
+    // Every cut of an eight-row speculative pass must have identical full
+    // FP32 state and future output when its recovery joins the next kernel.
+    func deferredRun(_ start: Int, _ end: Int, _ state: MLXArray,
+        _ pending: Q2GatedDelta.Pending?, _ record: Bool, _ sigmoid: Bool,
+        _ receive: @escaping ([Q2GatedDelta.Pending]) -> Void)
+        -> (output: MLXArray, state: MLXArray, states: [MLXArray]) {
+        Q2GatedDelta.apply(convInput: conv[0..., start..<(end+3)], convWeight: weight,
+            a: a[0..., start..<end], b: b[0..., start..<end], z: z[0..., start..<end],
+            aLog: alog, dtBias: bias, norm: norm, state: state,
+            keyHeads: hk, valueHeads: hv, record: record, sigmoidGate: sigmoid,
+            pending: pending, deferred: receive)
+    }
+    for sigmoid in [false, true] {
+        var tape: [Q2GatedDelta.Pending] = []
+        let first = deferredRun(0,8,initial,nil,true,sigmoid) { tape = $0 }
+        guard tape.count == 8 else { throw ValidationError("Missing deferred recurrence tape") }
+        var lazyTape: [Q2GatedDelta.Pending] = []
+        let lazy = Q2GatedDelta.apply(convInput: conv[0..., 0..<11], convWeight: weight,
+            a: a[0..., 0..<8], b: b[0..., 0..<8], z: z[0..., 0..<8],
+            aLog: alog, dtBias: bias, norm: norm, state: initial,
+            keyHeads: hk, valueHeads: hv, record: true, sigmoidGate: sigmoid,
+            deferred: { lazyTape = $0 }, lazyRecording: true)
+        guard lazy.states.isEmpty, lazyTape.count == 8,
+              (lazy.output .== first.output).all().item(Bool.self),
+              (lazy.state .== first.state).all().item(Bool.self) else {
+            throw ValidationError("Lazy recorded recurrence changed public state or output")
+        }
+        for kept in 1...8 {
+            guard (lazyTape[kept - 1].materialized() .== first.states[kept - 1]).all().item(Bool.self) else {
+                throw ValidationError("Lazy recorded recurrence changed a rollback position")
+            }
+            let expected = Q2GatedDelta.apply(convInput: conv[0..., 0..<(kept+3)], convWeight: weight,
+                a: a[0..., 0..<kept], b: b[0..., 0..<kept], z: z[0..., 0..<kept],
+                aLog: alog, dtBias: bias, norm: norm, state: initial,
+                keyHeads: hk, valueHeads: hv, record: false, sigmoidGate: sigmoid)
+            guard (first.states[kept-1] .== expected.state).all().item(Bool.self) else {
+                throw ValidationError("Deferred public recurrence differs after \(kept)")
+            }
+            for width in [1,2,4,8] {
+                let end = kept + width
+                let reference = Q2GatedDelta.apply(convInput: conv[0..., kept..<(end+3)], convWeight: weight,
+                    a: a[0..., kept..<end], b: b[0..., kept..<end], z: z[0..., kept..<end],
+                    aLog: alog, dtBias: bias, norm: norm, state: expected.state,
+                    keyHeads: hk, valueHeads: hv, record: true, sigmoidGate: sigmoid)
+                var nextTape: [Q2GatedDelta.Pending] = []
+                let joined = deferredRun(kept,end,first.states[kept-1],tape[kept-1],true,sigmoid) { nextTape = $0 }
+                guard nextTape.count == width, (joined.output .== reference.output).all().item(Bool.self),
+                    (joined.state .== reference.state).all().item(Bool.self),
+                    zip(joined.states,reference.states).allSatisfy({ pair in (pair.0 .== pair.1).all().item(Bool.self) }) else {
+                    throw ValidationError("Joined recurrence differs after \(kept), width \(width)")
+                }
+                // Keeping the full new pass still carries exactly one tape;
+                // returning to ordinary execution materializes the same state.
+                let resumed = deferredRun(end,end+1,joined.state,nextTape.last,false,sigmoid) { _ in }
+                let ordinary = deferredRun(end,end+1,reference.state,nil,false,sigmoid) { _ in }
+                guard (resumed.output .== ordinary.output).all().item(Bool.self),
+                      (resumed.state .== ordinary.state).all().item(Bool.self) else {
+                    throw ValidationError("Joined recurrence ordinary continuation differs")
+                }
+            }
+        }
+    }
+    print("Pending recurrence: both gates, all eight rollback cuts, four widths, full states and ordinary continuation exact PASS")
     // Independent scalar CPU oracle for the first recurrent step. Round all
     // prescribed boundaries to BF16 using round-to-nearest-even.
     func bf(_ x: Float) -> Float {

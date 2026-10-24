@@ -1,5 +1,6 @@
 import ArgumentParser
 import Foundation
+import CryptoKit
 import MLX
 import Slotstream
 
@@ -14,9 +15,10 @@ struct Q2ProfileCheck: ParsableCommand {
     @Option var memoryGB: Double = 10
     @Option var rounds: Int = 3
     @Option var model: String = "smart-q2"
+    @Option var retainedPrefix: Int = 0
 
     func run() throws {
-        guard (10...20).contains(memoryGB), (1...5).contains(rounds),
+        guard (10...20).contains(memoryGB), (1...5).contains(rounds), (0...8).contains(retainedPrefix),
               !FileManager.default.fileExists(atPath: output) else {
             throw ValidationError("Use a fresh receipt, 10–20 GB and one to five rounds")
         }
@@ -28,8 +30,8 @@ struct Q2ProfileCheck: ParsableCommand {
               let input = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let prefix = input["prompt_ids"] as? [Int],
               let continuation = input["output_ids"] as? [Int],
-              (1...512).contains(prefix.count), continuation.count >= 8,
-              (prefix + Array(continuation.prefix(8))).allSatisfy({ (0..<248_320).contains($0) }) else {
+              (1...512).contains(prefix.count), continuation.count >= 8 + retainedPrefix,
+              (prefix + Array(continuation.prefix(8 + retainedPrefix))).allSatisfy({ (0..<248_320).contains($0) }) else {
             throw ValidationError("Use a bounded production run receipt with prompt and output IDs")
         }
         let machine = Machine.current()
@@ -62,13 +64,20 @@ struct Q2ProfileCheck: ParsableCommand {
                 var rows: [[String: Any]] = []
                 defer { model.contextNumericsObserver = nil; model.gdnPhaseProfile = nil; model.capturesDraftFeatures = false }
                 for width in [1, 2, 4, 8] {
-                    let ids = Array(continuation.prefix(width))
+                    let ids = Array(continuation.dropFirst(retainedPrefix).prefix(width))
                     model.capturesDraftFeatures = width > 1
                     var reference: MLXArray?
                     // Both paths warm once. Alternate their order thereafter.
                     for round in 0...rounds {
                         for traced in (round.isMultiple(of: 2) ? [false, true] : [true, false]) {
                             try state.restoreChecked(checkpoint)
+                            if retainedPrefix > 0 {
+                                let previous = Array(continuation.prefix(8))
+                                state.setRecording(true)
+                                eval(try model.allLogitsWithMultiChecked(previous, state: state).logits)
+                                try state.rollbackChecked(keeping: retainedPrefix, of: previous,
+                                    from: checkpoint, ngramWindow: model.cfg.ngramSize - 1)
+                            }
                             state.setRecording(width > 1)
                             model.pool.resetStats()
                             var phases: [[String: Any]] = []
@@ -88,6 +97,9 @@ struct Q2ProfileCheck: ParsableCommand {
                                 }
                             } else { model.contextNumericsObserver = nil }
                             let before = ProcessMemory.vmActivity()
+                            let retirementStart = model.nativeRouterRetirementPasses
+                            let pendingStart = Q2GatedDelta.pendingFoldCount
+                            let combineStart = NativeProjectionSchedule.combinationCallCount
                             let started = RuntimeClock.now()
                             previous = started
                             let logits = width == 1
@@ -101,7 +113,23 @@ struct Q2ProfileCheck: ParsableCommand {
                             let after = ProcessMemory.vmActivity()
                             if reference == nil { reference = logits }
                             let difference = abs(logits.asType(.float32) - reference!.asType(.float32))
-                            let row: [String: Any] = ["width": width, "round": round, "traced": traced,
+                            let values = logits.asType(.float32).asArray(Float.self)
+                            let logitHash = values.withUnsafeBytes { SHA256.hash(data: Data($0)).map { String(format: "%02x", $0) }.joined() }
+                            var recurrence = SHA256()
+                            if retainedPrefix > 0 {
+                                let tensors = state.diagnosticTensors()
+                                for key in tensors.keys.sorted() where key.hasPrefix("ssm.") {
+                                    recurrence.update(data: Data(key.utf8))
+                                    tensors[key]!.asType(.float32).asArray(Float.self).withUnsafeBytes {
+                                        recurrence.update(data: Data($0))
+                                    }
+                                }
+                            }
+                            let recurrenceHash = recurrence.finalize().map { String(format: "%02x", $0) }.joined()
+                            let row: [String: Any] = ["retained_prefix": retainedPrefix,
+                                "native_hyper_combinations": NativeProjectionSchedule.combinationCallCount - combineStart,
+                                "pending_recurrence_folds": Q2GatedDelta.pendingFoldCount - pendingStart,
+                                "recurrence_sha256": recurrenceHash,"native_router_retirement_passes": model.nativeRouterRetirementPasses - retirementStart, "logits_sha256": logitHash, "width": width, "round": round, "traced": traced,
                                 "seconds": elapsed, "started_uptime_ns": started, "ended_uptime_ns": started + UInt64(elapsed * 1e9), "trailing_seconds": trailing, "phases": phases,
                                 "gdn": (gdn?.samples ?? []).map { sample in
                                     ["layer": Double(sample.layer), "input": sample.inputWait,

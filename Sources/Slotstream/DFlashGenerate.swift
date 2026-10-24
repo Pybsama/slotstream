@@ -22,7 +22,27 @@ extension Generator {
         let useVerifyBudget = model.cfg.isFast
             ? environment["SLOTSTREAM_DFLASH_VERIFY_BUDGET"] != "0"
             : model.pool.expertStore.isQ2 && environment["SLOTSTREAM_Q2_VERIFY_BUDGET"] != "0"
-        var verifyBudget: DFlashVerifyBudget? = useVerifyBudget ? .init() : nil
+        // Q2 keeps the bounded fit across ordinary engine requests and labels
+        // the already evaluated bonus prediction, matching Splash's useful
+        // batch selection for the explicit engineering candidate. Qualification
+        // belongs to each declared complete-request protocol, including failed
+        // comparisons at other cache sizes. Fast keeps its separately
+        // measured request-local policy. Engine.dropPrefixCache clears the fit at
+        // privacy/ownership transitions. Explicit 0/1 values are ablation
+        // controls, not user-facing performance modes. See the prepared
+        // execution measurement before changing either operating default.
+        let q2Calibration = model.pool.expertStore.isQ2
+        let reuseCalibration = environment["SLOTSTREAM_DFLASH_PERSISTENT_CALIBRATION"]
+            .map { $0 == "1" } ?? q2Calibration
+        let observeBonus = environment["SLOTSTREAM_DFLASH_BONUS_CALIBRATION"]
+            .map { $0 == "1" } ?? q2Calibration
+        var verifyBudget: DFlashVerifyBudget? = useVerifyBudget
+            ? (reuseCalibration ? dflashVerifyCalibration ?? .init() : .init()) : nil
+        stats.dflashCalibrationCyclesBefore = verifyBudget?.cycleCount
+        defer {
+            stats.dflashCalibrationCyclesAfter = verifyBudget?.cycleCount
+            if reuseCalibration { dflashVerifyCalibration = verifyBudget }
+        }
         guard params.maxTokens > 0, shouldContinue() else { reason = "stop"; return }
         let first = sample(logits, params: params, generated: generated)
         if eosIds.contains(first) { reason = "stop"; return }
@@ -63,6 +83,7 @@ extension Generator {
                 pending = sampled
                 continue
             }
+            let pipelinesBefore = q2Calibration ? NativeProjectionSchedule.pipelineCount : 0
             let started = RuntimeClock.now(), emittedBefore = out.count
             try checkAllocation(state.tokenCount, 64_000_000, "DFlash proposal workspace")
             let draftStart = RuntimeClock.now()
@@ -85,12 +106,16 @@ extension Generator {
             stats.verifyPasses += 1; stats.decodeForwardPasses += 1; stats.decodeModelTokens += input.count
             let captured = model.draftFeatures
             var accepted = 0
+            var bonusAccepted: Bool?
             pending = nil
             for position in 0...proposals.count {
                 guard out.count < params.maxTokens else { break }
                 guard shouldContinue() else { reason = "stop"; break }
                 let sampled = sample(result.logits[0..., position..<(position + 1), 0...], params: params, generated: generated)
                 if eosIds.contains(sampled) { reason = "stop"; break }
+                if observeBonus, position == proposals.count, position < guesses.count {
+                    bonusAccepted = sampled == guesses[position]
+                }
                 out.append(sampled); generated.insert(sampled)
                 guard onToken(sampled) else { reason = "stop"; break }
                 if position < proposals.count, sampled == proposals[position] { accepted += 1 }
@@ -107,9 +132,18 @@ extension Generator {
             }
             stats.reconciliationSeconds += RuntimeClock.seconds(since: reconcileStart)
             stats.acceptedDrafts += accepted; stats.adaptiveDraftDepths.append(proposals.count)
+            let labelsValid = pending != nil && shouldContinue()
+            if bonusAccepted != nil && labelsValid {
+                stats.dflashBonusObservations = (stats.dflashBonusObservations ?? 0) + 1
+            }
+            let preparedPipelines = q2Calibration
+                && NativeProjectionSchedule.pipelineCount > pipelinesBefore
+            if preparedPipelines {
+                stats.dflashPreparationCycles = (stats.dflashPreparationCycles ?? 0) + 1
+            }
             verifyBudget?.observe(confidence: draft.proposalConfidence, verified: proposals.count,
                 accepted: accepted, seconds: RuntimeClock.seconds(since: started),
-                labelsValid: pending != nil && shouldContinue())
+                labelsValid: labelsValid, bonusAccepted: bonusAccepted)
             // The confidence/cost controller already selects the useful
             // prefix, including an anchor-only target pass. A second controller
             // permanently halving its proposal horizon confounds its cost fit

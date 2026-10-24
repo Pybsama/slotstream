@@ -43,6 +43,16 @@ expert reads. It retains the rejected Fast read-ahead and buffer-reuse
 experiments, exact output checks and actual app startup identities. Final
 comparisons affected by paging or heat remain excluded from parity claims.
 
+The [prepared execution study](../db/records/measurements/native-prepared-execution.md)
+ports bounded Metal execution sections onto MLX's existing stream, with reusable
+plans and event leases, GPU weight staging and demand-owned adaptive cache
+replacement. It includes independent numerical references, actual application
+jobs and matched complete-request comparisons. Splash also encodes fresh GPU
+commands each cycle: reusing a plan is not replaying a pre-encoded command buffer.
+Keep host waits, GPU execution, SSD traffic and draft acceptance separate when
+explaining a remaining gap. Neither a CPU wait sample nor a successful kernel
+test proves where request time is lost.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)

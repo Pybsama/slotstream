@@ -7,7 +7,7 @@ import MLX
 package final class Q2Checkpoint {
     let files: [Q2GGUFFile]
     let tensors: [String: Q2GGUFTensor]
-    let mapped: [String: Q2GGUFTensor]
+    package let mapped: [String: Q2GGUFTensor]
     let config: ModelConfig
 
     init(directory: URL, shouldContinue: () -> Bool = { true }) throws {
@@ -94,6 +94,32 @@ package final class Q2Checkpoint {
         }
     }
 
+    /// A lossless row permutation, before resident plane preparation. Reject
+    /// non-permutations and malformed extents before touching source bytes.
+    package static func reorderPackedRows(_ bytes: Data, format: Q2GGUFFormat,
+                                          rows: Int, columns: Int, order: [Int32]) throws -> Data {
+        guard rows > 0, columns > 0, columns.isMultiple(of: format.block),
+              order.count == rows, Set(order).count == rows,
+              order.allSatisfy({ $0 >= 0 && Int($0) < rows }) else {
+            throw ModelError("Invalid packed resident row permutation")
+        }
+        let (rowBytes, rowOverflow) = (columns / format.block).multipliedReportingOverflow(by: format.bytes)
+        let (size, sizeOverflow) = rows.multipliedReportingOverflow(by: rowBytes)
+        guard !rowOverflow, !sizeOverflow, bytes.count == size else {
+            throw ModelError("Packed resident row extent mismatch")
+        }
+        var result = Data(count: size)
+        result.withUnsafeMutableBytes { output in
+            bytes.withUnsafeBytes { input in
+                for (destination, source) in order.enumerated() {
+                    output.baseAddress!.advanced(by: destination * rowBytes).copyMemory(
+                        from: input.baseAddress!.advanced(by: Int(source) * rowBytes), byteCount: rowBytes)
+                }
+            }
+        }
+        return result
+    }
+
     func residents() throws -> (arrays: [String: MLXArray], linears: [String: Q2GGUFLinear]) {
         // GGUF groups the j-th value head of all key heads together. Native
         // recurrence groups the three value heads belonging to each key.
@@ -101,7 +127,8 @@ package final class Q2Checkpoint {
         let tiled = (0..<48).map { ($0 % 16) * 3 + $0 / 16 }
         func channels(_ heads: [Int]) -> [Int32] { heads.flatMap { h in (0..<128).map { Int32(h * 128 + $0) } } }
         let valueOrder = channels(grouped), outputOrder = MLXArray(channels(tiled))
-        let qkvOrder = MLXArray((0..<4096).map(Int32.init) + valueOrder.map { $0 + 4096 })
+        let qkvRows = (0..<4096).map(Int32.init) + valueOrder.map { $0 + 4096 }
+        let qkvOrder = MLXArray(qkvRows)
         var arrays: [String: MLXArray] = [:], linears: [String: Q2GGUFLinear] = [:]
         for (name, tensor) in mapped.sorted(by: { $0.key < $1.key }) {
             if name.contains(".switch_mlp.") || name == "model.embed_tokens.weight" { continue }
@@ -112,6 +139,17 @@ package final class Q2Checkpoint {
                 bytes = try Q2MixQuantization.convert(bytes, format: format)
                 format = .q80
             }
+            // Move complete compressed rows once. Per-row K reductions and
+            // quantization blocks are unchanged; no forward output copy is
+            // needed. The out projection permutes columns and stays separate.
+            if ![Q2GGUFFormat.bf16, .f16, .f32].contains(format) {
+                let order: [Int32]? = name.hasSuffix("linear_attn.in_proj_qkv.weight") ? qkvRows
+                    : name.hasSuffix("linear_attn.in_proj_z.weight") ? valueOrder : nil
+                if let order {
+                    bytes = try Self.reorderPackedRows(bytes, format: format,
+                        rows: tensor.rows, columns: tensor.columns, order: order)
+                }
+            }
             let packed = MLXArray(bytes, [bytes.count], dtype: .uint8)
             if ![Q2GGUFFormat.bf16, .f16, .f32].contains(format) {
                 guard tensor.shape.count == 2 else { throw ModelError("Packed Q2 resident is not a matrix") }
@@ -119,8 +157,6 @@ package final class Q2Checkpoint {
                     rows: tensor.rows, columns: tensor.columns, prepare: true)
                 projection.inputType = .bfloat16
                 projection.outputType = name == "lm_head.weight" ? .float32 : .bfloat16
-                if name.hasSuffix("linear_attn.in_proj_qkv.weight") { projection.outputOrder = qkvOrder }
-                if name.hasSuffix("linear_attn.in_proj_z.weight") { projection.outputOrder = MLXArray(valueOrder) }
                 if name.hasSuffix("linear_attn.out_proj.weight") { projection.inputOrder = outputOrder }
                 linears[String(name.dropLast(7))] = projection
                 arrays[name] = projection.bytes

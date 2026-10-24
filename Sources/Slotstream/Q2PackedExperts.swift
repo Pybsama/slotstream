@@ -36,17 +36,17 @@ package enum Q2PackedExperts {
     package static func repackCPU(_ raw: UnsafeRawPointer, into output: UnsafeMutableRawPointer,
                                   rows: Int, columns: Int) {
         precondition(rows.isMultiple(of: 32) && columns.isMultiple(of: 64))
-        let blocks = columns / 64
-        for tile in 0..<(rows / 32) {
+        let blocks = columns / 64, tileRows = rows.isMultiple(of: 64) ? 64 : 32
+        for tile in 0..<(rows / tileRows) {
             for block in 0..<blocks {
-                let codes = (tile * blocks * 2 + block * 2) * 32 * 8
-                let scales = rows * columns / 4 + (tile * blocks + block) * 32 * 2
-                for lane in 0..<32 {
-                    let source = ((tile * 32 + lane) * blocks + block) * 18
+                let codes = (tile * blocks * 2 + block * 2) * tileRows * 8
+                let scales = rows * columns / 4 + (tile * blocks + block) * tileRows * 2
+                for lane in 0..<tileRows {
+                    let source = ((tile * tileRows + lane) * blocks + block) * 18
                     output.storeBytes(of: raw.loadUnaligned(fromByteOffset: source + 2, as: UInt64.self),
                         toByteOffset: codes + lane * 8, as: UInt64.self)
                     output.storeBytes(of: raw.loadUnaligned(fromByteOffset: source + 10, as: UInt64.self),
-                        toByteOffset: codes + 256 + lane * 8, as: UInt64.self)
+                        toByteOffset: codes + tileRows * 8 + lane * 8, as: UInt64.self)
                     output.storeBytes(of: raw.loadUnaligned(fromByteOffset: source, as: UInt16.self),
                         toByteOffset: scales + lane * 2, as: UInt16.self)
                 }
@@ -64,14 +64,15 @@ package enum Q2PackedExperts {
         inputNames: ["raw"], outputNames: ["packed"], source: """
         uint i=thread_position_in_grid.x, expert=thread_position_in_grid.y;
         if (i>=N*K/64) return;
+        constexpr uint TILE=N%64==0?64:32;
         uint row=i/(K/64), block=i%(K/64);
         size_t base=size_t(expert)*N*K/64*18;
         size_t source=base+size_t(i)*18;
         for(uint part=0;part<2;++part) {
-            size_t to=base+((size_t(row/32)*(K/32)+2*block+part)*32+row%32)*8;
+            size_t to=base+((size_t(row/TILE)*(K/32)+2*block+part)*TILE+row%TILE)*8;
             for(uint b=0;b<8;++b) packed[to+b]=raw[source+2+part*8+b];
         }
-        size_t scale=base+N*K/4+((size_t(row/32)*(K/64)+block)*32+row%32)*2;
+        size_t scale=base+N*K/4+((size_t(row/TILE)*(K/64)+block)*TILE+row%TILE)*2;
         packed[scale]=raw[source]; packed[scale+1]=raw[source+1];
         """)
 

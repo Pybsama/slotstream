@@ -673,6 +673,16 @@ expert reads. It retains the rejected Fast read-ahead and buffer-reuse
 experiments, exact output checks and actual app startup identities. Final
 comparisons affected by paging or heat remain excluded from parity claims.
 
+The [prepared execution study](../db/records/measurements/native-prepared-execution.md)
+ports bounded Metal execution sections onto MLX's existing stream, with reusable
+plans and event leases, GPU weight staging and demand-owned adaptive cache
+replacement. It includes independent numerical references, actual application
+jobs and matched complete-request comparisons. Splash also encodes fresh GPU
+commands each cycle: reusing a plan is not replaying a pre-encoded command buffer.
+Keep host waits, GPU execution, SSD traffic and draft acceptance separate when
+explaining a remaining gap. Neither a CPU wait sample nor a successful kernel
+test proves where request time is lost.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)
@@ -6652,6 +6662,17 @@ Version headings can be prepared before publication. The
 determines which version the installer downloads.
 
 ## Unreleased
+
+- Add native prepared Metal execution sections for Fast and the explicit Q2
+  candidate, using MLX's stream and allocator. Share compiled pipelines across
+  batch widths using bounded dispatch parameters, reuse bounded event
+  leases, stage Q2 expert weights on the GPU and adapt cache replacement to
+  actual slots and pins. Preserve cancellation, failed-read recovery and memory
+  admission. Submit useful work earlier, fold retained speculative state into
+  its next pass, and retain bounded verification calibration for the explicit
+  Q2 candidate across ordinary requests. The [prepared execution study](db/records/measurements/native-prepared-execution.md)
+  records matched speed, quality, app checks and remaining limitations. Smart's
+  selected model is unchanged.
 
 - Add bounded next-input expert read-ahead to the explicit Q2 candidate's
   native engine and app recipe, with charged staging and demand-owned cache

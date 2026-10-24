@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5k3eweq9dq3d64w0kg18j3e
 created: 2026-10-23T00:44:32.086907+00:00
-updated: 2026-10-23T18:31:27.836204+00:00
+updated: 2026-10-24T22:31:23.751009+00:00
 summary: Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
 date: 2026-10-22
 doc: measurements
@@ -254,3 +254,13 @@ The [exact-commit CI receipt](../../sources/runs/2026/10/2026-10-22-native-execu
 ## Scheduling follow-up, October 23
 
 The [native scheduling study](native-fast-q2-scheduling.md) adds bounded page-aligned reads, shared Q2 input preparation and next-input read-ahead with private staging. Its clean ablation supports Q2; a clean Fast regression and slower buffer-reuse experiment are retained and rejected. Final matched comparisons remain excluded for paging or thermal failures. The full app and quality checks retain their prior capability limits. This later schedule does not rewrite the unsuccessful earlier read-ahead experiments or establish complete Splash parity.
+
+## Prepared execution follow-up, October 24, 2026
+
+The [prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) preserves the next
+native schedule port, independent correctness checks, final app checks, clean
+comparisons and excluded attempts. The wording above describing Splash as
+pre-encoded command replay is corrected: Splash reuses immutable execution
+plans and pipelines, then encodes fresh Metal commands each cycle. The native
+port uses the existing MLX allocator and stream with bounded ownership. Neither
+implementation language nor a cached target replay establishes serving parity.

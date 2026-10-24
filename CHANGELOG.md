@@ -8,6 +8,17 @@ determines which version the installer downloads.
 
 ## Unreleased
 
+- Add native prepared Metal execution sections for Fast and the explicit Q2
+  candidate, using MLX's stream and allocator. Share compiled pipelines across
+  batch widths using bounded dispatch parameters, reuse bounded event
+  leases, stage Q2 expert weights on the GPU and adapt cache replacement to
+  actual slots and pins. Preserve cancellation, failed-read recovery and memory
+  admission. Submit useful work earlier, fold retained speculative state into
+  its next pass, and retain bounded verification calibration for the explicit
+  Q2 candidate across ordinary requests. The [prepared execution study](db/records/measurements/native-prepared-execution.md)
+  records matched speed, quality, app checks and remaining limitations. Smart's
+  selected model is unchanged.
+
 - Add bounded next-input expert read-ahead to the explicit Q2 candidate's
   native engine and app recipe, with charged staging and demand-owned cache
   admission. Share eligible Q2 projection preparation and align bounded expert

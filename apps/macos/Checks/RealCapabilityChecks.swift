@@ -43,7 +43,8 @@ func realCapabilitiesIfRequested() async throws -> Bool {
     let selection: ModelPackSelection = args.contains("--q2") ? .pack(ModelPackRegistry.q2Candidate.id)
         : args.contains("--smart") ? .pack(ModelPackRegistry.baseline.id) : .pack(ModelPackRegistry.fast.id)
     let preferences = PerformancePreferences(budget: .custom, customGB: budget, quantization: selection)
-    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("Home"), dbmd: dbmd, inference: LocalInference(preferences: preferences), performancePreferences: preferences, helper: helper)
+    let inference = LocalInference(preferences: preferences)
+    let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("Home"), dbmd: dbmd, inference: inference, performancePreferences: preferences, helper: helper)
     var expectedPackID = try ModelPackRegistry.resolve(selection).pack.id
     var rows: [[String: Any]] = [], failures: [String] = []
     func expect(_ passed: Bool, _ label: String) {
@@ -54,7 +55,8 @@ func realCapabilitiesIfRequested() async throws -> Bool {
         try JSONSerialization.data(withJSONObject: ["budget_gb": budget, "thinking": false, "initial_available_gb": available, "case": selectedCases?.sorted().joined(separator: ",") ?? "all", "dflash_disabled": ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] == "0", "runs": rows, "failures": failures], options: [.prettyPrinted, .sortedKeys]).write(to: root.appendingPathComponent("results.json"), options: .atomic)
     }
     func run(_ name: String, _ prompt: String, source: URL? = nil, editable: Bool = false, existingThread: String? = nil) async throws -> WorkThread? {
-        if let selectedCases, !selectedCases.contains(name) { return nil }
+        let explicitSwitch = name.hasPrefix("switch_") && (args.contains("--switch-models") || args.contains("--switch-q2"))
+        if let selectedCases, !selectedCases.contains(name), !explicitSwitch { return nil }
         let id: String
         if let existingThread { id = existingThread } else { id = try await runtime.newThread(title: name) }
         if let source {
@@ -72,7 +74,29 @@ func realCapabilitiesIfRequested() async throws -> Bool {
                 expect(configuration?.memoryCeilingGB == budget, name + " preserves the explicit test budget")
                 let expectedRecipe = try ModelPackRegistry.resolve(.pack(expectedPackID)).pack.startupDefaults
                 expect(configuration?.startupPolicyID == expectedRecipe.id, name + " applies the selected startup recipe")
-                let row: [String: Any] = ["model_pack": configuration?.packID ?? "missing",
+                let generationStats = await inference.lastStats
+                let native = generationStats.compactMap(\.nativeExecution)
+                if args.contains("--require-native-schedule") {
+                    expect(native.contains { $0.expertPasses > 0 }, name + " executes native expert schedules")
+                    expect(!native.isEmpty && native.allSatisfy { $0.projectionFailures == 0 }, name + " has no native projection fallback")
+                    if expectedPackID == ModelPackRegistry.q2Candidate.id {
+                        expect(native.contains { $0.projectionCalls > 0 }, name + " executes native resident projections")
+                        expect(native.contains { ($0.hyperCombinations ?? 0) > 0 }, name + " executes prepared residual combination")
+                        expect(generationStats.contains { ($0.dflashCalibrationCyclesAfter ?? 0) > 0 }, name + " applies Q2 calibration by default")
+                    }
+                }
+                if args.contains("--require-gpu-repack"), expectedPackID == ModelPackRegistry.q2Candidate.id {
+                    expect(native.contains { ($0.gpuRepackedRecords ?? 0) > 0 }, name + " prepares demanded Q2 weights on the GPU")
+                }
+                if args.contains("--require-adaptive-replacement") {
+                    expect(native.contains { ($0.adaptiveCacheClaims ?? 0) > 0 }, name + " executes adaptive cache replacement")
+                }
+                let nativeJSON = try JSONSerialization.jsonObject(with: JSONEncoder().encode(native))
+                let row: [String: Any] = ["native_execution": nativeJSON,
+                    "calibration_before": generationStats.compactMap(\.dflashCalibrationCyclesBefore),
+                    "calibration_after": generationStats.compactMap(\.dflashCalibrationCyclesAfter),
+                    "bonus_observations": generationStats.compactMap(\.dflashBonusObservations),
+                    "model_pack": configuration?.packID ?? "missing",
                     "startup_policy": configuration?.startupPolicyID ?? "missing",
                     "execution_policy_identity": configuration?.executionPolicyIdentity ?? "missing",
                     "name": name, "prompt": prompt, "state": job.state.rawValue, "status": job.status, "answer": answer, "seconds": Date().timeIntervalSince(start), "trace": job.trace,
@@ -82,7 +106,7 @@ func realCapabilitiesIfRequested() async throws -> Bool {
                 expect(job.state == (editable ? .needsYou : .completed), name + " reaches its expected terminal state")
                 let folded = answer.lowercased().replacingOccurrences(of: ",", with: "")
                 switch name {
-                case "switch_smart", "switch_fast": expect(answer.contains("ORCHARD-9157"), name + " preserves conversation history")
+                case "switch_smart", "switch_q2", "switch_fast": expect(answer.contains("ORCHARD-9157"), name + " preserves conversation history")
                 case "writing": expect(answer.contains("NARANJO-4826") && answer.contains("18") && answer.contains("3") && answer.split(whereSeparator: \.isWhitespace).count < 50, "writing preserves the code and deadline within the requested length")
                 case "translation": expect(folded.contains("jueves") && folded.contains("factura") && folded.contains("bancari"), "translation retains invoice, Thursday and bank-detail instruction")
                 case "learning": expect(answer.split(whereSeparator: \.isWhitespace).count < 80, "explanation stays within the requested length; review the analogy")
@@ -141,8 +165,10 @@ func realCapabilitiesIfRequested() async throws -> Bool {
         let transcript = sources.appendingPathComponent("meeting.txt")
         try Data("Lina: The October 18 shipment date is cancelled.\\nOmar: I will arrange shipment for October 20 instead.\\nLina: Agreed. The approved budget remains 8450 dollars. No one has agreed to a launch date yet.\\n".replacingOccurrences(of: "\\n", with: "\n").utf8).write(to: transcript)
         _ = try await run("meeting_notes", "Summarize the decisions and action items from this transcript. Include owner and agreed date. Distinguish cancelled or undecided items, cite the source, and do not invent commitments. Keep it under 80 words.", source: transcript)
-        if args.contains("--switch-models") {
-            for (name, pack) in [("switch_smart", ModelPackRegistry.baseline), ("switch_fast", ModelPackRegistry.fast)] {
+        if args.contains("--switch-models") || args.contains("--switch-q2") {
+            let first = args.contains("--switch-q2") ? ("switch_q2", ModelPackRegistry.q2Candidate)
+                : ("switch_smart", ModelPackRegistry.baseline)
+            for (name, pack) in [first, ("switch_fast", ModelPackRegistry.fast)] {
                 expectedPackID = pack.id
                 try await runtime.setPerformancePreferences(.init(budget: .custom, customGB: budget, quantization: .pack(pack.id)))
                 _ = try await run(name, "What storage code did I mention for the workshop earlier? Look it up in this conversation, then answer briefly.", existingThread: "home")

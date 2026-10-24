@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-23T18:31:58.603990Z
+updated: 2026-10-24T22:26:46.767375Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution]] — Native prepared execution evidence and complete comparison protocols
 - [[sources/runs/2026/10/2026-10-23-native-scheduling-excluded-comparisons]] — Excluded final native and Splash timing comparisons
 - [[sources/runs/2026/10/2026-10-23-native-scheduling]] — Native scheduling ablations and qualification
 - [[sources/runs/2026/10/2026-10-22-native-execution-ci]] — Exact implementation commit passes engine and native app CI
@@ -506,9 +507,8 @@ updated: 2026-10-23T18:31:58.603990Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-short-one-complete-pass]] — Exact final composition passes the complete original short-one paired request and startup gates
 - [[sources/runs/2026/09/2026-09-09-optimization-final-eight-paired-serial-preparation]] — Original eight exact final paired studies are queued sequentially with unchanged full work and acceptance
 - [[sources/runs/2026/09/2026-09-09-optimization-final-offline-client-full-pass]] — Exact final candidate passes the complete original Hermes and Ollama client family with isolated offline scanner configuration
-- [[sources/runs/2026/09/2026-09-09-optimization-offline-client-fixture-preparation]] — Pinned Hermes explicit scanner path prevents auxiliary download while preserving all original local client assertions
 
 ## More
 
-This folder has 945 files. The 500 most recent are listed above.
+This folder has 946 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

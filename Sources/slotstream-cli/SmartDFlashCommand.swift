@@ -32,6 +32,7 @@ struct SmartDFlashCheck: ParsableCommand {
         var tool: ProbeTool?
         var imagePaths: [String]?
         var conversation: String?
+        var resetCacheBefore: Bool?
     }
     struct ProbeTool: Decodable {
         let name: String
@@ -51,8 +52,8 @@ struct SmartDFlashCheck: ParsableCommand {
             throw ValidationError("Native read-ahead requires Fast/Q2 and off, reserve or on")
         }
         guard ["plain", "mtp", "dflash", "q2", "fast"].contains(method), memoryGB.isFinite,
-              (10...33).contains(memoryGB), [8192, 32768].contains(maxContext) else {
-            throw ValidationError("Use plain, mtp, dflash, q2 or fast, a 10–33 GB explicit budget, and 8192 or 32768 context tokens")
+              (8.1...33).contains(memoryGB), [8192, 32768].contains(maxContext) else {
+            throw ValidationError("Use plain, mtp, dflash, q2 or fast, an 8.1–33 GB explicit budget, and 8192 or 32768 context tokens")
         }
         let probes = try JSONDecoder().decode([Probe].self, from: Data(contentsOf: URL(fileURLWithPath: cases)))
         guard !probes.isEmpty, probes.count <= 100,
@@ -126,6 +127,7 @@ struct SmartDFlashCheck: ParsableCommand {
                 var rows: [[String: Any]] = []
                 var conversations: [String: [ChatMessage]] = [:]
                 for probe in probes {
+                    if probe.resetCacheBefore == true { engine.dropPrefixCache() }
                     let control = try engine.beginRequest()
                     let tools = probe.tool.map { [$0.definition] } ?? []
                     var message = ChatMessage(role: "user", content: probe.prompt)
@@ -163,6 +165,12 @@ struct SmartDFlashCheck: ParsableCommand {
                         }
                     }
                     let before = ProcessMemory.vmActivity()
+                    let draftPackedBefore = DFlashDraft.packedProjectionCount
+                    let draftConvolutionsBefore = NativeDraftConvolution.callCount
+                    let mixedBefore = NativeExpertSchedule.mixedSubmissionCount
+                    let scheduledBefore = engine.model.nativeExpertScheduledPasses
+                    let projectionsBefore = NativeProjectionSchedule.callCount
+                    let projectionFailuresBefore = NativeProjectionSchedule.failureCount
                     let start = Date()
                     let (text, tokens, stats) = engine.generate(promptIds: ids, params: params, vision: vision,
                         onToken: { _, delta in
@@ -180,6 +188,13 @@ struct SmartDFlashCheck: ParsableCommand {
                     rows.append(["id": probe.id, "prompt_ids": ids, "text": text, "tokens": tokens,
                         "streamed": streamed, "callbacks": callbacks, "stats": statsJSON,
                         "tool_calls": toolCalls, "malformed_tool_call": malformed,
+                        "native_expert_scheduled_passes": engine.model.nativeExpertScheduledPasses - scheduledBefore,
+                        "native_projection_schedule_calls": NativeProjectionSchedule.callCount - projectionsBefore,
+                        "native_projection_schedule_plans": NativeProjectionSchedule.planCount,
+                        "native_mixed_expert_submissions": NativeExpertSchedule.mixedSubmissionCount - mixedBefore,
+                        "native_draft_convolutions": NativeDraftConvolution.callCount - draftConvolutionsBefore,
+                        "draft_packed_projections": DFlashDraft.packedProjectionCount - draftPackedBefore,
+                        "native_projection_schedule_failures": NativeProjectionSchedule.failureCount - projectionFailuresBefore,
                         "elapsed_seconds": Date().timeIntervalSince(start),
                         "swapins_delta": (after?.swapins ?? 0) - (before?.swapins ?? 0),
                         "swapouts_delta": (after?.swapouts ?? 0) - (before?.swapouts ?? 0)])
@@ -255,10 +270,14 @@ struct Q2FormatCheck: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "q2-format-check",
         abstract: "Check native packed Q2 deployment formats against independent fixtures")
     @Option var fixtures: String
-    @Option var policyFixtures: String?
+    @Option var policyFixtures: [String] = []
     @Option var mixFixtures: String?
     struct MixFixture: Decodable { let format: UInt32; let input: String; let expected: String }
-    struct PolicyFixture: Decodable { let confidence: [Float]; let depth: Int; let accepted: Int; let seconds: Double }
+    struct PolicyFixture: Decodable {
+        let confidence: [Float]; let depth: Int; let accepted: Int; let seconds: Double
+        let bonusAccepted: Bool?
+        let expectedLabels: Int?
+    }
     struct Fixture: Decodable {
         let format: UInt32
         let bytes: String
@@ -360,6 +379,40 @@ struct Q2FormatCheck: ParsableCommand {
                     }
                 }
                 print("\(format): packed resident tiles match independent arithmetic, 1/2/3/8/9 rows")
+                // Force the staged branch even on this narrow fixture, where
+                // production normally chooses registers. This independently
+                // checks all admitted M16 formats against original GGML bytes.
+                if NativeProjectionSchedule.enabled, NativeProjectionPolicy.device.apple10,
+                   format.bytes * 16 < format.block * 9 {
+                    for count in [1, 2, 3, 8] {
+                        let input = MLXArray(Array(repeating: f.input, count: count).flatMap { $0 },
+                            [count, f.columns]).asType(.bfloat16)
+                        guard NativeProjectionPolicy.stagedTileRows(batch: count, parts: 1, format: format) == 16,
+                              let output = NativeProjectionSchedule.staged([input, tiled.bytes], format: format,
+                                k: f.columns, n: 64, rows: count, parts: 1, p1: tiled.plane1, meta: tiled.meta, dtype: .float32),
+                              let roundedOutput = NativeProjectionSchedule.staged([input, tiled.bytes], format: format,
+                                k: f.columns, n: 64, rows: count, parts: 1, p1: tiled.plane1, meta: tiled.meta, dtype: .bfloat16) else {
+                            throw ValidationError("M16 format oracle did not exercise the prepared kernel")
+                        }
+                        let x = input.asType(.float32).asArray(Float.self), got = output.asArray(Float.self)
+                        var error = 0.0, scale = 0.0
+                        for row in 0..<count { for col in 0..<64 {
+                            var expected = 0.0
+                            for k in 0..<f.columns {
+                                expected += Double(x[row * f.columns + k])
+                                    * Double(Float16(f.expected[(col % f.rows) * f.columns + k]))
+                            }
+                            error = max(error, abs(Double(got[row * 64 + col]) - expected))
+                            scale = max(scale, abs(expected))
+                        } }
+                        guard got.allSatisfy(\.isFinite), error <= max(2e-5, scale * 5e-5),
+                              (roundedOutput .== output.asType(.bfloat16)).all().item(Bool.self) else {
+                            throw ValidationError("M16 independent FP64/rounding oracle failed: \(format), \(count), \(error)")
+                        }
+                        print("\(format): M16 original-byte FP64 oracle, \(count) live rows, error \(error) PASS")
+                    }
+                }
+
             }
         }
         if let mixFixtures {
@@ -382,19 +435,27 @@ struct Q2FormatCheck: ParsableCommand {
             }
             print("Q8 mixing preparation: exact upstream bytes; nonfinite and overflowing scales refused")
         }
-        if let policyFixtures {
+        for policyFixtures in policyFixtures {
             let sequence = try JSONDecoder().decode([PolicyFixture].self,
                 from: Data(contentsOf: URL(fileURLWithPath: policyFixtures)))
             guard (128...4096).contains(sequence.count) else { throw ValidationError("Bounded policy sequence required") }
             var policy = DFlashVerifyBudget()
             for (i, row) in sequence.enumerated() {
-                guard row.confidence.count == 7, policy.depth(confidence: row.confidence) == row.depth else {
-                    throw ValidationError("Upstream verify-budget mismatch at cycle \(i)")
+                guard row.confidence.count == 7 else { throw ValidationError("Seven draft confidences required") }
+                let depth = policy.depth(confidence: row.confidence)
+                guard depth == row.depth else {
+                    throw ValidationError("Upstream verify-budget mismatch at cycle \(i): expected \(row.depth), got \(depth)")
                 }
                 policy.observe(confidence: row.confidence, verified: row.depth,
-                    accepted: row.accepted, seconds: row.seconds)
+                    accepted: row.accepted, seconds: row.seconds, bonusAccepted: row.bonusAccepted)
+                if let expected = row.expectedLabels, policy.labelCount != expected {
+                    throw ValidationError("Upstream verify-budget label mismatch at cycle \(i)")
+                }
             }
             print("Verify budget matches upstream across \(sequence.count) cycles and online refits")
+        }
+        if NativeProjectionSchedule.enabled, NativeProjectionSchedule.failureCount != 0 {
+            throw ValidationError("Native format checks used a failed projection schedule")
         }
     }
     private func admissionChecks() throws {

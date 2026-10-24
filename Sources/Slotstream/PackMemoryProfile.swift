@@ -69,8 +69,9 @@ package struct PackMemoryProfile: Equatable, Sendable {
     /// the bounded feature window. Preserve the original fixed allowance;
     /// do not load MTP or inherit its throughput evidence. Physical tests
     /// determine whether this conservative envelope can become a default.
-    package static let q2 = Self(identity: "gsq-q2-native-memory-v2",
-        expertRecordBytes: 1_382_400, residentReserveBytes: 1_600_000_000,
+    package static let q2 = Self(identity: NativeExpertSchedule.gpuStagingEnabled ? "gsq-q2-native-memory-v3" : "gsq-q2-native-memory-v2",
+        expertRecordBytes: 1_382_400, residentReserveBytes: 1_600_000_000
+            + (NativeExpertSchedule.gpuStagingEnabled ? NativeExpertSchedule.gpuStagingReserveBytes : 0),
         maximumPrefill: 512, maximumContext: 32_768, usesBaselineSpeedEvidence: false,
         supportsStreamedDraft: false, supportsVision: false, automaticOptimizations: false, supportsDecodeLookahead: true)
 
