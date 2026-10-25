@@ -648,3 +648,6 @@ Preserved passive GPU frequency aligned to frozen verification windows, whole-pr
 ## [2026-10-25 21:54] update | records/measurements/q2-order-executor-and-validation
 Preserved clean 15 GB forward/reverse condition control: cached and demand-only passes match, partial/read-ahead separation persists. Longer queue/QoS and deferred-output-validation controls have whole-protocol paging exclusions; all outputs match and neither yields a sustained fix. Explicitly preserve the transient early validation speedup as rejected evidence. No runtime change: all 509 inputs and five default artifacts match v68; Fast unchanged. Archive 178 members verified, local links pass, zero-error/zero-warning brain validation, 354 claims, projections, llms and whitespace pass. Goal remains active; next profile ordinary complete requests without interpass full-logit checking.
 
+## [2026-10-25 22:45] update | records/measurements/q2-ordinary-request-and-submission-diagnosis.md
+Preserved ordinary-request clocks, overlap bounds, commit origins and excluded ABCCBA. Submission cap change not adopted; runtime and Fast unchanged. Brain, projections and 354 claims checks pass.
+

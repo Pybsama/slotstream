@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-25T21:53:46.992385Z
+updated: 2026-10-25T22:44:48.611693Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-ordinary-request-and-submission-diagnosis]] — Q2 ordinary-request frequency, overlap and submission controls
 - [[sources/runs/2026/10/2026-10-25-q2-order-executor-and-validation]] — Q2 condition order, execution context and validation placement
 - [[sources/runs/2026/10/2026-10-25-q2-frequency-and-cache-diagnosis]] — Q2 passive frequency and cached versus partial-miss verification
 - [[sources/runs/2026/10/2026-10-25-q2-decoder-and-metadata-diagnosis]] — Q2 copy control, file checks and paired-code decoder trials
@@ -506,9 +507,8 @@ updated: 2026-10-25T21:53:46.992385Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-long-on-delivery-refusal]] — Final MTP-on long cohort refuses incompatible legacy large-memory protocol before model launch
 - [[sources/runs/2026/09/2026-09-10-optimization-final-long-off-complete-pass]] — Final MTP-off sustained cohort completes all512-output work with13clean pairs
 - [[sources/runs/2026/09/2026-09-09-optimization-current-all37-source-dispositions]] — All thirty-seven current dispositions reconciled with final source and completed evidence
-- [[sources/runs/2026/09/2026-09-09-optimization-final-observed-spreads-and-original-aa-context]] — Final paired request spreads and original A/A variability are reported without rescoring
 
 ## More
 
-This folder has 973 files. The 500 most recent are listed above.
+This folder has 974 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
