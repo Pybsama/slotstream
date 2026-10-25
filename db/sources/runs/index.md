@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-25T13:44:18.963491Z
+updated: 2026-10-25T16:30:53.651018Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-copy-complete-requests]] — Q2 copy candidates fail clean complete-request retention
+- [[sources/runs/2026/10/2026-10-25-q2-continuation-excluded]] — Excluded Q2 continuation protocols and diagnostic harness failures
+- [[sources/runs/2026/10/2026-10-25-q2-continuation-diagnostics]] — Q2 continuation replay and staging-copy diagnostic evidence
 - [[sources/runs/2026/10/2026-10-25-q2-handoff-checkpoint]] — Q2 investigation restoration and repository checkpoint
 - [[sources/runs/2026/10/2026-10-25-q2-handoff-complete-requests]] — Fresh clean Q2 complete requests after competing builds stop
 - [[sources/runs/2026/10/2026-10-25-q2-handoff-excluded]] — Excluded Q2 handoff candidates and diagnostic failures
@@ -504,11 +507,8 @@ updated: 2026-10-25T13:44:18.963491Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-actual-default-and-eight-paired-complete-pass]] — Exact final actual-default cohort and all eight original paired studies pass
 - [[sources/runs/2026/09/2026-09-09-optimization-final-complete-verification-and-installed-preparation]] — Final coverage audit preserves complete verification and installed qualification before activation
 - [[sources/runs/2026/09/2026-09-09-optimization-final-retention-complete-pass]] — Exact final retention-only cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-prospective-long-adaptive-scheduling]] — Prospective long-study thermal scheduling passes 43 checks; frozen paired campaign remains unchanged
-- [[sources/runs/2026/09/2026-09-09-optimization-final-complete-repeat-complete-pass]] — Exact final complete-repeat cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-distinct-tail-complete-pass]] — Exact final distinct-tail cohort passes complete original qualification
 
 ## More
 
-This folder has 959 files. The 500 most recent are listed above.
+This folder has 962 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T13:44:46.664243Z
+updated: 2026-10-25T16:30:26.610160Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-continuation-and-copy-diagnosis]] — Q2 continuation replay and staging-copy diagnosis
 - [[records/measurements/q2-handoff-and-overlap-diagnosis]] — Q2 remains slower; readiness, read-work and bounded scheduling controls reject unearned complexity
 - [[records/measurements/q2-typical-verification]] — Typical Q2 verification narrows the overlap gap; clean complete requests reject direct forecast reads
 - [[records/measurements/q2-focused-bottleneck]] — Controlled Q2 diagnosis rejects a faster repack kernel without repeatable complete-request benefit
