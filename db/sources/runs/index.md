@@ -2,11 +2,15 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-25T01:39:50.106433Z
+updated: 2026-10-25T13:44:18.963491Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-checkpoint]] — Q2 investigation restoration and repository checkpoint
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-complete-requests]] — Fresh clean Q2 complete requests after competing builds stop
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-excluded]] — Excluded Q2 handoff candidates and diagnostic failures
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-diagnostics]] — Q2 handoff and overlap diagnostic evidence
 - [[sources/runs/2026/10/2026-10-25-q2-typical-complete-requests]] — Clean 15 GB baseline, direct-read candidate and Splash complete-request comparison
 - [[sources/runs/2026/10/2026-10-25-q2-direct-read-replay-excluded]] — Preserve complete excluded candidate replay after final baseline paging
 - [[sources/runs/2026/10/2026-10-25-q2-typical-verification]] — Captured typical Q2 verification, matched partial misses, tracing controls and rejected candidate evidence
@@ -503,12 +507,8 @@ updated: 2026-10-25T01:39:50.106433Z
 - [[sources/runs/2026/09/2026-09-09-optimization-prospective-long-adaptive-scheduling]] — Prospective long-study thermal scheduling passes 43 checks; frozen paired campaign remains unchanged
 - [[sources/runs/2026/09/2026-09-09-optimization-final-complete-repeat-complete-pass]] — Exact final complete-repeat cohort passes complete original qualification
 - [[sources/runs/2026/09/2026-09-09-optimization-final-distinct-tail-complete-pass]] — Exact final distinct-tail cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-mtp-resource-complete-pass]] — Exact final mtp-resource cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-sampled-complete-pass]] — Exact final sampled cohort passes full output, memory, request and startup qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-prose-complete-pass]] — Exact final prose cohort passes full work, memory, request and startup qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-paired-resumption]] — Full final optimization qualification resumes after material resource recovery
 
 ## More
 
-This folder has 955 files. The 500 most recent are listed above.
+This folder has 959 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

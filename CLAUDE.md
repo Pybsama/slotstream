@@ -149,6 +149,19 @@ complete requests, so the candidate was reverted. Isolate readiness boundaries
 and concurrent I/O before rewriting the reader scheduler. Keep throughput
 completion distinct from task quality and application readiness.
 
+The [Q2 handoff study](db/records/measurements/q2-handoff-and-overlap-diagnosis.md)
+rejects command-count reduction alone as an explanation: fewer submissions
+preserved exact output but barely changed useful-work time. Confirm that a
+priority intervention actually applies; do not boost shared executor threads
+or add polling without attributable benefit and responsiveness qualification.
+Distinguish Splash's CPU polling from its separate GPU spin library. The fixed
+component reference disables CPU polling; published complete requests retain
+it. Reserve the model across the whole protocol and record competing builds.
+Nominal thermal state does not guarantee stable timings. Preserve every arm
+when a favorable first pair reverses later. Reconstruct actual verification
+widths, routes and cache work before another scheduler rewrite; do not replace
+an unresolved cause with a parity promise or repeated benchmark selection.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).

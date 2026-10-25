@@ -1,0 +1,66 @@
+{
+  "archive": {
+    "path": "db/sources/runs/2026/10/q2-handoff-diagnosis-2026-10-25.tar.gz",
+    "files": 744,
+    "bytes": 62672646,
+    "sha256": "dc682c2e4bdfed53fa928cf92f97edfe2d18e0ade8c1c2890b863f25f68756b6",
+    "readback_verified": true,
+    "unique_logits_files": 2
+  },
+  "restoration": {
+    "source_files": 509,
+    "all_source_hashes_equal_v68": true,
+    "default_artifacts": {
+      "slotstream": true,
+      "slotstream-checks": true,
+      "mlx.metallib": true,
+      "build-identity.json": true,
+      "build-source.tar.gz": true
+    },
+    "binary_sha256": "db1af8ffd201d3dfb83d64b036db12383b08ac0a522d9079c3343acebe78c89b",
+    "git_head": "7578fb21e57ec362d19f5050922e0f583914935d",
+    "production_changes_retained": false,
+    "fast_changed": false
+  },
+  "repository_checks": {
+    "source_matches_v68": true,
+    "source_files": 509,
+    "frozen_artifact_hashes_match": true,
+    "added_markdown_file_links": [
+      {
+        "source": "CLAUDE.md",
+        "target": "db/records/measurements/q2-handoff-and-overlap-diagnosis.md",
+        "exists": true
+      },
+      {
+        "source": "db/sources/runs/2026/10/2026-10-25-q2-handoff-complete-requests.md",
+        "target": "q2-handoff-diagnosis-2026-10-25.tar.gz",
+        "exists": true
+      },
+      {
+        "source": "db/sources/runs/2026/10/2026-10-25-q2-handoff-diagnostics.md",
+        "target": "q2-handoff-diagnosis-2026-10-25.tar.gz",
+        "exists": true
+      },
+      {
+        "source": "db/sources/runs/2026/10/2026-10-25-q2-handoff-excluded.md",
+        "target": "q2-handoff-diagnosis-2026-10-25.tar.gz",
+        "exists": true
+      }
+    ],
+    "broken_file_links": [],
+    "scope": "New and added Markdown file targets; wiki-links are checked independently by dbmd. Fragment anchors are not checked here.",
+    "diff_check": {
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  "brain_gates": "0 issue(s): 0 error(s), 0 warning(s), 0 info\nMEASUREMENTS.md is current\nPLAN.md is current\nclaims gate: 354 needle checks, 0 failures\nBRAIN GATES PASS\n",
+  "counter_capabilities": {
+    "command": ".build/q2-handoff-20261025/counter_capabilities",
+    "exit_code": 0,
+    "stdout": "device=Apple M5 Pro\nsampling_0=1\nsampling_1=0\nsampling_2=0\nsampling_3=0\nsampling_4=0\nset=timestamp\n counter=GPUTimestamp\n",
+    "stderr": ""
+  }
+}
