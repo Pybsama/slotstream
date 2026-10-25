@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-25T00:25:54.681440Z
+updated: 2026-10-25T01:39:50.106433Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-typical-complete-requests]] — Clean 15 GB baseline, direct-read candidate and Splash complete-request comparison
+- [[sources/runs/2026/10/2026-10-25-q2-direct-read-replay-excluded]] — Preserve complete excluded candidate replay after final baseline paging
+- [[sources/runs/2026/10/2026-10-25-q2-typical-verification]] — Captured typical Q2 verification, matched partial misses, tracing controls and rejected candidate evidence
 - [[sources/runs/2026/10/2026-10-24-q2-focused-complete-requests]] — Discarded whole 15 GB Q2 baseline/candidate/Splash comparison with both candidate arms paging
 - [[sources/runs/2026/10/2026-10-24-q2-focused-bottleneck]] — Focused Q2 cached/miss diagnosis, exact rejected repack candidate and excluded 15 GB comparison
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]] — Complete hosted CI for the native prepared execution port and unchanged app inputs
@@ -504,11 +507,8 @@ updated: 2026-10-25T00:25:54.681440Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-sampled-complete-pass]] — Exact final sampled cohort passes full output, memory, request and startup qualification
 - [[sources/runs/2026/09/2026-09-09-optimization-final-prose-complete-pass]] — Exact final prose cohort passes full work, memory, request and startup qualification
 - [[sources/runs/2026/09/2026-09-09-optimization-final-paired-resumption]] — Full final optimization qualification resumes after material resource recovery
-- [[sources/runs/2026/09/2026-09-09-optimization-final-thermal-impasse-audit]] — Third consecutive thermal impasse preserves the complete unfinished optimization goal
-- [[sources/runs/2026/09/2026-09-09-optimization-final-readiness-thermal-timeout]] — Final readiness times out with sufficient memory and no model launch
-- [[sources/runs/2026/09/2026-09-09-optimization-final-dispositions-and-readiness-checkpoint]] — All37 dispositions retain exact current evidence; bounded readiness observer prepares no model run
 
 ## More
 
-This folder has 952 files. The 500 most recent are listed above.
+This folder has 955 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

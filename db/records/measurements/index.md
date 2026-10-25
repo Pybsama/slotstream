@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T00:26:04.781859Z
+updated: 2026-10-25T01:38:57.619066Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-typical-verification]] — Typical Q2 verification narrows the overlap gap; clean complete requests reject direct forecast reads
 - [[records/measurements/q2-focused-bottleneck]] — Controlled Q2 diagnosis rejects a faster repack kernel without repeatable complete-request benefit
 - [[records/measurements/native-prepared-execution]] — Native prepared execution on the 48 GiB Mac: qualified Fast speed, cache-dependent Q2 results, ownership checks and preserved workflow failures
 - [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain

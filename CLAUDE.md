@@ -139,6 +139,16 @@ reverted because complete requests did not earn it. The shared-reader
 scheduler remains a hypothesis, and native language choice does not promise
 parity. Preserve known Fast recall failures separately from performance gates.
 
+The [typical Q2 verification study](db/records/measurements/q2-typical-verification.md)
+matches captured small passes and missing logical expert keys. Use symmetric,
+low-allocation instrumentation and a trace-disabled control before attributing
+concurrent overhead: per-read tracing inflated the apparent gap. Read-ahead
+still helps native execution; its interaction with GPU handoff remains
+unresolved. Direct forecast reads preserved tested arithmetic but slowed clean
+complete requests, so the candidate was reverted. Isolate readiness boundaries
+and concurrent I/O before rewriting the reader scheduler. Keep throughput
+completion distinct from task quality and application readiness.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).
