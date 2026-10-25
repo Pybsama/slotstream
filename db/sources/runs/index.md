@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-25T19:09:24.523707Z
+updated: 2026-10-25T19:50:48.307761Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-copy-and-stage-diagnosis]] — Q2 copy attribution and named GPU-stage diagnostics
 - [[sources/runs/2026/10/2026-10-25-q2-matched-work-12gb-excluded]] — Q2 trace-disabled matched work at 12 GB; timing excluded
 - [[sources/runs/2026/10/2026-10-25-q2-forecast-reader-count-excluded]] — Q2 forecast-reader count and offline demand-lane analysis
 - [[sources/runs/2026/10/2026-10-25-q2-forecast-only-sequence-excluded]] — Q2 aligned forecast-only continuation preserves arithmetic; timing excluded
@@ -506,9 +507,8 @@ updated: 2026-10-25T19:09:24.523707Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-calibration-inputs-and-profile-label-correction]] — Exact planner family and all final short-cohort memory caps verified; two profile labels corrected
 - [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-disposition-checkpoint]] — All thirty-seven optimization dispositions retain completed lifetime and control evidence
 - [[sources/runs/2026/09/2026-09-09-optimization-final-control-and-fallback-review]] — Exact final controls preserve selected defaults, reference compatibility and measured platform dispatch
-- [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-on-pass]] — Exact final MTP-on lifetime passes all sixty original requests
 
 ## More
 
-This folder has 969 files. The 500 most recent are listed above.
+This folder has 970 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

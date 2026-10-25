@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T19:09:24.596991Z
+updated: 2026-10-25T19:50:48.380660Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-copy-and-stage-diagnosis]] — Q2 weight-copy attribution and GPU-stage identity
 - [[records/measurements/q2-matched-work-12gb]] — Q2 matched complete work at 12 GB
 - [[records/measurements/q2-forecast-reader-count]] — Q2 forecast-reader count and scheduling triage
 - [[records/measurements/q2-forecast-only-continuation]] — Q2 forecast-only continuation control
