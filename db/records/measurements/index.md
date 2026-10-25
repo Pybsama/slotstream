@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T22:44:48.685697Z
+updated: 2026-10-25T23:07:19.045256Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-ordinary-host-attribution]] — Q2 ordinary-request host work and submission gaps
 - [[records/measurements/q2-ordinary-request-and-submission-diagnosis]] — Q2 ordinary requests and submission boundaries
 - [[records/measurements/q2-order-executor-and-validation]] — Q2 condition order, execution context and validation controls
 - [[records/measurements/q2-frequency-and-cache-diagnosis]] — Q2 streaming interaction and passive GPU frequency

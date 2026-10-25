@@ -651,3 +651,6 @@ Preserved clean 15 GB forward/reverse condition control: cached and demand-only 
 ## [2026-10-25 22:45] update | records/measurements/q2-ordinary-request-and-submission-diagnosis.md
 Preserved ordinary-request clocks, overlap bounds, commit origins and excluded ABCCBA. Submission cap change not adopted; runtime and Fast unchanged. Brain, projections and 354 claims checks pass.
 
+## [2026-10-25 23:07] update | records/measurements/q2-ordinary-host-attribution.md
+Archived clean ordinary copy and host-scope diagnostics. Copies and expert preparation explain little exposed time; remaining lead is pre-submission target/draft evaluation. No runtime candidate adopted; all509sources and five artifacts restored. Brain, links, projections and354claims checks pass.
+
