@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-24T23:40:16.309082Z
+updated: 2026-10-25T00:25:54.681440Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-24-q2-focused-complete-requests]] — Discarded whole 15 GB Q2 baseline/candidate/Splash comparison with both candidate arms paging
+- [[sources/runs/2026/10/2026-10-24-q2-focused-bottleneck]] — Focused Q2 cached/miss diagnosis, exact rejected repack candidate and excluded 15 GB comparison
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]] — Complete hosted CI for the native prepared execution port and unchanged app inputs
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution-cooled-confirmation]] — Excluded cooled Q2 confirmations with unchanged final native binary
 - [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]] — Native prepared execution context proxy repair
@@ -505,10 +507,8 @@ updated: 2026-10-24T23:40:16.309082Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-thermal-impasse-audit]] — Third consecutive thermal impasse preserves the complete unfinished optimization goal
 - [[sources/runs/2026/09/2026-09-09-optimization-final-readiness-thermal-timeout]] — Final readiness times out with sufficient memory and no model launch
 - [[sources/runs/2026/09/2026-09-09-optimization-final-dispositions-and-readiness-checkpoint]] — All37 dispositions retain exact current evidence; bounded readiness observer prepares no model run
-- [[sources/runs/2026/09/2026-09-09-optimization-exact-final-activation-preparation]] — Unapplied final V519 activation patch matches all150source inputs and passes the real workspace apply check
-- [[sources/runs/2026/09/2026-09-09-optimization-final-continuation-and-remaining-delivery-preparation]] — Exact final continuation reuses the passed short cohort and prepares unchanged lifetime, sustained-TPS and activation work
 
 ## More
 
-This folder has 950 files. The 500 most recent are listed above.
+This folder has 952 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-24T23:40:16.402573Z
+updated: 2026-10-25T00:26:04.781859Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-focused-bottleneck]] — Controlled Q2 diagnosis rejects a faster repack kernel without repeatable complete-request benefit
 - [[records/measurements/native-prepared-execution]] — Native prepared execution on the 48 GiB Mac: qualified Fast speed, cache-dependent Q2 results, ownership checks and preserved workflow failures
 - [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
 - [[records/measurements/native-q2-splash-execution-comparison]] — Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs

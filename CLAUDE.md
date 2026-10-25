@@ -129,6 +129,16 @@ contracts too. Extract production declarations, inject platform observations
 and test both capability states; do not duplicate the memory constants in a
 test stub. A passing full build does not prove the isolated proxy still compiles.
 
+The [focused Q2 diagnosis](db/records/measurements/q2-focused-bottleneck.md)
+keeps Fast's qualified performance path stable. Use cached weights with
+read-ahead off to isolate execution; a warm demanded cache can still issue
+unused forecasts. Account for overlapping reads, copies and GPU command
+intervals. Match actual verification widths and miss distributions before
+generalizing from a forced all-miss probe. A faster repacking kernel was
+reverted because complete requests did not earn it. The shared-reader
+scheduler remains a hypothesis, and native language choice does not promise
+parity. Preserve known Fast recall failures separately from performance gates.
+
 ## App identity (October 16, 2026)
 
 Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).
