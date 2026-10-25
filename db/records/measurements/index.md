@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T17:26:38.778042Z
+updated: 2026-10-25T18:28:22.511609Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-forecast-only-continuation]] — Q2 forecast-only continuation control
+- [[records/measurements/q2-adaptive-cost-and-demand-shape]] — Q2 adaptive costs and demand boundaries
 - [[records/measurements/q2-complete-copy-controls]] — Q2 complete-generation copy controls and layout isolation
 - [[records/measurements/q2-continuation-and-copy-diagnosis]] — Q2 continuation replay and staging-copy diagnosis
 - [[records/measurements/q2-handoff-and-overlap-diagnosis]] — Q2 remains slower; readiness, read-work and bounded scheduling controls reject unearned complexity
