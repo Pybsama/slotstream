@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-25T16:30:53.651018Z
+updated: 2026-10-25T17:26:38.709343Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-recorded-choices-excluded]] — Q2 recorded adaptive choices preserve complete work; timing excluded
+- [[sources/runs/2026/10/2026-10-25-q2-padding-layout-control]] — Clean Q2 padding-only normal-request comparison
+- [[sources/runs/2026/10/2026-10-25-q2-fixed-depth-excluded]] — Q2 fixed-depth complete controls preserve outputs; timing protocols excluded
 - [[sources/runs/2026/10/2026-10-25-q2-copy-complete-requests]] — Q2 copy candidates fail clean complete-request retention
 - [[sources/runs/2026/10/2026-10-25-q2-continuation-excluded]] — Excluded Q2 continuation protocols and diagnostic harness failures
 - [[sources/runs/2026/10/2026-10-25-q2-continuation-diagnostics]] — Q2 continuation replay and staging-copy diagnostic evidence
@@ -504,11 +507,8 @@ updated: 2026-10-25T16:30:53.651018Z
 - [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-actual-binding]] — Original final lifetimes bind successfully to all eight completed paired studies
 - [[sources/runs/2026/09/2026-09-09-optimization-final-installed-qualification-pass]] — Exact final installed CLI passes all31 checks and full upgrade/rollback qualification
 - [[sources/runs/2026/09/2026-09-09-optimization-final-complete-verification-pass]] — Exact final V519 passes the complete original25-check verification battery
-- [[sources/runs/2026/09/2026-09-09-optimization-final-actual-default-and-eight-paired-complete-pass]] — Exact final actual-default cohort and all eight original paired studies pass
-- [[sources/runs/2026/09/2026-09-09-optimization-final-complete-verification-and-installed-preparation]] — Final coverage audit preserves complete verification and installed qualification before activation
-- [[sources/runs/2026/09/2026-09-09-optimization-final-retention-complete-pass]] — Exact final retention-only cohort passes complete original qualification
 
 ## More
 
-This folder has 962 files. The 500 most recent are listed above.
+This folder has 965 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
