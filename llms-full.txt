@@ -3249,14 +3249,15 @@ next turn. Without `max_output_tokens` the reply budget is the
 up to 8,192 tokens, bounded by the room the prompt leaves.
 
 The response object, returned whole without `stream` and carried by the
-`response.created` and `response.completed` events, has `id`, `status`,
+`response.created`, `response.in_progress`, `response.completed`,
+`response.incomplete`, and `response.failed` events, has `id`, `status`,
 `model`, and `output`, and repeats the request's `tools`,
 `tool_choice`, `parallel_tool_calls`, `instructions`, `temperature`,
 `top_p`, `max_output_tokens`, `reasoning`, and `text` as the API does. It
 reports `store: false` and a null `previous_response_id` because nothing is
 kept. `usage` is included in non-streamed responses with status `completed`
 or `incomplete` and in their corresponding terminal events; it is omitted
-from `response.created`.
+from `response.created`, `response.in_progress`, and `response.failed`.
 
 A streamed reply is Server-Sent Events, each with an `event:` line and a
 `data:` line: `response.created`, `response.in_progress`,
@@ -3264,17 +3265,22 @@ A streamed reply is Server-Sent Events, each with an `event:` line and a
 `.done`, `response.output_text.delta` and `.done`,
 `response.reasoning_summary_part.added` and `.done`,
 `response.reasoning_summary_text.delta` and `.done`,
-`response.function_call_arguments.delta` and `.done`, and
+`response.function_call_arguments.delta` and `.done`,
+`response.custom_tool_call_input.delta` and `.done`, and
 `response.completed` with `usage`. During a long prompt read the server sends
 a `response.in_progress` event every 10 seconds, because Codex's idle timeout
-counts events rather than bytes. Running out of tokens before the reply ends
-is `response.incomplete` with `incomplete_details.reason:
-"max_output_tokens"`, unless a complete function call was already delivered,
-in which case the response completes. An inference failure after the stream
+counts events rather than bytes. With no tool-call error, running out of
+tokens before the reply ends is `response.incomplete` with
+`incomplete_details.reason: "max_output_tokens"`, unless a complete tool call
+was already delivered, in which case the response completes. An unfinished
+call or an unsatisfied required `tool_choice` is an inference failure even
+at the token limit. An inference failure after the stream
 starts is a `response.failed` event carrying `error.code` and `error.message`,
 with no `response.completed` after it. Function calls are delivered whole:
 `response.output_item.added`, one arguments delta, `arguments.done`, and
-`output_item.done`, only once the model's call block is complete.
+`output_item.done`, only once the model's call block is complete. Custom calls
+follow the same sequence using one `response.custom_tool_call_input.delta`
+and then `response.custom_tool_call_input.done` for their raw input.
 
 ## `/v1/messages`
 
