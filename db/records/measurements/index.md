@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T18:55:29.601502Z
+updated: 2026-10-25T19:09:24.596991Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-matched-work-12gb]] — Q2 matched complete work at 12 GB
 - [[records/measurements/q2-forecast-reader-count]] — Q2 forecast-reader count and scheduling triage
 - [[records/measurements/q2-forecast-only-continuation]] — Q2 forecast-only continuation control
 - [[records/measurements/q2-adaptive-cost-and-demand-shape]] — Q2 adaptive costs and demand boundaries
