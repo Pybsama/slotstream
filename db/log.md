@@ -630,3 +630,6 @@ Frozen Q2 continuation diagnosis confirms a roughly20%target-sequence gap; sourc
 ## [2026-10-25 17:27] update | records/measurements/q2-complete-copy-controls
 Record clean Q2 padding-layout isolation and exact complete-work controls; preserve three paging-excluded protocols, v68 restoration and unresolved adaptive-selection diagnosis. No Fast or production runtime changes.
 
+## [2026-10-25 18:56] update | records/measurements/q2-forecast-reader-count
+Preserved offline read-lane and forecast-waste diagnosis, one Q2-only two-reader component trial, whole-protocol paging exclusion and reversed raw pair directions. All888native full-logit hashes matchv68; installed-byte and generic lifetime checks pass, dedicated two-queue and complete-request tests remain unexecuted. No scheduler rewrite or runtime change retained. All509runtime inputs and five default artifacts matchv68; Fast unchanged. Archive hash readback, local links, zero-error/zero-warning brain validation, projections and354claims pass. Q2 parity, broad quality and app readiness remain unresolved.
+

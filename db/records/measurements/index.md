@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T18:28:22.511609Z
+updated: 2026-10-25T18:55:29.601502Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-forecast-reader-count]] — Q2 forecast-reader count and scheduling triage
 - [[records/measurements/q2-forecast-only-continuation]] — Q2 forecast-only continuation control
 - [[records/measurements/q2-adaptive-cost-and-demand-shape]] — Q2 adaptive costs and demand boundaries
 - [[records/measurements/q2-complete-copy-controls]] — Q2 complete-generation copy controls and layout isolation
