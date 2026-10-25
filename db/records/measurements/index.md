@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T19:50:48.380660Z
+updated: 2026-10-25T20:48:02.584231Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-decoder-and-metadata-diagnosis]] — Q2 metadata costs and paired-code decoder rejection
 - [[records/measurements/q2-copy-and-stage-diagnosis]] — Q2 weight-copy attribution and GPU-stage identity
 - [[records/measurements/q2-matched-work-12gb]] — Q2 matched complete work at 12 GB
 - [[records/measurements/q2-forecast-reader-count]] — Q2 forecast-reader count and scheduling triage
