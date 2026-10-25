@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-25T21:18:15.581170Z
+updated: 2026-10-25T21:53:47.089439Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-order-executor-and-validation]] — Q2 condition order, execution context and validation controls
 - [[records/measurements/q2-frequency-and-cache-diagnosis]] — Q2 streaming interaction and passive GPU frequency
 - [[records/measurements/q2-decoder-and-metadata-diagnosis]] — Q2 metadata costs and paired-code decoder rejection
 - [[records/measurements/q2-copy-and-stage-diagnosis]] — Q2 weight-copy attribution and GPU-stage identity
