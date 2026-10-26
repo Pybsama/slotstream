@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T16:56:52.466178Z
+updated: 2026-10-26T18:16:59.505858Z
 ---
 
 # records/measurements
 
+- [[records/measurements/measured-facts]] — Measured facts
 - [[records/measurements/relevant-conversation-excerpts]] — Relevant conversation excerpts repair tested factual recall; citation quality remains open
 - [[records/measurements/q2-compiler-identity-and-precompiled-shaders]] — Q2 compilation spikes isolated; offline treatment does not earn integration
 - [[records/measurements/q2-cold-compilation-and-row-counts]] — Q2 runtime row counts remove repeated compilation; first-request qualification stays open
@@ -244,4 +245,3 @@ updated: 2026-10-26T16:56:52.466178Z
 - [[records/measurements/n-gram-store-plan-was-structurally-wrong]] — N-gram store — plan was structurally wrong
 - [[records/measurements/m0-2-model-ground-truth-byte-exact-from-safetensors-headers]] — M0.2 — Model ground truth (byte-exact, from safetensors headers)
 - [[records/measurements/m0-1-metal-memory-limits-mlx-device-info-2026-08-28]] — M0.1 — Metal / memory limits (mlx device_info, 2026-08-28)
-- [[records/measurements/measured-facts]] — Measured facts

@@ -20,7 +20,7 @@ import Vision
         window.setFrameOrigin(NSPoint(x: -30000, y: -30000))
         defer { window.orderOut(nil) }
         for appearance in ["light", "dark", "system"] {
-            for mode in ["automatic", "unloaded-automatic", "custom", "saved-fractional", "saved-above-range", "saved-below-range", "unavailable-range", "failed-settings", "failed-activation", "corrupt-activation", "corrupt-pending-settings", "fixed", "unavailable-pack"] {
+            for mode in ["automatic", "unloaded-automatic", "custom", "saved-fractional", "saved-above-range", "saved-below-range", "unavailable-range", "failed-settings", "failed-activation", "corrupt-activation", "corrupt-pending-settings", "fixed", "unavailable-pack", "archived-fast", "archived-q2"] {
                 let custom = mode != "automatic" && mode != "unloaded-automatic"
                 let overRange = mode == "saved-above-range"
                 let belowRange = mode == "saved-below-range"
@@ -32,6 +32,10 @@ import Vision
                 let pending = failedPending || (custom && !activationFailed)
                 let savedLimit = belowRange ? 10.0 : mode == "saved-fractional" ? 9.99 : 48.0
                 var preferences = custom ? PerformancePreferences(budget: .custom, customGB: savedLimit) : .init()
+                if mode == "archived-fast" || mode == "archived-q2" {
+                    preferences.quantization = .pack(mode == "archived-fast" ? "qwen3.6-35b-a3b:4bit" : "qwen3.8-flash-next:gsq-q2")
+                    preferences = PerformancePreferences.restore(try JSONEncoder().encode(preferences))
+                }
                 if mode == "fixed" { preferences.liveMemory = .fixed }
                 if mode == "unavailable-pack" { preferences.quantization = .pack("removed-pack") }
                 model.performancePreferences = preferences
@@ -83,6 +87,7 @@ import Vision
                     + (mode == "fixed" ? ["Fixed cache capacity", "Memory pressure can still stop"] : ["Automatic adjustment"])
                     + (mode == "unavailable-pack" ? ["saved model is unavailable", "Use Qwen3.8-Flash-Next 4-bit"] : [])
                     + (mode == "automatic" ? ["Speed is not verified"] : [])
+                    + (mode.hasPrefix("archived-") ? ["retired", "Dismiss", "Qwen3.8-Flash-Next 4-bit"] : [])
                     + (mode == "unloaded-automatic" ? ["when the model loads"] : [])
                 for label in labels where !text.localizedCaseInsensitiveContains(label) {
                     throw NSError(domain: "MemoryUI", code: 2, userInfo: [NSLocalizedDescriptionKey: "\(name) missing rendered label: \(label)\n\(text)"])

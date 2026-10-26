@@ -132,7 +132,7 @@ public enum PerformancePolicy {
     package static func validate(_ preferences: PerformancePreferences, on machine: Machine, pack: ModelPack) throws {
         try validateSaved(preferences)
         if case .pack(let requested) = preferences.quantization, requested != pack.id {
-            throw AppRuntimeError.refused("The planned model does not match your saved quantization choice.")
+            throw AppRuntimeError.refused("The planned model does not match your saved model.")
         }
         guard preferences.budget == .custom else { return }
         let range: ModelPackMemoryRange
@@ -444,11 +444,11 @@ public final class PerformanceTelemetry: @unchecked Sendable {
 
     package static func selectionReason(selection: ModelPackSelection, proposed: ModelPackDecision?,
                                         confirmed: String?, loaded: Bool, pending: Bool, activationFailed: Bool) -> String? {
-        if pending { return "Your selection will be checked when the new settings apply." }
+        if pending { return "Your settings will be checked before they are applied." }
         if activationFailed { return "Your requested settings did not activate. Any restored model keeps its previous configuration." }
         if case .pack = selection { return (try? ModelPackRegistry.resolve(selection))?.reason }
         if loaded {
-            return confirmed ?? "Automatic selection is active. Speed is not verified for the current configuration and conditions."
+            return confirmed ?? "Speed is not verified for the current configuration and conditions."
         }
         if proposed?.automaticProfileID != nil {
             return "An automatic configuration is selected. Its files and actual settings will be checked when the model loads."

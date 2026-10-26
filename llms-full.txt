@@ -706,6 +706,10 @@ requiring one particular tool call, but a failed answer must stay a failure.
 
 ## Candidate quantization research
 
+This is a reference to closed studies and their existing diagnostic tools.
+It is not an active model qualification track. The only maintained model is
+Qwen3.8-Flash-Next 4-bit.
+
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)
 records the closed research effort and keeps qualification separate from format support. The installed engine still
 admits its pinned affine pack. Experimental descriptors and decoders do not
