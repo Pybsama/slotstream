@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T04:32:29.748949Z
+updated: 2026-10-26T05:09:47.046300Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-mlx-graph]] — Q2 MLX graph and wait phases with sensitivity limit
+- [[sources/runs/2026/10/2026-10-26-q2-mlx-ownership]] — Q2 direct MLX buffer-ownership observation
+- [[sources/runs/2026/10/2026-10-26-q2-metal-lifecycle]] — Q2 Metal lifecycle observation and excluded comparison
 - [[sources/runs/2026/10/2026-10-26-q2-mask-reuse]] — Immutable Q2 draft-mask reuse evidence
 - [[sources/runs/2026/10/2026-10-26-q2-started-forecast-requests]] — Started forecast complete-request evidence
 - [[sources/runs/2026/10/2026-10-26-q2-started-forecast-reuse]] — Q2 started forecast reuse evidence
@@ -504,11 +507,8 @@ updated: 2026-10-26T04:32:29.748949Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-distributed-thermal-stop]] — Distributed-cooling MTP cohort stops during reference startup after six complete pairs
 - [[sources/runs/2026/09/2026-09-10-optimization-final-all37-delivery-and-activation-reconciliation]] — All 37 dispositions retained with completed MTP-off and delivery evidence; full MTP-on and activation remain open
 - [[sources/runs/2026/09/2026-09-10-optimization-final-distributed-launch-and-delivery-reconciliation]] — Actual distributed-cooling launch and completed delivery evidence remain tied to the exact candidate
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-distributed-cooling-preparation]] — Same total idle time distributed around both full MTP requests; original acceptance and source proofs retained
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-cooled-thermal-stop]] — Long MTP cohort stops thermally despite before-cell cooling; full completed work and cleanup preserved
-- [[sources/runs/2026/09/2026-09-10-optimization-final-cooled-launch-and-report-binding]] — Cooled MTP cohort passes actual readiness and final report preparation follows its exact identity
 
 ## More
 
-This folder has 983 files. The 500 most recent are listed above.
+This folder has 986 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

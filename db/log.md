@@ -675,3 +675,6 @@ Matched original-file pieces reveal 4,387 and 4,314 same-cycle duplicate demand/
 ## [2026-10-26 04:33] update | records/measurements/q2-forecast-requests-and-mask-reuse.md
 Preserved the independently declared started-forecast request protocol, wholly excluded for 12/4 swap-in pages. A separate immutable Q2 draft-mask candidate passes 18 original-row cases, invalid-ID checks and 111 exact full-logit/proposal/token passes. All six 15 GB, 4067-slot, 8192-context request arms are clean; code gains reverse direction but prose regresses, so neither candidate is retained. Current v68/Splash pooled gaps are 9.38 percent code and 6.12 percent prose; parity remains unproven. Archive160 members hash-verified. All509 runtime inputs and five artifacts remain v68; Fast unchanged. Zero-warning brain validation,354 claims, projections, local links and whitespace pass. Next bounded diagnosis is per-operation command construction and buffer-lifetime bookkeeping, distinct from already rejected submission-count controls.
 
+## [2026-10-26 05:09] update | records/measurements/q2-mlx-ownership-and-graph.md
+Archive direct Q2 Metal lifecycle, MLX ownership and graph/wait observations; preserve contamination and sensitivity limits; retain v68 and Fast unchanged.
+

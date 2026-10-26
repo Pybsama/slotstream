@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T04:32:29.819278Z
+updated: 2026-10-26T05:09:47.116061Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-mlx-ownership-and-graph]] — Q2 MLX ownership and graph diagnosis
 - [[records/measurements/q2-forecast-requests-and-mask-reuse]] — Q2 forecast requests and immutable draft-mask reuse
 - [[records/measurements/q2-started-forecast-reuse]] — Q2 started forecasts and duplicate demand reads
 - [[records/measurements/q2-expert-submission-boundary]] — Q2 expert submission boundary and rejected small fixes
