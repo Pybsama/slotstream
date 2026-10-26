@@ -693,3 +693,6 @@ Resolve exact Q2 readiness ancestry but reject native timing attribution after4.
 ## [2026-10-26 09:18] update | records/measurements/q2-allocator-and-read-latency.md
 Preserve allocator recorder failure, exact 111-cycle checks and both failed sensitivity controls. Reject an allocator rewrite without representative evidence. Offline localization finds equal required misses but slower read completions and 1,593 fewer ready forecasts in the slow off arm; retain overlap and causality limits. Restore 509 runtime inputs, five v68 artifacts and clean MLX dependency. Fast unchanged; parity goal remains active.
 
+## [2026-10-26 09:50] update | records/measurements/q2-controlled-read-latency.md
+Complete clean matched expert-read delay experiment: both engines preserve111full-logit references and2664timing cycles preserve own proposals/selected IDs. Native slows11-14percent versus Splash22percent, rejecting forecast-amplification trigger. Retain all arms and actual147/144microsecond waits; no production change. Next unmeasured scope is completion cleanup and captured-owner destruction.509sources/fivev68artifacts/Fast unchanged; parity still open.
+

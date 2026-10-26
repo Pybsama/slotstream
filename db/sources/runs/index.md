@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T09:18:31.644908Z
+updated: 2026-10-26T09:50:00.011857Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-read-latency]] — Q2 matched read-delay sensitivity experiment
 - [[sources/runs/2026/10/2026-10-26-q2-allocator-waits]] — Q2 allocator probes, failed sensitivity controls and read-latency localization
 - [[sources/runs/2026/10/2026-10-26-q2-packed-routing-metadata]] — Q2 packed routing metadata exact checks and flat clean ABBA
 - [[sources/runs/2026/10/2026-10-26-q2-event-readiness]] — Q2 event readiness ancestry with failed native sensitivity control
@@ -506,9 +507,8 @@ updated: 2026-10-26T09:18:31.644908Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-preactivation-closure]] — All thirty-seven optimization outcomes and complete exact-candidate gates close before local activation
 - [[sources/runs/2026/09/2026-09-10-optimization-final-empirical-calibration-decision]] — Completed final evidence retains the conservative planner family without new capacity or speed credit
 - [[sources/runs/2026/09/2026-09-10-optimization-final-long-on-complete-pass]] — Complete fixed-MTP sustained cohort qualifies with a measured speed-memory tradeoff
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-thermal-recovery-guarded-launch]] — Full thermal-recovery MTP-on cohort launches after real bounded nominal and capacity readiness
 
 ## More
 
-This folder has 993 files. The 500 most recent are listed above.
+This folder has 994 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
