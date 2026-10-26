@@ -784,10 +784,12 @@ package struct PersistentPrefixLayout: Equatable, Sendable {
     package let linearLayers: Set<Int>
     package let attentionLayers: Set<Int>
     package let compactIndexerRaw: Bool
+    package let indexerLayers: Set<Int>
 
     package init(linearLayers: Set<Int>, attentionLayers: Set<Int>, compactIndexerRaw: Bool) {
         self.linearLayers = linearLayers
         self.attentionLayers = attentionLayers
+        self.indexerLayers = attentionLayers
         self.compactIndexerRaw = compactIndexerRaw
     }
 
@@ -795,12 +797,14 @@ package struct PersistentPrefixLayout: Equatable, Sendable {
         let types = Array(model.cfg.layerTypes.prefix(model.runLayers))
         linearLayers = Set(types.indices.filter { types[$0] == "linear_attention" })
         attentionLayers = Set(types.indices.filter { types[$0] != "linear_attention" })
+        indexerLayers = model.cfg.isFast ? [] : attentionLayers
         compactIndexerRaw = model.optimizations.compactIndexerRaw
     }
 
     package init(state: Qwen4ExpModel.State) {
         linearLayers = Set(state.linear.keys)
         attentionLayers = Set(state.kv.keys)
+        indexerLayers = Set(state.indexer.keys)
         compactIndexerRaw = state.indexer.values.first?.compactRaw ?? false
     }
 }

@@ -15,6 +15,7 @@ public struct ModelError: Error, CustomStringConvertible {
 // MARK: - Config
 
 public struct ModelConfig {
+    public private(set) var isFast = false
     public var hiddenSize = 2560
     public var numLayers = 48
     public var numAttentionHeads = 24
@@ -114,6 +115,7 @@ public struct ModelConfig {
                     + "\(PinnedModelName.display) checkpoint — check --model")
         }
         var c = ModelConfig()
+        c.isFast = root["model_type"] as? String == "qwen3_5_moe"
         func i(_ k: String, _ d: Int) -> Int { (t[k] as? Int) ?? d }
         func f(_ k: String, _ d: Float) -> Float {
             if let v = t[k] as? Double { return Float(v) }
@@ -212,7 +214,8 @@ public struct ModelConfig {
                 guard c.quantizationOverrides[name] == nil else { throw ModelError("duplicate quantization descriptor for \(name)") }
                 let descriptor = try AffineQuantization(bits: bits, groupSize: group)
                 let expectedGroup = name.contains("ngram_embedding") ? 32 : 64
-                guard bits == 4, group == expectedGroup else {
+                let fastRouter = c.isFast && (name.hasSuffix(".mlp.gate") || name.hasSuffix(".mlp.shared_expert_gate"))
+                guard bits == (fastRouter ? 8 : 4), group == expectedGroup else {
                     throw ModelError("unqualified quantization layout for \(name); the installed adapter requires affine 4-bit")
                 }
                 c.quantizationOverrides[name] = descriptor
@@ -220,6 +223,12 @@ public struct ModelConfig {
         }
         guard root["vq_modules"] == nil, root["vq_ple"] == nil else {
             throw ModelError("VQ candidate decoding is experimental; this pack has not qualified for Engine.load")
+        }
+        if c.isFast {
+            c.outputGateType = "silu"
+            c.hcCount = 1
+            c.pleLayerIds = []
+            c.admittedExpertRecordBytes = 1_769_472
         }
         try c.validate()
         return c
@@ -232,6 +241,21 @@ public struct ModelConfig {
     private func validate() throws {
         func bad(_ detail: String) throws -> Never {
             throw ModelError("unsupported or invalid text_config (\(detail)) — check --model")
+        }
+        if isFast {
+            guard hiddenSize == 2048, numLayers == 40, numAttentionHeads == 16,
+                  numKVHeads == 2, headDim == 256, vocabSize == 248_320,
+                  maxPositionEmbeddings == 262_144, fullAttentionInterval == 4,
+                  numExperts == 256, topK == 8, moeIntermediate == 512,
+                  sharedExpertIntermediate == 512, linearNumKHeads == 16,
+                  linearNumVHeads == 32, linearKHeadDim == 128, linearVHeadDim == 128,
+                  convKernel == 4, qBits == 4, qGroup == 64,
+                  rmsNormEps == 1e-6, ropeTheta == 10_000_000, partialRotaryFactor == 0.25,
+                  layerTypes == (0..<40).map({ ($0 + 1) % 4 == 0 ? "full_attention" : "linear_attention" }),
+                  eosTokenId >= 0, eosTokenId < vocabSize else {
+                try bad("checkpoint geometry does not match Qwen3.6-35B-A3B-4bit")
+            }
+            return
         }
         guard hiddenSize == 2560, numLayers == 48, maxPositionEmbeddings == ContextPolicy.modelLimit,
             numAttentionHeads == 24, numKVHeads == 2, headDim == 256,
@@ -342,17 +366,18 @@ public struct TensorRef {
 /// that another request can close or reuse while its read is pending.
 package struct TensorReadHandle {
     private let owner: CheckpointIndex
-    private let descriptor: Int32
+    /// One descriptor per replica of this tensor's shard, in replica order.
+    private let descriptors: [Int32]
     private let base: Int
     private let length: Int
     private let verifiedFile: VQTensorFile?
     private let ref: TensorRef
-    init(owner: CheckpointIndex, descriptor: Int32, ref: TensorRef) {
-        self.owner = owner; self.descriptor = descriptor; self.base = ref.byteOffset; self.length = ref.byteCount
+    init(owner: CheckpointIndex, descriptors: [Int32], ref: TensorRef) {
+        self.owner = owner; self.descriptors = descriptors; self.base = ref.byteOffset; self.length = ref.byteCount
         self.verifiedFile = nil; self.ref = ref
     }
     init(owner: CheckpointIndex, verifiedFile: VQTensorFile, ref: TensorRef) {
-        self.owner = owner; self.descriptor = -1; self.base = ref.byteOffset; self.length = ref.byteCount
+        self.owner = owner; self.descriptors = []; self.base = ref.byteOffset; self.length = ref.byteCount
         self.verifiedFile = verifiedFile; self.ref = ref
     }
     package func readChecked(into dst: UnsafeMutableRawPointer, offset: Int, count: Int,
@@ -363,15 +388,28 @@ package struct TensorReadHandle {
         }
         let absolute = try ExactRead.tensorOffset(base: base, length: length, offset: offset, count: count)
         try withExtendedLifetime(owner) {
-            try ExactRead.transfer(into: dst, offset: absolute, count: count, shouldContinue: shouldContinue) { pointer, remaining, position in
-                let got = Foundation.pread(descriptor, pointer, remaining, off_t(position))
-                return .init(count: got, error: got < 0 ? errno : 0)
-            }
+            try owner.readRouted(descriptors, into: dst, absolute: absolute, count: count,
+                shouldContinue: shouldContinue)
         }
     }
     package func read(into dst: UnsafeMutableRawPointer, offset: Int, count: Int) {
         do { try readChecked(into: dst, offset: offset, count: count) }
         catch { preconditionFailure(String(describing: error)) }
+    }
+
+    /// Private aligned scratch only, never a live GPU slot. Authenticated
+    /// tensors keep their exact verified read boundary.
+    package func readPageAlignedChecked(into dst: UnsafeMutableRawPointer, capacity: Int,
+        offset: Int, count: Int, shouldContinue: () -> Bool = { true }) throws -> UnsafeRawPointer {
+        guard capacity >= count else { throw CheckpointReadError.invalidRange }
+        let span = try ExactRead.pageSpan(base: base, length: length, offset: offset,
+            count: count, capacity: capacity)
+        if verifiedFile != nil || Int(bitPattern: dst) % ExactRead.pageBytes != 0 {
+            try readChecked(into: dst, offset: offset, count: count, shouldContinue: shouldContinue)
+            return UnsafeRawPointer(dst)
+        }
+        try readChecked(into: dst, offset: span.offset, count: span.count, shouldContinue: shouldContinue)
+        return UnsafeRawPointer(dst + span.skip)
     }
 }
 
@@ -380,15 +418,22 @@ public final class CheckpointIndex {
     public let dir: URL
     public let config: ModelConfig
     public private(set) var tensors: [String: TensorRef] = [:]
-    private var fds: [URL: Int32] = [:]
+    /// One descriptor per replica, in replica order, with `dir`'s own copy
+    /// first. Replicas hold identical bytes, so a read may use any of them.
+    private var fds: [URL: [Int32]] = [:]
+    package private(set) var q2: Q2Checkpoint?
     private let authenticatedFiles: [URL: VQTensorFile]
     package let affineExpertArtifact: AffineExpertControl.Artifact?
     package let authenticatedStorageIdentity: String?
     private let fdLock = NSLock()
+    private let mirrorDirs: [URL]
+    package let mirror: MirrorRouter
 
     deinit {
         fdLock.withLock {
-            for fd in fds.values { close(fd) }
+            for descriptors in fds.values {
+                for fd in descriptors { close(fd) }
+            }
             fds.removeAll()
         }
     }
@@ -404,12 +449,21 @@ public final class CheckpointIndex {
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
-    public init(dir: URL) throws {
+    public convenience init(dir: URL) throws {
+        try self.init(dir: dir, mirrors: [])
+    }
+
+    /// `mirrors` are directories holding byte-identical copies of the same
+    /// checkpoint, on other disks. Reads are then spread across all of them by
+    /// `MirrorRouter`.
+    public init(dir: URL, mirrors: [URL]) throws {
         self.authenticatedFiles = [:]
         self.affineExpertArtifact = nil
         self.authenticatedStorageIdentity = nil
         let resolved = dir.resolvingSymlinksInPath()
         self.dir = resolved
+        self.mirrorDirs = mirrors.map { $0.resolvingSymlinksInPath() }
+        self.mirror = MirrorRouter(replicaCount: 1 + mirrors.count)
         self.config = try ModelConfig.load(from: resolved)
         let files = try Self.shardFiles(in: resolved)
         guard !files.isEmpty else {
@@ -419,6 +473,71 @@ public final class CheckpointIndex {
             try parseHeader(f)
         }
         try requireExpectedTensors()
+        try requireIdenticalMirrors(files)
+    }
+
+    package init(q2Directory directory: URL, shouldContinue: () -> Bool = { true }) throws {
+        let source = try Q2Checkpoint(directory: directory, shouldContinue: shouldContinue)
+        self.q2 = source; self.dir = directory; self.config = source.config
+        self.mirrorDirs = []; self.mirror = MirrorRouter(replicaCount: 1)
+        self.authenticatedFiles = [:]; self.affineExpertArtifact = nil
+        self.authenticatedStorageIdentity = PinnedQ2Model.revision
+        for (name, tensor) in source.mapped where name.contains(".switch_mlp.") {
+            tensors[name] = TensorRef(file: tensor.file.url, dtype: "U8",
+                shape: [512, tensor.shape[1], tensor.rowBytes], byteOffset: tensor.offset, byteCount: tensor.byteCount)
+        }
+        for file in source.files {
+            let descriptor = dup(file.fd)
+            guard descriptor >= 0 else { throw ModelError("Cannot retain Q2 read descriptor") }
+            fds[file.url] = [descriptor]
+        }
+    }
+
+    /// Tensor offsets from the primary are reused on every replica. Check
+    /// shard sizes and headers before routing; payload hashes must be verified
+    /// separately with `pull --verify`.
+    private func requireIdenticalMirrors(_ files: [URL]) throws {
+        guard !mirrorDirs.isEmpty else { return }
+        for file in files {
+            let name = file.lastPathComponent
+            let expected = try Self.shardIdentity(file)
+            for replica in mirrorDirs {
+                let found: (size: Int, header: Data)
+                do { found = try Self.shardIdentity(replica.appendingPathComponent(name)) }
+                catch {
+                    throw ModelError(
+                        "mirror \(replica.path) cannot serve \(name): \(error) — a mirror must "
+                            + "hold the same shards as --model")
+                }
+                guard found.size == expected.size, found.header == expected.header else {
+                    throw ModelError(
+                        "mirror \(replica.path) holds a different \(name) than \(dir.path) — "
+                            + "every mirror must be a byte-identical copy of --model")
+                }
+            }
+        }
+    }
+
+    /// Size plus safetensors header, which together pin every tensor's name,
+    /// dtype, shape and byte range within the shard.
+    private static func shardIdentity(_ file: URL) throws -> (size: Int, header: Data) {
+        func unreadable(_ why: String) -> ModelError {
+            ModelError("\(file.path) is not a readable safetensors file (\(why))")
+        }
+        let handle = try FileHandle(forReadingFrom: file)
+        defer { try? handle.close() }
+        guard let size = (try? FileManager.default.attributesOfItem(atPath: file.path))?[.size]
+            as? Int64, size >= 8, size <= Int64(Int.max)
+        else { throw unreadable("file size is not representable") }
+        guard let lengthData = try handle.read(upToCount: 8), lengthData.count == 8 else {
+            throw unreadable("truncated header")
+        }
+        // Data's buffer carries no alignment guarantee; `load` requires one.
+        let length = lengthData.withUnsafeBytes { $0.loadUnaligned(as: UInt64.self) }
+        guard length > 0, length <= 100_000_000, length <= UInt64(size - 8),
+            let header = try handle.read(upToCount: Int(length)), header.count == Int(length)
+        else { throw unreadable("header length \(length) does not fit the file") }
+        return (Int(size), header)
     }
 
     /// Internal immutable index assembled from complete authenticated files.
@@ -432,6 +551,7 @@ public final class CheckpointIndex {
             throw ModelError("authenticated checkpoint has an unowned tensor")
         }
         self.dir = authenticatedDirectory; self.config = config
+        self.mirrorDirs = []; self.mirror = MirrorRouter(replicaCount: 1)
         self.authenticatedFiles = files; self.tensors = tensors
         self.affineExpertArtifact = affineExpertArtifact
         self.authenticatedStorageIdentity = authenticatedStorageIdentity
@@ -439,6 +559,7 @@ public final class CheckpointIndex {
     }
 
     package func verifyAuthenticatedFilesUnchanged() throws {
+        for file in q2?.files ?? [] { try file.verifyUnchanged() }
         for file in authenticatedFiles.values { try file.verifyUnchanged() }
     }
 
@@ -450,9 +571,19 @@ public final class CheckpointIndex {
     /// existing envelope; PLE tables are never admitted through this method.
     package func authenticatedArray(_ name: String, shouldContinue: () -> Bool = { true }) throws -> MLXArray {
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
-        guard let ref = tensors[name], let file = authenticatedFiles[ref.file],
-              (1...800_000_000).contains(ref.byteCount), !name.contains("ngram_embedding.shard_") else {
+        guard let ref = tensors[name], authenticatedFiles[ref.file] != nil else {
             throw ModelError("authenticated resident tensor is absent or exceeds its load-copy bound")
+        }
+        return try residentArray(name, shouldContinue: shouldContinue)
+    }
+
+    /// Eager, bounded resident loading through the index's exact-read path.
+    /// Mirrored vision must use this instead of reopening primary URLs in MLX.
+    package func residentArray(_ name: String, shouldContinue: () -> Bool = { true }) throws -> MLXArray {
+        guard shouldContinue() else { throw CheckpointReadError.cancelled }
+        guard let ref = tensors[name], (1...800_000_000).contains(ref.byteCount),
+              !name.contains("ngram_embedding.shard_") else {
+            throw ModelError("resident tensor is absent or exceeds its load-copy bound")
         }
         let dtype: DType
         switch ref.dtype {
@@ -462,16 +593,16 @@ public final class CheckpointIndex {
         case "F32": dtype = .float32
         case "I64": dtype = .int64
         case "I32": dtype = .int32
-        default: throw ModelError("unsupported authenticated resident tensor dtype")
+        default: throw ModelError("unsupported resident tensor dtype \(ref.dtype)")
         }
         var bytes = Data(count: ref.byteCount)
         try bytes.withUnsafeMutableBytes { destination in
-            try file.readDirect(into: destination.baseAddress!, ref: ref, offset: 0, count: ref.byteCount,
+            try preadChecked(into: destination.baseAddress!, ref, offset: 0, count: ref.byteCount,
                 shouldContinue: shouldContinue)
         }
         let array = MLXArray(bytes, ref.shape, dtype: dtype)
         eval(array)
-        try file.verifyUnchanged()
+        try authenticatedFiles[ref.file]?.verifyUnchanged()
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
         return array
     }
@@ -572,7 +703,8 @@ public final class CheckpointIndex {
             linear(base + ".input_mix_weight_up")
             if inject { required.append(base + ".block_inject_weight.weight") }
         }
-        hyper("model.hyper_connection_mixer", inject: false)
+        if config.isFast { required.append("model.norm.weight") }
+        else { hyper("model.hyper_connection_mixer", inject: false) }
         for l in 0 ..< config.numLayers {
             let layer = "model.layers.\(l)"
             let mlp = layer + ".mlp"
@@ -584,8 +716,12 @@ public final class CheckpointIndex {
             for piece in ExpertStore.pieces {
                 required.append(mlp + ".switch_mlp." + piece)
             }
-            hyper(layer + ".attn_hyper_connection", inject: true)
-            hyper(layer + ".mlp_hyper_connection", inject: true)
+            if config.isFast {
+                required += [layer + ".input_layernorm.weight", layer + ".post_attention_layernorm.weight"]
+            } else {
+                hyper(layer + ".attn_hyper_connection", inject: true)
+                hyper(layer + ".mlp_hyper_connection", inject: true)
+            }
 
             if config.layerTypes[l] == "linear_attention" {
                 let b = layer + ".linear_attn"
@@ -602,9 +738,11 @@ public final class CheckpointIndex {
                 }
                 required.append(b + ".q_norm.weight")
                 required.append(b + ".k_norm.weight")
-                linear(b + ".indexer.index_qk_proj")
-                required.append(b + ".indexer.q_layernorm.weight")
-                required.append(b + ".indexer.k_layernorm.weight")
+                if !config.isFast {
+                    linear(b + ".indexer.index_qk_proj")
+                    required.append(b + ".indexer.q_layernorm.weight")
+                    required.append(b + ".indexer.k_layernorm.weight")
+                }
             }
 
             if config.pleLayerIndices.contains(l) {
@@ -654,8 +792,10 @@ public final class CheckpointIndex {
         return r
     }
 
+    /// The primary checkpoint descriptor, retained for existing library callers.
+    /// Routed reads use preadChecked or readHandle instead.
     public func fd(for file: URL) -> Int32 {
-        do { return try checkedFD(for: file) }
+        do { return try checkedDescriptors(for: file)[0] }
         catch { preconditionFailure(String(describing: error)) }
     }
 
@@ -663,22 +803,64 @@ public final class CheckpointIndex {
         if let file = authenticatedFiles[ref.file] {
             return TensorReadHandle(owner: self, verifiedFile: file, ref: ref)
         }
-        return TensorReadHandle(owner: self, descriptor: fd(for: ref.file), ref: ref)
+        do { return TensorReadHandle(owner: self, descriptors: try checkedDescriptors(for: ref.file), ref: ref) }
+        catch { preconditionFailure(String(describing: error)) }
     }
 
-    private func checkedFD(for file: URL) throws -> Int32 {
-        if let owner = authenticatedFiles[file] { return try owner.checkedDescriptor() }
+    private func checkedDescriptors(for file: URL) throws -> [Int32] {
+        if let owner = authenticatedFiles[file] { return [try owner.checkedDescriptor()] }
         guard authenticatedFiles.isEmpty else { throw ModelError("unbound authenticated checkpoint file") }
         fdLock.lock()
         defer { fdLock.unlock() }
-        if let f = fds[file] { return f }
+        if let open = fds[file] { return open }
+        var opened: [Int32] = []
+        do {
+            opened.append(try Self.openForStreaming(file))
+            for replica in mirrorDirs {
+                opened.append(try Self.openForStreaming(
+                    replica.appendingPathComponent(file.lastPathComponent)))
+            }
+        } catch {
+            for descriptor in opened { close(descriptor) }
+            throw error
+        }
+        fds[file] = opened
+        return opened
+    }
+
+    private static func openForStreaming(_ file: URL) throws -> Int32 {
         var f: Int32
         repeat { f = open(file.path, O_RDONLY) } while f < 0 && errno == EINTR
         guard f >= 0 else { throw ModelError("open \(file.path) failed: \(String(cString: strerror(errno)))") }
         _ = fcntl(f, F_NOCACHE, 1)
         _ = fcntl(f, F_RDAHEAD, 0)
-        fds[file] = f
         return f
+    }
+
+    /// Runs one exact read through the mirror router, which chooses the replica
+    /// and times the read itself so that its view of that replica stays current.
+    /// `descriptors` is indexed by replica, so it has to be one this index
+    /// opened: it and the router are both sized from `mirrorDirs`.
+    fileprivate func readRouted(_ descriptors: [Int32], into dst: UnsafeMutableRawPointer,
+        absolute: Int, count: Int, shouldContinue: () -> Bool) throws {
+        for file in q2?.files ?? [] { try file.verifyUnchanged() }
+        // A single copy skips the router: there is no choice to make, and its
+        // lock would otherwise be taken by every read of an unmirrored run.
+        let routed = mirror.replicaCount > 1
+        let replica = routed ? mirror.claim(byteCount: count) : 0
+        let descriptor = descriptors[replica]
+        do {
+            try ExactRead.transfer(into: dst, offset: absolute, count: count,
+                shouldContinue: shouldContinue) { pointer, remaining, position in
+                    let got = Foundation.pread(descriptor, pointer, remaining, off_t(position))
+                    return ExactRead.Outcome(count: got, error: got < 0 ? errno : 0)
+                }
+        } catch {
+            if routed { mirror.release(replica, byteCount: count, completed: false) }
+            throw error
+        }
+        if routed { mirror.release(replica, byteCount: count, completed: true) }
+        for file in q2?.files ?? [] { try file.verifyUnchanged() }
     }
 
     /// Compatibility wrapper. A corrupt checkpoint still fails closed; it
@@ -699,11 +881,7 @@ public final class CheckpointIndex {
         }
         let absolute = try ExactRead.tensorOffset(base: r.byteOffset, length: r.byteCount, offset: offset, count: count)
         if count == 0 { return }
-        let f = try checkedFD(for: r.file)
-        try ExactRead.transfer(into: dst, offset: absolute, count: count,
-            shouldContinue: shouldContinue) { pointer, remaining, absolute in
-                let got = Foundation.pread(f, pointer, remaining, off_t(absolute))
-                return ExactRead.Outcome(count: got, error: got < 0 ? errno : 0)
-            }
+        try readRouted(try checkedDescriptors(for: r.file), into: dst, absolute: absolute,
+            count: count, shouldContinue: shouldContinue)
     }
 }

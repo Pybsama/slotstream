@@ -18,6 +18,7 @@ on:
       - "Tools/build_slotstream_mac.sh"
       - "Tools/mac_build_inputs.py"
       - "Tools/check_mac_package_products.py"
+      - "Tools/check_home_integration.py"
       - "Tools/prepare_slotstream_build.py"
       - "Tools/test_prepare_slotstream_build.py"
       - "Tools/dbmd_install.sh"
@@ -35,6 +36,7 @@ on:
       - "Tools/build_slotstream_mac.sh"
       - "Tools/mac_build_inputs.py"
       - "Tools/check_mac_package_products.py"
+      - "Tools/check_home_integration.py"
       - "Tools/prepare_slotstream_build.py"
       - "Tools/test_prepare_slotstream_build.py"
       - "Tools/dbmd_install.sh"
@@ -70,6 +72,7 @@ jobs:
             .build/slotstream-thinking-ui/
             .build/slotstream-apps-ui/
             .build/slotstream-memory-ui/
+            .build/slotstream-home-ui/
           if-no-files-found: ignore
   xcode:
     runs-on: macos-26

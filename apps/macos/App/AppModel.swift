@@ -11,7 +11,7 @@ import Combine
     private let openedHomeURL: URL
     @Published private(set) var openingHome = false
     init(homeURL: URL? = nil, homes: HomeNavigation? = nil) {
-        let navigation = homes ?? HomeNavigation()
+        let navigation = homes ?? (homeURL.map { HomeNavigation(environment: ["SLOTSTREAM_HOME": $0.path]) } ?? HomeNavigation())
         self.homes = navigation
         openedHomeURL = homeURL ?? navigation.current
         navigation.model = self
@@ -366,6 +366,7 @@ import Combine
         poll = Task {
             do {
                 if runtime == nil {
+                    if let error = homes.selectionError { throw AppRuntimeError.unavailable("Cannot read the selected Home. " + error) }
                     let root = try HomeLocation.validate(homeURL, intent: homes.initialIntent)
                     runtime = try await makeHomeRuntime(at: root)
                 }

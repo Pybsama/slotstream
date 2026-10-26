@@ -12,6 +12,7 @@ extension Catalogue {
             Check("pack-memory", tier: .t0) { try Diagnostics.packMemory() },
             Check("automatic-pack-policy", tier: .t0) { try Diagnostics.automaticPackPolicy() },
             Check("model-pack-planning", tier: .t0) { try Diagnostics.modelPackPlanning() },
+            Check("dflash-configuration", tier: .t0) { try Diagnostics.dflashConfiguration() },
             Check("model-pack-startup-defaults", tier: .t0) { try Diagnostics.modelPackStartupDefaults() },
             Check("model-pack-startup-selection", tier: .t0) { try Diagnostics.modelPackStartupSelection() },
             Check("quantization-session-framing", tier: .t0) { try Diagnostics.quantizationSessionFraming() },
@@ -29,6 +30,7 @@ extension Catalogue {
             Check("automatic-context-window", tier: .t0) { try automaticContextWindow() },
             Check("memory-budget-context", tier: .t0) { try memoryBudgetContext() },
             Check("configurable-context", tier: .t0) { try Diagnostics.configurableContext() },
+            Check("checkpoint-mirror", tier: .t0) { Diagnostics.checkpointMirror() },
             Check("exact-read", tier: .t0) { Diagnostics.optimizationExactRead() },
             Check("packed-layout", tier: .t0) { try Diagnostics.optimizationPackedLayout() },
             Check("ngram-prefetch-ticket", tier: .t0) { try Diagnostics.optimizationNgramPrefetchTicket() },
@@ -59,6 +61,7 @@ extension Catalogue {
             Check("vision-check", tier: .t0) { Diagnostics.vision() },
             Check("prefill-read-policy", tier: .t0) { Diagnostics.fusedWorkspaceReservation() },
             // T1: touches MLX, so it needs the Metal library beside the runner.
+            Check("dflash-selector", tier: .t1) { Diagnostics.dflashSelector() },
             Check("fused-prefill-attention", tier: .t1) { Diagnostics.fusedPrefillAttention() },
             Check("sampler-behaviour", tier: .t1) { try Diagnostics.samplerBehaviour() },
             Check("expert-lookahead-adoption", tier: .t1) { try Diagnostics.expertLookaheadAdoption() },

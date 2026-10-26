@@ -66,6 +66,34 @@ extension Diagnostics {
             }
             c.equal("empty transfer performs no I/O", invalidReads, 0)
         } catch { c.expect("empty transfer succeeds", false) }
+        do {
+            let page = ExactRead.pageBytes
+            // Unaligned tensor origin and request; compare payload locations,
+            // not an implementation copy of the alignment formula.
+            let span = try ExactRead.pageSpan(base: 37, length: page * 8,
+                offset: page + 19, count: page + 7, capacity: page * 4)
+            c.equal("page read starts at a physical page", 37 + span.offset, page)
+            c.equal("page read contains complete pages", span.count, page * 2)
+            c.equal("page read returns the exact logical payload", span.skip, 56)
+            for (offset, count, capacity) in [(0, 91, page * 3), (page * 8 - 91, 91, page * 3),
+                                               (page + 19, page + 7, page + 7), (0, 0, 0)] {
+                let exact = try ExactRead.pageSpan(base: 37, length: page * 8,
+                    offset: offset, count: count, capacity: capacity)
+                c.equal("bounded page fallback offset \(offset)/\(count)", exact.offset, offset)
+                c.equal("bounded page fallback size \(offset)/\(count)", exact.count, count)
+                c.equal("bounded page fallback skip \(offset)/\(count)", exact.skip, 0)
+            }
+            let overflow = try ExactRead.pageSpan(base: Int.max - 2, length: 2,
+                offset: 0, count: 2, capacity: page * 2)
+            c.equal("page rounding overflow falls back to an exact valid read", overflow.count, 2)
+            for (offset, count, capacity) in [(-1, 1, page), (page * 8, 1, page), (0, 9, 8)] {
+                do {
+                    _ = try ExactRead.pageSpan(base: 37, length: page * 8,
+                        offset: offset, count: count, capacity: capacity)
+                    c.expect("invalid aligned range is rejected \(offset)/\(count)/\(capacity)", false)
+                } catch { c.expect("invalid aligned range is rejected \(offset)/\(count)/\(capacity)", true) }
+            }
+        } catch { c.expect("bounded page spans", false, String(describing: error)) }
         return c.report()
     }
 }

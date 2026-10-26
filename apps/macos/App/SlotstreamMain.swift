@@ -107,6 +107,7 @@ import SlotstreamRuntime
     @objc func back(_ sender: Any?) { model.closePanel() }
     @objc func revealHome(_ sender: Any?) { NSWorkspace.shared.open(model.homeURL) }
     @objc func attachSources(_ sender: Any?) { model.panel = ""; model.attach() }
+    @objc func dataBrowser(_ sender: Any?) { model.panel = "Data" }
     @objc func appsAndSkills(_ sender: Any?) { model.panel = "Apps" }
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if model.homes.switching { return false }
@@ -166,6 +167,7 @@ import SlotstreamRuntime
         add(edit, "Search Home…", #selector(search(_:)), "k", target: self)
         let view = menu("View"); add(view, "Home", #selector(home(_:)), "1", target: self)
         add(view, "Apps & Skills", #selector(appsAndSkills(_:)), "2", target: self)
+        add(view, "Data", #selector(dataBrowser(_:)), "3", target: self)
         add(view, "Toggle Sidebar", #selector(toggleSidebar(_:)), target: self)
         view.addItem(.separator())
         add(view, "Focus Composer", #selector(focusComposer(_:)), target: self)
@@ -262,7 +264,7 @@ import SlotstreamRuntime
             if let help = item.toolTip, let view = item.view, view.toolTip != help { view.toolTip = help; view.setAccessibilityHelp(help) }
         }
         let conversation = model.panel.isEmpty || model.panel == "Artifact"
-        let panelTitles = ["Apps": "Apps & Skills", "App review": "Review App", "Skill review": "Review Skill", "Changes": "File Changes", "Needs you": "Needs You"]
+        let panelTitles = ["Knowledge": "Memory", "Apps": "Apps & Skills", "App review": "Review App", "Skill review": "Review Skill", "Changes": "File Changes", "Needs you": "Needs You"]
         let title = conversation ? (model.thread?.title ?? "Home") : model.panel == "App" ? (model.runningApp?.session.name ?? "App") : panelTitles[model.panel] ?? model.panel
         var subtitle = conversation ? (model.thread?.mode.title ?? "Shared memory") : model.panel == "App" ? "Mini-app · offline" : ""
         if conversation, let thread = model.thread, thread.id != "home" {
@@ -360,6 +362,7 @@ import SlotstreamRuntime
         menu.addItem(.separator())
         add("Attach Files…", "paperclip", #selector(attachSources(_:)), enabled: model.composer.ready && !model.working && !model.aiPaused)
         add("Apps & Skills", "square.grid.2x2", #selector(appsAndSkills(_:)))
+        add("Data", "externaldrive", #selector(dataBrowser(_:)))
         add("Reveal Home in Finder", "folder", #selector(revealHome(_:)))
         add("Settings…", "gearshape", #selector(settings(_:)))
     }

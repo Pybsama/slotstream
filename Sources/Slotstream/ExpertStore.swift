@@ -34,6 +34,9 @@ public enum SlotPoolError: Error, CustomStringConvertible {
 
 public final class ExpertStore {
     public let index: CheckpointIndex
+    package var isQ2: Bool { index.q2 != nil }
+    package let nativeAffineTiles: Bool
+    package var pieceCount: Int { refs[0].count }
     package let quantization: AffineQuantization
     package let downQuantization: AffineQuantization
     private let cfg: ModelConfig
@@ -56,6 +59,9 @@ public final class ExpertStore {
     /// payload before changing the active reader. Failed loads preserve it.
     @discardableResult
     public func loadPackedLayout(at directory: URL) throws -> PackedLayoutReport {
+        guard index.mirror.replicaCount == 1 else {
+            throw ModelError("packed expert layouts cannot be combined with checkpoint mirrors")
+        }
         try ModelProcessGuard.acquire()
         let identity = try packedModelIdentity()
         let candidate = try PackedExpertLayout(directory:directory,identity:identity,
@@ -134,11 +140,49 @@ public final class ExpertStore {
     /// cancelled ticket stops between pieces. A failure here never touches
     /// the packed-layout fallback state that demand reads own.
     package func readPieceChecked(into destination: UnsafeMutableRawPointer, key: ExpertKey, piece: Int,
-                                  shouldContinue: () -> Bool) throws {
+                                  shouldContinue: () -> Bool, rawCopy: Bool = false,
+                                  scratch: ExpertPrefetchScratch? = nil) throws {
         guard piece >= 0, piece < pieceRowBytes.count, key.layer >= 0, key.layer < cfg.numLayers,
               key.expert >= 0, key.expert < cfg.numExperts else { throw SlotPoolError.invalidKey(key) }
         guard shouldContinue() else { throw CheckpointReadError.cancelled }
         let bytes = pieceRowBytes[piece]
+        if nativeAffineTiles || (isQ2 && Q2PackedExperts.enabled) {
+            // A speculative ticket must publish the same representation as a
+            // demand miss. Keep file I/O in private host memory, then transform
+            // into the ticket's destination before it can become visible.
+            let capacity = bytes + 2 * ExactRead.pageBytes
+            let raw: UnsafeMutableRawPointer, temporary: Bool
+            if let scratch {
+                guard scratch.bytes >= capacity, let acquired = scratch.acquire() else {
+                    throw ModelError("out of memory for a speculative expert read")
+                }
+                raw = acquired.0; temporary = acquired.1
+            } else {
+                var allocation: UnsafeMutableRawPointer?
+                guard posix_memalign(&allocation, ExactRead.pageBytes, capacity) == 0, let pointer = allocation else {
+                    throw ModelError("out of memory for a speculative expert read")
+                }
+                raw = pointer; temporary = true
+            }
+            defer {
+                if let scratch { scratch.release(raw, temporary: temporary) }
+                else { free(raw) }
+            }
+            let payload: UnsafeRawPointer
+            if usePackedLayout, let packedLayout {
+                try packedLayout.readPiece(key, piece: piece, into: raw)
+                payload = UnsafeRawPointer(raw)
+            } else {
+                try readFault?.beforeRead()
+                let handle = readHandles?[key.layer][piece] ?? index.readHandle(for: refs[key.layer][piece])
+                payload = try handle.readPageAlignedChecked(into: raw, capacity: capacity,
+                    offset: key.expert * bytes, count: bytes, shouldContinue: shouldContinue)
+            }
+            guard shouldContinue() else { throw CheckpointReadError.cancelled }
+            if rawCopy { memcpy(destination, payload, bytes) }
+            else { repackPieceCPU(payload, into: destination, piece: piece) }
+            return
+        }
         if usePackedLayout, let packedLayout {
             try packedLayout.readPiece(key, piece: piece, into: destination)
         } else {
@@ -167,12 +211,35 @@ public final class ExpertStore {
             throw ModelError("whole-record speculative reads require the packed layout")
         }
         try packedLayout.readRecord(key, into: destination)
+        if nativeAffineTiles || (isQ2 && Q2PackedExperts.enabled) {
+            guard let scratch = malloc(pieceRowBytes.max()!) else { throw ModelError("out of memory preparing an expert record") }
+            defer { free(scratch) }
+            var offset = 0
+            for (piece, bytes) in pieceRowBytes.enumerated() {
+                guard shouldContinue() else { throw CheckpointReadError.cancelled }
+                memcpy(scratch, destination + offset, bytes)
+                repackPieceCPU(scratch, into: destination + offset, piece: piece)
+                offset += bytes
+            }
+        }
+    }
+
+    fileprivate func repackPieceCPU(_ raw: UnsafeRawPointer, into destination: UnsafeMutableRawPointer, piece: Int) {
+        if nativeAffineTiles {
+            NativeAffineExperts.repackCPU(raw, into: destination,
+                rows: piece >= 6 ? cfg.hiddenSize : cfg.moeIntermediate,
+                columns: piece >= 6 ? cfg.moeIntermediate : cfg.hiddenSize, codes: piece.isMultiple(of: 3))
+        } else {
+            Q2PackedExperts.repackCPU(raw, into: destination,
+                rows: piece == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
+                columns: piece == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+        }
     }
 
     /// Row shape and dtype of each staging piece, for single-record adoption.
     package var stagingPieceSpecs: [(shape: [Int], dtype: DType)] {
-        refs[0][0 ..< 9].map { r in
-            (Array(r.shape.dropFirst()), r.dtype == "U32" ? DType.uint32 : DType.bfloat16)
+        refs[0].map { r in
+            (Array(r.shape.dropFirst()), r.dtype == "U8" ? DType.uint8 : r.dtype == "U32" ? DType.uint32 : DType.bfloat16)
         }
     }
 
@@ -187,7 +254,11 @@ public final class ExpertStore {
         return total
     }
 
-    public init(index: CheckpointIndex) throws {
+    public convenience init(index: CheckpointIndex) throws {
+        try self.init(index: index, nativeAffineTiles: false)
+    }
+
+    package init(index: CheckpointIndex, nativeAffineTiles: Bool) throws {
         self.index = index
         self.cfg = index.config
         let h = cfg.hiddenSize
@@ -202,6 +273,17 @@ public final class ExpertStore {
             throw ModelError("mixed expert projections require the exact admitted research artifact")
         }
         self.downQuantization = down
+        self.nativeAffineTiles = nativeAffineTiles && Q2PackedExperts.enabled && cfg.isFast
+            && index.q2 == nil && affine.bits == 4 && affine.groupSize == 64 && down == affine
+        if index.q2 != nil {
+            for layer in 0..<cfg.numLayers {
+                refs.append(["gate_proj", "up_proj", "down_proj"].map {
+                    index.ref("model.layers.\(layer).mlp.switch_mlp." + $0 + ".weight")
+                })
+            }
+            pieceRowBytes = refs[0].map { $0.rowBytes }
+            return
+        }
         let g = affine.groupSize
         let hiddenWords = try affine.packedWords(columns: h)
         let intermediateWords = try down.packedWords(columns: ff)
@@ -312,7 +394,7 @@ public final class ExpertStore {
         }
         let failure = JoinedReadFailure()
         // 9n reads, spread across worker lanes
-        let jobs: [(piece: Int, slot: Int)] = (0 ..< n).flatMap { s in (0 ..< 9).map { (piece: $0, slot: s) } }
+        let jobs: [(piece: Int, slot: Int)] = (0 ..< n).flatMap { s in (0 ..< pieceCount).map { (piece: $0, slot: s) } }
         let lanes = min(max(queueDepth, 1), jobs.count)
         DispatchQueue.concurrentPerform(iterations: lanes) { lane in
             var j = lane
@@ -343,18 +425,23 @@ public final class ExpertStore {
     package func readIntoSlotsChecked(_ keys: [ExpertKey], slots: [Int], bases: [UnsafeMutableRawPointer],
                                       scratch: ExpertPrefetchScratch,
                                       queueDepth: Int = ExpertStore.poolQueueDepth,
-                                      finishReaders: (() -> Void)? = nil) throws {
+                                      finishReaders: (() -> Void)? = nil, rawCopy: Bool = false) throws {
         let n = keys.count
-        guard n > 0, slots.count == n, bases.count == 9, pieceRowBytes.count == 9, !supportsRecordReads else {
+        guard n > 0, slots.count == n, bases.count == pieceCount, pieceRowBytes.count == pieceCount, !supportsRecordReads else {
             throw CheckpointReadError.invalidRange
         }
         for key in keys where key.layer < 0 || key.layer >= cfg.numLayers || key.expert < 0 || key.expert >= cfg.numExperts {
             throw SlotPoolError.invalidKey(key)
         }
+        func copyPiece(_ from: UnsafeRawPointer, _ to: UnsafeMutableRawPointer, _ piece: Int) {
+            if !rawCopy && (nativeAffineTiles || (isQ2 && Q2PackedExperts.enabled)) {
+                repackPieceCPU(from, into: to, piece: piece)
+            } else { memcpy(to, from, pieceRowBytes[piece]) }
+        }
         let failure = JoinedReadFailure()
         let rowBytes = pieceRowBytes
         // 9n reads spread across worker lanes in the staging path's order.
-        let jobs = n * 9
+        let jobs = n * pieceCount
         let lanes = min(max(queueDepth, 1), jobs)
         if let finishReaders {
             // Diagnostic overlap variant: keep disk reads independent of the
@@ -367,7 +454,7 @@ public final class ExpertStore {
             DispatchQueue.concurrentPerform(iterations: lanes) { lane in
                 var j = lane
                 while j < jobs {
-                    let (record, piece) = (j / 9, j % 9)
+                    let (record, piece) = (j / pieceCount, j % pieceCount)
                     let key = keys[record], bytes = rowBytes[piece]
                     do { try read(into: buffers[piece] + record * bytes, layer: key.layer,
                                   piece: piece, offset: key.expert * bytes, count: bytes) }
@@ -382,8 +469,8 @@ public final class ExpertStore {
             DispatchQueue.concurrentPerform(iterations: lanes) { lane in
                 var j = lane
                 while j < jobs {
-                    let (record, piece) = (j / 9, j % 9), bytes = rowBytes[piece]
-                    memcpy(bases[piece] + slots[record] * bytes, buffers[piece] + record * bytes, bytes)
+                    let (record, piece) = (j / pieceCount, j % pieceCount), bytes = rowBytes[piece]
+                    copyPiece(buffers[piece] + record * bytes, bases[piece] + slots[record] * bytes, piece)
                     j += lanes
                 }
             }
@@ -397,12 +484,15 @@ public final class ExpertStore {
             defer { scratch.release(buffer, temporary: temporary) }
             var j = lane
             while j < jobs {
-                let (record, piece) = (j / 9, j % 9)
+                let (record, piece) = (j / pieceCount, j % pieceCount)
                 let key = keys[record]
                 let bytes = rowBytes[piece]
                 do {
-                    try read(into: buffer, layer: key.layer, piece: piece, offset: key.expert * bytes, count: bytes)
-                    memcpy(bases[piece] + slots[record] * bytes, buffer, bytes)
+                    try readFault?.beforeRead()
+                    let handle = readHandles?[key.layer][piece] ?? index.readHandle(for: refs[key.layer][piece])
+                    let payload = try handle.readPageAlignedChecked(into: buffer, capacity: scratch.bytes,
+                        offset: key.expert * bytes, count: bytes)
+                    copyPiece(payload, bases[piece] + slots[record] * bytes, piece)
                 } catch { failure.record(error) }
                 j += lanes
             }
@@ -446,8 +536,8 @@ public final class ExpertStore {
         }
         // One job per (run, piece), largest first so the lanes finish together.
         var jobs: [(piece: Int, row: Int, len: Int)] = []
-        jobs.reserveCapacity(runs.count * 9)
-        for r in runs { for p in 0 ..< 9 { jobs.append((p, r.row, r.len)) } }
+        jobs.reserveCapacity(runs.count * pieceCount)
+        for r in runs { for p in 0 ..< pieceCount { jobs.append((p, r.row, r.len)) } }
         jobs.sort { $0.len * pieceRowBytes[$0.piece] > $1.len * pieceRowBytes[$1.piece] }
         let lanes = min(max(queueDepth, 1), jobs.count)
         let lock = NSLock()
@@ -509,10 +599,11 @@ public final class ExpertStore {
         let profile = transferProfile
         let start = profile == nil ? 0 : RuntimeClock.now()
         var out: [MLXArray] = []
-        for (p, r) in refs[0][0 ..< 9].enumerated() {
+        for (p, r) in refs[0].enumerated() {
             let shape = [n] + Array(r.shape.dropFirst())
             let dtype: DType
             switch r.dtype {
+            case "U8": dtype = .uint8
             case "U32": dtype = .uint32
             case "BF16": dtype = .bfloat16
             default:
@@ -530,6 +621,18 @@ public final class ExpertStore {
                 out.append(MLXArray(rawPointer: owned, shape, dtype: dtype) { free(owned) })
             }
         }
+        if isQ2 && Q2PackedExperts.enabled {
+            out = out.enumerated().map { p, raw in
+                Q2PackedExperts.repack(raw, rows: p == 2 ? cfg.hiddenSize : cfg.moeIntermediate,
+                    columns: p == 2 ? cfg.moeIntermediate : cfg.hiddenSize)
+            }
+        }
+        if nativeAffineTiles {
+            out = out.enumerated().map { p, raw in
+                NativeAffineExperts.repack(raw, rows: p >= 6 ? cfg.hiddenSize : cfg.moeIntermediate,
+                    columns: p >= 6 ? cfg.moeIntermediate : cfg.hiddenSize, codes: p.isMultiple(of: 3))
+            }
+        }
         let evalStart = profile == nil ? 0 : RuntimeClock.now()
         if let profile { profile.wrappingSeconds += Double(evalStart - start) / 1e9 }
         eval(out)
@@ -540,10 +643,10 @@ public final class ExpertStore {
 
 // MARK: - Slot pool
 
-/// A fixed pool of expert slots shared across all layers (uniform shape), with
-/// CLOCK eviction. `ensure` maps (layer, expert) keys to slot indices, loading
-/// misses in one batched read + scatter. Bit-exact: the pool holds the same
-/// quantized bytes the checkpoint does.
+/// A fixed pool of expert slots shared across all layers (uniform shape).
+/// Maintained native-affine and Q2 tiles use bounded adaptive replacement;
+/// other layouts retain CLOCK. `ensure` maps (layer, expert) keys to pinned
+/// slots and publishes complete reads. Repacking changes layout losslessly.
 public final class SlotPool {
     public private(set) var slots: Int
     private let cfg: ModelConfig
@@ -556,6 +659,13 @@ public final class SlotPool {
     private var keyOf: [ExpertKey?]
     private var refBit: [Bool]
     private var pinned: SlotPins
+    private var adaptiveReplacement: AdaptiveSlotReplacement?
+    package var adaptiveReplacementEnabled = AdaptiveSlotReplacement.enabled {
+        didSet { if oldValue != adaptiveReplacementEnabled { adaptiveReplacement = nil } }
+    }
+    package var replacementIsScan = false
+    package private(set) var adaptiveReplacementClaims = 0
+    package private(set) var adaptiveReplacementGhostHits: UInt64 = 0
     package var pinnedSlotCount: Int { pinned.count }
     package var contiguousSlotWrites = false
     package var wordSlotWrites = false
@@ -580,8 +690,10 @@ public final class SlotPool {
     package var diagnosticOverlapDirectCopies = false
     package private(set) var readyTicketPrelaunchRecords = 0
     package private(set) var overlapDirectBatches = 0
-    /// One piece-sized host buffer per demand lane, plus a few spare.
-    private lazy var demandScratch = ExpertPrefetchScratch(pieceBytes: store.pieceRowBytes.max() ?? 1,
+    /// A piece plus two pages per demand lane, including spares. The extra
+    /// 1.125 MiB at the default 36 lanes is covered by the conservative fixed
+    /// runtime/staging allowance. Only scratch is widened; slots stay exact.
+    private lazy var demandScratch = ExpertPrefetchScratch(pieceBytes: (store.pieceRowBytes.max() ?? 1) + 2 * ExactRead.pageBytes,
                                                            count: ExpertStore.poolQueueDepth + 4)
     public private(set) var slotDirectBatches = 0
     package var denseLookup = false {
@@ -603,6 +715,7 @@ public final class SlotPool {
         drainReturnedSlots()
         guard inFlightCount == 0 else { throw ModelError("cannot discard residency with speculative slots in flight") }
         eval(pools)
+        adaptiveReplacement = nil
         for key in keyOf.compactMap({ $0 }) { map.removeValue(forKey: key) }
         keyOf = Array(repeating: nil, count: slots)
         refBit = Array(repeating: false, count: slots)
@@ -647,7 +760,8 @@ public final class SlotPool {
     /// Bumped on every pool write or replacement; the cached piece base
     /// pointers are recomputed when it changes, and a reservation whose bases
     /// differ from the current ones at adoption is refused.
-    private var poolWriteEpoch: UInt64 = 0
+    private var poolWriteEpoch: UInt64 = 0 { didSet { nativeBindings = nil } }
+    private var nativeBindings: NativeExpertSchedule.Bindings?
     private var basesCache: (epoch: UInt64, bases: [UnsafeMutableRawPointer])?
     public private(set) var speculativeSlotReservations = 0
     public private(set) var speculativeSlotAdoptions = 0
@@ -728,6 +842,7 @@ public final class SlotPool {
     public func resize(to newSlots: Int) {
         let n = max(newSlots, 1)
         if n == slots { return }
+        adaptiveReplacement = nil // Re-seed exact retained indices after growth; shrink is cold.
         unpinAll()
         // The scheduler was invalidated (workers joined) before any resize;
         // whatever came back is drained and the reservation state restarts.
@@ -809,6 +924,52 @@ public final class SlotPool {
         try ensureCore(keys, reservedHits: nil, finishReaders: nil)
     }
 
+    package func scheduledBindings(for schedule: NativeExpertSchedule) throws -> NativeExpertSchedule.Bindings {
+        if let nativeBindings { return nativeBindings }
+        let bindings = try schedule.bind(pools)
+        nativeBindings = bindings
+        return bindings
+    }
+
+    /// A queued external Metal section may bind the pool before demand only
+    /// when every subsequent write keeps this backing allocation. Diagnostic
+    /// scatters and speculative slot ownership use the ordinary MLX path.
+    package var supportsScheduledDemand: Bool {
+        directDemandReads && !store.supportsRecordReads && transferProfile == nil
+            && !cpuSlotWrites && !wordSlotWrites && !contiguousSlotWrites
+            && lookahead?.prefetch?.usesSlotAdoption != true
+            && (lookahead?.prefetch == nil || lookahead?.prefetch?.configuration.inputForecast == true)
+    }
+
+    /// Reserve and pin destinations, then allow encoding against those exact
+    /// slots while they are still gated by an external event. The caller must
+    /// release only after success, or cancel/drain on every error path.
+    package func ensureScheduled(_ keys: [ExpertKey],
+                                 staging: (() -> NativeExpertSchedule.Staging?)? = nil,
+                                 prepare: @escaping ([Int], Bool) throws -> Void) throws -> [Int] {
+        guard supportsScheduledDemand, currentPoolBases() != nil else {
+            throw ModelError("Scheduled expert demand requires stable direct-write storage")
+        }
+        let epoch = poolWriteEpoch
+        do {
+            let result = try ensureCore(keys, reservedHits: nil, finishReaders: nil, prepare: prepare, staging: staging)
+            guard epoch == poolWriteEpoch else { throw ModelError("Scheduled expert storage changed during loading") }
+            return result
+        } catch {
+            // Raw reads are not valid pool bytes until the GPU repack runs.
+            // Cancellation skips repacking, including earlier complete batches.
+            if let staged = staging?() {
+                for key in keys {
+                    if let slot = map[key], staged.copiedSlots.contains(slot) {
+                        map.removeValue(forKey: key); keyOf[slot] = nil
+                    }
+                }
+                adaptiveReplacement = nil
+            }
+            throw error
+        }
+    }
+
     /// Resident GPU work may be submitted after the whole request is pinned.
     /// Complete those readers after synchronous I/O and before the first write,
     /// including the error path. Diagnostic host copies also join first.
@@ -818,7 +979,8 @@ public final class SlotPool {
     }
 
     private func ensureCore(_ keys: [ExpertKey], reservedHits: (([Int]) -> Void)?,
-                            finishReaders: (() -> Void)?) throws -> [Int] {
+                            finishReaders: (() -> Void)?, prepare: (([Int], Bool) throws -> Void)? = nil,
+                            staging: (() -> NativeExpertSchedule.Staging?)? = nil) throws -> [Int] {
         for key in keys where key.layer < 0 || key.layer >= cfg.numLayers || key.expert < 0 || key.expert >= cfg.numExperts {
             throw SlotPoolError.invalidKey(key)
         }
@@ -844,6 +1006,18 @@ public final class SlotPool {
                 missPos.append((i, j))
             }
         }
+        // ARC is qualified independently for the maintained Fast/Q2 targets.
+        // Speculative slot ownership has a separate reservation protocol;
+        // ordinary staging forecasts never own or evict slots and are safe.
+        let useAdaptive = adaptiveReplacementEnabled && (store.isQ2 || store.nativeAffineTiles)
+            && lookahead?.prefetch?.usesSlotAdoption != true && inFlightCount == 0
+        if useAdaptive {
+            // Match the upstream deterministic claim order. The returned slot
+            // list still follows the caller's exact route order, duplicates included.
+            missKeys.sort { $0.layer == $1.layer ? $0.expert < $1.expert : $0.layer < $1.layer }
+            uniqueMiss = Dictionary(uniqueKeysWithValues: missKeys.enumerated().map { ($0.element, $0.offset) })
+            missPos = keys.enumerated().compactMap { i, key in uniqueMiss[key].map { (i, $0) } }
+        } else { adaptiveReplacement = nil }
         drainReturnedSlots()
         lookahead?.prefetch?.noteLayerDemand(misses: missKeys.count)
         let needed = hitSlots.reduce(0) { $0 + (pinned[$1] ? 0 : 1) } + missKeys.count
@@ -855,9 +1029,33 @@ public final class SlotPool {
         var completed = false
         defer {
             if !completed {
+                // A claim is metadata, never proof of published bytes. On any
+                // partial failure, seed the next policy from actual residency.
+                adaptiveReplacement = nil
                 for slot in newHitPins { pinned.unpin(slot) }
                 for slot in reservedPins { pinned.unpin(slot) }
             }
+        }
+        if useAdaptive {
+            if adaptiveReplacement == nil { adaptiveReplacement = try AdaptiveSlotReplacement(keys: keyOf) }
+            try adaptiveReplacement!.begin(pinned: pinned.count == 0 ? [] : (0..<slots).filter { pinned[$0] })
+            // Splash's tile descriptors enumerate experts by logical ID.
+            // Physical slot order is a cache-placement detail and would
+            // otherwise change ARC recency even with the same route trace.
+            let orderedHits = hitSlots.sorted { lhs, rhs in
+                let a = keyOf[lhs]!, b = keyOf[rhs]!
+                return a.layer == b.layer ? a.expert < b.expert : a.layer < b.layer
+            }
+            for slot in orderedHits { try adaptiveReplacement!.touch(slot, scan: replacementIsScan) }
+        }
+        func selectVictim(_ key: ExpertKey) throws -> Int {
+            guard let adaptiveReplacement else { return victim(preferLayer: key.layer) }
+            let before = adaptiveReplacement.ghostHits
+            let slot = try adaptiveReplacement.claim(key, scan: replacementIsScan)
+            guard !pinned[slot], !inFlight[slot] else { throw ModelError("Adaptive replacement selected a pinned slot") }
+            adaptiveReplacementClaims += 1
+            adaptiveReplacementGhostHits += adaptiveReplacement.ghostHits - before
+            return slot
         }
         for slot in hitSlots { refBit[slot] = true; pinned.pin(slot) }
         hits += requestHits
@@ -915,7 +1113,7 @@ public final class SlotPool {
                         slotIdx.append(-1)
                         continue
                     }
-                    let s = victim(preferLayer: k.layer)
+                    let s = try selectVictim(k)
                     pinned.pin(s)
                     reservedPins.append(s)
                     slotIdx.append(Int32(s))
@@ -926,13 +1124,19 @@ public final class SlotPool {
             } else {
                 // choose victims first (so scatter is one batched op)
                 for k in missKeys {
-                    let s = victim(preferLayer: k.layer)
+                    let s = try selectVictim(k)
                     pinned.pin(s)
                     reservedPins.append(s)
                     slotIdx.append(Int32(s))
                 }
             }
             event?.victimSlots = slotIdx
+            if let prepare {
+                var planned = result
+                for (i, j) in missPos { planned[i] = Int(slotIdx[j]) }
+                guard planned.allSatisfy({ $0 >= 0 }) else { throw ModelError("Expert schedule has an unresolved slot") }
+                try prepare(planned, true)
+            }
             if diagnosticOverlapReadyTickets, reservedHits != nil {
                 // Only a successful publish installs a missing key in map.
                 // Reserved demand victims and unfinished/stale tickets must
@@ -961,16 +1165,56 @@ public final class SlotPool {
             /// Adopt complete tickets into the slots the victim scan chose, in
             /// the logical demand order; returns the miss indices that could
             /// not be adopted and must be read on the demand path.
-            func adoptTickets(_ ready: [ExpertKey: ExpertPrefetchTicket]) -> [Int] {
+            func adoptTickets(_ ready: [ExpertKey: ExpertPrefetchTicket]) throws -> [Int] {
                 var fallback: [Int] = []
                 var adoptedSlots: [Int32] = []
-                var stagedPieces: [[MLXArray]] = Array(repeating: [], count: 9)
+                var stagedPieces: [[MLXArray]] = Array(repeating: [], count: pools.count)
+                var copied = 0
                 for (j, k) in missKeys.enumerated() where ready[k] != nil {
+                    if scheduler?.stagesRawQ2 == true && currentPoolBases() == nil {
+                        // A generic scatter cannot consume raw Q2 tickets.
+                        // Leave their ownership with the scheduler and reread.
+                        fallback.append(j); continue
+                    }
+                    if session?.prefetch?.configuration.inputForecast == true,
+                       let ticket = ready[k], let bases = currentPoolBases(), let raw = ticket.adoptRaw() {
+                        // Demand selected and pinned this slot; GPU readers
+                        // joined before adoption. The ticket owns bytes in
+                        // its scheduler-declared representation. Wrong
+                        // predictions never evict slots.
+                        let s = Int(slotIdx[j])
+                        if let old = keyOf[s] { map.removeValue(forKey: old); keyOf[s] = nil }
+                        var transferred = false
+                        defer { if !transferred { raw.release() } }
+                        if scheduler?.stagesRawQ2 == true, let staged = staging?() {
+                            if let forecast = raw.forecast {
+                                transferred = try staged.adoptForecast(forecast, slot: s, release: raw.release)
+                            }
+                            if !transferred {
+                                let index = try staged.indices(for: [s])[0]
+                                for p in 0..<pools.count {
+                                    memcpy(staged.bases[p] + index * store.pieceRowBytes[p], raw.buffers[p], store.pieceRowBytes[p])
+                                }
+                                try staged.markCopied([s])
+                            }
+                        } else {
+                            for p in 0..<pools.count {
+                                let target = bases[p] + s * store.pieceRowBytes[p]
+                                if scheduler?.stagesRawQ2 == true {
+                                    store.repackPieceCPU(raw.buffers[p], into: target, piece: p)
+                                } else { memcpy(target, raw.buffers[p], store.pieceRowBytes[p]) }
+                            }
+                        }
+                        keyOf[s] = k; map[k] = s; refBit[s] = true
+                        event?.adoptedExperts.append(Int32(k.expert))
+                        copied += 1
+                        continue
+                    }
                     guard let ticket = ready[k], let staged = ticket.makeStagingArrays(shapes: specs) else {
                         fallback.append(j); continue
                     }
                     let s = Int(slotIdx[j])
-                    for p in 0 ..< 9 { stagedPieces[p].append(staged[p]) }
+                    for p in 0 ..< pools.count { stagedPieces[p].append(staged[p]) }
                     if let old = keyOf[s] { map.removeValue(forKey: old) }
                     keyOf[s] = k
                     map[k] = s
@@ -978,13 +1222,14 @@ public final class SlotPool {
                     adoptedSlots.append(Int32(s))
                     event?.adoptedExperts.append(Int32(k.expert))
                 }
+                if copied > 0 { recordsAdopted += copied; slotCPUBatches += 1 }
                 if !adoptedSlots.isEmpty {
                     // One scatter per piece for the whole adopted batch, like the
                     // demand path: the concatenation reads each ticket's own
                     // buffers (their finalizers fire once it has), so the pool
                     // write is a single indexed assignment instead of one per record.
                     let idx = MLXArray(adoptedSlots)
-                    for p in 0 ..< 9 {
+                    for p in 0 ..< pools.count {
                         pools[p][idx] = stagedPieces[p].count == 1 ? stagedPieces[p][0] : concatenated(stagedPieces[p], axis: 0)
                     }
                     poolWriteEpoch &+= 1
@@ -1010,7 +1255,7 @@ public final class SlotPool {
                 if !claimed.ready.isEmpty {
                     let tAdopt = RuntimeClock.now()
                     finishResidentReaders()
-                    readyFallback = Set(adoptTickets(claimed.ready))
+                    readyFallback = Set(try adoptTickets(claimed.ready))
                     adoptSeconds += RuntimeClock.seconds(since: tAdopt)
                     event?.adoptNanos = RuntimeClock.now()
                 }
@@ -1051,9 +1296,12 @@ public final class SlotPool {
                         let tIO = RuntimeClock.now()
                         laneBudget?.beginDemand()
                         do {
-                            try store.readIntoSlotsChecked(batchIndices.map { missKeys[$0] }, slots: destinations,
-                                                           bases: bases, scratch: demandScratch,
-                                                           finishReaders: readersPending ? finishResidentReaders : nil)
+                            let raw = staging?()
+                            try store.readIntoSlotsChecked(batchIndices.map { missKeys[$0] },
+                                slots: try raw?.indices(for: destinations) ?? destinations,
+                                bases: raw?.bases ?? bases, scratch: demandScratch,
+                                finishReaders: readersPending ? finishResidentReaders : nil, rawCopy: raw != nil)
+                            try raw?.markCopied(destinations)
                         } catch {
                             laneBudget?.endDemand()
                             ioSeconds += RuntimeClock.seconds(since: tIO)
@@ -1093,24 +1341,24 @@ public final class SlotPool {
                     let tScatter = RuntimeClock.now()
                     let destinations = batchIndices.map { slotIdx[$0] }
                     if cpuSlotWrites {
-                        for p in 0..<9 { pools[p] = try CPUSlotWrite.apply(to: pools[p], from: batch[p], slots: destinations) }
+                        for p in 0..<pools.count { pools[p] = try CPUSlotWrite.apply(to: pools[p], from: batch[p], slots: destinations) }
                         slotCPUBatches += 1
                     } else if wordSlotWrites {
                         let idx = MLXArray(destinations)
                         var eligible = 0
-                        for p in 0 ..< 9 {
+                        for p in 0 ..< pools.count {
                             if WordSlotWrite.eligible(pools[p], batch[p]) { eligible += 1 }
                             pools[p] = WordSlotWrite.apply(to: pools[p], from: batch[p], at: idx)
                         }
                         if eligible > 0 { slotWordBatches += 1; slotWordBuffers += eligible }
                         slotScatterBatches += 1
                     } else if contiguousSlotWrites, let runs = SlotWriteRun.plan(destinations, capacity: slots) {
-                        for p in 0 ..< 9 { SlotWriteRun.apply(runs, to: pools[p], from: batch[p]) }
+                        for p in 0 ..< pools.count { SlotWriteRun.apply(runs, to: pools[p], from: batch[p]) }
                         slotSliceBatches += 1
                         slotSliceRuns += runs.count
                     } else {
                         let idx = MLXArray(destinations)
-                        for p in 0 ..< 9 { pools[p][idx] = batch[p] }
+                        for p in 0 ..< pools.count { pools[p][idx] = batch[p] }
                         slotScatterBatches += 1
                     }
                     poolWriteEpoch &+= 1
@@ -1168,7 +1416,7 @@ public final class SlotPool {
                         speculativeSlotStale += 1
                         ticket.discard()
                     }
-                    let s = victim(preferLayer: k.layer)
+                    let s = try selectVictim(k)
                     pinned.pin(s)
                     reservedPins.append(s)
                     slotIdx[j] = Int32(s)
@@ -1181,7 +1429,7 @@ public final class SlotPool {
                 let finished = scheduler.finishReading(pendingReads)
                 let tAdopt = RuntimeClock.now()
                 finishResidentReaders()
-                let fallback = Set(adoptTickets(finished))
+                let fallback = Set(try adoptTickets(finished))
                 adoptSeconds += RuntimeClock.seconds(since: tAdopt)
                 event?.adoptNanos = RuntimeClock.now()
                 var rest: [Int] = []
@@ -1194,6 +1442,7 @@ public final class SlotPool {
             fillSeconds += RuntimeClock.seconds(since: tMiss)
             for (i, j) in missPos { result[i] = Int(slotIdx[j]) }
         }
+        if missKeys.isEmpty { try prepare?(result, false) }
         if var event, let session {
             event.endNanos = RuntimeClock.now()
             session.demand(event)
@@ -1233,7 +1482,7 @@ public final class SlotPool {
     /// a piece is not contiguous, which never happens for a zeros-allocated pool.
     private func currentPoolBases() -> [UnsafeMutableRawPointer]? {
         if let cached = basesCache, cached.epoch == poolWriteEpoch { return cached.bases }
-        guard pools.count == 9 else { return nil }
+        guard pools.count == store.pieceCount else { return nil }
         var out: [UnsafeMutableRawPointer] = []
         for piece in pools {
             let wrapped = piece.asData(access: .noCopyIfContiguous)
@@ -1259,6 +1508,7 @@ public final class SlotPool {
             if keyOf[candidate] == nil, !pinned[candidate], !inFlight[candidate] { chosen = candidate; break }
         }
         let s = chosen ?? victim(preferLayer: key.layer)
+        adaptiveReplacement = nil // Speculative slot ownership is a separate policy.
         if let old = keyOf[s] {
             map.removeValue(forKey: old)
             keyOf[s] = nil
@@ -1269,7 +1519,7 @@ public final class SlotPool {
         inFlightCount += 1
         speculativeSlotReservations += 1
         let rowBytes = store.pieceRowBytes
-        let destinations = (0 ..< 9).map { bases[$0] + s * rowBytes[$0] }
+        let destinations = (0 ..< pools.count).map { bases[$0] + s * rowBytes[$0] }
         return SpeculativeSlotReservation(slot: s, destinations: destinations, pieceBytes: rowBytes, bases: bases,
             onLeave: { [weak self] slot in self?.returnSpeculativeSlot(slot) })
     }
@@ -1437,6 +1687,7 @@ public final class SlotPool {
     /// the pool writes stay lazy until `commitAdmissions` unless the explicit
     /// piecewise allocation contract completes each destination immediately.
     public func admit(layer: Int, experts: [Int], rows: [Int], from staged: [MLXArray]) {
+        adaptiveReplacement = nil // Sweep admission is outside the demand policy.
         if admissionPiecewiseWrites { commitAdmissions() }
         var victims: [Int32] = []
         var src: [Int32] = []
@@ -1464,7 +1715,7 @@ public final class SlotPool {
         asyncEval(picked)
         let dst = MLXArray(victims)
         let start = RuntimeClock.now()
-        for p in 0 ..< 9 {
+        for p in 0 ..< pools.count {
             pools[p][dst] = picked[p]
             if admissionPiecewiseWrites {
                 eval(pools[p])

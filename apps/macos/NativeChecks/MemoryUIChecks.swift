@@ -12,7 +12,7 @@ import Vision
         let out = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_UI_OUT"]!)
         let model = AppModel()
         let setupOwner = LocalInference(model: out.appendingPathComponent("uninstalled-fixture-model"))
-        guard let reviewedSetup = try await setupOwner.modelSetup(preferences: .init()) else {
+        guard let reviewedSetup = try await setupOwner.modelSetup(preferences: .init(quantization: .automatic)) else {
             throw NSError(domain: "MemoryUI", code: 6, userInfo: [NSLocalizedDescriptionKey: "local setup offer missing"])
         }
         let window = NSWindow(contentRect: NSRect(x: -30000, y: -30000, width: 620, height: 1050),
@@ -33,6 +33,7 @@ import Vision
                 let savedLimit = belowRange ? 10.0 : mode == "saved-fractional" ? 9.99 : 48.0
                 var preferences = custom ? PerformancePreferences(budget: .custom, customGB: savedLimit) : .init()
                 if mode == "fixed" { preferences.liveMemory = .fixed }
+                if mode == "unloaded-automatic" { preferences.quantization = .automatic }
                 if mode == "unavailable-pack" { preferences.quantization = .pack("removed-pack") }
                 model.performancePreferences = preferences
                 model.snapshot = RuntimeSnapshot(home: .init(), modelStatus: "Ready", error: nil, simulated: true)
@@ -71,7 +72,7 @@ import Vision
                 let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate
                 try VNImageRequestHandler(cgImage: rep.cgImage!, options: [:]).perform([request])
                 let text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
-                let labels = ["Quantization", "While running", "Memory budget", "Keep model ready"]
+                let labels = ["Model", "While running", "Memory budget", "Keep model ready"]
                     + (loaded ? ["Budget available now", "14.5 GB"] : [])
                     + (custom ? ["Custom limit", MemoryLimitText.number(savedLimit), "Your limit stays saved"]
                         + (rangeAvailable ? [overRange ? "37 GB" : "49.5 GB"] : []) : ["Automatic", "Recommended now"])
@@ -99,7 +100,7 @@ import Vision
                 print("PASS: \(name), rendered controls, current budget, supported range and pending state")
             }
             for setupMode in ["reviewed", "stale", "verified", "unavailable"] {
-                model.performancePreferences = setupMode == "stale" ? .init(liveMemory: .fixed) : .init()
+                model.performancePreferences = setupMode == "stale" ? .init(quantization: .automatic, liveMemory: .fixed) : .init(quantization: .automatic)
                 model.setup = setupMode == "unavailable" ? nil : reviewedSetup
                 model.setupIssue = setupMode == "unavailable" ? "The selected model pack is unavailable in this build. Your saved choice has been preserved." : nil
                 model.setupRequestPending = false
@@ -116,7 +117,7 @@ import Vision
                 let labels: [String]
                 if setupMode == "unavailable" { labels = ["Model files", "unavailable", "saved choice"] }
                 else {
-                    labels = ["Model files", "Quantization", reviewedSetup.packTitle, "Complete installation", "Available storage"]
+                    labels = ["Model files", "Model", reviewedSetup.packTitle, "Complete installation", "Available storage"]
                         + (setupMode == "stale" ? ["Settings changed", "Stop setup"]
                             : setupMode == "verified" ? ["Model files verified", "before the next reply", "Check local model"]
                             : ["Not checked", "Check local model", "Download or repair", "Conversation data is not sent"])

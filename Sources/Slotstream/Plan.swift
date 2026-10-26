@@ -36,7 +36,7 @@ public enum Geometry {
     /// allocates from config.json. If they ever disagree, every memory number
     /// the user is shown is wrong, so fail loudly instead of drifting.
     public static func check(against cfg: ModelConfig, recordBytes actual: Int) throws {
-        guard cfg.numLayers == layers, cfg.numExperts == expertsPerLayer,
+        guard cfg.numLayers == (cfg.isFast ? 40 : layers), cfg.numExperts == (cfg.isFast ? 256 : expertsPerLayer),
             actual == cfg.admittedExpertRecordBytes
         else {
             throw ModelError(
@@ -249,7 +249,7 @@ public struct MemoryPlan {
         self.contextQualification = contextQualification
     }
 
-    public var expertsPerLayerCached: Double { Geometry.perLayer(slots) }
+    public var expertsPerLayerCached: Double { Double(slots) / Double(resources.layers) }
     public var poolGB: Double { resources.poolGB(slots) }
     public var memoryLedger: ContextMemoryLedger {
         ContextMemoryLedger(slots: slots, context: maxContextTokens, chunk: prefillChunk,
@@ -283,7 +283,7 @@ public struct MemoryPlan {
         resources.usesBaselineSpeedEvidence ? PrefillSchedule.estSeconds(tokens: maxContextTokens, maxChunk: prefillChunk) : .nan
     }
     public var estWarmTokS: Double { resources.usesBaselineSpeedEvidence ? Planner.estWarmTokS(expertsPerLayer: expertsPerLayerCached) : .nan }
-    public var fullyResident: Bool { slots >= Geometry.totalRecords }
+    public var fullyResident: Bool { slots >= resources.totalRecords }
 
     /// The startup announce: device, decision, expectation, override hint.
     public func banner() -> String {
@@ -309,11 +309,11 @@ public struct MemoryPlan {
         if fullyResident {
             l.append(String(
                 format: "  cache:  all %d experts per layer resident (%.1f GB pool)",
-                Geometry.expertsPerLayer, poolGB))
+                resources.expertsPerLayer, poolGB))
         } else {
             l.append(String(
                 format: "  cache:  ~%.0f of %d experts per layer  (%d global slots = %.1f GB pool)",
-                expertsPerLayerCached, Geometry.expertsPerLayer, slots, poolGB))
+                expertsPerLayerCached, resources.expertsPerLayer, slots, poolGB))
         }
         if resources.usesBaselineSpeedEvidence {
         l.append(String(
@@ -377,7 +377,10 @@ public struct MemoryPlan {
                 prefixCacheTokens, PrefixCache.maxEntries,
                 Planner.prefixCacheCostGB(tokens: prefixCacheTokens)))
         }
-        if decodeLookahead {
+        if decodeLookahead, resources.nativeInputReadAheadReserveBytes > 0 {
+            l.append(String(format: "  lookahead: next-input expert reads with bounded host staging (%.0f MiB, charged above)",
+                Double(lookaheadReserveBytes) / Double(1 << 20)))
+        } else if decodeLookahead {
             l.append(String(format: "  lookahead: on, expert prefetch %@, router cache and a GPU barrier every %d layers (%.0f MiB, charged above)",
                 mtpEnabled ? "with the draft head" : "in plain decode",
                 DecodeLookahead.barrierLayers, Double(lookaheadReserveBytes) / Double(1 << 20)))
@@ -1181,6 +1184,10 @@ public enum Planner {
         guard resources.supportsDecodeLookahead || retainedLookahead != true else {
             throw PlanError("decode lookahead is not admitted for this pack")
         }
+        if retainedLookahead == true, resources.nativeInputReadAheadReserveBytes > 0,
+           fixedLookaheadBytes < resources.nativeInputReadAheadReserveBytes {
+            throw PlanError("native input read-ahead requires its complete staging reserve")
+        }
         if resources == .affine3GroupedLookaheadControl {
             guard retainedLookahead == true, fixedLookaheadBytes == DecodeLookahead.reserveBytes else {
                 throw PlanError("experimental affine lookahead requires its exact explicit full reserve")
@@ -1312,13 +1319,20 @@ public enum Planner {
         /// floor. Its bytes then come out of the pool.
         func resolveLookahead(mtpOn: Bool, streamed: Bool, slotsAfterHead: Int) -> Bool {
             if let retainedLookahead { return retainedLookahead }
+            if resources.nativeInputReadAheadReserveBytes > 0 {
+                // Fully resident expert weights have nothing to read ahead.
+                return slotsAfterHead < resources.totalRecords
+            }
             guard resources.automaticOptimizations else { return false }
             return Geometry.perLayer(slotsAfterHead)
                 >= (mtpOn ? headFloor(streamed: streamed) : plainLookaheadFloorPerLayer)
         }
+        let automaticLookaheadBytes = resources.nativeInputReadAheadReserveBytes > 0
+            ? resources.nativeInputReadAheadReserveBytes
+            : DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes)
         /// Budget the automatic lookahead takes when it is on.
         func lookaheadChargeGB(_ on: Bool) -> Double {
-            on && retainedLookahead == nil ? Double(DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes)) / 1e9 : 0
+            on && retainedLookahead == nil ? Double(automaticLookaheadBytes) / 1e9 : 0
         }
 
         func finish(
@@ -1330,7 +1344,7 @@ public enum Planner {
             let budgetForCaches = target.map { poolBudgetGB($0) - mtpCharge - contextCharge }
                 ?? resources.poolGB(slots)
             let chunk = prefillChunkFor(poolBudgetGB: budgetForCaches, contextCap: maxContextTokens, retentionFloor: retentionFloor)
-            let capped = min(slots, Geometry.totalRecords)
+            let capped = min(slots, resources.totalRecords)
             let floored = max(capped, Geometry.floorSlots)
             if floored > capped {
                 notes.append(String(
@@ -1364,7 +1378,7 @@ public enum Planner {
                 notes: notes,
                 simulated: simulated, contextQualification: qualification,
                 lookaheadReserveBytes: fixedLookaheadBytes
-                    + (lookaheadOn && retainedLookahead == nil ? DecodeLookahead.reserveBytes(correctionBytes: automaticCorrectionBytes) : 0),
+                    + (lookaheadOn && retainedLookahead == nil ? automaticLookaheadBytes : 0),
                 decodeLookahead: lookaheadOn, memoryLimitGB: memoryLimitGB, mtpStreamedExperts: mtpOn && mtpStreamed, resources: resources)
             let resolved = try runtimePolicy.map { try applyingRuntimePolicy(base, policy: $0) } ?? base
             let bytes = resolved.memoryLedger.expectedPeakBytes
@@ -1387,7 +1401,7 @@ public enum Planner {
             guard n >= 1 else { throw PlanError("--experts-per-layer must be ≥ 1") }
             if poolGB != nil { notes.append("--pool-gb ignored (--experts-per-layer takes precedence)") }
             if memoryGB != nil { notes.append("--memory-gb ignored (--experts-per-layer takes precedence)") }
-            let slots = min(n, Geometry.expertsPerLayer) * Geometry.layers
+            let slots = min(n, resources.expertsPerLayer) * resources.layers
             let streamed = streamsExperts(slotsAfterResident: slots)
             let mtpOn = resolveMTP(slotsAfterCharge: slots, streamed: streamed)
             return try finish(.expertsPerLayer, slots, target: nil, mtpOn: mtpOn, mtpStreamed: streamed,
@@ -1400,8 +1414,8 @@ public enum Planner {
             if memoryGB != nil { notes.append("--memory-gb ignored (--pool-gb takes precedence)") }
             // Preserve a below-floor request so `finish` can explain that it
             // raised it; cap before Double->Int so huge finite input is safe.
-            let requested = g >= resources.poolGB(Geometry.totalRecords)
-                ? Geometry.totalRecords : Int(g * 1e9 / Double(resources.expertRecordBytes))
+            let requested = g >= resources.poolGB(resources.totalRecords)
+                ? resources.totalRecords : Int(g * 1e9 / Double(resources.expertRecordBytes))
             let streamed = streamsExperts(slotsAfterResident: requested)
             let mtpOn = resolveMTP(slotsAfterCharge: requested, streamed: streamed)
             return try finish(.poolGB, requested, target: nil, mtpOn: mtpOn, mtpStreamed: streamed,

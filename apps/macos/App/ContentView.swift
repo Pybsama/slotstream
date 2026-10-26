@@ -52,6 +52,11 @@ struct ContentView: View {
     private var allSource: String { messages.map { "## " + speaker($0) + "\n\n" + $0.text }.joined(separator: "\n\n") }
     private var artifactOpen: Bool { model.panel == "Artifact" }
     private var ready: Bool { model.composer.ready }
+    private var selectedModelRole: String {
+        guard let pack = try? ModelPackRegistry.resolve(model.performancePreferences.quantization).pack else { return "unavailable" }
+        if pack.id == PinnedQ2Model.name { return PinnedQ2Model.name }
+        return pack.id == PinnedFastModel.name ? "fast" : "smart"
+    }
     var body: some View {
         GeometryReader { geometry in
             let wide = geometry.size.width >= 960
@@ -198,9 +203,12 @@ struct ContentView: View {
             if covered { panelContent.frame(maxWidth: .infinity, maxHeight: .infinity) }
         }
     }
-    private static let panels: Set<String> = ["Settings", "Search", "Needs you", "Knowledge", "Journal", "Rename", "Artifact", "Context", "Home changes", "Changes", "App review", "Skill review", "Apps", "App"]
+    private static let panels: Set<String> = ["Data", "Settings", "Search", "Needs you", "Knowledge", "Journal", "Rename", "Artifact", "Context", "Home changes", "Changes", "App review", "Skill review", "Apps", "App"]
     @ViewBuilder private var panelContent: some View {
         switch model.panel {
+        case "Data":
+            if model.runtime != nil { DataBrowser(model: model) }
+            else { ProgressView("Opening Home…").frame(maxWidth: .infinity, maxHeight: .infinity) }
         case "Settings": settings
         case "Search": search
         case "Needs you": needsYou
@@ -428,6 +436,21 @@ struct ContentView: View {
                         Divider(); Button("New Incognito Thread") { model.newThread(.incognito) }
                     } label: { Label(model.thread?.mode.title ?? "Shared memory", systemImage: model.thread?.mode == .incognito ? "eye.slash" : "circle.hexagongrid") }.disabled(!ready || model.busy)
                         .help("Choose which memories this thread can use")
+                    Picker("Model", selection: Binding(get: {
+                        selectedModelRole
+                    }, set: { role in
+                        guard role == "fast" || role == "smart" else { return }
+                        var preferences = model.performancePreferences
+                        preferences.quantization = .pack(role == "fast" ? PinnedFastModel.name : PinnedModel.name)
+                        model.setPerformance(preferences)
+                    })) {
+                        Text("Fast").tag("fast")
+                        Text("Smart").tag("smart")
+                        if selectedModelRole == PinnedQ2Model.name { Text("Q2 candidate").tag(PinnedQ2Model.name) }
+                        if selectedModelRole == "unavailable" { Text("Unavailable").tag("unavailable") }
+                    }.fixedSize().disabled(!ready || model.working)
+                        .accessibilityIdentifier("model-role")
+                        .help("Fast for everyday work; Smart for harder tasks. Switching keeps your conversation.")
                     Toggle(isOn: Binding(get: { model.thinkingEnabled }, set: { _ in model.toggleThinking() })) { Label("Think longer", systemImage: "brain") }
                         .toggleStyle(.button).disabled(!ready || model.thinkingUnavailable).help(thinkHelp)
                         .accessibilityIdentifier("think-longer").accessibilityHint(thinkHelp)
@@ -843,7 +866,7 @@ struct ModelFilesSettings: View {
             if let issue = model.setupIssue { Text(issue).foregroundStyle(secondaryInk).textSelection(.enabled) }
             if model.setupRequestPending { ProgressView("Reviewing model setup").controlSize(.small) }
             if let selection = model.setup {
-                LabeledContent("Quantization", value: selection.packTitle)
+                LabeledContent("Model", value: selection.packTitle)
                 if let offer = selection.offer { Text(offer.reason).font(.callout).foregroundStyle(secondaryInk).fixedSize(horizontal: false, vertical: true) }
                 LabeledContent("Complete installation", value: ByteCountFormatter.string(fromByteCount: selection.completeBytes, countStyle: .file))
                 if !selection.matches(model.performancePreferences) {
@@ -912,18 +935,20 @@ struct PerformanceSettings: View {
     }
     var body: some View {
         Section("Performance") {
-            Picker("Quantization", selection: Binding(get: { model.performancePreferences.quantization }, set: { choice in
+            Picker("Model", selection: Binding(get: { model.performancePreferences.quantization }, set: { choice in
                 var next = model.performancePreferences; next.quantization = choice; model.setPerformance(next)
             })) {
-                Text("Automatic (Recommended)").tag(ModelPackSelection.automatic)
+                if model.performancePreferences.quantization == .automatic {
+                    Text("Smart (previous automatic setting)").tag(ModelPackSelection.automatic)
+                }
                 ForEach(ModelPackRegistry.supported, id: \.id) { pack in
                     Text(pack.title).tag(ModelPackSelection.pack(pack.id))
                 }
                 if case .pack(let id) = model.performancePreferences.quantization,
                    !ModelPackRegistry.supported.contains(where: { $0.id == id }) {
-                    Text("Unavailable saved pack").tag(ModelPackSelection.pack(id))
+                    Text(ModelPackRegistry.alias(id)?.title ?? "Unavailable saved pack").tag(ModelPackSelection.pack(id))
                 }
-            }.disabled(status == nil).help("Choose how the same model's weights are stored. This is separate from memory limits.")
+            }.disabled(status == nil).help("Fast is the default for everyday work. Smart uses the larger model for harder tasks. Switching keeps your conversation.")
             if let reason = status?.selectionReason {
                 Text(reason).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
@@ -981,7 +1006,7 @@ struct PerformanceSettings: View {
                 Text("Fixed cache capacity").tag(LiveMemoryManagement.fixed)
             }.disabled(status == nil)
             Text(model.performancePreferences.liveMemory == .automatic
-                 ? "Adjusts the cache as memory availability changes. The selected quantization stays loaded."
+                 ? "Adjusts the cache as memory availability changes. The selected model stays loaded."
                  : "Keeps the cache capacity chosen at load time. Memory pressure can still stop a response or release an idle model.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let recommendation = status?.recommendationGB {
@@ -1025,9 +1050,9 @@ struct PerformanceSettings: View {
                 Text(status.detail).font(.callout).foregroundStyle(.secondary)
                 DisclosureGroup("Memory details", isExpanded: $showMemoryDetails) {
                     if let configuration = status.configuration {
-                        LabeledContent("Active quantization", value: ModelPackRegistry.supported.first(where: { $0.id == configuration.packID })?.title ?? configuration.packID)
+                        LabeledContent("Active model", value: ModelPackRegistry.alias(configuration.packID)?.title ?? configuration.packID)
                         LabeledContent("Context window", value: configuration.contextTokens.formatted() + " tokens")
-                        LabeledContent("Speculative decoding", value: configuration.mtp ? "On" : "Off")
+                        LabeledContent("Speculative decoding", value: configuration.dflash == true ? "DFlash (adaptive)" : configuration.mtp ? "MTP" : "Off")
                         LabeledContent("Live adjustment", value: configuration.liveMemory == .automatic ? "Automatic" : "Fixed capacity")
                     }
                     if let physical = status.physicalGB {

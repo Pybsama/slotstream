@@ -97,12 +97,15 @@ public final class Engine {
     /// Metadata follows the authenticated loaded artifact, independent of
     /// mutable memory settings. Preserve existing identities for legacy clients.
     package var modelQuantization: String {
+        if resources == .q2 { return "GSQ-RCO mixed precision / Q2_0 experts" }
         if resources == .gsq224GroupedControl || resources == .gsq224GroupedVisionControl {
             return "2bit gate/up / original 4bit down, dense and PLE"
         }
-        return resources == .original || resources == .originalCandidateControl ? "4bit" : "3bit experts / original dense and PLE"
+        return resources == .fast || resources == .smartDFlash || resources == .original || resources == .originalCandidateControl ? "4bit" : "3bit experts / original dense and PLE"
     }
     package var modelDigest: String {
+        if resources == .q2 { return "sha256:" + ModelPackRegistry.q2Candidate.manifestDigest }
+        if resources == .fast { return "sha256:" + ModelPackRegistry.fast.manifestDigest }
         guard let identity = model.authenticatedArtifactIdentity else {
             return "slotstream-qwen38-flash-next-4bit"
         }
@@ -110,6 +113,9 @@ public final class Engine {
         return "sha256:" + SHA256.hash(data: Data(deployed.utf8)).map { String(format: "%02x", $0) }.joined()
     }
     package func acceptsModelName(_ requested: String) -> Bool {
+        if resources == .q2 { return [modelName, "smart-q2", PinnedQ2Model.directoryName].contains(requested) }
+        if resources == .fast { return [modelName, "fast", PinnedFastModel.directoryName].contains(requested) }
+        if requested == "smart", resources == .original { return true }
         if [modelName, "qwen3.8-flash-next", "qwen3.8-flash-next:latest"].contains(requested) { return true }
         return resources == .original && requested == "qwen38-flash-next-mlx-4bit"
     }
@@ -223,7 +229,7 @@ public final class Engine {
     /// Release the retained conversation state. Takes the generation lock, so
     /// never call it from inside `generate`.
     public func dropPrefixCache() {
-        withExclusive { prefixCache.drop() }
+        withExclusive { prefixCache.drop(); generator.dflashVerifyCalibration = nil }
     }
 
     /// Return allocator-held reusable buffers after the embedding owner has
@@ -326,6 +332,10 @@ public final class Engine {
                   policy.lookahead != .off || !plan.decodeLookahead,
                   policy.lookahead != .uncorrected || (plan.decodeLookahead
                     && model.lookahead?.prefetch?.configuration == .qualifiedDecode),
+                  policy.lookahead != .nativeInput || (plan.decodeLookahead
+                    ? model.lookahead?.prefetch?.configuration == NativeInputReadAhead.configuration(
+                        reservedBytes: plan.lookaheadReserveBytes, topK: model.cfg.topK)
+                    : model.lookahead?.prefetch == nil),
                   (plan.runtimeAllocationPolicy?.prefixCacheEnabled ?? true) == policy.prefixCacheEnabled else {
                 throw ModelError("Loaded resources differ from this pack's startup recipe")
             }
@@ -396,7 +406,11 @@ public final class Engine {
     }
 
     public convenience init(modelDir: URL, plan: MemoryPlan) async throws {
-        try await self.init(modelDir: modelDir, poolSlots: plan.slots, plan: plan)
+        try await self.init(modelDir: modelDir, mirrors: [], plan: plan)
+    }
+
+    public convenience init(modelDir: URL, mirrors: [URL], plan: MemoryPlan) async throws {
+        try await self.init(modelDir: modelDir, mirrors: mirrors, poolSlots: plan.slots, plan: plan)
     }
 
     /// Load a compiled maintained deployment with its own complete memory
@@ -404,20 +418,31 @@ public final class Engine {
     /// does not apply product tuning or confer a measured performance profile;
     /// those remain explicit steps before publishing a healthy runtime.
     public convenience init(modelDir: URL, pack: ModelPack, plan: MemoryPlan) async throws {
+        try await self.init(modelDir: modelDir, mirrors: [], pack: pack, plan: plan)
+    }
+
+    public convenience init(modelDir: URL, mirrors: [URL], pack: ModelPack, plan: MemoryPlan) async throws {
         try pack.validateLoadPlan(plan)
         if pack.id == PinnedAffineStandalone.id {
+            guard mirrors.isEmpty else {
+                throw ModelError("authenticated affine packs cannot be combined with checkpoint mirrors")
+            }
             let bundle = try AffineStandalonePack(directory: modelDir,
                 manifestSHA256: PinnedAffineStandalone.manifestSHA256)
             try await self.init(modelDir: bundle.directory,
                 affineSource: AffineEngineSource(standalone: bundle,
                     decodeLookahead: plan.decodeLookahead, nativeArithmetic: true), plan: plan)
         } else {
-            try await self.init(modelDir: modelDir, plan: plan)
+            try await self.init(modelDir: modelDir, mirrors: mirrors, plan: plan)
         }
     }
 
     public convenience init(modelDir: URL, poolSlots: Int, plan: MemoryPlan? = nil) async throws {
-        try await self.init(modelDir: modelDir, poolSlots: poolSlots, plan: plan, affineSource: nil)
+        try await self.init(modelDir: modelDir, mirrors: [], poolSlots: poolSlots, plan: plan)
+    }
+
+    public convenience init(modelDir: URL, mirrors: [URL], poolSlots: Int, plan: MemoryPlan? = nil) async throws {
+        try await self.init(modelDir: modelDir, mirrors: mirrors, poolSlots: poolSlots, plan: plan, affineSource: nil)
     }
 
     package convenience init(modelDir: URL, affineSource: AffineEngineSource, plan: MemoryPlan) async throws {
@@ -436,7 +461,7 @@ public final class Engine {
             affineSource: nil, originalCandidateControl: true)
     }
 
-    private init(modelDir: URL, poolSlots: Int, plan: MemoryPlan?, affineSource: AffineEngineSource?,
+    private init(modelDir: URL, mirrors: [URL] = [], poolSlots: Int, plan: MemoryPlan?, affineSource: AffineEngineSource?,
                  originalCandidateControl: Bool = false) async throws {
         // A plan made for a simulated machine may be printed and compared,
         // never loaded. Simulating memory the machine does not have still
@@ -494,9 +519,14 @@ public final class Engine {
                 throw ModelError("standalone component metadata and tensor owners require the same directory")
             }
         }
-        let resources: PackMemoryProfile = originalCandidateControl ? .originalCandidateControl : (affineSource?.resources ?? .original)
+        let resources: PackMemoryProfile = originalCandidateControl ? .originalCandidateControl
+            : (affineSource?.resources ?? (plan?.resources == .fast ? .fast :
+                (plan?.resources == .q2 ? .q2 : (plan?.resources == .smartDFlash ? .smartDFlash : .original))))
         guard plan?.resources == resources || (plan == nil && affineSource == nil) else {
             throw SlotstreamError.invalidPlan("the loader and memory plan must describe the same pack")
+        }
+        if resources == .smartDFlash || resources == .q2, plan?.mtpEnabled != false {
+            throw SlotstreamError.invalidPlan("Smart DFlash uses one draft component; its plan must disable MTP")
         }
         let candidateProcessBudget: UInt64?
         if affineSource != nil {
@@ -515,7 +545,7 @@ public final class Engine {
         let context = try ContextConfiguration(maxContextTokens: plan?.maxContextTokens ?? ContextPolicy.defaultTokens,
             maxPrefillWaitMinutes: plan?.maxPrefillWaitMinutes ?? ContextConfiguration.defaultWaitMinutes,
             qualification: plan?.contextQualification ?? false)
-        guard poolSlots >= Geometry.floorSlots, poolSlots <= Geometry.totalRecords,
+        guard poolSlots >= Geometry.floorSlots, poolSlots <= resources.totalRecords,
               context.maxContextTokens <= resources.maximumContext,
               plan == nil || plan?.slots == poolSlots,
               (plan?.prefillChunk ?? 256) <= resources.maximumPrefill,
@@ -546,7 +576,7 @@ public final class Engine {
             maxTokens: plan?.prefixCacheTokens
                 ?? Planner.prefixCacheTokensFor(poolBudgetGB: Geometry.gb(poolSlots)),
             enabled: env != "0" && (plan?.runtimeAllocationPolicy?.prefixCacheEnabled ?? true))
-        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil {
+        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast || resources == .q2 {
             prefixCache.setBudgetLimit(p.prefixCacheTokens)
         }
         // MLX's allocator otherwise retains freed transients (KV caches,
@@ -560,7 +590,7 @@ public final class Engine {
             ? 2 << 30 : 128_000_000
         self.modelName = affineSource?.nativeArithmetic == true
             ? PinnedAffineStandalone.id
-            : affineSource?.artifact.modelName ?? "qwen3.8-flash-next:4bit"
+            : affineSource?.artifact.modelName ?? (resources == .q2 ? PinnedQ2Model.name : resources == .fast ? PinnedFastModel.name : PinnedModel.name)
         let t0 = Date()
         let index: CheckpointIndex
         if let affineSource {
@@ -574,14 +604,23 @@ public final class Engine {
                     artifact: affineSource.artifact,
                     shouldContinue: { (try? initial.check(phase: "authenticated model loading")) != nil })
             }
-        } else { index = try CheckpointIndex(dir: modelDir) }
+        } else if resources == .q2 {
+            guard mirrors.isEmpty else { throw ModelError("Q2 checkpoint mirrors are not supported") }
+            _ = try PinnedTokenizerMetadata(directory: modelDir)
+            index = try CheckpointIndex(q2Directory: modelDir, shouldContinue: {
+                (try? initial.check(phase: "authenticated Q2 loading")) != nil
+            })
+        } else { index = try CheckpointIndex(dir: modelDir, mirrors: mirrors) }
         // Expert Lookahead: an explicitly requested pack is validated against
         // the checkpoint geometry before the model allocates anything. A plan
         // made without the reserve cannot load a prefetch-enabled engine. With
         // no explicit prefetch switch, a plan that chose the decode lookahead
         // gets exactly the qualified configuration.
         let processEnvironment = ProcessInfo.processInfo.environment
+        let nativeInputLookahead = plan?.decodeLookahead == true
+            && resources.nativeInputReadAheadReserveBytes > 0
         let qualifiedLookahead = plan?.decodeLookahead == true
+            && !nativeInputLookahead
             && !ExpertPrefetchConfiguration.explicitlyConfigured(processEnvironment)
         // The qualified default carries the checkpoint's shipped tap correction
         // when one is located next to the weights (measured file only).
@@ -602,6 +641,9 @@ public final class Engine {
             throw SlotstreamError.invalidPlan("expert lookahead is not admitted for the affine control")
         }
         var predictor: ExpertPredictor? = nil
+        guard !nativeInputLookahead || !prefetchConfiguration.active else {
+            throw SlotstreamError.invalidPlan("native input read-ahead cannot share an experimental prefetch scheduler")
+        }
         if prefetchConfiguration.active {
             guard plan == nil || (plan?.lookaheadReserveBytes ?? 0) >= prefetchConfiguration.reserveBytes else {
                 throw SlotstreamError.invalidPlan("expert prefetch needs a plan that charged its lookahead reserve")
@@ -624,7 +666,12 @@ public final class Engine {
                 affineControlContextLimit: context.maxContextTokens,
                 affinePiecewiseAllocation: affineSource.piecewiseAllocation,
                 affineGroupedExperts: affineSource.groupedExperts, affineNativeArithmetic: affineSource.nativeArithmetic)
-        } else { self.model = try Qwen4ExpModel(index: index, poolSlots: poolSlots) }
+        } else {
+            guard index.config.isFast == (resources == .fast) else {
+                throw ModelError("The selected model and memory plan differ; use the fast or smart alias")
+            }
+            self.model = try Qwen4ExpModel(index: index, poolSlots: poolSlots)
+        }
         self.responsiveGovernor = model.optimizations.responsiveGovernor
         try model.validate()
         // Read from the index that is already open — no tensor is touched, and
@@ -645,6 +692,16 @@ public final class Engine {
             model.optimizations.rowInvariantProjection = true
             model.optimizations.verifySplitAttention = true
             model.optimizations.verifySplitMinContext = 0
+        }
+        if resources == .smartDFlash || resources == .q2 || (resources == .fast && ProcessInfo.processInfo.environment["SLOTSTREAM_DFLASH"] != "0") {
+            let store = resources == .smartDFlash || resources == .q2 ? SmartDFlashDeployment.store(for: modelDir) : DFlashDeployment.store(for: modelDir)
+            guard store.status().isReady else {
+                throw ModelError("The selected DFlash component is missing or invalid; verify its pinned installation")
+            }
+            self.model.dflash = try DFlashDraft(directory: DFlashDeployment.directory(for: modelDir), target: model.cfg)
+        }
+        if nativeInputLookahead {
+            try model.enableNativeInputReadAhead(reservedBytes: plan?.lookaheadReserveBytes ?? 0)
         }
         self.generator = Generator(model: model)
         if prefetchConfiguration.active {
@@ -690,7 +747,7 @@ public final class Engine {
                         .data(using: .utf8)!) }
             }
         }
-        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil {
+        if let p = plan, p.runtimeAllocationPolicy != nil || affineSource != nil || resources == .fast || resources == .q2 {
             generator.setPrefillBudgetCeiling(p.prefillChunk)
             generator.prefillChunk = p.prefillChunk
         }
@@ -1029,7 +1086,8 @@ public final class Engine {
             }
             try request?.check(nextAllocationBytes: workspaceBytes, phase: "vision workspace admission")
             if let vt = visionTower { return vt }
-            let idx = try authenticatedVisionMetadata != nil ? model.pool.expertStore.index : CheckpointIndex(dir: modelDir)
+            // Share routing observations and byte accounting with text reads.
+            let idx = model.pool.expertStore.index
             guard VisionTower.present(index: idx) else {
                 throw SlotstreamError.vision(
                     "this checkpoint has no vision tower — it is a text-only model")

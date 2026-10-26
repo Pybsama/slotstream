@@ -48,7 +48,8 @@ extension Qwen4ExpModel.State {
               indexer.values.allSatisfy({ $0.offset == tokenCount }),
               linear.values.allSatisfy({ cache in
                   n == ids.count ||
-                      ((cache.ssmState == nil || cache.ssmStates.count == ids.count)
+                      ((cache.ssmState == nil || (cache.ssmPendingStates.isEmpty
+                          ? cache.ssmStates.count : cache.ssmPendingStates.count) == ids.count)
                        && (cache.convState == nil || cache.convStates.count == ids.count)
                        && (cache.pleConvState == nil || cache.pleConvStates.count == ids.count))
               }) else {

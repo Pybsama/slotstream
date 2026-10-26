@@ -47,12 +47,15 @@ extension Engine {
                   Device.defaultDevice() == .gpu,
                   (model.mtpHead != nil) == plan.mtpEnabled else { return nil }
             let expectedOptimizations = pack.startupOptimizations(plan: plan, hardware: observation.hardware)
+            let nativeDeferred = pack.memoryProfile == .fast || pack.memoryProfile == .q2
             guard model.optimizations == expectedOptimizations,
                   expectedOptimizations.fusedPrefillAttention != true || FusedPrefillAttention.available,
-                  model.decodeBarrierLayers == (plan.decodeLookahead ? DecodeLookahead.barrierLayers : 1) else { return nil }
+                  model.decodeBarrierLayers == (plan.decodeLookahead || nativeDeferred ? DecodeLookahead.barrierLayers : 1) else { return nil }
             if plan.decodeLookahead {
                 guard let scheduler = model.lookahead?.prefetch else { return nil }
-                var expected = ExpertPrefetchConfiguration.qualifiedDecode
+                var expected = pack.startupDefaults.lookahead == .nativeInput
+                    ? NativeInputReadAhead.configuration(reservedBytes: plan.lookaheadReserveBytes, topK: model.cfg.topK)
+                    : ExpertPrefetchConfiguration.qualifiedDecode
                 if pack.startupDefaults.lookahead == .originalAutomatic,
                    case .automaticCorrected(let bytes) = observation.originalLookahead {
                     let pins = pack.decodeForecastFiles.filter { $0.size == bytes }

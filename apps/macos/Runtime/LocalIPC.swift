@@ -9,6 +9,7 @@ public struct LocalRequest: Codable, Sendable {
     public var text: String?
     public var nonce: String?
     public var path: String?
+    public var dataQuery: HomeDataRequest?
     public init(operation: String, threadID: String = "home", text: String? = nil, nonce: String? = nil, path: String? = nil) {
         self.operation = operation; self.threadID = threadID; self.text = text; self.nonce = nonce; self.path = path
     }
@@ -19,6 +20,10 @@ public struct LocalReply: Codable, Sendable {
     public var thread: WorkThread?
     public var runID: String?
     public var error: String?
+    public var data: HomeDataResult?
+    public init(homeID: String? = nil, thread: WorkThread? = nil, runID: String? = nil, error: String? = nil, data: HomeDataResult? = nil) {
+        self.homeID = homeID; self.thread = thread; self.runID = runID; self.error = error; self.data = data
+    }
 }
 
 /// Authenticated user-local IPC. There is no TCP listener. Session credentials
@@ -83,6 +88,10 @@ public final class LocalEndpoint: @unchecked Sendable {
     }
     private func dispatch(_ request: LocalRequest) async throws -> LocalReply {
         let before = await runtime.snapshot()
+        if request.operation == "data" {
+            guard let query = request.dataQuery else { throw AppRuntimeError.refused("A data query is required.") }
+            return LocalReply(homeID: before.home.id, data: try await runtime.data(query))
+        }
         guard let thread = before.home.threads.first(where: { $0.id == request.threadID }), thread.mode != .incognito else { throw AppRuntimeError.refused("This local client cannot access that thread.") }
         switch request.operation {
         case "status": break

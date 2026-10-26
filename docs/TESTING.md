@@ -249,6 +249,7 @@ documentation and the brain.
 | `Tools/static_gates.sh` | shell and python syntax, doc parity, fixture digests, manifest digests, planner gates, installer gates | no | CI |
 | `Tools/sampler_gates.sh` | the sampler against a numpy reference, and the governor's branches | no | CI |
 | `Tools/consumer_smoke.sh` | a package outside the repository can import and use the library | no | CI |
+| `Tools/check_home_integration.py --bin-dir apps/macos/.build/release` | Home selection, real dbmd queries, pagination, isolation, byte-preserving offline reads, live owner attachment, CLI ask and MCP transport/review boundaries | no | CI + local |
 | `Tools/check_slotstream_mac.sh` | the Mac app over scripted inference in disposable Homes: runtime, sources and the sandboxed document helper, reviewed changes, knowledge bases, skills, mini-apps, and offscreen checks of the production views | no | CI + local |
 | `Tools/build_slotstream_xcode.sh` | the Xcode project builds for Apple silicon, ad hoc signed, with the package versions the checks use and the helper, dbmd and Metal library in the bundle | no | CI |
 | `Tools/verify.sh` | the acceptance battery: provenance, goldens, byte-equality across cache sizes and live resizes, MTP, the memory promise, long context | **yes** | dev Mac |
@@ -669,3 +670,38 @@ bounds and depth heuristic when reproducing its original protocol. Those
 different arithmetic schedules are not a cache-corruption oracle.
 `prefix-exact-check` remains a required, separate gate for bit-identical raw
 logits and tokens under the actual cache schedule.
+
+## Fast and Smart development checks
+
+Fast and Smart need separate model and application checks. Build the engine,
+install and verify the selected weights, and run one real-model process at a
+time. Use new disposable output/Home directories for each replay.
+
+```bash
+python3 Tools/fast_smart_acceptance.py --out .build/fast-smart-acceptance
+Tools/check_slotstream_mac.sh
+apps/macos/.build/release/slotstream-mac-checks --real-capabilities \
+  --home "$PWD/.build/fast-smart-workflows" --memory-gb 9 --switch-models
+apps/macos/.build/release/slotstream-mac-checks --real-cache \
+  --home "$PWD/.build/fast-cache-check"
+Tools/build_slotstream_mac.sh
+```
+
+The native acceptance script exercises both aliases, Fast with and without
+DFlash, a smaller memory budget and a longer prompt. The app fixtures check
+actual selected-model receipts, explicit budgets, tools and reviewed effects.
+The cache fixture uses its default 10 GB budget. All real checks require spare
+memory before loading. These observations are not clean speed benchmarks.
+
+For a focused workflow replay, add `--case code_edit`, `--case ocr_receipt` or
+`--case history_recall` to `--real-capabilities`, using another new Home.
+`--smart` selects Smart for that fixture; `SLOTSTREAM_DFLASH=0` provides a Fast
+plain-decoding control. Preserve unsuccessful outputs. A nonzero capability
+result can identify a model-quality miss or an incorrect test assertion as well
+as a runtime defect; investigate the specific result before changing a gate.
+
+The initial Fast qualification retained word-limit misses and an old-history
+retrieval miss in repetitive context. The [engineering decision](../db/records/decisions/fast-and-smart.md)
+separates these from verified installation, storage, review, cache and model
+switching. Planning checks across the target memory range and smaller budgets
+on the development Mac do not replace physical tests on other Macs.

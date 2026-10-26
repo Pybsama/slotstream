@@ -23,7 +23,7 @@ The README, user guides, engineering notes, and changelog are combined in
 
 ## Facts
 
-- The only model is `qwen3.8-flash-next:4bit`; the engine is built around its geometry.
+- Development builds support Fast (`qwen3.6-35b-a3b:4bit` with DFlash 2) and Smart (`qwen3.8-flash-next:4bit` with the existing MTP policy). New app installs default to Fast; saved choices and the independent CLI default remain unchanged. See `docs/MODELS.md` and the Unreleased changelog.
 - Target range: Macs that cannot hold the model, 16 to 64 GB. From 96 GB the model fits in memory; Slotstream runs there but is not optimized for it, and engines that keep the model resident report faster decode. Decision: `db/records/decisions/target-range-macs-that-cannot-hold-the-model.md`.
 - The current engine requires Apple Silicon, MLX, and Metal. Windows and Linux are not supported. Other models, including the dense Qwen3.8-27B, are unsupported.
 - Native end to end: the CLI, server, planner, expert cache, governor and model are Swift on mlx-swift and Metal, with Slotstream's own run-time-compiled Metal kernels and a C decoder for the download format. No Python runtime, interpreter or bridge is on the request path; the Python under `Tools/` is the parity reference, benchmark and release tooling and never runs in the product. Speed is attributed to measured mechanisms, never to the stack itself. Details: `docs/ENGINEERING.md#native-stack`.
@@ -77,6 +77,7 @@ development app, not a published desktop release.
 - [docs/CLAUDE-CODE.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CLAUDE-CODE.md): Claude Code on Slotstream through `slotstream launch claude`, thinking, differences from Claude, shared prompts on disk, manual variables, and troubleshooting
 - [docs/CODEX.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CODEX.md): Codex through `slotstream launch codex`, the manual catalog and profile setup, a file-editing example, and troubleshooting
 - [README.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/README.md): project overview, requirements, measured speed, quick start, guides, a plain explanation, limitations, FAQs, community, and star history
+- [docs/MODELS.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/MODELS.md): Fast and Smart, defaults, aliases, acceleration and hardware qualification limits
 - [docs/SLOTSTREAM-MAC.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/SLOTSTREAM-MAC.md): native philosophy, development build, local workflow, tests, internal CLI and unpassed release gates
 - [docs/CLI.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CLI.md): everyday commands, common diagnostics, memory-option precedence, environment variables, file locations, the diagnostic checks
 - [docs/API.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/API.md): every endpoint, accepted field, sampling default, streaming and error shapes
@@ -99,3 +100,7 @@ development app, not a published desktop release.
 - [Sources/Slotstream/](https://github.com/carloslfu/slotstream/tree/main/Sources/Slotstream): the engine: memory planner (Plan.swift), expert streaming (ExpertStore.swift), HTTP server (Server.swift), sampling (Generate.swift), elastic governor (Governor.swift), conversation reuse (PrefixCache.swift), speculative decode (MTP.swift), the one-process lock (ProcessMemory.swift)
 - [Sources/slotstream-cli/](https://github.com/carloslfu/slotstream/tree/main/Sources/slotstream-cli): the CLI: subcommands in main.swift and the command files; the download engine and pinned manifest live in the Slotstream library
 - [Tools/verify.sh](https://raw.githubusercontent.com/carloslfu/slotstream/main/Tools/verify.sh): the acceptance battery; [Tools/e2e_release.sh](https://raw.githubusercontent.com/carloslfu/slotstream/main/Tools/e2e_release.sh) re-tests the installed binary; [Tools/llms_full.sh](https://raw.githubusercontent.com/carloslfu/slotstream/main/Tools/llms_full.sh) regenerates llms-full.txt
+
+## Mac Home data integration
+
+The development app’s Data browser, bundled `slotstream-home` CLI, agent skill and local MCP stdio server use the same selected Home. Data reads work with the app open or closed; AI requests use the open app’s model and native review controls. Setup and contracts: [Homes and integrations](docs/SLOTSTREAM-HOMES.md). No SQL or network listener is added.

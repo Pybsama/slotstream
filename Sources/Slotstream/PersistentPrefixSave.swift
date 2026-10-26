@@ -284,7 +284,7 @@ extension PersistentPrefixCache {
     private static func plan(state s: Qwen4ExpModel.State, tokens: [Int], identity: String,
                              includeDraft: Bool) throws -> Plan {
         guard s.committedBoundaryValid, s.tokenCount == tokens.count, !s.recordingEnabled,
-              Set(s.kv.keys) == Set(s.indexer.keys),
+              Set(s.indexer.keys).isSubset(of: Set(s.kv.keys)),
               s.kv.values.allSatisfy({ $0.offset == s.tokenCount }),
               s.indexer.values.allSatisfy({ $0.offset == s.tokenCount }) else {
             throw ModelError("state is not at a committed boundary")
@@ -357,7 +357,7 @@ extension PersistentPrefixCache {
             try sequence("kv.\(layer).keys", kv.keys, axis: 2, base: 0, live: kv.offset)
             try sequence("kv.\(layer).values", kv.values, axis: 2, base: 0, live: kv.offset)
             plan.header.attention.append(.init(layer: layer, kvOffset: kv.offset,
-                indexer: try indexer(s.indexer[layer]!, "indexer.\(layer)")))
+                indexer: try s.indexer[layer].map { try indexer($0, "indexer.\(layer)") }))
         }
         if includeDraft, let mtp = s.mtp, let row = s.lastMulti {
             try sequence("draft.kv.keys", mtp.kv.keys, axis: 2, base: 0, live: mtp.kv.offset)

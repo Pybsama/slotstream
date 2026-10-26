@@ -32,7 +32,7 @@ struct VisionParity: ParsableCommand {
     func run() throws {
         try model.rejectAdaptiveLimitForFixedDiagnostic()
         let path = try VisionAssets.resolve(image)
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         guard VisionTower.present(index: index) else {
             throw PlanError("this checkpoint has no vision tower")
         }
@@ -69,7 +69,7 @@ struct VisionParity: ParsableCommand {
         }
         try write("pixels.bin", pixels)
         try write("embed.bin", embed.asType(.float32).asArray(Float.self))
-        let manifest: [String: Any] = [
+        var manifest: [String: Any] = [
             "image": path,
             "model_dir": try model.modelURL.path,
             "height": Int(plan.height), "width": Int(plan.width),
@@ -83,6 +83,8 @@ struct VisionParity: ParsableCommand {
             "attention_padding": padding,
             "attention_query_tile": controls.visionQueryTile,
         ]
+        let served = index.mirror.servedBytes()
+        if served.count > 1 { manifest["mirror_bytes"] = served }
         try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
             .write(to: dir.appendingPathComponent("manifest.json"))
         print(

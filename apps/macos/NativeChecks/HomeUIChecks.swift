@@ -43,7 +43,7 @@ import SlotstreamPresentation
         let a = root.appendingPathComponent("Personal", isDirectory: true)
         let b = root.appendingPathComponent("Research", isDirectory: true)
         defaults.set(a.path, forKey: "homes.selected.v1")
-        let homes = HomeNavigation(defaults: defaults, environment: [:])
+        let homes = HomeNavigation(defaults: defaults, environment: [:], registry: HomeRegistry(directory: root.appendingPathComponent("registry")))
         homes.makeRuntime = { url in
             try SlotstreamRuntime(homeURL: url, dbmd: dbmd, inference: ScriptedInference(
                 turns: [EngineTurn(text: String(repeating: "Working on a long response. ", count: 120))], delayNanoseconds: 50_000_000))
@@ -103,10 +103,10 @@ import SlotstreamPresentation
         try await ready()
         try require(current.draft == "Personal draft survives switching", "conversation draft restored exactly")
         try require(current.journalComposer.text == "Personal journal draft", "journal draft restored exactly")
-        try require(HomeNavigation(defaults: defaults, environment: [:]).current == a, "last selected Home persists for next launch")
+        try require(HomeNavigation(defaults: defaults, environment: [:], registry: HomeRegistry(directory: root.appendingPathComponent("registry"))).current == a, "last selected Home persists for next launch")
         let explicit = HomeNavigation(defaults: defaults, environment: ["SLOTSTREAM_HOME": b.path])
         explicit.opened(b)
-        try require(HomeNavigation(defaults: defaults, environment: [:]).current == a, "explicit development Home does not replace saved startup Home")
+        try require(HomeNavigation(defaults: defaults, environment: [:], registry: HomeRegistry(directory: root.appendingPathComponent("registry"))).current == a, "explicit development Home does not replace saved startup Home")
         let missing = root.appendingPathComponent("Disconnected")
         try require(!(await homes.switchHome(to: missing)), "missing recent Home is refused")
         try require(!FileManager.default.fileExists(atPath: missing.path) && current.homeURL == a, "missing Home is not silently recreated")
@@ -181,6 +181,68 @@ import SlotstreamPresentation
         try await Task.sleep(nanoseconds: 400_000_000)
         try require(homes.showing, "Home menu remains reachable with collapsed navigation")
         homes.showing = false
+        // Native data browser over real dbmd records and the active Home owner.
+        func seed(_ path: String, title: String, body: String) throws {
+            let file = root.appendingPathComponent("data-body.txt")
+            try Data(body.utf8).write(to: file)
+            let process = Process(); process.executableURL = dbmd
+            process.arguments = ["write", path, "--dir", a.appendingPathComponent("db").path, "--type", "project-note", "--summary", title, "--fm", "title=" + title, "--body-file", file.path, "--json"]
+            let pipe = Pipe(); process.standardOutput = pipe; process.standardError = pipe
+            try process.run(); let output = pipe.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
+            try require(process.terminationStatus == 0, "seed real data: " + String(decoding: output, as: UTF8.self))
+        }
+        try seed("records/notes/workshop.md", title: "Workshop plan", body: "The workshop is on Friday. Bring the prototype.")
+        try seed("records/notes/reading.md", title: "Reading list", body: "Review the native application notes.")
+        let browser = DataBrowserModel(runtime: current.runtime)
+        current.panel = "Data"
+        window.setContentSize(NSSize(width: 1000, height: 760)); window.appearance = NSAppearance(named: .aqua)
+        window.contentView = NSHostingView(rootView: DataBrowser(model: current, browser: browser))
+        let dataDeadline = Date().addingTimeInterval(15)
+        while browser.page == nil && Date() < dataDeadline { try await Task.sleep(nanoseconds: 30_000_000) }
+        try require(browser.page?.total == 2, "native browser loads the current Home's real records")
+        let image = try snapshot("data-browser-light")
+        let dataText = try text(image)
+        try require(dataText.contains("Workshop plan") && dataText.contains("Reading list") && dataText.contains("Connections"), "organized data list and connections render")
+        let clickRecord = VNRecognizeTextRequest(); clickRecord.recognitionLevel = .accurate
+        try VNImageRequestHandler(cgImage: image).perform([clickRecord])
+        guard let recordRow = clickRecord.results?.first(where: { $0.topCandidates(1).first?.string == "Workshop plan" }), let dataView = window.contentView else { fatalError("Record row missing") }
+        let recordPoint = NSPoint(x: recordRow.boundingBox.midX * dataView.bounds.width, y: recordRow.boundingBox.midY * dataView.bounds.height)
+        func table(in view: NSView) -> NSTableView? {
+            if let table = view as? NSTableView { return table }
+            return view.subviews.lazy.compactMap { table(in: $0) }.first
+        }
+        // Exercise the production native table's selection and SwiftUI binding.
+        // Offscreen windows cannot run NSTableView's mouse-tracking event loop.
+        guard let records = table(in: dataView) else { fatalError("Native record table missing") }
+        let rowIndex = records.row(at: records.convert(recordPoint, from: nil))
+        try require(rowIndex >= 0, "rendered record maps to a native table row")
+        records.selectRowIndexes(IndexSet(integer: rowIndex), byExtendingSelection: false)
+        let detailDeadline = Date().addingTimeInterval(10)
+        while browser.detail == nil && Date() < detailDeadline { try await Task.sleep(nanoseconds: 30_000_000) }
+        try require(browser.detail?.records.first?.body?.contains("Friday") == true, "native table selection opens exact saved content")
+        try require(try text(snapshot("data-detail-light")).contains("Friday"), "selected content is visible")
+        window.appearance = NSAppearance(named: .darkAqua)
+        _ = try snapshot("data-detail-dark")
+        window.setContentSize(NSSize(width: 620, height: 660))
+        try await Task.sleep(nanoseconds: 200_000_000)
+        try require(try text(snapshot("data-detail-compact")).contains("Back to results"), "compact data view preserves a back action and detail")
+        browser.clearDetail(); browser.search = "workshop"
+        try await Task.sleep(nanoseconds: 700_000_000)
+        try require(browser.page?.total == 1, "native search narrows saved content")
+        browser.search = "no-match-for-this-fixture"
+        try await Task.sleep(nanoseconds: 700_000_000)
+        try require(browser.page?.total == 0, "native no-match query is empty")
+        _ = try snapshot("data-empty-compact")
+        browser.section = "schemas"; browser.search = ""
+        try await Task.sleep(nanoseconds: 500_000_000)
+        try require(try text(snapshot("data-schemas")).contains("Declared record types"), "schemas render as organized fields")
+        browser.section = "log"
+        try await Task.sleep(nanoseconds: 500_000_000)
+        try require(try text(snapshot("data-log")).contains("No maintenance entries yet"), "database log has an explicit native empty state")
+        window.contentView = NSHostingView(rootView: HomeConnections(home: a))
+        window.setContentSize(NSSize(width: 620, height: 800))
+        try await Task.sleep(nanoseconds: 300_000_000)
+        try require(try text(snapshot("data-connections")).contains("MCP server"), "connection setup is visible with CLI, skill and MCP controls")
         try require(await current.quit(), "final Home closes cleanly")
         current.releaseHomeSession()
         print("Home switching and native UI checks passed.")

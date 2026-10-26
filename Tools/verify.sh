@@ -63,6 +63,12 @@ SMALL_MEMORY=8.1
 BIG_MEMORY=10
 ECBIG=960
 
+# Engine diagnostics admit a real model-sized memory envelope even when the
+# missing-mirror fixture fails before tensor allocation. Keep these cases in
+# model acceptance, not the weights-free gate on small hosted runners.
+check "mirror CLI forwarding and refusal, including Engine entrypoints" \
+  'run_model python3 Tools/checkpoint_mirror_cli.py --binary "$BIN"'
+
 echo "== weights provenance (hashes all 105.3 GB vs the pinned revisions; the draft head is optional) =="
 if python3 - "$BIN" "$VERIFY_OUT/model-verification" <<'PYVERIFY'
 import os,sys

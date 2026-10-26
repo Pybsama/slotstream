@@ -10,7 +10,8 @@ struct ModelPackCommand: ParsableCommand {
     func run() throws {
         let decision = try ModelPackRegistry.resolve(selection == "auto" ? .automatic : .pack(selection))
         if json {
-            let rows: [[String: Any]] = ModelPackRegistry.supported.map { pack in
+            let listed = ModelPackRegistry.supported + (ModelPackRegistry.supported.contains(where: { $0.id == decision.pack.id }) ? [] : [decision.pack])
+            let rows: [[String: Any]] = listed.map { pack in
                 let defaults: [String: Any] = ["id": pack.startupDefaults.id,
                     "automatic_ceiling_bytes": pack.startupDefaults.automaticCeilingBytes,
                     "context_tokens": pack.startupDefaults.contextTokens,
@@ -42,7 +43,7 @@ struct ModelPackCommand: ParsableCommand {
         } else {
             print("Selected: \(decision.pack.title) (\(decision.pack.id))")
             print(decision.reason)
-            print("This lists supported packs; it does not certify a generation-speed target.")
+            print("These model identities do not certify a generation-speed target.")
         }
     }
 }

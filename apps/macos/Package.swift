@@ -15,6 +15,7 @@ let package = Package(
         .executable(name: "slotstream-presentation-checks", targets: ["SlotstreamPresentationChecks"]),
         .executable(name: "slotstream-composer-checks", targets: ["SlotstreamComposerChecks"]),
         .executable(name: "slotstream-local", targets: ["SlotstreamLocal"]),
+        .executable(name: "slotstream-home", targets: ["SlotstreamLocal"]),
         .executable(name: "slotstream-mac-checks", targets: ["SlotstreamMacChecks"]),
         .executable(name: "slotstream-extract", targets: ["SlotstreamExtract"]),
     ],

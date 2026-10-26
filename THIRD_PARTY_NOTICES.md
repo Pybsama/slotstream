@@ -13,3 +13,49 @@ code. No upstream Python is executed by the native runtime.
 
 This code license does not license the separately distributed model weights.
 Each model artifact retains its own license and provenance requirements.
+
+`Sources/Slotstream/DFlashDraft.swift` implements the DFlash 2 draft network
+in native Swift/MLX, following [Z Lab DFlash](https://github.com/z-lab/dflash)
+(`model_mlx.py` at commit `07ebd93db9f472af339b644bb70221ad8428328a`). Its grouped dynamic
+convolution and candidate selection are adapted under the
+[MIT license](Licenses/DFlash-MIT.txt), Copyright 2026 Z Lab.
+The bounded context, target verification and app integration are Slotstream code.
+The separately downloaded Fast draft includes its own Apache 2.0 license.
+The pinned Smart draft declares Apache 2.0 in its
+[model card](https://huggingface.co/incoai/Qwen3.8-Flash-Next-DFlash2/tree/a22a1744e85c17364dcc54a6a420af7135d4c7f6);
+that revision has no separate LICENSE file. Both retain their original model
+cards and pinned provenance alongside the downloaded weights.
+
+The target architecture was checked against Apple's
+[mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) Qwen35 and Qwen35MoE
+implementations at `bb0d5b048f02e14dbf8f2d7bb1a20911a295470a`.
+[Splash](https://github.com/incoai/splash) at
+`1482f6bbc2abf12375332725302019594150b6cb` was also reviewed as an
+implementation reference. Slotstream implements event-gated execution through
+its own MLX stream and allocator; it does not launch the Splash runtime.
+
+The native GSQ-RCO Q2 checkpoint decoder, GPU DFlash candidate selector and
+bounded verification budget adapt Splash's GGUF format readers,
+candidate edge reductions and `VerifyBudget` at the revision
+above, under [Apache-2.0](Licenses/splash-Apache-2.0.txt). The original notices
+and a description of the adaptations are retained in
+[the Splash notice](Licenses/splash-NOTICE.txt). Exact packed model bytes remain
+separately downloaded artifacts; this source license is not their license.
+The fused draft convolution and packed QKV, context KV and gate/up layouts
+also follow this revision. The packing keeps the MLX projection arithmetic;
+it is not the upstream staged affine kernel.
+The bounded adaptive cache metadata in `Sources/CNativeSchedule/splash/model/`
+is unmodified from that same revision. Its source hashes are recorded in
+`splash-manifest.json`; the Slotstream adapter preserves physical slots,
+longer-lived GPU pins and failed-read publication boundaries.
+
+## MLX native execution extension
+
+`Sources/CNativeSchedule` uses pinned MLX C++ and metal-cpp headers to execute
+prepared expert and projection plans on the same MLX stream and allocator.
+The unmodified header hashes and dependency revision are recorded in its
+`vendor-manifest.json`; the SwiftPM dependency provides the implementation.
+MLX is Copyright Apple Inc. and MIT licensed, reproduced in
+[MLX-LICENSE.txt](Licenses/MLX-LICENSE.txt). metal-cpp is Copyright Apple Inc.
+and Apache-2.0 licensed, reproduced in
+[Metal-CPP-LICENSE.txt](Licenses/Metal-CPP-LICENSE.txt).

@@ -6,6 +6,80 @@ Version headings can be prepared before publication. The
 [Releases page](https://github.com/carloslfu/slotstream/releases/latest)
 determines which version the installer downloads.
 
+## Unreleased
+
+- Add native prepared Metal execution sections for Fast and the explicit Q2
+  candidate, using MLX's stream and allocator. Share compiled pipelines across
+  batch widths using bounded dispatch parameters, reuse bounded event
+  leases, stage Q2 expert weights on the GPU and adapt cache replacement to
+  actual slots and pins. Preserve cancellation, failed-read recovery and memory
+  admission. Submit useful work earlier, fold retained speculative state into
+  its next pass, and retain bounded verification calibration for the explicit
+  Q2 candidate across ordinary requests. The [prepared execution study](db/records/measurements/native-prepared-execution.md)
+  records matched speed, quality, app checks and remaining limitations. Smart's
+  selected model is unchanged.
+
+- Add bounded next-input expert read-ahead to the explicit Q2 candidate's
+  native engine and app recipe, with charged staging and demand-owned cache
+  admission. Share eligible Q2 projection preparation and align bounded expert
+  reads. Keep Fast's existing recipe after its read-ahead experiment regressed
+  prose. The [scheduling study](db/records/measurements/native-fast-q2-scheduling.md)
+  preserves the measurements, app results and remaining Splash comparison limits.
+
+- Port compressed expert tiles and fused gate/up work into both native Fast
+  and the explicit Q2 candidate. Fast also uses fused recurrent processing and
+  prepared routing weights; Q2 adds narrow register projections with GPU-aware
+  reduction splits. Preserve bounded streaming, portable fallbacks and prefix
+  compatibility. The [kernel port study](db/records/measurements/native-fast-q2-execution-kernels.md)
+  records the tests, rejected experiments and remaining comparison limits.
+
+- Reduce Fast's draft and target scheduling overhead with native GPU candidate
+  selection, bounded deferred evaluation, fused recurrent verification and
+  grouped short-prefill work. Use one verification controller that can recover
+  after expensive early passes. Preserve target verification and memory limits;
+  the [matched Splash comparison](db/records/measurements/fast-splash-execution-comparison.md)
+  records the remaining gap and qualification limits.
+
+- Preserve literal JSON brackets in saved conversations and tool results. Table
+  output no longer becomes an accidental db.md link, and interrupted saves recover.
+
+- Add Fast and Smart to the native app's composer and settings. New installs
+  start with Fast; existing choices, conversations and review boundaries remain.
+- Add native Qwen3.6-35B-A3B inference with pinned DFlash 2, bounded SSD expert
+  streaming and adaptive target verification. Keep Smart's existing MTP path.
+- Add `fast` and `smart` engine aliases, complete target/draft setup verification,
+  model-specific memory planning and persistent caches for Fast's attention layout.
+
+## 0.2.30 - 2026-10-19
+
+- Add repeatable, optional `--mirror <dir>` to distribute text and vision
+  checkpoint reads across identical copies on different disks, with per-copy
+  byte reporting. The default still uses one copy, and existing Swift
+  initializers remain compatible. Verify every copy before use; packed expert
+  layouts and authenticated affine packs reject mirrors. By
+  [@spikezz](https://github.com/spikezz) in
+  [#57](https://github.com/carloslfu/slotstream/pull/57).
+- Fix concurrent access to the mirror replica count and add a ThreadSanitizer
+  regression check.
+- The AI SDK gateway rejects malformed tool settings, definitions, arguments
+  and results instead of silently defaulting or dropping them. By
+  [@Pybsama](https://github.com/Pybsama) in
+  [#56](https://github.com/carloslfu/slotstream/pull/56).
+- Give adaptive-memory acceptance tests bounded startup and completion
+  deadlines with reliable server cleanup. By
+  [@spikezz](https://github.com/spikezz) in
+  [#58](https://github.com/carloslfu/slotstream/pull/58).
+- Rename the development Mac app to Slotstream while preserving existing
+  Homes, preferences, backups and saved mini-app compatibility. Repair Xcode
+  app/engine naming conflicts and invalidate stale native build objects when
+  their inputs change.
+- The development app gains exact bounded CSV/TSV analysis, permitted history
+  and memory search, direct file references, shared grouped and page citations,
+  raw JSON copying, and bounded tool-schema correction. These changes are
+  available in source; this release does not include a Desktop installer.
+- Add diagnostic tools for context-boundary behavior and ready-expert overlap.
+  These experiments do not establish a default performance improvement.
+
 ## 0.2.29 - 2026-10-13
 
 - Remove GPU keepalive completely after base-M5 MacBook Air and M1 Max Mac Studio

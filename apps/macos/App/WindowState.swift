@@ -148,7 +148,8 @@ struct SidebarView: View {
                 Button { model.panel = "App" } label: { navigationLabel(running, symbol: "app").padding(.leading, 12) }
                     .buttonStyle(RailButton(selected: state.panel == "App")).help("Return to \(running), which is open")
             }
-            railButton("Knowledge", symbol: "square.stack", selected: state.panel == "Knowledge") { model.panel = "Knowledge" }
+            railButton("Data", symbol: "externaldrive", selected: state.panel == "Data") { model.panel = "Data" }
+            railButton("Memory", symbol: "square.stack", selected: state.panel == "Knowledge") { model.panel = "Knowledge" }
             railButton("Settings", symbol: "gearshape", selected: state.panel == "Settings") { model.panel = "Settings" }
             Text("Development build · Local only").font(.caption).foregroundStyle(secondaryInk).padding(12)
         }.padding(.horizontal, 8).padding(.bottom, 8)
@@ -169,7 +170,7 @@ struct SidebarView: View {
             .help(row.title + " · " + row.lifecycle.title + ". Right-click for thread actions.").contextMenu { threadActions(row) }
     }
     private func railButton(_ title: String, symbol: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) { navigationLabel(title, symbol: symbol) }.buttonStyle(RailButton(selected: selected)).help(title == "Home" ? "Open your Home conversation (⌘1)" : title == "Knowledge" ? "Inspect, correct, or forget saved memories" : title == "Journal" ? "Read and write your personal journal" : title == "Apps & Skills" ? "Your mini-apps and skills (⌘2)" : "Appearance, model, and keyboard settings (⌘,)")
+        Button(action: action) { navigationLabel(title, symbol: symbol) }.buttonStyle(RailButton(selected: selected)).help(title == "Home" ? "Open your Home conversation (⌘1)" : title == "Data" ? "Browse records, sources, schemas and activity in this Home" : title == "Memory" ? "Inspect, correct, or forget saved memories" : title == "Journal" ? "Read and write your personal journal" : title == "Apps & Skills" ? "Your mini-apps and skills (⌘2)" : "Appearance, model, and keyboard settings (⌘,)")
     }
     private func navigationLabel(_ title: String, symbol: String) -> some View {
         HStack(spacing: 10) { Image(systemName: symbol).frame(width: 16, height: 18).accessibilityHidden(true); Text(title) }

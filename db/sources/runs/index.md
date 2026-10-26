@@ -2,11 +2,94 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-14T21:37:00.798994Z
+updated: 2026-10-26T11:02:38.516967Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-fixed-prose]] — Q2 aligned forecast fixed-prose full-cycle control
+- [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-requests]] — Q2 aligned forecast-only normal requests reject retention
+- [[sources/runs/2026/10/2026-10-26-q2-completion-cleanup]] — Q2 completion cleanup and output-map contention diagnostic
+- [[sources/runs/2026/10/2026-10-26-q2-read-latency]] — Q2 matched read-delay sensitivity experiment
+- [[sources/runs/2026/10/2026-10-26-q2-allocator-waits]] — Q2 allocator probes, failed sensitivity controls and read-latency localization
+- [[sources/runs/2026/10/2026-10-26-q2-packed-routing-metadata]] — Q2 packed routing metadata exact checks and flat clean ABBA
+- [[sources/runs/2026/10/2026-10-26-q2-event-readiness]] — Q2 event readiness ancestry with failed native sensitivity control
+- [[sources/runs/2026/10/2026-10-26-q2-routing-and-read-issuance]] — Q2 read issuance, staging ablation and actual expert routing
+- [[sources/runs/2026/10/2026-10-26-q2-early-expert]] — Q2 early expert preparation: exact checks, rejected speed candidate and GPU attribution
+- [[sources/runs/2026/10/2026-10-26-q2-expert-preparation]] — Q2 native expert preparation and route-readback phases
+- [[sources/runs/2026/10/2026-10-26-q2-required-dependencies]] — Q2 required-payload ancestry and matched readiness traces
+- [[sources/runs/2026/10/2026-10-26-q2-mlx-graph]] — Q2 MLX graph and wait phases with sensitivity limit
+- [[sources/runs/2026/10/2026-10-26-q2-mlx-ownership]] — Q2 direct MLX buffer-ownership observation
+- [[sources/runs/2026/10/2026-10-26-q2-metal-lifecycle]] — Q2 Metal lifecycle observation and excluded comparison
+- [[sources/runs/2026/10/2026-10-26-q2-mask-reuse]] — Immutable Q2 draft-mask reuse evidence
+- [[sources/runs/2026/10/2026-10-26-q2-started-forecast-requests]] — Started forecast complete-request evidence
+- [[sources/runs/2026/10/2026-10-26-q2-started-forecast-reuse]] — Q2 started forecast reuse evidence
+- [[sources/runs/2026/10/2026-10-25-q2-expert-submission-boundary]] — Q2 expert submission boundary evidence
+- [[sources/runs/2026/10/2026-10-25-q2-full-cycle-execution-control]] — Q2 full-cycle execution control evidence
+- [[sources/runs/2026/10/2026-10-25-q2-forecast-launch-control]] — Q2 forecast launch boundary control evidence
+- [[sources/runs/2026/10/2026-10-25-q2-demand-lifecycle-triage]] — Q2 demand lifecycle and buffer triage evidence
+- [[sources/runs/2026/10/2026-10-25-q2-small-work-and-readiness]] — Q2 small-work controls and dependency attribution
+- [[sources/runs/2026/10/2026-10-25-q2-ordinary-host-attribution]] — Q2 ordinary-request copying, host scopes and submission gaps
+- [[sources/runs/2026/10/2026-10-25-q2-ordinary-request-and-submission-diagnosis]] — Q2 ordinary-request frequency, overlap and submission controls
+- [[sources/runs/2026/10/2026-10-25-q2-order-executor-and-validation]] — Q2 condition order, execution context and validation placement
+- [[sources/runs/2026/10/2026-10-25-q2-frequency-and-cache-diagnosis]] — Q2 passive frequency and cached versus partial-miss verification
+- [[sources/runs/2026/10/2026-10-25-q2-decoder-and-metadata-diagnosis]] — Q2 copy control, file checks and paired-code decoder trials
+- [[sources/runs/2026/10/2026-10-25-q2-copy-and-stage-diagnosis]] — Q2 copy attribution and named GPU-stage diagnostics
+- [[sources/runs/2026/10/2026-10-25-q2-matched-work-12gb-excluded]] — Q2 trace-disabled matched work at 12 GB; timing excluded
+- [[sources/runs/2026/10/2026-10-25-q2-forecast-reader-count-excluded]] — Q2 forecast-reader count and offline demand-lane analysis
+- [[sources/runs/2026/10/2026-10-25-q2-forecast-only-sequence-excluded]] — Q2 aligned forecast-only continuation preserves arithmetic; timing excluded
+- [[sources/runs/2026/10/2026-10-25-q2-cost-and-demand-diagnosis]] — Q2 adaptive-cost replay and demand-shape diagnosis
+- [[sources/runs/2026/10/2026-10-25-q2-recorded-choices-excluded]] — Q2 recorded adaptive choices preserve complete work; timing excluded
+- [[sources/runs/2026/10/2026-10-25-q2-padding-layout-control]] — Clean Q2 padding-only normal-request comparison
+- [[sources/runs/2026/10/2026-10-25-q2-fixed-depth-excluded]] — Q2 fixed-depth complete controls preserve outputs; timing protocols excluded
+- [[sources/runs/2026/10/2026-10-25-q2-copy-complete-requests]] — Q2 copy candidates fail clean complete-request retention
+- [[sources/runs/2026/10/2026-10-25-q2-continuation-excluded]] — Excluded Q2 continuation protocols and diagnostic harness failures
+- [[sources/runs/2026/10/2026-10-25-q2-continuation-diagnostics]] — Q2 continuation replay and staging-copy diagnostic evidence
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-checkpoint]] — Q2 investigation restoration and repository checkpoint
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-complete-requests]] — Fresh clean Q2 complete requests after competing builds stop
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-excluded]] — Excluded Q2 handoff candidates and diagnostic failures
+- [[sources/runs/2026/10/2026-10-25-q2-handoff-diagnostics]] — Q2 handoff and overlap diagnostic evidence
+- [[sources/runs/2026/10/2026-10-25-q2-typical-complete-requests]] — Clean 15 GB baseline, direct-read candidate and Splash complete-request comparison
+- [[sources/runs/2026/10/2026-10-25-q2-direct-read-replay-excluded]] — Preserve complete excluded candidate replay after final baseline paging
+- [[sources/runs/2026/10/2026-10-25-q2-typical-verification]] — Captured typical Q2 verification, matched partial misses, tracing controls and rejected candidate evidence
+- [[sources/runs/2026/10/2026-10-24-q2-focused-complete-requests]] — Discarded whole 15 GB Q2 baseline/candidate/Splash comparison with both candidate arms paging
+- [[sources/runs/2026/10/2026-10-24-q2-focused-bottleneck]] — Focused Q2 cached/miss diagnosis, exact rejected repack candidate and excluded 15 GB comparison
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]] — Complete hosted CI for the native prepared execution port and unchanged app inputs
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-cooled-confirmation]] — Excluded cooled Q2 confirmations with unchanged final native binary
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]] — Native prepared execution context proxy repair
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]] — Native prepared execution final local validation
+- [[sources/runs/2026/10/2026-10-24-native-prepared-execution]] — Native prepared execution evidence and complete comparison protocols
+- [[sources/runs/2026/10/2026-10-23-native-scheduling-excluded-comparisons]] — Excluded final native and Splash timing comparisons
+- [[sources/runs/2026/10/2026-10-23-native-scheduling]] — Native scheduling ablations and qualification
+- [[sources/runs/2026/10/2026-10-22-native-execution-ci]] — Exact implementation commit passes engine and native app CI
+- [[sources/runs/2026/10/2026-10-22-native-q2-host-profile]] — Native Q2 CPU handoff diagnostic after the kernel port
+- [[sources/runs/2026/10/2026-10-22-native-execution-final-comparisons]] — Final matched native Fast and Q2 comparison attempts
+- [[sources/runs/2026/10/2026-10-22-native-execution-final-validation]] — Final native Fast and Q2 validation
+- [[sources/runs/2026/10/2026-10-22-native-execution-kernels]] — Native Fast and Q2 execution kernels and rejected experiments
+- [[sources/runs/2026/10/2026-10-22-fast-splash-app-validation]] — Fast app bundle identity, final gates and original/final real-workflow failures preserved
+- [[sources/runs/2026/10/2026-10-22-fast-splash-exclusions]] — Ineligible timing aggregates, memory refusals and rejected selector experiments preserved
+- [[sources/runs/2026/10/2026-10-22-fast-splash-execution]] — Matched Fast/Splash execution, native scheduling ports, quality controls and preserved failures
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-closeout]] — Pushed native Q2 checkpoint; exact tested local CLI restored, rebuilt catalogue passes, hosted engine and app CI still pending at capture
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-followup]] — Final native Q2 warm control retains a gap; extra recovery-graph representation is rejected after limited benefit and incomplete guarded ABBA
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-validation]] — Full static suite and catalogue pass on frozen native Q2 v17; initial static fixture failure preserved
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution-exclusions]] — Retained paging, cache mismatches, thermal exclusions, continuous-session memory failure, unsupported fixtures and unsuccessful native optimizations
+- [[sources/runs/2026/10/2026-10-22-native-q2-execution]] — Frozen native Q2 ports, matched-cache comparisons, independent quality/state checks and six real app jobs, with performance parity still open
+- [[sources/runs/2026/10/2026-10-22-native-q2-app]] — Native Q2 passes six real app jobs and visible GUI generation under a ten-GB limit; preserved harness and activation failures
+- [[sources/runs/2026/10/2026-10-22-native-q2-timing-exclusions]] — Retain paging-affected native Q2 timing diagnostics and failed/intermediate attempts without clean speed claims
+- [[sources/runs/2026/10/2026-10-22-native-q2-port]] — Native exact Q2 source, numerical reference, functional, quality, memory and regression evidence
+- [[sources/runs/2026/10/2026-10-21-slotstream-home-stable-checks]] — Complete stable-source Mac suite and pinned dbmd Home integration compatibility
+- [[sources/runs/2026/10/2026-10-21-exact-q2-timing-exclusions]] — Retained timing exclusions, thermal interruption and real-headroom refusals
+- [[sources/runs/2026/10/2026-10-21-exact-q2-tradeoff]] — Exact Q2 recipe, production controls, cache scaling and bounded quality receipts
+- [[sources/runs/2026/10/2026-10-21-slotstream-home-data-integrations]] — Native Home data browser, global CLI, bundled skills and MCP integration verification
+- [[sources/runs/2026/10/2026-10-21-smart-dflash-final-code-ci]] — Hosted engine, Mac app and context checks pass for the final native Smart DFlash code
+- [[sources/runs/2026/10/2026-10-21-smart-dflash-review]] — Smart DFlash native and upstream comparison receipts
+- [[sources/runs/2026/10/2026-10-21-smart-dflash-timing-discarded]] — Discarded incomplete Smart timing round
+- [[sources/runs/2026/10/2026-10-21-fast-smart-ci]] — Successful exact-commit engine and app CI after the real Fast and Smart development-app qualification.
+- [[sources/runs/2026/10/2026-10-21-fast-smart-delivered-app]] — Exact development app Fast/Smart UI switches, verified installation, corrected workflow fixtures and preserved Fast quality limits.
+- [[sources/runs/2026/10/2026-10-21-fast-smart-integration]] — Native Fast/Smart integration checks, real workflow results, preserved quality failures, storage recovery and qualification limits.
+- [[sources/runs/2026/10/2026-10-21-fast-native-first]] — First native Fast and DFlash functional runs at a small explicit budget; timing is exploratory.
+- [[sources/runs/2026/10/2026-10-19-release-0-2-30-published-and-installed]] — v0.2.30 published and accepted from the exact CI archive
+- [[sources/runs/2026/10/2026-10-18-mirror-review-final]] — Final integrated mirror review acceptance and three-arm performance capture
 - [[sources/runs/2026/10/2026-10-14-sevra-capability-fixes]] — Native capability fixes pass deterministic and app checks; real-model replay refused before loading for insufficient headroom
 - [[sources/runs/2026/10/2026-10-14-sevra-capability-audit]] — Real native capability audit: successful narrow jobs, failed reviewed edit, JSON and citation mismatch, and stale app artifacts
 - [[sources/runs/2026/10/2026-10-14-issue54-full-model]] — Six full-model requests complete without the reported 32k cliff on M5 across deployment, portable and automatic lookahead configurations; one interrupted prefill preserved
@@ -424,91 +507,8 @@ updated: 2026-10-14T21:37:00.798994Z
 - [[sources/runs/2026/09/2026-09-10-user-server-three-prompts-small-benchmark]] — Small sequential benchmark of three prompts on the existing user server, with repeats and follow-ups
 - [[sources/runs/2026/09/2026-09-10-optimization-final-program-complete]] — Original OPT00–OPT36 program complete with tested sources and installed candidate active
 - [[sources/runs/2026/09/2026-09-10-optimization-final-local-activation-and-all37-outcomes]] — Qualified final source and installed binary activated locally with all thirty-seven outcomes preserved
-- [[sources/runs/2026/09/2026-09-10-optimization-final-preactivation-closure]] — All thirty-seven optimization outcomes and complete exact-candidate gates close before local activation
-- [[sources/runs/2026/09/2026-09-10-optimization-final-empirical-calibration-decision]] — Completed final evidence retains the conservative planner family without new capacity or speed credit
-- [[sources/runs/2026/09/2026-09-10-optimization-final-long-on-complete-pass]] — Complete fixed-MTP sustained cohort qualifies with a measured speed-memory tradeoff
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-thermal-recovery-guarded-launch]] — Full thermal-recovery MTP-on cohort launches after real bounded nominal and capacity readiness
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-thermal-recovery-preparation]] — Prospective full-cohort recovery from excluded completed fair responses passes 86 model-free checks
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-user-directed-thermal-stop]] — Capacity-qualified continuation stops at a completed reference response ending thermally fair
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-user-directed-guarded-launch]] — User-directed full MTP continuation starts after actual memory and nominal thermal readiness
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-quiet-interval-preparation]] — Separate complete MTP repetition prepared with unchanged protocol, awaiting a quiet machine interval
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-distributed-thermal-stop]] — Distributed-cooling MTP cohort stops during reference startup after six complete pairs
-- [[sources/runs/2026/09/2026-09-10-optimization-final-all37-delivery-and-activation-reconciliation]] — All 37 dispositions retained with completed MTP-off and delivery evidence; full MTP-on and activation remain open
-- [[sources/runs/2026/09/2026-09-10-optimization-final-distributed-launch-and-delivery-reconciliation]] — Actual distributed-cooling launch and completed delivery evidence remain tied to the exact candidate
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-distributed-cooling-preparation]] — Same total idle time distributed around both full MTP requests; original acceptance and source proofs retained
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-cooled-thermal-stop]] — Long MTP cohort stops thermally despite before-cell cooling; full completed work and cleanup preserved
-- [[sources/runs/2026/09/2026-09-10-optimization-final-cooled-launch-and-report-binding]] — Cooled MTP cohort passes actual readiness and final report preparation follows its exact identity
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-cooled-cohort-preparation]] — Fresh full MTP cohort prepared with longer cooling and actual polling-overhead validation
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-thermal-stop]] — Final MTP long cohort stops on fair thermal state with full partial work preserved
-- [[sources/runs/2026/09/2026-09-10-optimization-final-prefill-reconciliation-and-calibration-preparation]] — Closed automatic-prefill results reconciled and final calibration report prepared
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-startup-exclusion-preparation]] — Exact final MTP startup method excludes contaminated pairs and preserves resource stops
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-startup-swapin-stop]] — Corrected MTP long cohort stops on eight startup swap-in pages with ample headroom
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-delivery-correction]] — Exact final MTP long-workload delivery correction passes49model-free checks and freezes
-- [[sources/runs/2026/09/2026-09-10-optimization-final-long-on-delivery-refusal]] — Final MTP-on long cohort refuses incompatible legacy large-memory protocol before model launch
-- [[sources/runs/2026/09/2026-09-10-optimization-final-long-off-complete-pass]] — Final MTP-off sustained cohort completes all512-output work with13clean pairs
-- [[sources/runs/2026/09/2026-09-09-optimization-current-all37-source-dispositions]] — All thirty-seven current dispositions reconciled with final source and completed evidence
-- [[sources/runs/2026/09/2026-09-09-optimization-final-observed-spreads-and-original-aa-context]] — Final paired request spreads and original A/A variability are reported without rescoring
-- [[sources/runs/2026/09/2026-09-09-optimization-final-calibration-inputs-and-profile-label-correction]] — Exact planner family and all final short-cohort memory caps verified; two profile labels corrected
-- [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-disposition-checkpoint]] — All thirty-seven optimization dispositions retain completed lifetime and control evidence
-- [[sources/runs/2026/09/2026-09-09-optimization-final-control-and-fallback-review]] — Exact final controls preserve selected defaults, reference compatibility and measured platform dispatch
-- [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-on-pass]] — Exact final MTP-on lifetime passes all sixty original requests
-- [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-off-pass]] — Exact final MTP-off lifetime passes all sixty original requests
-- [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-actual-binding]] — Original final lifetimes bind successfully to all eight completed paired studies
-- [[sources/runs/2026/09/2026-09-09-optimization-final-installed-qualification-pass]] — Exact final installed CLI passes all31 checks and full upgrade/rollback qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-complete-verification-pass]] — Exact final V519 passes the complete original25-check verification battery
-- [[sources/runs/2026/09/2026-09-09-optimization-final-actual-default-and-eight-paired-complete-pass]] — Exact final actual-default cohort and all eight original paired studies pass
-- [[sources/runs/2026/09/2026-09-09-optimization-final-complete-verification-and-installed-preparation]] — Final coverage audit preserves complete verification and installed qualification before activation
-- [[sources/runs/2026/09/2026-09-09-optimization-final-retention-complete-pass]] — Exact final retention-only cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-prospective-long-adaptive-scheduling]] — Prospective long-study thermal scheduling passes 43 checks; frozen paired campaign remains unchanged
-- [[sources/runs/2026/09/2026-09-09-optimization-final-complete-repeat-complete-pass]] — Exact final complete-repeat cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-distinct-tail-complete-pass]] — Exact final distinct-tail cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-mtp-resource-complete-pass]] — Exact final mtp-resource cohort passes complete original qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-sampled-complete-pass]] — Exact final sampled cohort passes full output, memory, request and startup qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-prose-complete-pass]] — Exact final prose cohort passes full work, memory, request and startup qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-paired-resumption]] — Full final optimization qualification resumes after material resource recovery
-- [[sources/runs/2026/09/2026-09-09-optimization-final-thermal-impasse-audit]] — Third consecutive thermal impasse preserves the complete unfinished optimization goal
-- [[sources/runs/2026/09/2026-09-09-optimization-final-readiness-thermal-timeout]] — Final readiness times out with sufficient memory and no model launch
-- [[sources/runs/2026/09/2026-09-09-optimization-final-dispositions-and-readiness-checkpoint]] — All37 dispositions retain exact current evidence; bounded readiness observer prepares no model run
-- [[sources/runs/2026/09/2026-09-09-optimization-exact-final-activation-preparation]] — Unapplied final V519 activation patch matches all150source inputs and passes the real workspace apply check
-- [[sources/runs/2026/09/2026-09-09-optimization-final-continuation-and-remaining-delivery-preparation]] — Exact final continuation reuses the passed short cohort and prepares unchanged lifetime, sustained-TPS and activation work
-- [[sources/runs/2026/09/2026-09-09-optimization-final-unique-prose-thermal-stop]] — Original final unique-prose cohort remains unqualified after nominal-state exclusions make five clean pairs impossible
-- [[sources/runs/2026/09/2026-09-09-optimization-final-short-one-complete-pass]] — Exact final composition passes the complete original short-one paired request and startup gates
-- [[sources/runs/2026/09/2026-09-09-optimization-final-eight-paired-serial-preparation]] — Original eight exact final paired studies are queued sequentially with unchanged full work and acceptance
-- [[sources/runs/2026/09/2026-09-09-optimization-final-offline-client-full-pass]] — Exact final candidate passes the complete original Hermes and Ollama client family with isolated offline scanner configuration
-- [[sources/runs/2026/09/2026-09-09-optimization-offline-client-fixture-preparation]] — Pinned Hermes explicit scanner path prevents auxiliary download while preserving all original local client assertions
-- [[sources/runs/2026/09/2026-09-09-optimization-final-resource-pass-and-client-installer-stop]] — Final resource suite passes all seven gates; original Hermes client remains failed for a blocked scanner download attempt
-- [[sources/runs/2026/09/2026-09-09-optimization-final-quiet-resource-repetition-preparation]] — One complete quiet resource repeat preserves every original guard after the recorded global swap-in stop
-- [[sources/runs/2026/09/2026-09-09-optimization-final-resource-global-swapin-stop]] — Original final resource suite retains six passes and an incomplete MTP check after four global swap-ins
-- [[sources/runs/2026/09/2026-09-09-optimization-final-resource-client-exact-binding]] — Original resource and client families bind the exact final binary and seven native proofs
-- [[sources/runs/2026/09/2026-09-09-optimization-final-composition-static-and-external-pass]] — Final exact-source static suite and independent public-library consumer both pass
-- [[sources/runs/2026/09/2026-09-09-optimization-final-lifetime-binding-preparation]] — Exact final lifetime adapter retains both original60request workloads and passes12 model-free checks
-- [[sources/runs/2026/09/2026-09-09-optimization-final-composition-seven-native-pass-and-serving-freeze]] — All5556 final native assertions pass and the original final serving matrix is bound
-- [[sources/runs/2026/09/2026-09-09-optimization-final-composition-build-pure-and-native-freeze]] — Exact selected final composition compiles and passes25360 pure assertions and116 CLI checks
-- [[sources/runs/2026/09/2026-09-09-optimization-final-preparation-binding-amendment-and-source-review]] — Final prerequisite path amendment passes all27 affected checks and bounded source review
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-complete-pass]] — Complete 16 GB public-planner cohort passes with independently audited startup swap-in exclusions
-- [[sources/runs/2026/09/2026-09-09-hermes-automatic-mtp-preflight]] — Hermes automatic MTP guide and preflight verification
-- [[sources/runs/2026/09/2026-09-09-optimization-final-source-current-profile-binding-preparation]] — Final-source preparation requires the exact qualified profile identities and declared exclusion audit
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-complete-pass]] — Complete 12 GB public-planner cohort passes with explicit startup swap-in pair exclusions
-- [[sources/runs/2026/09/2026-09-09-optimization-explicit-startup-swapin-method-and-full-freeze]] — Explicit whole-pair startup swap-in exclusion with unchanged hard limits and fresh full cohorts
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-repeat-startup-swapin-stop]] — Second 12 GB startup swap-in stop with ample headroom, preserved incomplete cohort
-- [[sources/runs/2026/09/2026-09-09-optimization-qualified-fixture-full-planner-cohorts-freeze]] — Full 12 and 16 GB original planner cohorts frozen after independent fixture delivery
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-continuation-delivery-pass]] — Corrected 16 GB planner fixtures pass four-response functional delivery, no timing qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-continuation-fixture-and-full-cohort-preparation]] — Prospective 4099-token continuation delivery and full original cohort adapter preparation
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-1024-first-fixture-short-stop]] — Original 16 GB first fixture stopped at one output; early work guard preserved evidence and drained
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-fixture-delivery-pass]] — Corrected 12 GB planner fixture passes four-response functional delivery, no timing qualification
-- [[sources/runs/2026/09/2026-09-09-optimization-first-work-guard-and-fixture-delivery-preparation]] — Early original first-work enforcement and bounded prospective fixture delivery preparation
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-512-resource-stop-and-first-work-failure]] — V515 12 GB planner resource stop and first-job workload failure, unqualified
-- [[sources/runs/2026/09/2026-09-09-optimization-final-static-consumer-preparation]] — Final static lease and external consumer preparation preserve original checks and guards
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-256-complete-pass]] — Original 10 GB public-planner cohort qualifies automatic grouping with exact full responses
-- [[sources/runs/2026/09/2026-09-09-optimization-final-qualification-drivers-preparation]] — Final source qualification drivers preserve original native, paired and long workloads
-- [[sources/runs/2026/09/2026-09-09-optimization-final-source-preparation-checks]] — Final composition source and original build lease preparation pass eight model-free checks
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-metadata-delivery-correction]] — Actual planner metadata collection corrects first-response observation failure
-- [[sources/runs/2026/09/2026-09-09-optimization-public-planner-raw-delivery-correction]] — Raw planner benchmark refuses before model launch; exact request correction is frozen
-- [[sources/runs/2026/09/2026-09-09-optimization-final-component-control-and-vision-override-preparation]] — Final comparison controls preserve original workloads and draft explicit vision override compatibility
-- [[sources/runs/2026/09/2026-09-09-optimization-adaptive-public-planner-cohort-freeze]] — Three original public-planner cohorts rebound to the exact seven-case-qualified candidate
-- [[sources/runs/2026/09/2026-09-09-optimization-adaptive-scope-seven-native-pass]] — All seven smaller-group native cases pass with complete prior coverage
 
 ## More
 
-This folder has 914 files. The 500 most recent are listed above.
+This folder has 997 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

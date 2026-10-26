@@ -12,7 +12,7 @@ struct Slotstream: ParsableCommand {
         abstract: "Qwen3.8-Flash-Next on Apple Silicon via SSD-streamed experts + cache slots.",
         version: SlotstreamBuild.version,
         subcommands: [
-            Run.self, Serve.self, Launch.self, Stop.self, Pull.self, Doctor.self, ModelPackCommand.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
+            Q2FormatCheck.self, Q2ProfileCheck.self, Q2ExpertsCheck.self, SmartDFlashCheck.self, SmartDFlashReplay.self, Run.self, Serve.self, Launch.self, Stop.self, Pull.self, Doctor.self, ModelPackCommand.self, PrefixCacheCommand.self, Parity.self, ElasticCheck.self,
             NgramGolden.self, DequantGolden.self, TemplateCheck.self, SamplerGolden.self, GovernorCheck.self,
             PrefixCheck.self, PrefixExactCheck.self, ElasticDrill.self, RuntimeCheck.self, PullCheck.self,
             MTPParity.self, MTPAccept.self, MTPCheck.self, MTPRowCheck.self, MTPFixtureInputs.self, MTPBench.self, MTPPassCost.self,
@@ -57,6 +57,11 @@ struct ModelOptions: ParsableArguments {
 
     @Option(name: .long, help: "Product pack selection: auto or a supported ID from model-packs; omitted preserves legacy --model behavior")
     var quantization: String?
+
+    @Option(name: .customLong("mirror"), help: ArgumentHelp(
+        "Byte-identical checkpoint copy on another disk. Repeatable.",
+        discussion: "Reads choose the copy estimated to finish first. Startup checks shard sizes and headers, not payloads. Verify every copy, including --model, with `slotstream pull --verify --dir <copy>` before use."))
+    var mirror: [String] = []
 
     @Option(
         name: .customLong("memory-gb"),
@@ -164,7 +169,15 @@ struct ModelOptions: ParsableArguments {
     /// choice owns all subsequent directory, verification and resource calls.
     var selectedPack: ModelPack? {
         get throws {
-            guard let quantization else { return nil }
+            guard let quantization else {
+                if originalModelName { return nil }
+                if let alias = ModelPackRegistry.alias(model) { return alias }
+                // An external SSD directory still needs Fast's own geometry.
+                if let config = try? ModelConfig.load(from: ModelLocator.resolve(model)), config.isFast {
+                    return ModelPackRegistry.fast
+                }
+                return nil
+            }
             return try ModelPackRegistry.resolve(quantization == "auto" ? .automatic : .pack(quantization)).pack
         }
     }
@@ -183,6 +196,7 @@ struct ModelOptions: ParsableArguments {
             return url.resolvingSymlinksInPath()
         }
     }
+    var mirrorURLs: [URL] { mirror.map { ModelLocator.resolve($0).resolvingSymlinksInPath() } }
 
     func validate() throws {
         let minimum = try resources.minimumMemoryGB
@@ -219,6 +233,7 @@ struct ModelOptions: ParsableArguments {
     /// Does this checkpoint carry a tower? Reads the shard headers only.
     func visionAvailable() throws -> Bool {
         let directory = try modelURL
+        if try resources == .fast { return false }
         guard let idx = try? CheckpointIndex(dir: directory) else { return false }
         return VisionTower.present(index: idx)
     }
@@ -226,11 +241,19 @@ struct ModelOptions: ParsableArguments {
     /// Keep the chosen resource contract attached to serving. Registration of
     /// another representation must provide its authenticated loader here; a
     /// different pack cannot fall through to the original checkpoint loader.
+    /// Diagnostics that bypass the routed loader must reject the shared option
+    /// before opening weights, so a mirror check cannot silently use one copy.
+    func rejectMirrors() throws {
+        guard mirror.isEmpty else {
+            throw ValidationError("--mirror is not supported by this command")
+        }
+    }
+
     func loadEngine(plan: MemoryPlan) async throws -> Engine {
         if let pack = try selectedPack {
-            return try await Engine(modelDir: modelURL, pack: pack, plan: plan)
+            return try await Engine(modelDir: modelURL, mirrors: mirrorURLs, pack: pack, plan: plan)
         }
-        return try await Engine(modelDir: modelURL, plan: plan)
+        return try await Engine(modelDir: modelURL, mirrors: mirrorURLs, plan: plan)
     }
 
     /// Resolve knobs -> plan, print the announce, return it. Also the first
@@ -312,7 +335,7 @@ struct ModelOptions: ParsableArguments {
         guard let pack = try selectedPack ?? (originalModelName ? ModelPackRegistry.baseline : nil) else {
             return !FileManager.default.fileExists(atPath: url.appendingPathComponent("config.json").path)
         }
-        return WeightStore(modelDirectory: url, pack: pack).remainingBytes() > 0
+        return pack.installationStores(at: url).contains { $0.remainingBytes() > 0 }
     }
 
     /// The announce, doctor and serving metadata share the same reservation
@@ -340,7 +363,7 @@ struct ModelOptions: ParsableArguments {
         let fm = FileManager.default
         let pack = try selectedPack ?? (originalModelName ? ModelPackRegistry.baseline : nil)
         if quantization != nil, !originalModelName, let pack {
-            guard WeightStore(modelDirectory: url, pack: pack).status().isReady else {
+            guard try pack.installationStatus(at: url).isReady else {
                 throw PlanError("this directory does not contain the selected verified pack; use slotstream pull with an explicit destination before selecting it")
             }
             return
@@ -354,13 +377,13 @@ struct ModelOptions: ParsableArguments {
         }
         // pinned model: every manifest file must be present whole (a partial
         // first download must resume here, not die later in the engine)
-        let store = WeightStore(modelDirectory: url, pack: pack)
-        var remaining = store.remainingBytes()
+        let stores = pack.installationStores(at: url)
+        var remaining = stores.reduce(Int64(0)) { $0 + $1.remainingBytes() }
         if remaining == 0 {
             // Size alone cannot distinguish a valid file from same-size
             // corruption. Hash before loading; this takes seconds and prevents
             // a damaged tokenizer/config/weight from reaching the engine.
-            let status = store.status()
+            let status = try pack.installationStatus(at: url)
             if status.isReady { return }
             remaining = status.bytesToFetch
             if case .corrupt(let paths, _, _) = status {
@@ -368,7 +391,7 @@ struct ModelOptions: ParsableArguments {
                     + paths.joined(separator: ", "))
             }
         }
-        let have = max(0, pack.requiredBytes - remaining)
+        let have = max(0, pack.installationBytes - remaining)
         // free disk where the weights will actually land
         var probe = url
         while !fm.fileExists(atPath: probe.path), probe.path != "/" {
@@ -378,7 +401,7 @@ struct ModelOptions: ParsableArguments {
             forPath: probe.path))?[.systemFreeSize] as? Int64 ?? 0
         print("""
             \(pack.id) is not \(have > 0 ? "fully " : "")downloaded yet.
-              size:  \(String(format: "%.1f", Double(pack.totalBytes) / 1e9)) GB in \(pack.files.count) files (resumable if interrupted)\(
+              size:  \(String(format: "%.1f", Double(pack.installationBytes) / 1e9)) GB in \(pack.files.count) files (resumable if interrupted)\(
                   have > 0 ? String(format: "\n  have:  %.1f GB already here — the download resumes", Double(have) / 1e9) : "")
               time:  measured during download; compressed transfer and reconstruction overlap
               to:    \(url.path)
@@ -388,7 +411,9 @@ struct ModelOptions: ParsableArguments {
         switch askYesNo("download now? [Y/n] ") {
         case .some(true):
             try withInterruptiblePull { cancellation in
-                try store.download(.init(transport: .automatic, cancellation: cancellation), log: { print($0); fflush(stdout) })
+                for store in stores {
+                    try store.download(.init(transport: .automatic, cancellation: cancellation), log: { print($0); fflush(stdout) })
+                }
                 // The same optional forecast sidecar `slotstream pull` fetches.
                 for file in pack.decodeForecastFiles {
                     TapCorrectionSidecar.ensure(modelDir: url, file: file, cancellation: cancellation, log: { print($0); fflush(stdout) })
@@ -596,7 +621,7 @@ struct Run: ParsableCommand {
                 }
                 if let error = stats.runtimeError { throw ModelError(error) }
                 let hs = String(format: "%.3f", stats.expertHitRate)
-                let perLayer = String(format: "~%.0f/%d experts per layer", plan.expertsPerLayerCached, Geometry.expertsPerLayer)
+                let perLayer = String(format: "~%.0f/%d experts per layer", plan.expertsPerLayerCached, engine.model.cfg.numExperts)
                 let memoryObservation: String
                 if let sample = stats.sampledFootprint {
                     memoryObservation = String(format: "sampled footprint peak %.3f GB", Double(sample.peakBytes) / 1e9)
@@ -607,14 +632,26 @@ struct Run: ParsableCommand {
                     memoryObservation = String(format: "RSS high-water %.3f GB, current footprint %.3f GB",
                         Double(stats.lifetimeRSSPeakBytes) / 1e9, Double(stats.physicalFootprintEndBytes) / 1e9)
                 }
+                // The router knows replicas only by position, so they are named
+                // here by the option that supplied them: index 0 is --model and
+                // the rest are the --mirror directories in the order given.
+                let mirrorBytes = stats.mirrorBytes ?? []
+                let mirrorTotal = Double(max(mirrorBytes.reduce(0, +), 1))
+                let mirrorReport = mirrorBytes.isEmpty ? "" : "-- mirror split: "
+                    + mirrorBytes.enumerated().map { replica in
+                        String(format: "%@ %.2f GB (%.1f%%)",
+                            replica.offset == 0 ? "--model" : "--mirror #\(replica.offset)",
+                            Double(replica.element) / 1e9,
+                            100 * Double(replica.element) / mirrorTotal)
+                    }.joined(separator: ", ") + " over the whole run\n"
                 FileHandle.standardError.write(
                     """
 
                     -- prefill \(stats.prefillTokens) tok in \(String(format: "%.2f", stats.prefillSeconds))s (\(String(format: "%.1f", stats.prefillTPS)) tok/s)\(stats.prefixHit ? " | \(stats.reusedPrefixTokens) of \(stats.promptTokens) reused from the previous turn" : "")
-                    -- prefill split: io \(String(format: "%.2f", stats.prefillIOSeconds))s + scatter \(String(format: "%.2f", stats.prefillScatterSeconds))s | \(stats.prefillRecords) records (\(String(format: "%.1f", Double(stats.prefillRecords) * 2.7648e-3)) GB, \(String(format: "%.1f", Double(stats.prefillRecords) * 2.7648e-3 / max(stats.prefillIOSeconds, 1e-9))) GB/s)
+                    -- prefill split: io \(String(format: "%.2f", stats.prefillIOSeconds))s + scatter \(String(format: "%.2f", stats.prefillScatterSeconds))s | \(stats.prefillRecords) records (\(String(format: "%.1f", Double(stats.prefillReadBytes) / 1e9)) GB, \(String(format: "%.1f", Double(stats.prefillReadBytes) / 1e9 / max(stats.prefillIOSeconds, 1e-9))) GB/s)
                     -- decode \(stats.decodeTokens) tok in \(String(format: "%.2f", stats.decodeSeconds))s (\(String(format: "%.2f", stats.decodeTPS)) tok/s)
-                    \(RouterTrace.flush().map { $0 + "\n" } ?? "")\(MemTrace.on ? MemTrace.report() + "\n" : "")-- decode split: io \(String(format: "%.2f", stats.decodeIOSeconds))s + scatter \(String(format: "%.2f", stats.decodeScatterSeconds))s | \(stats.decodeRecords) records\(stats.verifyPasses > 0 ? String(format: " | mtp %d/%d drafts accepted (%.0f%%), %d verify passes", stats.acceptedDrafts, stats.draftedTokens, 100 * stats.draftAcceptRate, stats.verifyPasses) : "")
-                    -- expert cache \(perLayer), hit rate \(hs) | ngram rows \(stats.ngramRowHits)h/\(stats.ngramRowMisses)m | \(memoryObservation) | total \(String(format: "%.1f", -t0.timeIntervalSinceNow))s
+                    \(RouterTrace.flush().map { $0 + "\n" } ?? "")\(MemTrace.on ? MemTrace.report() + "\n" : "")-- decode split: io \(String(format: "%.2f", stats.decodeIOSeconds))s + scatter \(String(format: "%.2f", stats.decodeScatterSeconds))s | \(stats.decodeRecords) records\(stats.verifyPasses > 0 ? String(format: " | %@ %d/%d drafts accepted (%.0f%%), %d verify passes", stats.speculativeMethod ?? "speculation", stats.acceptedDrafts, stats.draftedTokens, 100 * stats.draftAcceptRate, stats.verifyPasses) : "")
+                    \(mirrorReport)-- expert cache \(perLayer), hit rate \(hs) | ngram rows \(stats.ngramRowHits)h/\(stats.ngramRowMisses)m | \(memoryObservation) | total \(String(format: "%.1f", -t0.timeIntervalSinceNow))s
 
                     """.data(using: .utf8)!)
                 result = .success(())
@@ -875,7 +912,7 @@ struct Parity: ParsableCommand {
             throw ValidationError("--tokens must be a non-empty comma-separated list of integers")
         }
         let ids = parsed.compactMap { $0 }
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         guard ids.allSatisfy({ $0 >= 0 && $0 < index.config.vocabSize }) else {
             throw ValidationError("--tokens contains an id outside 0..<\(index.config.vocabSize)")
         }
@@ -969,10 +1006,10 @@ struct Doctor: ParsableCommand {
             return "weights: \(url.path) (not the pinned model — size unknown)"
         }
         let fm = FileManager.default
-        let remaining = WeightStore(modelDirectory: url, pack: pack).remainingBytes()
+        let remaining = pack.installationStores(at: url).reduce(Int64(0)) { $0 + $1.remainingBytes() }
         if remaining == 0 {
             let line = String(format: "weights: present by size, %.1f GB at %@ (run pull --verify for hashes)",
-                              Double(pack.totalBytes) / 1e9, url.path)
+                              Double(pack.installationBytes) / 1e9, url.path)
             if pack.id != ModelPackRegistry.baseline.id {
                 var lines = [line]
                 for file in pack.decodeForecastFiles {
@@ -1015,6 +1052,7 @@ struct Doctor: ParsableCommand {
     }
 
     func run() throws {
+        try model.rejectMirrors()
         _ = try ContextConfiguration(maxContextTokens: self.maxContext.tokens ?? ContextPolicy.defaultTokens,
             maxPrefillWaitMinutes: maxPrefillWait)
         let resources = try model.resources
@@ -1033,8 +1071,8 @@ struct Doctor: ParsableCommand {
                 + "(\(Geometry.totalRecords) records = 67.9 GB streamed from SSD)")
         } else if !quiet {
             print(String(format: "model:  %d layers x %d experts x %.2f MB (%d records = %.1f GB streamed from SSD)",
-                Geometry.layers, Geometry.expertsPerLayer, Double(resources.expertRecordBytes) / 1e6,
-                Geometry.totalRecords, resources.poolGB(Geometry.totalRecords)))
+                resources.layers, resources.expertsPerLayer, Double(resources.expertRecordBytes) / 1e6,
+                resources.totalRecords, resources.poolGB(resources.totalRecords)))
         }
         if !quiet, let pack { print("pack:   \(pack.title) (\(pack.id)); speed evidence requires a matching loaded configuration") }
         // Disk is the gate that bites before memory does, and the README sends
@@ -1197,7 +1235,7 @@ struct Doctor: ParsableCommand {
             let full = row.fullyResident
             let chunk = row.prefillChunk
             if !resources.usesBaselineSpeedEvidence {
-                print(String(format: "  %6.1f GB   %8.0f/512      uncalibrated      %5d   uncalibrated", t, e, chunk))
+                print(String(format: "  %6.1f GB   %8.0f/%d      uncalibrated      %5d   uncalibrated", t, e, resources.expertsPerLayer, chunk))
                 continue
             }
             let wait = PrefillSchedule.estSeconds(tokens: maxContext, maxChunk: chunk)
@@ -1257,7 +1295,7 @@ struct ElasticCheck: ParsableCommand {
             do {
                 // stay near the safe floor; equality is independent of size
                 let smallSlots = Geometry.floorSlots
-                let engine = try await Engine(modelDir: model.modelURL, poolSlots: smallSlots)
+                let engine = try await Engine(modelDir: model.modelURL, mirrors: model.mirrorURLs, poolSlots: smallSlots)
                 let ids = try engine.encodeChat(
                     [ChatMessage(role: "user", content: "Why is the sky blue?")], thinking: false)
                 var p = SampleParams.greedy
@@ -1785,7 +1823,7 @@ struct PrefixCheck: ParsableCommand {
         let enforceLegacyBounds = legacyRechunkBounds
         Task {
             do {
-                let engine = try await Engine(modelDir: model.modelURL, poolSlots: poolSlots)
+                let engine = try await Engine(modelDir: model.modelURL, mirrors: model.mirrorURLs, poolSlots: poolSlots)
                 var p = SampleParams.greedy
                 p.maxTokens = tokens
                 var failures: [String] = []
@@ -1981,13 +2019,14 @@ struct NgramGolden: ParsableCommand {
 
     func run() throws {
         try model.rejectAdaptiveLimitForFixedDiagnostic()
+        try model.rejectMirrors()
         let fields = tokens.split(separator: ",", omittingEmptySubsequences: false)
         let parsed = fields.map { Int64($0.trimmingCharacters(in: .whitespaces)) }
         guard !fields.isEmpty, parsed.allSatisfy({ $0 != nil }) else {
             throw ValidationError("--tokens must be a non-empty comma-separated list of integers")
         }
         let ids = parsed.compactMap { $0 }
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         guard ids.allSatisfy({ $0 >= 0 && $0 < Int64(index.config.vocabSize) }) else {
             throw ValidationError("--tokens contains an id outside 0..<\(index.config.vocabSize)")
         }
@@ -2012,7 +2051,7 @@ struct DequantGolden: ParsableCommand {
     func run() throws {
         try model.rejectAdaptiveLimitForFixedDiagnostic()
         guard gid >= 0 else { throw ValidationError("--gid must not be negative") }
-        let index = try CheckpointIndex(dir: model.modelURL)
+        let index = try CheckpointIndex(dir: model.modelURL, mirrors: model.mirrorURLs)
         let resident = try ResidentWeights(index: index)
         let store = NgramStore(index: index, resident: resident)
         guard gid >= 0, gid < Int64(store.rowCapacity) else {
@@ -2083,6 +2122,7 @@ struct TemplateCheck: ParsableCommand {
     @Flag var think = false
 
     func run() throws {
+        try model.rejectMirrors()
         try model.rejectAdaptiveLimitForFixedDiagnostic()
         let sem = DispatchSemaphore(value: 0)
         var out: [Int] = []

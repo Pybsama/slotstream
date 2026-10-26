@@ -8774,3 +8774,4816 @@ Global swap-ins changed in five of the six completed requests, with no new swap-
 **Disposition and next discriminating observation.** The maintainer has now completed the full-model work that earlier memory refusals prevented. No sustained cliff reproduces in these three bounded configurations on the local M5. Keep #54 open, retain the reporter's controls, and do not claim a release fix, dismiss the report, change context limits or remove unrelated mechanisms based on these negatives. The next decisive check is the same comparison on the affected M4 with v0.2.29 and its original memory settings. If it persists, record macOS, the actual planner output and per-token/memory observations before choosing a targeted kernel, allocation or read-ahead comparison. The lower-context workaround remains based on the reporter's own observations, not a new independently verified M4 remedy.
 
 Prior replies were read again before posting the [new full-model follow-up](https://github.com/carloslfu/slotstream/issues/54#issuecomment-6171643768). Its body and the still-open state are verified and archived. No inference default, installed CLI or release changed. The only source edit corrects stale lookahead comments; all noncomment lines are identical. The six payload/runtime validations, binary/helper identities, archive hashes and process cleanup pass.
+
+## Mirrored checkpoint reads: final review corrections and three-arm comparison
+On the measured M4 Mac mini, both disks reduce generation-request time by
+14.4–18.4% versus the faster single disk (paired medians); all 24 triplets
+favor both. This supports the opt-in mirror path for this setup, at the cost
+of a second full checkpoint copy and shared read routing.
+
+**Method.** Mac mini M4, 32 GiB, macOS 15.7.4; external WD_BLACK SN8100 2 TB
+and internal Apple AP0256Z 256 GB on separate physical disks. Both copies
+pass full payload verification and their MTP files have identical SHA-256
+hashes. The optional lookahead correction payload is absent from both.
+Repeated-sentence and ordinary prose-analysis prompts each use MTP off
+(10 GB process target) and on (12 GB), greedy sampling, context 32768,
+vision off and 128 output tokens. Prompt lengths are 1220 and 483 tokens.
+Each profile has one warmup per arm, then six triplets covering all six
+external/internal/both orders: 12 warmups and 72 measured runs. Fresh
+processes reset application caches; the OS file cache is uncontrolled.
+
+Each arm's six-run medians:
+
+| Workload | Disk | Prefill tok/s | Decode tok/s | TTFT s | Request s | Launch to first text s | Process s |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Repeated, MTP off | external | 40.022 | 3.741 | 30.511 | 64.767 | 31.421 | 65.799 |
+| Repeated, MTP off | internal | 28.393 | 2.409 | 43.002 | 96.960 | 44.129 | 98.156 |
+| Repeated, MTP off | both | 47.900 | 4.296 | 25.495 | 55.193 | 26.550 | 56.241 |
+| Repeated, MTP on | external | 42.794 | 3.590 | 28.534 | 64.314 | 29.477 | 65.385 |
+| Repeated, MTP on | internal | 27.635 | 2.280 | 44.189 | 100.243 | 45.596 | 101.591 |
+| Repeated, MTP on | both | 53.988 | 4.336 | 22.623 | 52.365 | 23.867 | 53.560 |
+| Prose, MTP off | external | 21.099 | 3.841 | 22.919 | 56.460 | 23.851 | 57.521 |
+| Prose, MTP off | internal | 13.309 | 2.423 | 36.320 | 89.494 | 37.580 | 90.750 |
+| Prose, MTP off | both | 27.176 | 4.281 | 17.800 | 47.948 | 18.782 | 49.045 |
+| Prose, MTP on | external | 30.153 | 3.317 | 16.044 | 54.657 | 17.238 | 55.961 |
+| Prose, MTP on | internal | 19.813 | 2.113 | 24.405 | 84.810 | 26.078 | 86.711 |
+| Prose, MTP on | both | 41.853 | 3.784 | 11.566 | 45.354 | 12.790 | 46.676 |
+
+TTFT runs from generator entry to the first sampled non-EOS token; request
+time excludes model loading. Launch-to-first-text and process time include
+startup. Paired benefits compare both against the faster single disk within
+each triplet, separately for each metric:
+
+| Workload | Prefill increase | Decode increase | TTFT reduction | Request reduction, median [min, max] | Faster request rounds |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Repeated, MTP off | +19.7% | +15.4% | +16.4% | +14.4% [+11.2%, +19.7%] | 6/6 |
+| Repeated, MTP on | +26.2% | +20.8% | +20.7% | +18.4% [+17.4%, +23.0%] | 6/6 |
+| Prose, MTP off | +28.8% | +12.1% | +22.3% | +15.1% [+11.8%, +20.7%] | 6/6 |
+| Prose, MTP on | +38.5% | +13.4% | +27.7% | +16.8% [+16.2%, +18.0%] | 6/6 |
+
+All prompt IDs, output IDs, text and settings match within triplets, and
+outputs match across rounds. Both replicas serve bytes and every run exercises
+direct-to-slot reads. Maximum whole-process peaks are 7.357 GB (MTP off) and
+8.092 GB (on), using 20 ms samples plus native lifetime footprint/RSS counters.
+No measured run adds global swap; thermal state is nominal and low-power
+mode is off at generation start/end. The independent audit recomputes the
+results from all raw receipts without excluding a measured run.
+
+**Validation.** The measured implementation is `bccd78e`, integrating main
+`159b43e` and #58. The original router fails 10 new assertions; the fixed
+router passes 26. Native checks pass 106 tests / 41300 assertions, the original
+unmodified full acceptance battery passes 35/35, and static, mirrored
+prefix/MTP, vision output-equality, library-consumer and instrumented-coverage
+gates pass. At this revision, the vision equality test still loaded only the
+primary; it did not establish mirror I/O.
+The later CLI harness separates 22 weights-free cases from all 26 cases after
+model-memory preflight. Both pass on the unchanged binary, with 69 Python
+harness tests passing. The 35-check receipt and separately rerun CLI gate do
+not constitute a fresh run of the newly assembled 36-check battery. Historical
+MLX 0.31 comparison differences are preserved; independent MLX 0.32.2 passes.
+Hosted CI is reported separately in the PR.
+
+**Scope.** These are fixed 128-token completions, not finished long-form jobs.
+MTP off/on also changes memory and pool budgets. There is no cold-SSD,
+energy, complete application-workflow or other-hardware claim, nor a reason
+to duplicate checkpoints by default.
+
+[Raw runs, protocol, commands, outputs, hashes and audit](https://github.com/spikezz/slotstream/tree/9df0b1ad04669e7ceda2a2f75a0c237fe83fb9bd/db/sources/artifacts/mirror-review-20261018) and
+[CLI harness follow-up receipts](https://github.com/spikezz/slotstream/tree/536f064b8c3c60ef8e42c9af172eb076de9d60af/db/sources/artifacts/mirror-review-ci-fixture-20261018) are preserved outside this PR's
+file diff on the fork's `pr57-validation-evidence-20261018` archive branch.
+Links pin immutable commits. The linked run record holds build identity and
+capture details; local paths are relabelled with original/published digests.
+
+## v0.2.30 published and accepted; mirror contributor notified
+**[v0.2.30](https://github.com/carloslfu/slotstream/releases/tag/v0.2.30) is published and accepted.** It adds optional mirrored checkpoint reads for text and vision, fixes concurrent access to the replica count, tightens gateway tool-request validation, and includes adaptive-test and development Mac app improvements. The default still uses one checkpoint copy. The Mac app changes ship as source, without a Desktop installer.
+
+Published 2026-10-19T17:55:19Z from `924442a2100a02caf5e2047dd67234a119e228dc`. [Complete main CI](https://github.com/carloslfu/slotstream/actions/runs/39289115709) succeeded before tagging; the [release workflow](https://github.com/carloslfu/slotstream/actions/runs/39298044641) published its preserved archive unchanged. The changelog moves the mirror entry out of the earlier 0.2.29 section into the release that actually contains it.
+
+| Acceptance | Result |
+| --- | --- |
+| Hosted checks | All seven passed, including engine, coverage, external library, Mac app, documentation and context contracts |
+| Full native battery on the CI executable | 36 gates passed, zero failures or skips; quality 15/15, API robustness 74/74, vision serving 25/25 |
+| Public distribution | Archive equals the accepted CI archive; checksum, GitHub provenance and all 299 source inputs verified |
+| Public installer | Unchanged installer fetched v0.2.30 into an isolated root; installed executable equals CI bytes; existing user installation and profiles unchanged |
+| Installed server | 31/31 checks passed with Auto quantization, a 10 GB adaptive ceiling, 32,768-token context and MTP on; owned server reaped |
+
+Archive SHA-256: `e7a3e6532ae0931ea3538abe1974dead0fc741d9d8a529e1f02517b7ac78335c`. Executable SHA-256: `62dbae3aac78db49072f9bbc54aae9dc86b069632e0c8e542b49a1d286be2c41`.
+
+The full suite started after the 20.5 GB admission check passed. The largest original-image profile has a 14.5 GB budget and 6 GB of headroom; ordinary equality tests use 8.1–10 GB. These checks establish functional and distribution acceptance, not a new speed claim. The historical MLX 0.31 draft-head diagnostic remains non-gating; the current independent reference and speculative checks pass.
+
+[PR #57 received the release link and thanks](https://github.com/carloslfu/slotstream/pull/57#issuecomment-6273742978). The linked raw run preserves the exact receipts and public evidence archive.
+
+## Smart DFlash native comparison and Q2 checkpoint review
+This is a native draft candidate and an investigation of a different target
+checkpoint. The app's Smart selection remains the original four-bit model with
+MTP. The comparison uses the owned 48 GB M5 Pro. Planning checks for 16, 24, 32,
+48 and 64 GB are simulations, not physical tests on those machines.
+
+## Native implementation
+
+The explicit `smart-dflash-check` command loads the existing Smart target and
+Inco's pinned Smart draft at `a22a1744e85c17364dcc54a6a420af7135d4c7f6`.
+It compares plain, MTP and DFlash through the production Engine, tokenizer,
+sampler, tools, vision and caches. Only the draft projections are quantized to
+affine four-bit groups of 64. Codebooks, norms and dynamic-convolution kernels
+retain BF16. Each draft artifact is verified against its pinned hash.
+
+Smart captures the BF16 mean of its post-layer hyper-connection streams at
+layers 5, 15, 25, 35 and 45. The prefill feature window now retains up to 2,047
+positions across passes; verification capture remains per-pass so rejected
+state can roll back. Float32 rotary arithmetic and fused SwiGLU match the
+reference's operation grouping. Terminal prefill pruning remains available
+when the final layer is not a draft feature tap. Every emitted token is still
+chosen by the target sampler, with checked state rollback and adaptive fallback.
+
+The comparison reserves an additional 1.6 GB for the draft, loading overlap and
+bounded state, admits no simultaneous MTP component, and inherits no Smart
+throughput estimate. The full model tests use a 10 GB process budget and the
+image comparisons explicitly price 12 GB. The MLX allocator cache remains
+bounded. No GPU spin, Python runtime, Splash server or GGUF adapter was added to
+the product.
+
+## Quality and arithmetic evidence
+
+A frozen set of twelve prompts covers extraction, filtering, aggregation,
+Spanish, Hindi, conflicting quoted instructions, sorting, JSON tool arguments,
+three executable Python tasks and longer retrieval. Expected results were saved
+before generation. Code grading permits one Python fence semantically and
+counts it separately as a formatting deviation. Literal JSON is otherwise
+required. The captured scripts and original failing outputs are retained.
+
+| Mode | Task checks under frozen rules | Strict format and content | Original successes retained |
+| --- | ---: | ---: | --- |
+| Plain Smart | 11/12 | 8/12 | baseline |
+| Existing Smart MTP | 11/12 | 8/12 | all |
+| Native Smart DFlash | 11/12 | 8/12 | all |
+
+All modes return 12 for the Hindi arithmetic problem whose answer is 14. All
+three coding answers add fences despite the plain-code instruction. Eleven
+answers have identical token IDs to plain decoding; the interval function is a
+different valid implementation. These small tests found no added semantic loss;
+they do not establish statistical noninferiority or broad coding capability.
+The final DFlash run accepted 243 of 294 proposed tokens and peaked at
+7.751161064 GB. Draft acceptance is neither a quality score nor a speed result.
+
+The pinned Z Lab MLX reference, using the same actual captured target features,
+embeddings, draft weights and projection chunk shapes, produces exactly the
+same 17,920 draft hidden values. An independent candidate-selector calculation
+with Splash's float32 edge arithmetic chooses the same seven tokens. Replaying
+earlier captured inputs through `smart-dflash-replay` also matches the reference
+exactly. This qualifies those fixtures, not every tensor on every prompt. The
+first diagnostic mismatches were traced to BF16 intermediate rotary arithmetic
+and unfused SwiGLU; the old results and the corrected checks are both preserved.
+
+Both plain and DFlash read the receipt image's identifier, date, currency and
+numeric total correctly. Both wrap the JSON in Markdown fences, which is a
+strict-format failure. Plain peaks at 8.361155112 GB; DFlash at 8.609683336 GB,
+within their explicit 12 GB budgets. This tests actual native image encoding,
+not an external OCR transcription.
+
+## Runtime and workflow checks
+
+The real read-file and list-issues tool definitions produce correctly parsed
+calls with exact typed arguments. No external tools are executed. Streamed
+text reconstructs the final text. Cancellation after twelve callbacks and a
+subsequent request are tested. The long request saves and restores 2,304 tokens
+of persistent prefix state, including a separate-process restart; a short prompt
+below the production persistence threshold is not counted as a disk-cache test.
+
+The original stop fixture asked for numbers but expected words. The model
+correctly returned digits, so its word stop sequence never occurred. That failed
+fixture is retained; an explicit word-copy case reaches the stop branch and
+returns exactly `one two three four`. This was a test correction, not a runtime
+patch. Another repetition is retained as a failed run because macOS memory
+pressure interrupted inference safely, despite a process peak below its budget.
+No pressure override was used.
+
+The shared DFlash changes also pass the existing Fast short and long extraction
+checks. Functional measurements taken during the checkpoint download are not
+clean throughput benchmarks. The final source archive and executable digest
+bind the successful native runs to the implementation.
+
+## What the upstream Q2 checkpoint changes
+
+The reviewed Splash source is release 1.4.0 at
+`1482f6bbc2abf12375332725302019594150b6cb`. Its Flash-Next benchmark uses
+`ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF:Q2_0`, not Slotstream's current
+four-bit target. The pinned target revision is
+`ed59f92082b1e93c0e96d60a8b11aab089b52f09`.
+
+The [publisher's results](https://huggingface.co/ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF#results)
+compare against BF16:
+
+| Checkpoint | AIME25 | GPQA-Diamond | LiveCodeBench v6 | Three-task mean |
+| --- | ---: | ---: | ---: | ---: |
+| BF16 | 100.00 | 91.92 | 87.43 | 93.12 |
+| Q2_0 | 96.67 | 89.39 | 81.14 | 89.07 |
+| IQ3_XXS | 100.00 | 91.41 | 86.29 | 92.57 |
+| IQ3_S | 100.00 | 92.93 | 86.86 | 93.26 |
+
+The Q2 coding drop is 6.29 percentage points against BF16. That is not evidence
+of minimal loss, and it is not a measurement against our four-bit checkpoint.
+The publisher cautions that small apparent improvements are benchmark variance.
+Its zero-shot recovery percentage does not establish preserved coding quality.
+
+The two Q2 shards total 66,423,878,624 bytes. The transformer uses mixed precision,
+not uniform two-bit weights. The first shard contains thirteen storage types;
+all routed gate/up/down matrices use Q2_0, while embeddings, the output head and
+dense layers use other formats. The second shard is the 28.8 GB IQ4_NL n-gram
+lookup table. All actual native tokenizer entries have identical IDs in the
+GGUF; its padded vocabulary is larger.
+
+An exact native port needs pinned mixed-format loading and matching decode and
+prefill arithmetic for those weights, including FP16 block scales and the
+lookup table. The existing `gsq224` experiment preserves original down, dense
+and lookup weights and therefore is not this checkpoint. Requantizing the GGUF
+into our existing affine format would also change the model. The Q2 expert
+record is half the original size, but that does not by itself prove a speedup.
+Lower read volume, different residency, DFlash and runtime kernels must be
+measured separately before attributing an upstream speed claim.
+
+The [Splash release benchmark](https://github.com/incoai/splash/releases/tag/1.4.0)
+is a different hardware, quantization and workload measurement. Its throughput
+is not a Slotstream promise. The isolated upstream test copy disables host-step
+spin and uses full verification plus BF16 KV to avoid adding those controls to
+the quality comparison; it is not a reproduction of the advertised speed setup.
+
+## Direct upstream answer comparison
+
+Both Q2 shards passed whole-file SHA-256 verification. Splash received the exact
+prompt token arrays used by the native baseline, avoiding chat-template and
+pretokenization differences. The isolated server completed all twelve requests
+with `--verify-rows all`, BF16 KV, no ANE and no host-step library. The observed
+engine footprint peaked at 9.013137536 GB under its 10 GB engine limit; this
+counter excludes the Python server's overhead. First-start kernel compilation
+made readiness take 228.625 seconds. No upstream startup or throughput claim is
+derived from this single run.
+
+Under the unchanged checker, upstream Q2 scores 9/12, versus 11/12 for each
+native Smart mode. Its strict-format-and-content score is 6/12, versus 8/12.
+The extra misses are a total of 39 instead of 53, and Markdown fences around a
+JSON array that was required to be literal JSON. Both repeat in a fresh server
+run. The same Hindi arithmetic miss remains; all three code solutions pass
+their executable checks but retain the baseline fence deviations.
+
+This is an observed difference between the complete implementations. It does
+not isolate quantization from the target runtime's numerical differences, and
+the sample is too small for a general error-rate estimate. Together with the
+publisher's coding result, it does not justify labeling Q2 a minimal-loss Smart
+replacement. Prefer qualifying native DFlash on the existing Smart target first.
+
+## Check coverage and limits
+
+The final native core passes 89 T0 checks with 38,972 assertions and 18 T1 checks
+with 2,360 assertions, with no failures or skips. The static gate battery also
+passed. A follow-up adds the normal per-user model lock to standalone draft
+replay; a held-lock negative test rejects before draft allocation, and a positive
+replay still matches the reference exactly. The source archives distinguish the
+generation-test binary from this CLI-only guard follow-up.
+
+The Smart app has not been switched to DFlash, no Q2 loader has been shipped,
+and no public release was created. Delivered-app qualification for a changed
+Smart deployment, physical 16/64 GB testing, broad coding quality, longer-context
+capacity and Q2 multimodal quality are still unproven. Keep the native candidate
+separate from the maintained app choice until the remaining adoption gates pass.
+
+## Paired native timing
+
+Three rounds interleave plain/MTP/DFlash, DFlash/MTP/plain and MTP/plain/DFlash
+at the same 10 GB process budget, with identical prepared prompts, prefill chunk
+limits and output token IDs. Downloads, builds and other model processes were
+stopped. Ordinary user apps remained open. All measured intervals retain
+nominal thermal state, low-power mode off and unchanged global swap counters.
+The request timer includes generation admission, prefill and decode, but excludes
+installation, model loading, tokenization and UI. These are two short prompts,
+not a general workload or a 48 GB automatically sized benchmark.
+
+| Task | Plain median | MTP median | DFlash median |
+| --- | ---: | ---: | ---: |
+| JSON extraction | 6.979 s | 6.668 s | 5.972 s |
+| Short Python function | 8.022 s | 7.154 s | 6.692 s |
+
+The median summed time of the two requests is 14.980 s plain, 13.830 s MTP and
+12.657 s DFlash: an 8.48% reduction from MTP and 15.51% from plain. First-text
+latency stays around two seconds; the gain is mainly in generation after that.
+The observed improvement is modest, not a reproduction of the upstream headline
+throughput. Further app and low-memory qualification still matters.
+
+An earlier attempted timing round is discarded because available memory fell
+below the admission threshold before DFlash could start. The complete rerun
+uses additional preflight headroom and a fixed short pause between processes;
+it does not override the runtime guard. Both attempts remain in the archive.
+
+Raw evidence: [[sources/runs/2026/10/2026-10-21-smart-dflash-review]].
+Discarded timing attempt: [[sources/runs/2026/10/2026-10-21-smart-dflash-timing-discarded]].
+
+## Hosted verification
+The final code commit `ed0c6c9d04a5433f75ce6639e3984abcf6b8bdfe` passes
+[engine CI](https://github.com/carloslfu/slotstream/actions/runs/39680693199),
+[Mac app CI](https://github.com/carloslfu/slotstream/actions/runs/39680693003)
+and [context proxies](https://github.com/carloslfu/slotstream/actions/runs/39680693062).
+This includes the engine release build, external-library use, static/runtime
+safety checks, goldens, full weights-free catalogue, instrumented tests and
+coverage report, as well as the Xcode app build, scripted app checks and
+light/dark view snapshots. The candidate's tested bytes remain unchanged.
+
+These hosted checks complement the local model tests above. They do not promote
+the candidate into the app, qualify physical 16/64 GB hardware or publish a
+release. The raw exact-commit receipt is
+[[sources/runs/2026/10/2026-10-21-smart-dflash-final-code-ci]].
+
+## Exact Q2 performance, production defaults and capability tradeoff
+This follow-up changes the engineering priority: the exact GSQ-RCO Q2_0
+checkpoint deserves native implementation and qualification. The previous
+8.48% timing result compared MTP and DFlash on the same four-bit target, with
+two short outputs. It was not a Q2 speed test. The earlier Q2 smoke also counted
+a JSON fence as one of two additional failures; consistently separating format
+from task correctness gives 11/12 versus 10/12, rather than two extra wrong
+answers. Preserve the historical frozen scores and their original evidence.
+
+The app's Smart deployment is unchanged. This is a comparison of native
+Slotstream with an isolated upstream Splash process, not a shipped native Q2
+port, a new release or an exact reproduction of the advertised 64 GB benchmark.
+
+## Identities and method
+
+The owned machine is the 48 GB M5 Pro with 20 GPU cores. The native binary is
+`29024b72d6877becb94c59a1f3bda8f8d165b3f28af58202ea412c55aaad01b7`, built from
+`ed0c6c9d04a5433f75ce6639e3984abcf6b8bdfe`; its manifest matches the current engine
+sources. Splash is release 1.4.0, source
+`1482f6bbc2abf12375332725302019594150b6cb`, executable
+`20b36bcc051145b425403dee7489d06cdbb5060460dfdb2e0cfc8d49cebfc29f`.
+The target is `ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF:Q2_0` at
+`ed59f92082b1e93c0e96d60a8b11aab089b52f09`; the draft is Inco's DFlash2 at
+`a22a1744e85c17364dcc54a6a420af7135d4c7f6`. Both target shards retain their
+previously verified whole-file hashes. No model weights are included in the
+evidence archive.
+
+All requests use greedy, non-thinking generation. Upstream receives the exact
+prepared native prompt IDs, with an 8K request window and no disk prefix cache.
+Its normal auto verification and INT8 KV are compared with BF16 KV and full
+verification. The GPU host-step spin library is absent; bounded CPU polling
+remains. ANE is disabled, and this MoE target has no applicable dense-FFN ANE
+path. The upstream Flash-Next loader does not accept safetensors, so it cannot
+provide an otherwise matched control using our exact current MLX checkpoint.
+
+The diagnostic `smart-dflash-check` forces its draft mode, disables ordinary
+decode read-ahead, reserves 32K context and limits prefill to 256 tokens. It is
+not the default-product baseline. Separate normal `slotstream run` controls
+use automatic MTP/read-ahead, 8K context, vision off and identical prompt IDs.
+At ten GB the normal planner selects MTP off and read-ahead on.
+
+One model runs at a time under the shared model lock. Native admission requires
+budget plus three real reclaimable GB; upstream requires four. Splash's flag
+bounds Metal allocation, while Slotstream's target prices a whole-process
+workload envelope. The harness separately samples upstream engine plus frontend
+and enforces budget plus one GB as its physical ceiling. Report observed memory
+alongside requested budgets; these are not equal physical allocations. All
+processes are drained after their test. No user application or other chat's
+process is stopped.
+
+## Performance and capacity
+
+Single coding-request controls, not a repeated causal estimate of quantization alone. The selected rows have nominal thermal boundaries and unchanged swap counters. All repetitions and exclusions remain in the archive.
+
+| Configuration | Budget GB | Decode tok/s | Request seconds | Observed peak GB |
+| --- | ---: | ---: | ---: | ---: |
+| Slotstream normal CLI | 10 | 4.71 | 224.90 | 6.18 |
+| Splash Q2 auto / INT8 | 10 | 22.53 | 47.29 | 9.64 |
+| Splash Q2 auto / INT8 | 16 | 43.41 | 25.03 | 15.47 |
+
+Fresh eligible ten-GB Q2 coding runs are about 22.5 to 22.7 tok/s; the initial combined run is 22.8. Two eligible sixteen-GB coding runs are 43.4 and 44.0 tok/s. Do not pool them with the thermally affected third repetition.
+
+The coding prompt reaches its 1,024-token cap in each compared configuration.
+It is a throughput task, not evidence of a completed correct cache class. The
+independent bounded coding tasks below supply correctness evidence. Explanation
+outputs vary in length, so their total latency also reflects different answers.
+Timing excludes installation, model loading and the app UI. Prefixes are cold
+in fresh performance processes; OS file-cache state is uncontrolled.
+
+The initial combined quality/performance run and three later interleaved
+MTP/Q2 pairs are retained separately. Only one complete later coding pair
+passes the clean timing conditions in both halves. Do not call that a
+three-pair clean median or a universal multiplier. The normal ten-GB coding
+control has nominal boundary temperatures and unchanged swap counters; its
+explanation control has global paging and is excluded from clean timing.
+
+Unrelated Swift builds subsequently overlap the DFlash diagnostic and keep
+restarting. The thermal-wait campaign is stopped before launching its next
+model. Remaining small-memory tests explicitly continue as functional checks,
+with unchanged memory guards and serious/critical thermal admission refused.
+Their times are diagnostic only. Boundary thermal snapshots are not a
+continuous temperature trace. Global paging does not identify its owning
+process or invalidate completed work within a process budget. All interrupted,
+refused and ineligible attempts are retained and separately registered.
+
+The later native sixteen-GB control is refused before model allocation when
+another compiler restarts and reclaimable memory falls to 17.95 GB, below the
+required nineteen. The twenty-GB Q2 extension is not admitted by the recorded
+22.86 GB snapshot either, since it needs twenty-four. Larger native controls
+remain unmeasured; the earlier completed sixteen-GB Q2 runs are preserved. No
+simulated availability or pressure override is used.
+
+## What limits speed
+
+Routed expert payload falls from 67,947,724,800 to 33,973,862,400 bytes; each
+record falls from 2,764,800 to 1,382,400 bytes. Smaller weights both halve the
+bytes per miss and permit more experts to remain cached. In the initial coding
+controls, forced native MTP requests about 1.090 TB of expert data, Q2 at ten GB
+about 432 GB and Q2 at sixteen GB about 193 GB. Q2's observed cache hit fraction
+rises from about 29% to 75% as its expert arena grows from 1.82 to 7.82 GB.
+These are engine IO counters, not independent physical-SSD traces.
+
+Normal native read-ahead must be counted separately: its coding run records
+334.762 GB of demand reads plus 576.170 GB of issued prefetch, including 484.255
+GB adopted and 91.902 GB wasted. Demand bytes alone understate its traffic.
+There are 1,023 decode forward passes. Forecast evaluation records 70.238
+seconds and demand IO 57.813 seconds, but these are not an exclusive wall-time
+decomposition. Conservative native reservations also leave unused capacity for
+this short request; that is a separate planning hypothesis, not permission to
+weaken the full-workload memory envelope.
+
+The native MTP proposal network uses 4.20 seconds of a 167.46-second coding
+decode. The loaded DFlash diagnostic spends 1.75 seconds proposing and falls
+through depths 7, 3 and 1 before ordinary decoding supplies 780 of 1,024 output
+tokens. Its interference prevents a clean performance verdict. The trace still
+shows why draft acceptance alone cannot decide usefulness: target verification
+and ordinary passes dominate, and the draft also consumes cache capacity.
+
+Splash combines packed Q2 kernels, an ARC expert cache, read-ahead and a
+[confidence/cost verification budget](https://github.com/incoai/splash/pull/487).
+Unverified speculative rows route no experts; checking every row can read
+experts for guesses later rejected. Native adaptation uses measured plain and
+draft costs instead of the same selector. Wall-clock adaptive batching can
+change greedy outputs between runs through floating-point execution shape.
+These runtime differences prevent attributing the entire speedup to two-bit
+quantization alone.
+
+The ineligible BF16 diagnostics provide mechanism evidence: full verification
+checks 1,415 coding proposals and accepts 820, while auto checks 871 and accepts
+755. Rejected verified rows fall from 595 to 116; expert-read bytes fall from
+650.317 to 438.379 GB for the same 1,024 output-token cap. Observed decode is
+15.93 versus 22.61 tok/s, but thermal/paging and desktop interference prohibit
+using that difference as a clean speedup estimate. The auto/BF16 rate is also
+near the earlier auto/INT8 rate: short-context speed does not require INT8 KV.
+This does not measure long-context KV tradeoffs.
+
+All four follow-up paths return the correct audit code for the same synthetic,
+repetitive 2,460-token retrieval input. Diagnostic prefill times are 18.07 seconds
+native MTP, 26.14 native DFlash and 3.12 for both Q2 settings. These are not clean
+or default-product long-document comparisons: the native diagnostic uses a
+256-token prefill cap, upstream has different scheduling, and the input is not
+a representative document workload. They identify a prefill path worth studying,
+not a general RAG throughput claim.
+
+Upstream ten-GB coding host-step counters record 18.386 seconds of loading
+work, 2.379 of GPU resume and 0.479 of pickup. Removing the measured resume
+delay alone cannot explain a jump from about 23 to 95 tokens/s. GPU-clock
+effects of spin are not isolated; keep that mechanism excluded. Upstream
+GPU-command durations include event waits and are not pure arithmetic time.
+
+## Why the published 95 tokens/s differs
+
+The [publisher's benchmark description](https://github.com/incoai/splash/pull/521)
+uses an idle 64 GB M5 Pro with the same 20 GPU cores, all experts resident,
+selected SPEED-Bench coding prompts and 1,024-token outputs. Its short-prompt
+decode is 1,000 divided by median output-token latency of 10.57 ms. That is
+different from its 32K prefill throughput, cached first-token latency and
+four-request aggregate throughput.
+
+The 66.4 GB download is not a requirement to retain every byte in RAM. Its
+first shard is 37.6 GB and the 28.8 GB PLE lookup table is sparsely read from SSD.
+This 48 GB machine reports a 40,200,896,512-byte recommended Metal working set;
+upstream subtracts a safety margin. Full residency is constrained under the
+reviewed planner, but no all-resident run was attempted here. The measured
+ten/sixteen-GB cache scaling, not an extrapolation, supports residency as a major
+cause of the remaining gap. Hardware, workload, available memory and disabled
+GPU spin still differ from the headline setup.
+
+## Capability and adoption
+
+| Configuration | Semantic tasks | Strict format and content |
+| --- | ---: | ---: |
+| Native four-bit Smart, forced MTP | 21/24 | 16/24 |
+| Q2, auto verification / INT8 KV | 19/24 | 12/24 |
+| Q2, full verification / BF16 KV | 19/24 | 12/24 |
+
+Both implementations fail the order total, stock arithmetic and Spanish
+arithmetic. Q2 additionally returns 100 instead of 110 for tax and mutates an
+input list despite an explicit no-mutation contract. The latter produces the
+correct return values but violates caller ownership. Both extra failures persist
+with BF16 KV and full verification, so they are not explained solely by INT8 KV
+or the adaptive row selector. Stock answers vary between Q2 settings but remain
+wrong. These tests use non-thinking mode and are not a thinking-mode evaluation.
+
+The 24-case expected-output rubric is frozen before generation and separates
+literal format from task correctness. Both configurations may have one Markdown
+fence stripped for semantic JSON/Python grading. A worker limitation rejecting
+valid `counts[key] += 1` was repaired identically for both using a restricted
+AST transformation; the original grader and score remain. The gold fixture
+passes all 24 checks. Code executes only in the existing bounded pure-function
+worker, never as a general tool action.
+
+This is not a broad error-rate estimate. The
+[publisher's results](https://huggingface.co/ISTA-DASLab/Qwen3.8-Flash-Next-GSQ-RCO-GGUF#results)
+give Q2 LiveCodeBench v6 81.14 versus BF16 87.43, a 6.29-point gap; its three-task
+mean is 89.07 versus 93.12. Those are BF16 comparisons, not measured losses
+against our four-bit deployment. The local comparison also changes runtime
+numerics. Neither zero-shot recovery percentages nor this small sample establish
+negligible loss. A sufficiently large practical gain can justify some loss;
+zero new failures is not an automatic adoption requirement.
+
+Prioritize an exact native Q2 candidate. Preserve all mixed-format weights,
+FP16 block scales, output head, embeddings and sparse PLE table. The previous
+GSQ224 overlay retained original four-bit down/dense/PLE tensors and rounded
+scales to BF16, so it was a different model. Q2_0 represents `d*(q-1)` with a
+FP16 scale and 64 two-bit coefficients in eighteen bytes. A lossless layout
+conversion is possible if coefficient precision is preserved; adding explicit
+affine bias would raise it to twenty bytes. Packed native kernels can avoid
+that added traffic. Both prefill and decode need independent reference checks.
+
+The reviewed upstream source is Apache-2.0 with third-party notices, distinct
+from the earlier MIT DFlash reference. Preserve applicable notices for borrowed
+code. Keep native tool, stream, cancellation, prefix-cache and memory contracts.
+Qualify actual complete app jobs and the delivered bundle before promoting the
+candidate. Broad coding, images, long contexts and physical 16/64 GB hardware
+remain unqualified. Do not turn this into a format catalog or an embedded
+Python/Splash runtime. The updated priority is recorded in
+[[records/decisions/smart-dflash-and-target-quantization]].
+
+Evidence: [[sources/runs/2026/10/2026-10-21-exact-q2-tradeoff]].
+Timing exclusions: [[sources/runs/2026/10/2026-10-21-exact-q2-timing-exclusions]].
+
+## Native exact Q2 qualification
+The exact upstream mixed-format Q2 checkpoint now runs inside Slotstream's
+Swift/MLX/Metal engine. This is an explicit engineering candidate, selected as
+`smart-q2`; it does not replace Smart, appear in normal setup, or enter automatic
+selection. Fast remains the default for new app installs. No public release is
+published by this work.
+
+## What was ported
+
+The two original GGUF shards retain their pinned SHA-256 identities. All 1,224
+tensors are accounted for, including the output head, mixed-format residents,
+FP16 Q2 scales, GDN head permutations and IQ4_NL PLE lookup table. There is no
+requantization into the earlier approximate affine expert overlay. Experts and
+large embedding rows stream from SSD into bounded native caches. Packed resident
+matrices remain packed. Native Metal implements the checkpoint's thirteen
+formats, FP32 accumulation and shared dense-weight tiles; it does not widen the
+whole checkpoint. The original shard revisions and exact hashes are in
+`PinnedQ2Model.swift` and the evidence archive.
+
+The pinned Smart DFlash2 component runs natively with target verification,
+bounded draft state and ordinary decoding when speculation costs more. A
+single-request adaptation of Splash's confidence/cost verification policy is
+checked against its C++ implementation. Licensing and notices accompany the
+ported decoder helpers. No Splash/Python runtime, GPU spin, power-state changes
+or hidden provider is used by the product.
+
+This is the exact target artifact with native arithmetic, not proof of
+whole-engine bit parity with Splash. The execution schedule, recurrent/KV
+arithmetic and cache policy differ. Splash's grouped expert kernels, ARC cache
+and INT8 KV implementation have not been ported. The GGUF has no vision tower;
+current Smart's general image understanding is not preserved by this candidate.
+Native document OCR is a separate host capability.
+
+## Method and source identity
+All physical runs use the owned M5 Pro with 48 GB unified memory. Functional
+runs use an explicit 10 GB process target and a real target-plus-3 GB reclaimable
+preflight. Capacity/timing diagnostics use 16 GB. Other sessions are left alone.
+Global paging is recorded and excludes clean speed claims; it does not erase
+successful functional and process-memory checks. No simulated availability is
+used for allocation. Simulated 16/32/48/64 GB plans only test planner contracts.
+
+Frozen v1, v2, v3 and final CLI manifests bind source archives, executable and
+Metal library hashes. The functional process took 27.31 seconds to load,
+including full shard verification; this is an observed startup diagnostic, not
+a clean comparative latency estimate. The qualified CLI executable is
+`a1413db7d9bccafc48442f33a75780e1e72c6b69d90bbb25de7dcdcfe02e4f18`.
+Its inference arithmetic is the v3 arithmetic. The changes enumerated by
+`final-source-comparison.json` protect normal model selection and extend
+regression checks and explicit CLI pack reporting.
+
+The later app qualification fixes selected-preference propagation in the test
+harness and admits the explicit Q2 candidate at the applied-configuration
+identity boundary, without admitting it to automatic selection. These changes
+in commit `9488c6191fe5b020af941653dd34fd14e6731572` do not change inference
+arithmetic. The successful app executable is
+`8339c6066b541ad65e7968039cba0c22b4760ae186c1ba4e82e7eefe840c3c15`.
+The final composer-label correction changes only `ContentView.swift`; its app
+executable is `b87a9fbbca8a267c62705be53a90b15b6bdde232cbf5efaba8006f68978860ce`.
+Separate source archives and build-input hashes bind both app builds in
+[[sources/runs/2026/10/2026-10-22-native-q2-app]].
+## Numerical, runtime and quality results
+
+Independent real-weight block fixtures cover all thirteen decode formats,
+matvec, routed gathers, and dense tiles with 2, 3 and 5 input rows. The verification
+policy matches 160 cycles of the upstream C++ oracle, including refits. Tiny
+admission fixtures cover wrong hashes, cancellation, truncation, overflow,
+symlinks and file mutation. These checks protect component arithmetic and
+loading, not broad model capability.
+
+The frozen 24-task quality suite scores 19 semantic passes and 12 strict-format
+passes, matching the earlier upstream Q2 totals. The earlier native Smart run
+scored 21 semantic and 16 strict passes. The native Q2 misses are order-total,
+stock, tax, Spanish and first-missing-positive coding cases. Correct values
+inside an unwanted code fence remain semantic successes and strict failures.
+The small suite does not establish statistical accuracy or negligible loss.
+
+The final arithmetic also passes streamed-output equality, conversation recall,
+cancellation and subsequent recovery, stop buffering, real tool-call decoding,
+and long-document retrieval. Its 32-request diagnostic has an observed lifetime
+physical peak of 8.13 GB. A repeated long prompt reuses 2,304 tokens; a fresh
+process restores the same prefix and retrieves the correct audit code. Prefix
+receipts preserve payload sizes and counts. The existing Smart elastic-cache
+check keeps identical tokens across shrink/grow transitions after the shared
+expert-store changes.
+
+## Speed evidence and remaining bottleneck
+
+Three native 16 GB coding diagnostics generate to the same 1,024-token cap:
+8.69, 8.59 and 8.72 decode tokens/s, with physical peaks around 12.9 GB. Every
+run has global paging, so all are excluded from clean timing. They demonstrate
+completion within the envelope, not a causal speedup or a matched clean
+comparison against upstream. The earlier Splash measurements around 43–44
+at this requested budget and the publisher's fully resident headline are
+separate evidence, not results reproduced by this port.
+
+In the final diagnostic, demand I/O accounts for about 16.6 of 117.5 decode
+seconds. Disk waits alone therefore cannot explain the whole gap. Routed expert
+compute still executes independent vector operations per route instead of
+reusing expert weights across verified tokens. The shared-weight dense kernel
+does not solve that expert path. Dispatch/synchronization and packed compute
+remain candidates for profiling; residual time is not proof of one exact cause.
+Speculation falls back to ordinary decode when measured cost exceeds its benefit.
+
+The shorter dense-batch trial does not materially improve sustained generation.
+Do not attribute its different prompt time to that change: the performance
+prompt already used a larger batch and the environment was not controlled.
+The next useful optimization is to profile and amortize routed expert work,
+then repeat complete-work comparisons under eligible conditions. Smaller
+checkpoint bytes alone are not a whole-engine speed claim.
+
+## Adoption and limits
+
+Keep Q2 explicit until useful-work benefits justify its measured capability
+losses and missing vision, and until native speed is competitive. Preserve
+failed tasks and normal product settings. Do not weaken the existing model
+selection checks to admit an unqualified candidate. New capabilities require
+complete app and delivery evidence; format fixtures, CLI output and simulated
+RAM plans answer narrower questions. Actual 16 GB and 64 GB hardware remains
+untested. A new candidate does not change the Fast/Smart product contract.
+
+## App and regression qualification status
+The full v2 native UI/runtime suite passed. The qualified CLI passes the
+107-check engine catalogue, numerical reference command, 97 planner checks,
+420 simulated memory-override cases, installer gates and resumed static
+transport checks. The corrected production app builds successfully and its
+scripted runtime checks pass. The initial local static-gate entry was resumed
+after source-list/fixture fixes; hosted full-entry verification is separate.
+
+Six real Q2 app jobs pass with actual loaded-model identity and the 10 GB
+ceiling asserted: writing, PDF citations, receipt OCR, CSV calculations,
+reviewed code edits and history recall outside the initial context. PDF work
+selects the current source over an obsolete figure; OCR yields valid requested
+JSON; CSV uses deterministic calculation. Code remains unchanged until review,
+then the approved patch passes bounded execution. The combined physical peak
+is 7.78 GB. These are six selected cases from the larger task map, not a claim
+that every app capability is qualified with Q2.
+
+The first app arm accidentally loaded Fast because its harness constructed the
+inference owner without selected preferences. Identity assertions rejected all
+six cases, preserving the mistake instead of counting them as Q2 successes.
+After fixing the harness, the next arm found a production activation guard
+that rejected the explicit candidate because it was outside the normal
+supported list. The corrected activation admits the exact pinned candidate
+while preserving setup and automatic-selection isolation. Both failures and
+the passing rerun remain in the immutable app archive.
+
+A visible isolated app instance answered exactly `NATIVE-Q2-READY` and showed
+the candidate ready under the saved 10 GB limit, with an observed 7.60 GB peak.
+The composer initially mislabeled it Smart. A display-only fix was rebuilt and
+visibly verified as `Q2 candidate`; normal new-user options remain Fast/Smart.
+Test processes exited, the owned activation journal returned to its original
+absence, and the separate defaults domain was removed. User Homes and saved
+preferences were untouched.
+
+Keep this result as functional integration on one Mac. Global paging excludes
+comparative app latency claims. Current Smart remains unchanged because the
+quality, missing-vision and native-speed tradeoffs are unresolved. Neither
+ad-hoc development signing nor passing workflows is a public release.
+
+Evidence: [[sources/runs/2026/10/2026-10-22-native-q2-port]],
+[[sources/runs/2026/10/2026-10-22-native-q2-timing-exclusions]] and
+[[sources/runs/2026/10/2026-10-22-native-q2-app]]. Prior upstream comparisons:
+[[records/measurements/exact-q2-performance-and-quality-followup]].
+
+## Controller and prepared execution follow-up, October 24, 2026
+
+The original 160-cycle oracle above proves its target-only, truncated controller
+interface. It did not cover the complete runtime's anchor-only and bonus-token
+observations or cross-request calibration. The
+[prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) retains that evidence,
+adds complete-controller fixtures and actual-path checks, and distinguishes
+successful calibration experiments from a later clean confirmation failure.
+It also preserves the rejected timing-filter experiment and the subsequent
+pipeline-parameter implementation. Q2 remains an explicit engineering candidate;
+these checks do not establish negligible quantization loss or promote Smart.
+
+## Native Q2 and Splash execution comparison
+Slotstream's native Q2 candidate is substantially improved, but has not reached
+Splash's speed. The clean adjacent pair from the matched-cache v15 experiment
+is 29.38 native versus 50.21 Splash decode tokens/s. This is one eligible pair,
+not a multi-round median or a guarantee for other prompts. Later final-binary
+runs and their exclusions remain in the evidence. Q2 stays an explicit
+engineering candidate; Fast and Smart defaults are unchanged. No release is
+published by this work.
+
+## Recipe and comparison controls
+
+The physical machine is the owned M5 Pro, 20 GPU cores, 48 GiB unified memory,
+macOS 26.6.2. There is one model process at a time, target-plus-headroom
+preflight, a combined process-footprint ceiling and a remaining-headroom
+watchdog. Other applications are not terminated. Paging disqualifies clean
+speed evidence, separately from successful functional and memory checks.
+Speed eligibility also requires nominal thermal state. No spin library,
+undocumented synchronization switch, power-state manipulation or ANE path is
+introduced.
+
+Splash is release 1.4.0, source commit
+`1482f6bbc2abf12375332725302019594150b6cb`; its engine SHA-256 is
+`20b36bcc051145b425403dee7489d06cdbb5060460dfdb2e0cfc8d49cebfc29f`.
+Both engines read the same original pinned GGUF files, verified as hardlinks
+to the same physical shards. Both use the pinned DFlash2 draft, automatic
+verification, greedy sampling and BF16 KV. The target preparation includes
+Splash's Q8_0 conversion of floating-point hyper-connection mixing weights.
+That conversion is quantization. The packed expert/resident plane transforms
+are lossless; the entire prepared checkpoint must not be called lossless.
+
+The main speed comparison uses an 8,192-token context, identical actual prompt
+IDs, a 512-token completion cap and 4,968 expert slots on each engine, with a
+16 GB combined-process guard. Splash's expert-memory option includes staging
+and metadata; it is not its actual slot arena. The verified arena is
+6,867,763,200 bytes. The PLE allowance is 51,200,000 bytes. The initial baseline
+used unequal caches and paging, so its roughly 8–10 tokens/s cannot support a
+causal speedup ratio. It is preserved as a starting diagnostic.
+
+ABBA sequences use fresh processes and preserve all attempts. Splash warms
+kernels during startup. An earlier v8 persistent-server control runs around
+22–23 tokens/s with a different cache. A final v17 warm control matches both
+expert caches at 4,968 slots and repeats around 23–26 native tokens/s. Its
+Splash sequence varies around 25–42 tokens/s under paging and reuses part of
+the prompt after the first request. These are separate diagnostics, not
+eligible paired ratios. Native repetition does not close the observed gap;
+this does not precisely isolate compilation from other request costs. Load
+time remains separate from request time. A capped coding completion is a
+throughput fixture, not proof that the code finishes a real job. The independent
+app code-edit job checks completed work.
+
+The final CLI is frozen as v17, SHA-256
+`f6c979e088384622291bd9b3c277b2d9f4ba014bbebf1caa85e12bfb984808e3`.
+Each build's source archive, binary and Metal library identities remain in the
+raw archive. v17 fixes the key normalization path used by optional terminal
+prefill. Its ordinary generation arithmetic is v16's. The app has its own
+source archive and executable identities; a CLI identity is not app evidence.
+
+## Final timing limits
+
+The final v17 sixteen-GB coding sequence observes 25.40/28.49 native and
+48.28/48.51 Splash tokens/s. The native arms have global paging and the last
+also loses nominal thermal state. The final prose sequence similarly has no
+eligible adjacent clean pair. These results demonstrate bounded completion,
+not a clean final-binary throughput ratio. The earlier v15 pair above remains
+a separately identified historical result, not a substituted v17 measurement.
+
+A final twelve-GB ABBA verifies exactly 2,074 slots per engine. It observes
+18.69/6.60 native and 32.22/32.43 Splash tokens/s; paging excludes every adjacent
+pair. The unusually slow last native arm spends 29.36 seconds in demand I/O.
+A previous twelve-GB arm completed cleanly at 22.48 tokens/s, but its Splash
+control had one fewer slot and paging. Keep these controls separate. No
+eligible median is manufactured from their best individual arms. The source
+and every exclusion are retained in `comparison-summary.json`.
+
+## Useful changes retained
+
+- Route tokens by expert and reuse compressed weight tiles across their rows.
+  CPU plane repacking writes directly into joined, pinned slots. GPU repacking
+  every demand miss was slower. All other expert-loading paths use the same
+  layout, including speculative tickets and sweep batches.
+- Keep resident weights compressed with staged matrix tiles; partition the
+  measured long, narrow projection reduction across four groups. Preserve
+  FP32 vocabulary logits, residuals and the required single-round BF16
+  boundaries. Native floating-point projections, hyper-connections, routing,
+  mixtures, PLE, attention preparation and GDN operations reduce temporary
+  arrays and dispatches.
+- Let the Q2 confidence/cost controller choose verification depth. The old
+  outer controller could permanently truncate or disable the inner policy's
+  exploration after cold compilation. Anchor-only passes remain priced
+  choices, and all emitted tokens still require target verification.
+- Start resident shared-expert work before waiting for demand reads. Keep a
+  bounded four-layer pin interval with the existing small-pool safety fallback.
+- Record compact GDN inputs and evaluate only the accepted recovery state.
+  Do not compact each layer's final convolution window while recording still
+  retains its parent. Commit accepted windows together in one evaluation.
+  Check every rollback position and continuation, not only full acceptance.
+
+These are native Swift/MLX/Metal changes. Splash and Python are comparison
+instruments, not product dependencies. Apache notices accompany adapted code.
+The raw fallback remains for older OS versions. This work physically qualifies
+only the available Mac, not all 16–64 GB hardware or every older GPU family.
+
+## What explains the remaining gap
+
+The fixed-token replay separates compute from I/O. The v14 untraced cached
+width-eight target pass takes about 75.85 ms, with zero demand I/O in the warm
+replay. The earlier v1 diagnostic was about 159.5 ms. Boundary-forcing profiles
+are separate and deliberately serialize work; their timings are not request
+latency measurements.
+
+A temporary MLX completion-handler diagnostic finds substantial submission
+gaps even with cached experts. Its width-eight pass is roughly 87 ms, with
+51–54 ms covered by GPU command intervals and about 35 ms between them,
+across approximately 270 command buffers. GPU intervals may themselves
+include waits and are not pure arithmetic time. The diagnostic emitted all
+samples and then aborted at shutdown. It is exploratory evidence, not a
+passing functional build. The dependency patch was removed and its original
+hash verified before every subsequent production qualification.
+
+Splash assembles a Metal execution sequence ahead of time, groups routes and
+uses bounded host-event handoffs and staging for expert reads. Its read-ahead
+can overlap useful work. The current native path builds a dynamic MLX graph
+and synchronizes host route decisions repeatedly. The matched v12 clean
+native run spends about 6.19 seconds in demand I/O and 16.88 seconds in target
+verification. The remaining time cannot simply be labeled disk latency.
+Upstream counters include startup; subtract status-before values when using
+them to analyze a request.
+
+In that one eligible v15 pair, native completes 126 verification cycles and
+accepts 385 draft tokens; Splash completes 131 cycles and accepts 380. The
+mean total decode cost per cycle is 138.33 ms native versus 77.68 ms Splash,
+computed from each request's decode duration and cycle count. Native uses
+slightly fewer cycles yet takes longer. In this fixture the main gap is the
+cost of executing a cycle, rather than fewer useful draft tokens. Those costs
+include draft, target, recovery and emission work; they are not pure GPU time
+or equal-width kernel timings. Different outputs and adaptive widths remain
+part of each engine's measured request.
+
+The next substantial port is the bounded native Metal execution sequence and
+its CPU/GPU handoffs, integrated with existing cache ownership, cancellation,
+rollback and process-memory accounting. Missing pieces also include upstream's
+complete resident projection fusion, register-tile selection and its target
+sparse-attention schedule. Their individual full-request contributions remain
+unproven. This evidence does not identify a single magic flag or prove that
+one scheduler rewrite will remove the entire gap. A final isolated Q8
+register-MMA adaptation has better unrounded numerical accuracy but is slower
+than the current staged kernel in the tested narrow projection. Its first
+attempt had a packed-slot indexing error; the corrected probe and CPU oracle
+are preserved. This rejects that adaptation, not Splash's complete register
+path, and no additional production code is adopted.
+
+Several plausible changes lost: demand-miss GPU repacking, extra cross-layer
+read-ahead, staging with repeated GPU scatters, a wider barrier interval,
+higher I/O queue depth, alternate expert gate/up parallelism and forced/padded
+attention paths. Larger MLX command-buffer limits brought only a small
+single-run change. None is adopted. In particular, a prefetcher that lowers
+measured disk wait can still make the whole request slower and read tens of
+GB that the request never uses. Keep the failed runs and implementation
+snapshots instead of tuning only the reported winner.
+
+A later v18 experiment delays construction of all alternative recurrent
+recovery graphs until the accepted position is known. Independent state and
+continuation checks pass, but its first cached width-eight replay pair changes
+68.522 to 67.347 ms, and the next arm is refused by the independent headroom
+preflight before allocation. The ABBA is incomplete and no substantial
+full-request benefit is established. That extra representation is removed;
+all compiled engine and app inputs are restored exactly to v17. The complete
+warm control, refused attempt and rejected source snapshot remain in
+[[sources/runs/2026/10/2026-10-22-native-q2-execution-followup]].
+
+## Quality, state and memory
+
+The frozen 24-task rubric gives v17 native Q2 19 semantic and 12 strict-format
+passes. Splash Q2 has the same totals and the same five semantic failures:
+order total, stock, tax, Spanish and first-missing-positive code. Earlier
+four-bit Smart scored 21 semantic and 16 strict passes. This small screen does
+not establish negligible quality loss or broad equivalence. Preserve the
+actual prompts, outputs and bounded code grader.
+
+Native v17 completes all 32 quality/runtime requests continuously at a 16 GB
+target, peaking at 13.13 GB observed combined physical footprint. The eight
+runtime cases cover streaming equality, conversation recall, cancellation,
+post-cancellation recovery, stop buffering, decoded tool arguments, long
+retrieval and prefix reuse. The repeated long prompt reuses 2,460 tokens. A
+v16 continuous run also completes within a 10 GB target with a 7.67 GB peak. A separate v17 restart restores 2,304 persisted tokens
+and retrieves the correct audit code within its sixteen-GB ceiling.
+Paging is retained as a diagnostic; neither is a clean latency claim.
+
+The 32K-context quality comparison has 4,546 native versus 4,545 Splash expert
+slots. A missing metadata/alignment allowance in the harness caused the
+one-slot difference. This is near-matched quality evidence, not exact cache
+parity. Splash crosses the strict combined 16 GB process guard after sixteen
+quality tasks, at 16.025 GB. The remaining eight independent coding tasks run
+in a fresh server. Their aggregate score is not a passing continuous-session
+memory result. Splash's documented allocation budget and this experiment's
+combined process limit are distinct contracts.
+
+Independent component checks pass the thirteen format oracles, CPU/GPU
+repack byte equality, partial/full resident tiles, FP64 float projections,
+exact Q8 preparation, deterministic routing ties, PLE and attention arithmetic,
+and every recorded GDN recovery boundary. The cost controller matches 160
+upstream C++ reference cycles, including anchor-only verification. The generic
+Smart and Fast state-recovery regressions pass. The legacy diagnostic invoked
+on Q2 refuses before allocation because it expects safetensors; preserve that
+unsupported fixture result rather than calling it a model failure or pass.
+
+## Final integration and next gate
+
+The rebuilt app passes its complete scripted runtime and rendered UI suite.
+All six real-model jobs pass at the explicit 10 GB ceiling: writing, cited
+PDF reading, receipt OCR, deterministic CSV calculation, reviewed code edits
+and history recall outside the initial context. Actual loaded pack and budget
+are asserted for each job. The observed combined physical peak is 6.47 GB.
+The approved minimal code edit also passes six bounded execution cases.
+These are development-app functional checks, not signed-release certification
+or a broad capability benchmark.
+Performance parity remains open. Keep Smart unchanged until repeated clean
+comparisons and complete useful jobs establish a worthwhile speed/capability
+tradeoff, including the Q2 candidate's missing general vision support. Do not
+spend memory reserves merely because one short prompt did not use them.
+
+Evidence: [[sources/runs/2026/10/2026-10-22-native-q2-execution]],
+[[sources/runs/2026/10/2026-10-22-native-q2-execution-exclusions]]. Previous
+qualification: [[records/measurements/native-exact-q2-qualification]].
+
+The full static suite passes against frozen v17, as do all 89 T0 and 18 T1
+catalogue checks. The static-entry fixture initially failed because its
+expected commands omitted the new mix-quantization fixture and expert check;
+the corrected expectations and new failure-path assertion pass. Both runs
+remain in [[sources/runs/2026/10/2026-10-22-native-q2-execution-validation]].
+The source restoration after the rejected v18 experiment is hash-checked
+against both the CLI and app build identities.
+
+The code checkpoint is pushed as 3b6a307. The exact qualified v17 CLI is also restored as the default local build output. Local rebuild and catalogue receipts, the derived cycle-cost audit, and a hosted-status snapshot are in [[sources/runs/2026/10/2026-10-22-native-q2-execution-closeout]]. At that capture, documentation, context contracts and the external-library job pass; full engine and Mac app CI remain pending. They are not counted as passes.
+
+## Prepared execution follow-up, October 24, 2026
+
+The [prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) adds reusable
+native execution descriptions, pipeline sharing across batch widths, checked
+state folding and cache integration. It preserves the earlier timing failures
+and distinguishes cold preparation, steady work, controller behavior and actual
+app outcomes. Its complete-request results have their own matched cache,
+warmup and exclusion rules; they do not retroactively qualify this study's
+excluded observations.
+
+The original 160-cycle controller oracle covered its truncated observation
+interface. It did not independently prove the complete runtime's anchor-only,
+bonus-observation and cross-request calibration wiring. The new study includes
+those separate fixture and executed-path checks.
+
+## Fast and Splash execution comparison
+Fast is implemented natively and now avoids several unnecessary dispatches
+and waits, but this work does not establish Splash speed parity. At the larger
+matched cache Splash still completes the measured requests faster. At the
+smaller cache the engines are closer, and the ordering varies with workload.
+No release is published and no Smart model selection changes.
+
+## Matched deployment and timing limits
+
+The physical machine is the owned M5 Pro with 20 GPU cores, 48 GiB memory and
+macOS 26.6.2. Both engines use the original pinned
+`mlx-community/Qwen3.6-35B-A3B-4bit` target at
+`38740b847e4cb78f352aba30aa41c76e08e6eb46` and Inco DFlash2 at
+`51ef7b6923ad6c14cb1bb41c37a9041446496ab6`. Splash is release 1.4.0,
+source commit `1482f6bbc2abf12375332725302019594150b6cb`. Its local preparation
+references the original target and draft files. Target quantization is unchanged.
+
+The warm protocols use exact native prompt IDs, greedy sampling, thinking off,
+BF16 KV, an 8,192-token context, 512 generated tokens per request and identical
+actual expert slots. There is one engine at a time, a target-plus-headroom
+preflight, a combined physical-process guard, and a minimum remaining-headroom
+guard. No GPU spin, host-step keepalive, undocumented power setting or ANE
+acceleration is enabled. Existing user applications remain running.
+
+Each arm starts a fresh process and runs two warmup requests. The twelve-GB
+ABBA then times six distinct prompts per arm; the sixteen-GB short ABBA times
+one coding and one prose prompt per arm. Early differing task identifiers
+prevent prompt reuse, and every timed request reports zero reused prompt
+positions. Load time and warmups are excluded from the warmed observations.
+
+| Process budget / actual expert slots | Native code | Splash code | Native prose | Splash prose |
+|---|---:|---:|---:|---:|
+| 12 GB / 2,525 | 36.6 | 35.4 | 26.6 | 29.8 |
+| 16 GB / 4,785 | 56.2 | 67.8 | 40.3 | 54.5 |
+
+These are **observed medians in decode tokens/s, not eligible clean benchmark
+aggregates**. Both native/splash timers use the generated-token count minus the
+initial token. Every complete ABBA violates its predeclared zero-paging gate;
+the last twelve-GB native arm also ends with elevated thermal state. Individual
+clean requests and two clean sixteen-GB Splash arms do not rescue an excluded
+aggregate. No precise universal speedup or parity claim follows. At sixteen GB,
+the two timed native coding requests take 9.52 and 10.03 seconds end to end;
+the source retains every request latency, prefill cost and paging observation.
+
+Equal budget flags initially produced unequal expert caches. Splash's automatic
+cache exceeded the sixteen-GB combined process ceiling and was stopped before
+any request result. Matching actual slot counts, rather than its broader expert
+memory setting, fixed that comparison defect. The first baseline and v1 runs
+also lack symmetric warmup and/or have paging; they cannot establish a clean
+before/after speedup. The memory and thermal preflight refusals, unsuccessful
+selector builds and all timing exclusions are preserved.
+
+## Native changes
+
+- Fast's separate model branch now applies the existing bounded four-layer
+  evaluation interval, safe pin generations, resident shared-expert overlap and
+  fused recurrent verification recording. Previously it bypassed this wiring
+  and synchronized after every layer. The interval shrinks when row count and
+  pool capacity require it; slot ownership remains bounded.
+- One confidence/cost verification controller replaces competing adaptation.
+  It chooses a useful verified prefix, including an anchor-only target pass,
+  and periodically explores again. Cold compilation no longer permanently
+  shuts down its ability to recover. An anchor-only pass still pays for draft
+  confidence; this is not a zero-overhead ordinary-decoding claim.
+- A native Metal kernel performs the dependent draft candidate edge reductions,
+  selection and confidence calculation with one host readback. Its independent
+  CPU oracle checks every depth, ties and confidence. Target verification still
+  owns every emitted token. Apache attribution accompanies the adapted work.
+- Independent draft-context projections materialize together; the six-layer
+  draft graph no longer evaluates at every layer. Bounded windows remain.
+- Short prefill passes with 64–255 rows use the existing grouped expert sweep,
+  while verification retains its cache path. Fast also receives the platform-
+  qualified fused dense-attention setting and its diagnostic counter. Existing
+  fallbacks remain on unqualified platforms.
+
+These are Swift/MLX/Metal product changes. Splash and Python are reference/test
+instruments, not product dependencies. The timing executable is frozen as v3.
+The final executable adds diagnostic counting, command help and license notices
+without changing generation arithmetic; both source archives and hashes remain.
+
+## What still costs time
+
+The fixed-token cached target replay takes about 33.0, 36.5, 40.4 and 52.6 ms
+at widths one, two, four and eight respectively. Warmed rows have zero demand
+I/O and zero paging. The traced/untraced output logits are identical within
+that replay. Boundary-forcing traces deliberately serialize work and are not
+normal request phase timings. These component observations do not inherit a
+clean whole-request performance qualification.
+
+At sixteen GB, a native timed coding request spends 7.86 seconds in target
+verification, including 2.71 seconds of demand I/O, versus 0.74 seconds in the
+draft. At twelve GB, its corresponding request reads about 64.6 GB of expert
+records and spends 5.83 seconds in demand I/O. Increasing the cache changes
+that tradeoff substantially. Native demand reads and Splash's read-ahead
+counters have different scopes; keep them separate.
+
+Source inspection explains further differences: Splash groups routes into
+expert matrix tiles, uses compressed-weight execution layouts and prepares
+more of its Metal command sequence ahead of time. Fast's current cached expert
+path still uses MLX gathered quantized matrix-vector operations, and each layer
+requires a host routing decision. The cached replay proves that SSD latency is
+not the entire gap; it does not independently assign all remaining time to
+one kernel or to CPU scheduling. A full pre-encoded target execution path and
+Splash's grouped affine expert kernels have not been ported by this change.
+Those are the next measured targets, not an established future speedup.
+
+Do not spend every unused byte from a short-request peak on expert slots.
+The process budget also covers longer contexts, retained conversations,
+loading and transient work. The conservative Fast planner is unchanged here.
+
+## Quality and engine qualification
+
+The original native engine, final native engine and Splash use the same frozen
+24 tasks, prompt IDs, greedy settings, 32,768-token requested context and 2,331
+actual expert slots under a twelve-GB process guard. All three score 20/24
+semantically and 12/24 under the strict formatting contract. Each gives the
+same wrong answers on order total, available stock, discounted tax and Spanish
+inventory. A native target-only control reproduces all four errors with the
+draft disabled. This is no observed regression on a small suite, not general
+quality equivalence or evidence about a different quantization.
+
+The final native engine completes 32 continuous requests and passes exact
+streaming, cancellation followed by a successful request, stop strings, native
+tool arguments, conversation recall, long retrieval and prefix-reuse checks.
+Its peak is 8.77 GB within the twelve-GB guard. Splash completes all quality
+requests continuously within its guard as well. The source contains the exact
+outputs, strict and semantic grading and failures.
+
+The catalogue passes 89 T0 and 19 T1 checks. The recurrent recording kernel
+passes 522 assertions over outputs and every retained state. Five bounded
+Fast/Smart acceptance cases pass at 8.1–9 GB, including ordinary Fast decoding
+and a longer prompt. Six Q2 regression requests pass under a ten-GB guard,
+qualifying the shared draft changes independently of the Fast default.
+
+Physical sixteen-GB and sixty-four-GB machines were not available. Small budgets
+on this forty-eight-GB Mac are narrower evidence and do not qualify that entire
+hardware range, every power state or long-context capacity.
+
+
+## App and final validation
+
+The rebuilt development app passes its full scripted UI/runtime suite. Its
+embedded engine input manifest matches the current source, and its ad hoc
+signature verifies. The [app validation receipts](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-fast-splash-app-validation.md)
+contain the source archive, identities and exact outputs. This is not a public
+release or a manual real-model GUI run.
+
+The real app runtime completes six fixed synthetic jobs at a ten-GB budget.
+Writing within the requested length, PDF facts with resolvable citations,
+receipt extraction to exact JSON and CSV calculation through the table tool
+pass. Two jobs fail: the model explains the correct code fix but does not stage
+it for review, and it repeats irrelevant old conversation instead of looking
+up the requested detail. Rerunning the same six jobs with the preserved original
+app runtime reproduces both failures. Neither version changes the file without
+review. The final process peaks at 6.61 GB; the original peaks at 6.22 GB.
+These are four passing jobs out of six, not a complete workflow qualification
+or proof that all code-edit/history tasks fail. Review/apply was not exercised
+by these failed proposals. Keep these general tool-use limitations visible;
+do not add fixture-specific prompts or silently treat a suggested patch as an
+executed action.
+
+The complete static suite passes with the final executable, including transport,
+planner, memory override, installer, native miniature-kernel and brain gates.
+Native runtime/API checks and the independently recorded real-model acceptance
+remain distinct from the two app quality failures. No public release is made.
+
+Next, profile and qualify a grouped affine expert path and prepared target
+command dispatch on Fast at matched cache sizes. Repeat clean interleaved
+completed-request comparisons before claiming parity or a speedup. Keep the
+same frozen quality/workflow inputs and target verification, and measure
+resident, SSD-bound and long-context cases independently. A proposed default
+must earn its place in useful completed work, not merely fewer kernel calls.
+
+## Native Fast and Q2 execution kernels
+These changes port more of Splash's useful execution into the native
+Swift/MLX/Metal engine used by the Mac app. They do not make the complete
+execution engines identical, and native code alone does not establish a speed
+advantage. Splash itself uses native C++ and Metal. Fast remains the new-install
+default; the exact Q2 deployment remains an explicit engineering candidate.
+The maintained Smart alias, saved model choices and independent CLI defaults
+are unchanged. No public release is made here.
+
+## Scope and native implementation
+
+The reference remains Splash 1.4.0 at
+`1482f6bbc2abf12375332725302019594150b6cb`. Target files and draft checkpoints
+are unchanged from the preceding Fast and Q2 execution comparisons. Product
+execution does not invoke Splash or Python. Their source and test harnesses
+remain reference instruments, with upstream notices in both engine and app.
+
+- Both targets group known routes into eight-row compressed expert tiles.
+  Experts with at most two total routes use the register column path; larger
+  groups use staged matrix tiles, including short tails. Gate and up projections
+  run in parallel SIMD groups and fuse their activation. Dispatch depends on
+  route count, never slot placement or cache residency.
+- Fast's affine codes, scales and biases are transposed losslessly for these
+  tiles. Demand loading, speculative tickets, packed records and prefill sweeps
+  produce the same representation. The source checkpoint remains untouched;
+  the normal public ExpertStore constructor retains its original representation.
+- Fast also uses the fused convolution, Q/K normalization, gates, recurrent
+  scan and output normalization with its SiLU gate. Compact prepared tapes
+  retain every speculative rollback boundary. FP32 router/shared-gate
+  preparation and ordered expert mixing follow upstream precision boundaries.
+  The bounded additional resident payload is charged separately by the planner.
+- Q2 adds the upstream narrow-matrix register algorithm with BF16 code operands
+  and FP32 coefficient application. It avoids the staged path's intermediate
+  FP16 weight rounding. GPU core count and Apple GPU family choose reduction
+  splits; an unavailable core count retains upstream's conservative fallback.
+  Owned FP32 partial buffers and an ordered reduction replace upstream's
+  mutable atomic last-arrival workspace.
+- GPU family and OS capability checks gate the MPP path. OS version alone was
+  insufficient in the prior hosted CI failure. Portable kernels remain on
+  unsupported devices. The register path is restricted to Apple10; prefix
+  identities include the changed arithmetic and Q2 projection policy.
+
+The generator's prefill limit is separate from the public model's sweep
+extent. A longer valid public call must not trap at a generator-only route
+limit. The new regression exercises the former boundary and final tile.
+
+This is a port of specific algorithms and layouts, not Splash's complete
+pre-encoded Metal command sequence, event-driven CPU/GPU handoffs, projection
+fusion or sparse-attention schedule. The native engine retains its existing
+cache ownership, memory governor and public interfaces.
+
+## Experiments retained and rejected
+
+The [kernel source receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-kernels.md)
+preserves frozen implementations, hashes, independent references, quality
+outputs, profiles and failures. It includes the initial JIT bounds failure,
+the corrected repack, the earlier packed-expert register probe, preflight
+refusals and unsuccessful timing attempts.
+
+Compiling the small GDN graph preserved outputs but did not demonstrate a
+benefit, so the additional graph representation and its experimental switch
+were removed. Extending the existing packed input-projection switch to every
+verification width also showed no clear benefit and was removed. Existing
+unrelated diagnostic controls retain their prior behavior.
+
+The preceding Q2 study already rejected extra read-ahead, repeated GPU scatters,
+wider barriers and a larger I/O queue. Those failures remain evidence. Neither
+a smaller measured disk wait nor a faster isolated kernel proves faster useful
+work. No keepalive, GPU spin, power-state manipulation or host-step spin library
+is introduced.
+
+## Cached target observations
+
+Fixed-token cached replays separate computation from SSD demand reads. The
+warmed observations have no demand I/O, no paging within the recorded replay
+intervals, and identical traced/untraced logits within each implementation.
+The boundary-forcing traces deliberately serialize execution and cannot be
+read as ordinary production phase timings.
+
+| Implementation | Width 1 | Width 2 | Width 4 | Width 8 |
+|---|---:|---:|---:|---:|
+| Original native Fast, adjacent replay | 39.97 ms | 59.37 ms | 40.15 ms | 51.59 ms |
+| Fast v4 | 21.02 ms | 22.65 ms | 28.48 ms | 35.18 ms |
+| Fast v4 repeat | 20.03 ms | 22.50 ms | 26.53 ms | 34.27 ms |
+| Q2 v6 | 45.58 ms | 49.03 ms | 54.17 ms | 61.76 ms |
+
+Each cell is the median of three warmed replay observations. The original
+Fast width-two result is an outlier, not evidence of a smooth scaling curve.
+Fast's before/after processes had nominal thermal readings; some paged during
+loading outside the replay intervals. Q2 v6 had no process-interval paging but
+fair thermal readings. These are component observations, not qualified
+whole-request speedups or cross-hardware estimates. The joint Fast changes
+are not an ablation assigning the improvement to one individual kernel.
+
+## Qualification and engineering lessons
+
+Full-request comparisons, final quality and app checks are recorded separately
+from these component probes. Exact upstream cache allocation includes staging,
+metadata and aligned per-projection planes. The first Q2 harness omitted that
+overhead and created one fewer upstream slot; the attempt is excluded and the
+repair checks actual slots before timing. A clean individual request does not
+rescue an ABBA aggregate that failed its paging or thermal gate.
+
+Preserve independent original-byte arithmetic references when changing
+precision boundaries. Register and staged projections intentionally have
+different intermediate rounding and need their corresponding references.
+Use actual device capabilities alongside OS availability, account for
+preparation memory, and preserve both ordinary and speculative execution.
+A small quality suite can show a regression or no observed regression; it
+cannot prove negligible quantization loss, universal task quality, full
+hardware-range qualification or permission to silently promote a candidate.
+
+## Final matched-request observations
+
+The [final comparison receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-final-comparisons.md)
+contains both refused sixteen-GB launches and both completed fifteen-GB ABBA
+studies. The larger launches failed the twenty-GB headroom preflight before
+loading. The new fifteen-GB protocol was frozen before running and requires
+nineteen GB of reclaimable memory. It keeps existing user applications open.
+
+Both engines use the same target/draft checkpoints, exact prompt IDs, greedy
+sampling, thinking off, BF16 KV, an 8,192-token context and identical actual
+expert slots. Every fresh process receives two symmetric warmup requests,
+followed by one coding and one prose request, each capped at 512 output tokens.
+Every timed request emits 512 tokens and reports zero reused prompt positions.
+Loading and warmups are excluded from the following observations. Both before
+and after thermal readings are nominal for every arm; cooldown requires three
+nominal samples ten seconds apart. Actual process memory stays within budget.
+
+**Both complete ABBA studies are excluded from clean timing claims because
+some timed requests observe global paging.** The table preserves the median
+observations, not a qualified speed ratio. Clean individual requests do not
+rescue either aggregate. This is the owned M5 Pro, 20 GPU cores and 48 GiB,
+not evidence for every machine in the target range.
+
+| Model / actual expert slots | Native code tok/s | Splash code tok/s | Native prose tok/s | Splash prose tok/s |
+|---|---:|---:|---:|---:|
+| Fast / 4,184 | 56.9 | 55.8 | 46.2 | 48.2 |
+| Exact Q2 / 4,244 | 23.1 | 36.3 | 21.2 | 31.3 |
+
+Median complete request times, including prompt processing, are 9.64 versus
+9.79 seconds for Fast code and 11.79 versus 11.31 for Fast prose. Q2 is 23.44
+versus 15.14 seconds for code and 25.28 versus 17.49 for prose. These have the
+same exclusion as the throughput table. Maximum observed process footprints
+are 11.710 GB native versus 12.563 GB Splash for Fast, and 12.430 versus
+14.252 GB for Q2. Splash includes its frontend process. Both use the exact
+same number of expert slots; equal slot counts do not imply equal total
+process footprints.
+
+Fast is close in these observations. Q2 still has a substantial gap, so the
+requested complete speed match is not achieved. The generated text is not
+byte-identical between engines; the quality comparison uses the independent
+frozen task rubric, not token identity as a substitute for quality.
+
+### What remains slower in Q2
+
+The first timed coding pair accepts 372 native drafts versus 375 upstream,
+with 140 versus 135 verification cycles. Native decode takes 23.080 seconds,
+including 8.878 seconds charged to demand reads and their CPU preparation,
+1.187 seconds of drafting, and 21.568 seconds of verification, which includes
+the demand I/O. These fields overlap and must not be summed. Splash decode
+takes 13.942 seconds. Native demand traffic is 85.384 GB; Splash's decode
+read counter rises 116.657 GB and includes read-ahead. More bytes read does
+not imply a longer critical-path wait.
+
+Similar draft acceptance rules out a large draft-acceptance deficit in this
+pair. Cached target replays and the source comparison point to target
+execution and expert-read preparation/handoffs as the remaining work. Splash
+uses a pre-encoded command graph, event-based host/GPU handoffs and further
+projection/input-preparation fusion. Those complete scheduling mechanisms are
+not present in this MLX port. The phase counters have different scopes and
+execution can overlap, so they do not isolate a single exact cause or prove
+that one proposed change will close the whole gap. Repeating the previously
+rejected read-ahead or scatter experiments without a new scheduling mechanism
+is not evidence of progress.
+
+The next qualification target is that remaining native execution schedule,
+with bounded buffer ownership, cancellation and target verification preserved,
+followed by the same cache-matched comparison. The maintained Smart deployment
+is unchanged; Q2 has neither complete parity nor general quality qualification.
+
+## Final implementation and app qualification
+
+The final v7 engine SHA-256 is
+`34086eff685e1ebf1b1c6065955c9c5d28fc19604c55b1167870420092f9754f`.
+Its frozen source archive and build inputs are retained in the
+[final validation receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-final-validation.md). The complete static gates pass, as does the check catalogue with
+108 checks and 41,385 assertions, no failures or skips. Independent tests cover
+lossless CPU/GPU transposition, original-byte projection arithmetic, actual
+Fast/Q2 geometries, all admitted resident quantization formats, register/staged
+boundaries, route ties and ordered mixing, long public sweeps, recurrent
+snapshots and continuation after rollback. The app's scripted UI/runtime suite
+also passes, and its newly built ad-hoc signature and embedded source manifest
+verify. This is a development bundle, not an installed public release receipt.
+
+The final quality run executes 32 requests per model at a twelve-GB ceiling.
+On the frozen 24-task semantic rubric Fast remains at 20/24 and Q2 at 19/24;
+both have 12/24 exact-format passes. The failed task identities are unchanged:
+Fast misses order-total, stock, tax and Spanish; Q2 also misses the gap-finding
+code task. Each passes all nine functional checks for streaming, native tool
+arguments, recall, cancellation and recovery, stop handling, bounded memory,
+long retrieval and prefix reuse. Observed combined physical peaks are 7.979 GB
+and 9.118 GB. Both processes observe global paging; these are functional results,
+not clean timing evidence. The bounded ordinary acceptance matrix also passes
+at its explicit small budgets, including the unchanged maintained Smart target.
+A small suite does not establish general quality equivalence or negligible Q2
+quantization loss against BF16 or the maintained Smart checkpoint.
+
+Through the actual app runtime at a ten-GB ceiling, Fast passes writing, PDF,
+receipt extraction and computed CSV work. It still fails to stage the requested
+code edit and retrieve the older-history detail, the same two job failures as
+the preceding original/final study. Q2 passes all six jobs, including the exact
+review/apply operation and the older-history lookup. The requested pack and
+memory ceiling are asserted in every job. App plus extraction-helper peaks are
+6.563 GB for Fast and 6.614 GB for Q2. Passing direct retrieval checks does not
+cancel Fast's failure to choose the history tool in the full application.
+Physical 16 GB and 64 GB machines are not tested by this study.
+
+### Instrumentation limitation
+
+The full expert suite passes Metal API validation. Full GPU shader validation
+cannot run the fused recurrent fixture: instrumentation expands its declared
+17,510-byte threadgroup scratch to 35,030 bytes, above this device's 32,768-byte
+limit, and aborts before a passing result. Preserve that failure; it is not a
+passing full instrumented suite. Isolated new expert and register kernels pass
+both Metal API and GPU shader validation. Instrumented timings are not speed
+measurements. The ordinary recurrent tests pass against their CPU reference,
+including both gate types and the saved rollback states.
+
+### Host-side diagnostic
+
+The [Q2 CPU sample](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-q2-host-profile.md) captures a guarded run after two warmup requests. It locates recurring blocking at MoELayer routing readback through MLXArray.asArray and GPU events, expert-reader workers in pread and CPU repacking, and MLX graph/command encoding. Kernel-source hashing also appears, but the sample does not establish it as the dominant remaining cost. This narrows the next investigation to the execution and read handoffs already identified in the source comparison.
+
+A CPU thread waiting for a GPU event is not proof that the GPU is idle. Samples across parallel worker threads cannot be summed into request-wall-time percentages. This instrumented run supplies call-site evidence only; it neither changes the earlier timing exclusions nor establishes the gain from a proposed scheduling rewrite. The guarded process and sampler both complete, and input hashes match the committed engine and app sources.
+
+### Implementation CI
+
+The [exact-commit CI receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-ci.md) records passing engine, native app, documentation and context workflows for fa398816ece5b85ca7a20ba601befc64bc1fde38. Engine goldens, the full catalogue, instrumented coverage, external library consumption and tested-candidate byte verification pass. App scripted checks, offscreen snapshots and the Xcode build pass. The frozen local engine and app input hashes match the committed implementation. Hosted CI has no real model weights and does not qualify another physical memory tier; its existing optional OCR policy is separate from the passing local OCR jobs. Later changes in this study are documentation and evidence only.
+
+## Scheduling follow-up, October 23
+
+The [native scheduling study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-fast-q2-scheduling.md) adds bounded page-aligned reads, shared Q2 input preparation and next-input read-ahead with private staging. Its clean ablation supports Q2; a clean Fast regression and slower buffer-reuse experiment are retained and rejected. Final matched comparisons remain excluded for paging or thermal failures. The full app and quality checks retain their prior capability limits. This later schedule does not rewrite the unsuccessful earlier read-ahead experiments or establish complete Splash parity.
+
+## Prepared execution follow-up, October 24, 2026
+
+The [prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) preserves the next
+native schedule port, independent correctness checks, final app checks, clean
+comparisons and excluded attempts. The wording above describing Splash as
+pre-encoded command replay is corrected: Splash reuses immutable execution
+plans and pipelines, then encodes fresh Metal commands each cycle. The native
+port uses the existing MLX allocator and stream with bounded ownership. Neither
+implementation language nor a cached target replay establishes serving parity.
+
+## Native Fast and Q2 scheduling
+This follow-up improves the native engine's useful work and tests the assumption
+that Swift/MLX should automatically beat Splash. That assumption is false:
+Splash also executes native code and Metal kernels. The implementation language
+does not determine the amount of computation, SSD work, synchronization or
+dispatch overhead. The complete engines are not identical.
+
+Fast remains the new-install default with its existing startup recipe. The
+maintained Smart alias remains the original four-bit target and MTP policy.
+The exact Q2 target stays an explicit engineering candidate. No public release
+or promotion to Smart is made here.
+
+## Method and reference
+
+The reference is Splash 1.4.0, source commit
+`1482f6bbc2abf12375332725302019594150b6cb`, on the owned M5 Pro with 20 GPU cores
+and 48 GiB. Tests use one model process at a time, explicit memory limits,
+target-plus-three-GB launch preflights, continuous combined-process footprint
+and headroom checks, and cleanup of owned children. Other applications remain
+open. The initial nine-GB launch refusal is preserved, not counted as a run.
+
+Comparisons match target and draft checkpoints, exact prompt token IDs, greedy
+sampling, thinking disabled, BF16 KV, an 8,192-token context and actual expert
+cache slots. Each fresh process receives two warmups followed by one coding
+and one prose request, each producing 512 tokens without prefix reuse. ABBA
+order, nominal thermal checks and per-request global paging checks are frozen
+before execution. Upstream runs disable ANE, disk cache and the host-step GPU
+spin library. No spin or power-state manipulation enters the native engine.
+
+The [raw archive](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-23-native-scheduling.md)
+contains protocols, commands, memory observers, complete outputs, failed
+attempts, source snapshots and hashes. Frozen v11 source is authoritative;
+standalone Swift files at the archive root include intermediate experiments.
+The previous [kernel-port study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-fast-q2-execution-kernels.md) retains
+the earlier kernels, cached replays, failed instrumentation and quality limits.
+
+## What changed
+
+- Expert file reads use private page-aligned scratch when the expanded span
+  remains inside the tensor and allocation. Tensor-edge and authenticated
+  reads retain exact bounds. Only logical payload bytes are copied or repacked.
+- Eligible Q2 shared gate/up projections reuse preparation of the same input.
+  They retain their own weights, split policies, output precision and output
+  permutations. Different inputs, permutations and incompatible precision
+  cannot share this request-local preparation.
+- Q2 predicts next-layer routes from the current expert input, ranks unique
+  candidates by summed routing weight with stable ties, and starts four serial
+  readers after submitting current GPU work. It stages at most 64 records
+  within a charged 128 MiB reservation. Four scratch allocations are included
+  in admission. Wrong predictions are cancelled before demand; predictions
+  never choose cache victims or evict useful slots. Actual demand selects and
+  pins the destination. Prepared host bytes are copied only after prior GPU
+  readers have joined. Error, cancellation and request completion drain readers.
+- Both forward architectures share forecast setup, including clearing it for
+  prefill and state-only passes. This matters for testing: the earlier v9/v10
+  implementation wired Q2's loop but did not exercise Fast's separate loop.
+  The final Fast experiment asserts issued read-ahead work, rather than
+  mistaking an enabled setting for an exercised implementation.
+- The Q2 candidate's planner and app recipe charge staging before solving
+  cache capacity, retain that charge once during replanning, and omit it when
+  experts are fully resident. New memory/startup identities invalidate stale
+  qualification. Loaded-selection expectations now match Fast/Q2's actual
+  optimized runtime. Real app receipts assert the selected pack, explicit
+  ceiling and startup recipe.
+
+The reservation, four readers and 64-record cap are measured candidate policy,
+not universal optima. Their purpose is bounded overlap without speculative
+cache pollution. The internal diagnostic off/reserve/on modes support
+equal-capacity controls; they are not additional product choices. Revisit the
+recipe on a full-request regression, a different physical hardware result,
+or evidence that its memory and I/O cost outweigh useful overlap.
+
+## Clean measurements and rejected experiments
+
+The original Q2 native/Splash baseline at 13 GB and 2,798 slots is clean:
+native/Splash medians are 19.75/28.09 tok/s for code and 17.76/25.45 for prose.
+Whole-request medians are 27.31/19.36 seconds and 30.07/21.30 seconds. This
+establishes a real initial gap without relying on the prior excluded 15 GB
+comparisons.
+
+The v9 read-ahead ablation charges the same reservation and uses exactly 2,701
+slots in both arms. Every timed interval passes the protocol. Control/on
+medians are 19.64/23.06 tok/s for code and 18.09/19.77 for prose, improvements
+of about 17.5% and 9.3%. Whole-request medians improve from 27.44 to 23.52
+seconds and from 30.14 to 27.19 seconds. Peak process observations remain
+inside the explicit 13 GB budget.
+
+On the first timed code request, demand I/O plus CPU preparation falls from
+11.98 to 7.71 seconds. The enabled path adopts 34,068 staged expert records,
+about 47.10 GB of useful prepared payload, and records no speculative cache
+evictions. Its issued-byte counter describes requested reservations, not
+completed physical SSD traffic. Verification, I/O and host timing scopes
+overlap and must not be summed or directly subtracted across engines.
+
+Two follow-ups were rejected:
+
+- Persistent read buffers and per-reader scratch reuse pass correctness but
+  lose about 3% in both clean Q2 comparisons. The complete v10 experiment is
+  archived and its additional pool implementation removed. This bundled
+  experiment does not identify which individual subchange caused the loss.
+- Fast read-ahead is exercised in v11 and compared cleanly against a control
+  with the same 2,978 slots. It changes code throughput from 43.42 to 45.48
+  tok/s, but prose falls from 37.91 to 32.18. Prose request time rises from
+  14.41 to 16.84 seconds. Many useful predictions are still reading at demand;
+  the first timed prose request spends about 3.55 seconds joining those
+  readers. Fast therefore retains its normal recipe with read-ahead off.
+
+The previous v6 read-ahead attempt already had DFlash lifecycle hooks. This
+follow-up does not relabel their earlier removal as a newly discovered bug.
+Its useful distinction is the changed prediction point, demand-first launch,
+bounded private staging and direct adoption without speculative eviction.
+
+## Remaining execution differences
+
+Splash builds reusable Metal command sequences and coordinates host loading
+through events. Slotstream still constructs MLX work and crosses its existing
+CPU/GPU boundaries. Expert loading and repacking also differ: Splash can stage
+partially completed read-ahead pieces into its demand batch and uses its own
+GPU repack schedule; native tickets retain the existing ownership and demand
+path. Earlier attempts at repeated GPU scatters and wider barriers regressed
+and remain rejected. Copying more code without changing that schedule does not
+establish parity.
+
+Poor draft acceptance is not the main explanation in the observed coding
+pair: native accepts 360 draft tokens and Splash 359. Their cycle counters
+have different definitions; Splash excludes zero-draft cycles. Prose accepts
+317/320. Text is not identical across engines. These are diagnostic counters,
+not a clean final speed ratio or proof that all remaining latency comes from
+one cause. Prior cached replays also show work and waits even with no SSD
+demand. CPU samples locate waits, not GPU idle time.
+
+The reviewed upstream projection-fusion notes report small whole-model gains
+for those specific changes, and some apply to Apple9 rather than this Apple10
+GPU. They do not explain a multi-fold advantage on this machine. A complete
+pre-encoded execution schedule is still unported; neither full implementation
+identity nor a native speed advantage has been established.
+
+## Final matched observations
+
+The final v11 Q2 comparison at 13 GB is excluded because one timed upstream
+request sees global paging and another arm ends with a non-nominal thermal
+reading. The reduced 12 GB Q2 comparison sees paging in both engines. The
+12 GB Fast comparison also encounters paging and a thermal failure. Every
+attempt is retained; clean individual requests do not rescue these aggregates.
+No more timing retries are used to select a favorable result.
+
+The following are excluded aggregate observations, not qualified speed claims:
+
+| Model / budget / actual slots | Native code tok/s | Splash code tok/s | Native prose tok/s | Splash prose tok/s |
+|---|---:|---:|---:|---:|
+| Q2 / 13 GB / 2,701 | 22.77 | 28.65 | 19.37 | 25.37 |
+| Q2 / 12 GB / 1,977 | 20.23 | 25.04 | 17.06 | 22.20 |
+| Fast / 12 GB / 2,488 | 38.16 | 36.87 | 31.09 | 30.90 |
+
+At 12 GB, observed whole-request medians are 26.68/21.70 seconds for Q2 code
+and 31.31/24.28 for Q2 prose; Fast is 14.26/14.57 and 17.33/17.35. These
+observations suggest Fast is close and Q2 remains behind, but do not qualify
+either final speed ratio. Lower budgets change cache capacity and cannot be
+mixed with the earlier 13 GB ablations.
+
+## Qualification
+
+The final v11 engine passes all 108 catalogue checks, 41,435 assertions, and
+the independent native-kernel checks. Eight target-only comparisons across
+Fast/Q2, code/JSON and new read-ahead off/on match the previous v7 prompt IDs,
+output tokens and text exactly. Enabled cases issue real read-ahead work.
+
+The frozen 24-task quality suite retains Fast at 20 semantic passes and Q2 at
+19, both with 12 strict-format passes. Both semantic and strict failure IDs
+match v7 exactly. Each model passes all ten request-behavior checks across 32
+requests, including the expected read-ahead policy, tools, cancellation and
+recovery, stop strings, streaming equality, memory bounds, long retrieval and
+prefix reuse. This is no observed regression in this suite, not a claim of
+negligible quantization loss or complete capability.
+
+The five bounded production checks pass: small-budget Fast, ordinary Fast,
+Fast DFlash, maintained Smart and longer Fast input. A separate normal Q2
+launch at 10 GB produces the exact requested JSON and automatically issues
+5,911 read-ahead records, with a measured 6.74 GB peak. Global paging remains a
+diagnostic for these functional checks, not a correctness failure.
+
+The complete scripted app suite passes. The rebuilt ad-hoc-signed app verifies
+its signature and all 411 embedded input hashes; 26 check-source hashes and
+the actual check executable are also captured. Real app jobs assert the loaded
+pack, ceiling and startup recipe. Fast passes writing, PDF, OCR and CSV but
+retains its previous code-edit staging and old-history retrieval failures,
+with exactly the same failure labels as v7. Q2 passes all six jobs, including
+reviewing and applying the frozen correct code change. All six Q2 receipts
+identify `gsq-q2-native-startup-v2`; Fast retains its existing recipe. Combined
+app/helper peaks are 6.42 GB for Fast and 6.67 GB for Q2 under the 10 GB ceiling.
+The app driver intentionally returns failure for Fast's retained workflow
+limitations; this is not reported as a clean full-capability sweep.
+
+The complete repository static gates pass against the frozen v11 binary.
+All 339 engine build inputs still match the tested source manifest.
+Physical 16 GB and 64 GB Macs are unavailable;
+planner checks across 16/24/32/48/64 GB and explicit small budgets on this Mac
+are narrower evidence than physical hardware qualification.
+
+## Prepared execution follow-up, October 24, 2026
+
+The [prepared execution study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-prepared-execution.md) preserves the next
+native schedule port, independent correctness checks, final app checks, clean
+comparisons and excluded attempts. The wording above describing Splash as
+pre-encoded command replay is corrected: Splash reuses immutable execution
+plans and pipelines, then encodes fresh Metal commands each cycle. The native
+port uses the existing MLX allocator and stream with bounded ownership. Neither
+implementation language nor a cached target replay establishes serving parity.
+
+## Native prepared GPU execution
+The [verified raw evidence](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-24-native-prepared-execution.md) binds every protocol, source snapshot and retained failure below.
+
+The native engine now reuses prepared GPU execution descriptions on the
+existing MLX stream. This follow-up measures complete Fast and exact-Q2
+requests against Splash and preserves unsuccessful candidates, excluded timing
+protocols and known model-quality limitations. The source is not an identical
+copy of the entire Splash runtime: Swift owns the model, cache, file reads and
+request lifecycle, with small native Metal execution adapters.
+
+Fast remains the default for new app installations. The current Smart alias
+retains the original four-bit target and MTP policy. Q2 remains an explicit
+engineering candidate; this study does not promote it or publish a release.
+
+## Reference and protocol
+
+The upstream reference is Splash 1.4.0, source commit
+`1482f6bbc2abf12375332725302019594150b6cb`. Measurements use the owned 48 GiB
+M5 Pro with 20 GPU cores. Target and draft checkpoints, exact prompt token IDs,
+greedy sampling, thinking disabled, BF16 KV, requested context and actual
+expert-slot capacity are matched. Upstream alignment, staging and metadata are
+included when matching the cache; equal advertised budgets alone are inadequate.
+
+The selected short-request protocol uses an 8,192-token context, two warmups
+and two timed requests per fresh process, code and prose, each with 384 output
+tokens. ABBA ordering and the reverse BAAB control preserve every arm. Native
+and upstream decode counters use their respective emitted-token conventions;
+full request time is a separate gate. Parity requires at least 95% of upstream
+decode rate and no more than 105% of upstream request time on both tasks.
+
+Every arm, including warmups, must pass the frozen paging, thermal, output
+length, prefix-reuse and memory checks. A clean subset cannot rescue an
+excluded aggregate. Functional checks may pass during global paging, with no
+clean timing claim. Earlier 512-token studies remain distinct protocols.
+
+One model process runs at a time, with target-plus-three-GB launch preflights,
+continuous process-footprint and headroom checks, and cleanup of owned children.
+Other applications remain open. Splash ANE, disk cache and GPU spin are off.
+No manufactured GPU work or power-state manipulation enters the native engine.
+
+## Mechanisms retained
+
+Prepared projection and expert programs are MLX primitives, using its allocator,
+stream, dependency tracking and command-buffer completion ownership. Immutable
+plans retain pipelines and geometry; request arrays and model weights are
+invocation inputs. Both plan and pipeline caches have finite bounds, tested
+for actual full-model execution without capacity or compilation fallback.
+
+Host-ready event leases are reusable only after both host and GPU owners release
+them, with increasing event values. Raw Q2 demand bytes and forecast tickets
+share bounded, charged staging. Failed reads publish failure and drain before
+reuse. Forecasts can prepare bytes but cannot select cache victims. The
+upstream replacement policy is adapted to physical slots and pins; an
+independent logical-order trace caught and corrected an integration error that
+policy-only equality had missed.
+
+Useful routed work is submitted before the next resident block is constructed.
+Eligible reader retirement happens at the next actual router readback, retaining
+final draining and observer paths. Pending recurrent state is folded into the
+next narrow pass, with its small tape staged once per head. Checkpoints,
+persistence, forks, public full-state access and wider fallbacks keep their
+materialized-state contracts.
+
+Q2 residual combination is a single prepared grid with fresh output ownership.
+It preserves separate FP32 multiply/add rounding, so retained checkpoints cannot
+be mutated. Shared/routed expert work, draft convolution, packed draft weights,
+lossless resident row order and bounded projection splits preserve independently
+checked original-format arithmetic and required intermediate precision.
+
+Batch dimensions and reduction extents are now copied into at most eight inline
+32-bit dispatch parameters. They do not specialize shader source. Plans still
+own exact buffer shapes; distinct arithmetic tiles retain distinct pipelines.
+Boundary tests reject missing, negative and oversized parameter counts, and
+prove two plans sharing a pipeline retain independent copied parameters after
+the original host arrays and plan handles are released.
+
+Splash reuses immutable plans but encodes fresh commands each cycle. Earlier
+references to pre-encoded command-buffer replay were incorrect. The pinned MLX
+event implementation already uses the public Metal shared-event wait; a supposed
+listener-versus-wait difference was not a demonstrated bottleneck.
+
+## Matched speed results
+
+The final frozen v68 binary is
+`db1af8ffd201d3dfb83d64b036db12383b08ac0a522d9079c3343acebe78c89b`.
+Its source archive is bound by `v68/sha256.json`. It retains v61 computation,
+adds explicit Swift-owner lifetimes at native boundaries and a fresh-input
+regression, and corrects a qualification comment. Source scope is independently
+checked against the frozen v61 archive.
+
+The final Fast 15 GB ABBA is clean and passes: code native/Splash rates are
+61.3349/54.7889 tok/s; prose rates are 49.9878/45.6404. Full-request ratios are
+0.90368 and 0.92416. Initial elevated thermal samples belong to cooldown;
+every passive sample after the first-arm preflight is nominal.
+
+The final Q2 12 GB confirmation is excluded by first-arm warmup paging and
+second-arm process paging. Its diagnostic code/prose native rates are
+22.5464/19.9928 versus Splash 22.2103/20.9328; these are not a clean speed
+claim. The final Q2 15 GB confirmation is excluded because its first Splash
+arm ends above nominal thermal status. Its diagnostic rates are
+32.5577/29.2540 versus 35.3611/30.3344. No clean subset repairs either full
+protocol. All measured requests complete inside their physical ceilings.
+Neither final Q2 repeat qualifies parity, and the larger-cache gap remains
+open despite the following earlier qualified smaller-cache result.
+
+The prior clean v61 Fast 15 GB comparison passes: native/Splash code rates are
+59.4415/53.0388 tok/s and prose rates 50.5817/48.7568. Complete-request ratios
+are 0.89903 and 0.96685. Every arm passes; all 225 passive thermal samples are
+nominal. This establishes the declared two-task comparison on this Mac, not a
+universal speed advantage.
+
+Q2 performance depends on the declared memory budget. A clean 12 GB three-way
+ABCCBA comparison retains all six arms: v61, the v66b full-GDN candidate and
+Splash. Native v61/Splash code rates are 23.4402/22.9903 tok/s and prose rates
+21.7714/22.3501. Complete-request ratios are 0.97663 and 1.02741, meeting both
+parity gates. All 692 passive thermal samples are nominal and no arm pages.
+The candidate's native/native geometric request ratio is 0.98736 and code
+regresses slightly. It misses the preregistered 0.98 gain threshold and is
+removed. The simpler retained schedule already matches Splash at this budget.
+
+That result does not repair the valid Q2 15 GB failures. Ordinary ABBA returns
+native/Splash code 28.4405/36.2694 and prose 27.2538/32.7492 tok/s. A quiet
+ABBA, excluding builds, source reads, edits and large UI output during timing,
+also fails at 28.2978/35.0549 and 26.3360/32.4890. All arms are eligible and its
+374 passive thermal samples are nominal. Extra assistant output alone is
+therefore not a sufficient explanation.
+
+A clean reverse BAAB control with passive clock observations also fails:
+code 31.4111/37.4272, prose 27.9580/32.4392 tok/s; complete-request ratios
+1.17670 and 1.15879. Splash remains faster in the last arm at higher observed
+temperatures. Whole-device GPU clocks are higher during Splash generation;
+that association does not prove causation. Approximate request windows include
+prefill and are not per-process clock attribution. No clock or power settings
+were changed. An initial monitoring attempt failed a 384-token harness
+assertion before loading a model; preserve it separately from the corrected run.
+
+Earlier v58b Q2 15 GB results were favorable, but v59 and repeated v61
+confirmations failed. They are retained rather than selecting the fastest
+historical candidate result as proof of reliable parity. The v60 experiment
+omitting cost observations during pipeline creation was excluded by heat and
+removed. Production prices all cycles. Earlier small-cache controller studies
+excluded by paging or heat remain excluded; no subset repairs them.
+
+## Root-cause evidence and rejected work
+
+Earlier fixed-input instrumentation found substantial native host/submission
+gaps even with cached target work. Its native target-only workload and upstream
+draft-plus-target workload differ, so the trace is diagnostic, not a serving
+speed comparison. GPU timestamp-interval unions include waits and are not ALU
+utilization. CPU samples identify waits, not GPU idle time; worker samples
+cannot be summed into request-wall-time percentages.
+
+Native graph construction and launch boundaries, recurrent-state materialization
+and verification-batch selection were concrete sources of extra work. Once the
+target schedule changed, prior calibration conclusions needed remeasurement:
+the older small-cache controller bundle had regressed, while the current 15 GB
+ablation improves complete requests. Draft acceptance alone never establishes
+quality or acceleration.
+
+Rejected production experiments include deferred host-routing workers, extra
+SSD readers, a separate buffer pool, raw Metal buffer bindings, wider command
+batching, an isolated compiled GDN graph, and a sharded draft top-16 kernel.
+The top-16 component improved in isolation but slowed complete requests. A
+staggered projection traversal failed the strict BF16 arithmetic gate. Combined
+GDN input scheduling was exact but had no eligible full-request benefit across
+two excluded protocols, so its extra production path was removed. Its shared
+threadgroup-scratch correction remains and passes strict shader validation.
+
+A diagnostic Metal observer directly records library and pipeline creation,
+without changing command execution. Its independent component check preserves
+computed values. On the same 96-token prompt, v59 prepares 162 native projection
+libraries and v61 prepares 35. Recorded native library calls total 2.46449 s
+and 0.002354 s respectively; these sequential instrumented runs retain OS
+compiler caches and do not qualify a serving speed ratio. They demonstrate
+unnecessary preparation and its observed cost, but cannot retrospectively prove
+that compilation caused every millisecond of the earlier v59 stall. Across all
+34 v61 Q2 functional requests, the prepared pipeline count stays at 35 and
+only the first decode cycle prepares new native projection pipelines.
+
+All failed builds, crashes, excluded aggregates, source snapshots and never-run
+candidate status remain in the evidence. Tests were not weakened to accept them.
+A static-gate fixture initially omitted the new header-test dependency; the
+corrected isolated fixture passes while the initial failure is preserved.
+
+## Correctness, quality and scope
+
+Independent compressed-byte references, cache-adapter traces, event/read-failure
+checks, cancellation, exact original greedy goldens and retained-state probes
+are separate from speed acceptance. Real trained-state probes compare complete
+FP32 logits and recurrent-state hashes across optimized/unoptimized and
+traced/untraced continuations, including partial speculative acceptance.
+
+The final v68 engine passes all 108 catalogue checks, with 41,435 assertions,
+no failures and no skips. Independent format, expert-pool, shared-kernel,
+Metal-validation and fresh-input ownership checks pass. Plain outputs equal
+the original goldens; partial-acceptance continuations preserve every full
+FP32 logit and recurrent-state hash. Both 34-request functional suites pass
+inside the explicit nine-GB ceiling. Fast peaks at 5.91201 GB and
+Q2 at 7.32162 GB. Global paging is observed for both models; these are functional checks, not speed claims.
+The rebuilt app's scripted UI/runtime suite, bundle inputs, helper hashes and
+strict code-signature checks pass. Its separate frozen source archive binds the
+actual app build. All 92 captured UI images were created by this execution; the
+reviewed file-change screen shows the expected diff and review controls.
+At a ten-GB combined-process ceiling, Fast peaks at 7.44798 GB
+and Q2 at 7.74492 GB. Q2 passes all six real jobs: writing, PDF,
+receipt OCR, CSV computation, reviewed code editing and history recall. Fast
+passes the first five but returns unrelated conversation text in history recall.
+It also fails the answer check after Fast → Q2 → Fast. The loaded-model,
+startup recipe, memory and native-path assertions pass for both switches.
+Q2 retrieves the correct stored code in the same Home; the two failed Fast
+turns do not call history.search. This is not observed deletion of history,
+and its cause is not isolated by this study. The complete real-workflow gate
+is failed, not relabeled as a pass. No scoring or prompt workaround was added.
+The final v68 scores retain both v61 and upstream per-case grades: Fast 20/24 semantic passes and Q2 19/24; both have 12 strict
+passes. All 34 request-behavior cases pass for each model. These small frozen
+suites do not prove negligible Q2-versus-four-bit capability loss or qualify
+all user tasks. No result from this single 48 GiB Mac establishes behavior on
+physical 16, 32 or 64 GB Macs.
+
+## Later candidates and ownership correction
+
+The v62c upstream-style AF4G64 draft packing passes arithmetic and quality, but
+its clean 15 GB native/native geometric request ratio is 1.01135, so it is
+removed. v63 borrowed buffer descriptors and sealed output metadata also pass
+correctness; their clean ratio of 0.98034 narrowly misses the frozen 0.98 gain
+gate. v64 lazy convolution windows preserve independently checked values and
+trained state, but their whole timing aggregate is excluded by paging. None
+becomes a production knob.
+
+v65 combines the entire Q2 recurrent block into one prepared primitive. Real
+trained-state continuations after retaining three of eight speculative rows
+produce identical full FP32 logits and recurrent hashes. A new fresh-input
+boundary test exposes a Swift/C++ wrapper-lifetime crash. Holding the Swift
+owners through the C call fixes it. The production projection and expert
+wrappers retain this correction independently of the rejected larger block.
+C++ copies MLX arrays for asynchronous use; raw context pointers alone do not
+retain their Swift owners. The regression frees program handles and temporary
+inputs before output evaluation and verifies independent outputs.
+
+v65b exhausts the bounded plan cache by specializing on previous tape length.
+v65c makes that input extent bounded and dynamic, keeping exact tail geometry
+and the existing cache cap. The clean 12 GB comparison misses the gain gate
+and regresses prose. Both 15 GB attempts are excluded by paging. v66b also
+folds convolution-window and output-permutation copies into the block, with
+independent all-width checks, strict Metal validation and exact trained-state
+continuations. Its clean three-way comparison still misses the gain gate.
+All whole-GDN candidate code, expanded program limits and associated flags
+are removed. Larger prepared blocks are not inherently faster.
+
+Full-prefix shader instrumentation exceeds threadgroup memory in an existing
+prefill kernel. A separately declared short-prefix validation exercises the
+new whole-GDN block and passes. This preserves the instrumentation limit; it
+is not evidence that the longer instrumented run passed. Initial type-check
+failures, rejected candidates and source snapshots remain in the raw archive.
+
+## Remaining gap and next experiment
+
+Both runtimes use the same physical GGUF files: device/inode checks prove the
+two path sets are hardlinks on the internal SSD. Different storage placement
+and a hidden prepacked upstream expert file are ruled out. Prepared upstream
+metadata still names those original raw files, and both runtimes GPU-repack
+expert bytes.
+
+Actual verification dominates native request time in the inspected Q2 traces.
+The draft and host reconciliation are much smaller. Approximate physical
+read-counter windows show similar total request traffic, with somewhat more
+native code-request reads; the different timing scopes cannot isolate an I/O
+cause. Issued forecast bytes are reservations, not completed SSD traffic.
+
+The full runtimes still differ. Splash's shared reader pool halts speculative
+batches and completes needed partial pieces in its demand scheduler. The
+native implementation promotes required tickets and uses joined demand reads
+with private aligned scratch. Splash can read aligned staging directly;
+removing the native scratch copy would require separately charged padded
+staging and proven ownership. The earlier worker-only ablation does not test
+this complete scheduling difference. These are concrete remaining experiments,
+not established causes or shipped optimizations.
+
+Native sections still participate in MLX graph evaluation and dependencies;
+Splash reuses a wider immutable execution graph. The failed full-GDN controls
+show that simply merging another block is insufficient. Public GPU counters
+on this Mac support stage timestamps, not dispatch sampling. GPU command
+intervals include event waits; neither them nor CPU samples prove individual
+kernel utilization. No keepalive, artificial work, power-state manipulation
+or benchmark-only timing filter is justified.
+
+Fast remains the new-install default. Smart retains the original four-bit
+model and MTP policy. Q2 remains an explicit engineering candidate outside
+normal setup and automatic incumbent retention. Clearing prefix state clears
+learned calibration at privacy/ownership transitions, and unload releases it.
+No public release or Smart promotion is made by this study. Broad Q2 parity
+remains unresolved until repeated matched complete-request gates pass at the
+larger cache as well as smaller budgets, with quality and real app jobs kept
+as independent acceptance criteria.
+
+
+## Final local validation
+
+The complete static suite passes against the frozen v68 binary. The current
+source and default local build match its archived identity. Brain validation
+reports zero errors and warnings, generated documents and all claim needles
+pass, and added local file links and Git whitespace checks pass. The original
+link-check failure and repair are preserved in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-validation]].
+Hosted CI is pending at this capture; these checks do not turn the remaining
+Q2 timing exclusions or Fast workflow failures into passes.
+
+
+## Direct-read constraint from earlier evidence
+
+The earlier [[records/measurements/expert-lookahead-2-slot-adoption-screen-2026-09-12]]
+records kernel-level file-read stalls after an experiment reading directly into
+GPU-shared pool storage. It did not isolate the cause. Removing the current
+private scratch copy is therefore not an established safe speedup. A future
+read-scheduler experiment must preserve bounded buffer ownership, completion
+and failure draining, and separately qualify any changed file-read destination.
+The remaining shared-reader scheduling hypothesis can be tested without first
+reintroducing that destination change.
+
+The final upstream logs explicitly report that the host-step spin library is
+absent and GPU keepawake is disabled. The comparison harness asserts the
+library is absent before each arm. The observed Q2 gap is not evidence that
+this study accidentally compared against an enabled upstream GPU keepalive.
+
+
+## Context proxy repair
+
+The first hosted context check fails because the isolated planner compilation
+omits the native schedule policy that the new Q2 memory profile references.
+The proxy now extracts the production declaration verbatim and injects the
+platform capability. It runs both states in fresh processes and independently
+checks the complete expert staging geometry, profile identity and reserve.
+The complete local proxy suite passes; no inference source or benchmark binary
+changes. The original failed CI artifact, exact repair and passing local
+receipts are preserved in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-context-repair]].
+The hosted repair result is pending at this capture.
+
+
+## Bounded confirmation after local builds
+
+One additional attempt per Q2 budget was declared before execution after
+local builds finished and the GPU cooled. No inference source or binary
+changed. The 15 GB protocol is refused before first-arm model loading because
+17.28 GB reclaimable does not meet the 18 GB launch guard. The 12 GB protocol
+finishes all four arms with nominal thermal observations, but one Splash arm
+pages during its timed code request. The whole protocol is excluded, and its
+diagnostic aggregate also misses parity. The other clean arms are not used
+as a replacement aggregate. No further retry is selected. The complete plan,
+outputs, exclusions and cleanup are retained in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-cooled-confirmation]].
+The final conclusion remains qualified Fast improvement and unresolved
+consistent Q2 parity. Earlier smaller-cache parity is historical evidence,
+not a guarantee repeated by the final v68 confirmations.
+
+
+## Complete hosted validation
+
+All engine, public-library, coverage, context-contract and documentation jobs
+pass on commit `42cce1ef6d74feae3060e100b4349699a49cea72`. The Mac app's
+scripted checks and Xcode build pass on `5b4e18fe9c19e4f16488404bbba7112571f937c1`;
+all 581 frozen app inputs are unchanged by the context-harness repair. All
+509 runtime inputs match the selected v68 source identity and committed
+repair source. Full job results and source checks are preserved in
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]].
+
+The initial context failure is fixed and retained as evidence. The original
+engine run was explicitly cancelled after the replacement queued; it is not
+counted as a pass. Hosted validation confirms the software checks, not broad
+Q2 speed parity or successful Fast history recall. The measured limitations,
+unchanged Smart alias and absence of a public release remain explicit.
+
+## Focused Q2 bottleneck diagnosis
+The focused experiment finds a real inefficiency in Q2 weight repacking, but
+its smallest fix does not demonstrate a useful complete-request improvement.
+The fix is reverted. All previously qualified native optimizations remain;
+Fast's performance path, Smart selection and the installed app are unchanged.
+The remaining Q2 slowdown is unresolved, and a shared-reader rewrite is not
+justified by this evidence.
+
+Raw commands, receipts, hashes, traces, failures and the rejected patch are in
+[[sources/runs/2026/10/2026-10-24-q2-focused-bottleneck]]. This is one bounded
+diagnosis and one candidate, not a search for a favorable benchmark retry.
+
+## Controlled verification
+
+On the 48 GiB M5 Pro, the same exact-Q2 checkpoint, 84 prefix token IDs, eight
+verification token IDs, BF16 activations/KV and FP32 recurrent state are used.
+Both engines have 1,897 actual expert slots under a 12 GB budget. Target-only
+verification excludes drafting, sampling and acceptance. Each pass starts from
+the same committed prefix within its engine. Cache-miss passes invalidate only
+residency metadata, preserving the allocation and capacity. Read-ahead is tested
+on and off; both retain its priced reserve. Two warmups and three measured
+passes per condition run in fresh-process NSSN order.
+
+Every arm is clean under the predeclared paging, thermal and physical-memory
+checks. The table averages the two process medians, in milliseconds:
+
+| Expert cache | Read-ahead | Native | Splash |
+|---|---|---:|---:|
+| Cached | Off | 44.93 | 42.07 |
+| Forced misses | Off | 355.85 | 342.07 |
+| Cached | On | 46.65 | 41.11 |
+| Forced misses | On | 271.80 | 252.60 |
+
+These are diagnostic first-verification results, not complete-request speed or
+proof at 15 GB. Cached/off issues no expert reads. Cached/on can still issue
+unused forecasts, so a warm demanded cache alone is not a no-I/O control.
+
+Within each engine, all full logits are byte-identical across cache conditions,
+read-ahead controls and repeats. Across engines, all eight greedy choices
+match, but logits differ and 11 of 1,877 unique demanded experts differ; the
+route intersection is 1,866. These numerical implementations are not identical
+work at every layer. Native's off-mode route observer was installed after its
+closure was built, so those route lists are absent. On-mode routes and all
+logits are captured; do not silently claim off-mode route equality.
+
+## Where time went
+
+A separate traced native/Splash pair records actual reads, native scratch
+copies and public Metal command-buffer timestamps. Interval unions and
+intersections account for overlap, rather than adding parallel worker times.
+With read-ahead off and forced misses, native reads cover about 220 ms and
+Splash reads about 218 ms. Native's roughly 52 ms of copy intervals mostly
+overlap reads; their union adds less than 2 ms beyond reads in the measured
+rounds. Removing the scratch copy is not supported as the main fix.
+
+Native GPU command intervals cover about 107 ms versus Splash's 94 ms in this
+control, compared with about 34 versus 32 ms when cached. This directs the
+next isolated test toward repacking. It does not make command intervals an
+ALU-utilization measure: event waits may be included, and CPU waiting alone
+never proves GPU idleness. With read-ahead on, reads overlap most command
+intervals; summing them would double-count much of the pass.
+
+Splash graph preparation/submission is about 1 ms here. Native's measured
+model-call span includes router synchronization and reads, so it cannot be
+reported as pure preparation overhead. Native emits 197 command buffers per
+pass versus Splash's 50; that count is a lead, not a measured causal cost.
+Exact CPU preparation/encoding versus GPU execution within the normal smaller
+passes still needs attribution.
+
+## One small candidate, then rejection
+
+The existing native repack dispatch has four grid rows and loops serially over
+experts. The candidate gives each staged expert one grid row and removes that
+loop. It changes two source locations, adds no buffers, and does not change
+reads, cache policy, arithmetic, or Fast execution.
+
+A bounded in-memory kernel experiment tests 1, 10, 40, 64 and 80 experts, with
+ordinary and mixed forecast inputs, alternating baseline/candidate/upstream
+order. Full output bytes, including untouched canaries, match native baseline.
+Splash's different bit permutation is checked independently against a CPU
+oracle. At 40 experts, candidate repacking takes about 0.61 ms versus 1.02 ms;
+at 64, about 1.09 versus 2.19 ms. Those are isolated kernel results only.
+
+The actual candidate passes independent original-weight checks, forecast and
+demand adoption, cache replacement, cancellation/retry, and Metal API
+validation. All 16 partial-rollback/width/trace cases match the frozen v68 full
+FP32 logits and recurrent-state hashes. Full shader instrumentation aborts in
+an unrelated 17-row GDN check before the repack pool checks; unchanged v68
+reproduces the same 35,030-byte versus 32,768-byte threadgroup-memory assertion.
+Preserve that separate validation limitation. It is not a new repack failure,
+and ordinary API-validated execution passes.
+
+The complete-request protocol uses normal read-ahead and adaptive DFlash,
+8,192-token requested context, identical prompt IDs and actual cache capacity,
+two warmups plus code/prose requests of 384 tokens, and ABCCBA ordering:
+v68 baseline, candidate, Splash, Splash, candidate, v68. It fits a 15 GB
+budget, but both candidate arms record global swap-ins, 8 and 4 pages.
+The **entire aggregate is excluded for timing qualification**. Even its
+diagnostic result is essentially flat: candidate/baseline geometric request
+ratio 0.99887, with code 1.18% slower and prose 1.39% faster. It fails the
+predeclared requirement of at least 2% overall improvement and neither task
+slower. No repeat replaces this failed protocol.
+
+The candidate source patch is archived and reverted. The default executable
+is restored to v68, SHA-256
+`db1af8ffd201d3dfb83d64b036db12383b08ac0a522d9079c3343acebe78c89b`;
+all 509 runtime inputs match its frozen identity. No new runtime change is
+retained. Passing byte/state checks do not constitute a new broad semantic
+quality or full-app qualification.
+
+## Best next action and remaining gates
+
+Normal baseline requests in this protocol average about 3.46–4.21 target rows
+per verification and 7.21–8.11 repacked experts per layer. The controlled
+all-miss eight-row probe averages 39.10 demanded experts per layer. A large
+cold-batch kernel improvement therefore does not establish the bottleneck in
+normal requests. These means describe the recorded work, not its distribution.
+
+Next capture the actual row-width and per-layer miss distributions in a normal
+request, then replay representative small passes with matched cached and
+partial-miss conditions. Attribute native CPU preparation/submission and GPU
+repacking/compute separately within those passes. Hold verification inputs and
+controller decisions fixed for the component comparison, then use normal
+controllers for the final request gate. Do not rewrite the shared reader
+scheduler until overlap-aware measurements show an attributable delay.
+
+The existing engine, library, coverage, context, app and documentation CI
+checkpoint is complete; see
+[[sources/runs/2026/10/2026-10-24-native-prepared-execution-ci]]. Production
+runtime inputs are unchanged by this study. Fast's history-recall and
+return-to-Fast recall failures remain separately tracked in
+[[records/measurements/native-prepared-execution]] and must be addressed before
+claiming full app readiness. Q2 is still an explicit engineering candidate;
+there is no Smart promotion, public release or parity claim.
+
+## Typical Q2 verification and read-ahead overlap
+Typical small verification passes localize the remaining Q2 delay to the
+interaction between read-ahead and GPU execution. They do not establish the
+underlying device or scheduling cause. A small direct-read candidate preserves
+correctness but slows complete requests, so it is reverted. Fast and all
+previously qualified runtime changes remain unchanged.
+
+Raw fixtures, source identities, traces, failures, the rejected patch and
+restoration proof are in
+[[sources/runs/2026/10/2026-10-25-q2-typical-verification]]. The clean complete
+request comparison is
+[[sources/runs/2026/10/2026-10-25-q2-typical-complete-requests]]. This follows
+[[records/measurements/q2-focused-bottleneck]] and tests one targeted candidate,
+without a broader reader-pool port or a parity promise.
+
+## Actual work and controlled replay
+
+A normal code/prose run on the 48 GiB M5 Pro uses a 15 GB budget, 4,067 actual
+expert slots, 8,192-token context, the exact Q2 target, BF16 activations/KV,
+FP32 recurrent state and ordinary DFlash/read-ahead settings. It completes
+without paging or non-nominal thermal state and within its physical-memory
+and headroom guards. Verification widths
+range from one to eight. Code uses 111 verification passes and prose 136;
+three rows are most common in code, and two in prose. These are distributions,
+not a claim that every request uses three or four rows.
+
+Two representative passes are chosen after pass 20 by proximity to the
+request's mean misses, without selecting by speed: a three-row prose pass at
+position 226 and a four-row code pass at position 317. Their per-layer miss
+counts total 362 and 393, respectively. Both engines re-prefill the same
+committed token IDs in 256-token chunks and verify the same captured inputs.
+Draft generation, sampling and acceptance are excluded from the component
+comparison. Both retain the same cache capacity and forecast reservation when
+read-ahead is disabled.
+
+A preliminary route capture identifies shared routed keys. The partial-miss
+replay invalidates exactly the same 362 or 393 logical experts in both
+engines, matching every layer's captured miss count without a cap adjustment.
+All other demanded experts remain cached. It changes metadata only at a
+fully retired boundary, preserving tensor storage and capacity. Each condition
+has two warmups and three measured passes, in fresh-process NSSN order at each
+width. All eight matched arms pass the clean-run gates.
+
+Cross-engine arithmetic is not byte-identical. The three-row pass routes
+984 native and 991 Splash experts, with 969 in common; the four-row pass routes
+1,283 each, with 1,273 in common. Full logits differ by at most about 0.471
+and 0.396 respectively, while all seven greedy next-token choices agree.
+Within each engine, full relevant logits remain unchanged across cached and
+partial-miss conditions, read-ahead controls and repetitions. This is matched
+missing-weight work with small numerical route differences, not identical
+arithmetic or a broad quality evaluation.
+
+## Read tracing was a confound
+
+The first interval trace gives a roughly 14 ms native/Splash gap with partial
+misses and read-ahead enabled. Native records allocate Swift dictionaries and
+lock for every read/copy, while Splash appends to a C++ vector. This unequal
+concurrent host work can perturb the overlap being investigated.
+
+A separate preregistered NSSN control disables per-read recording in both
+engines for the same four-row fixture. Passive command timestamps and sparse
+native layer events remain. All four arms are clean. The apparent gap shrinks
+to about 8.4 ms. The traced numbers remain diagnostic; they cannot substitute
+for these controls or uninstrumented complete-request timings. Do not subtract
+the two phases and call the difference a precisely measured logging cost.
+
+The table averages the two process medians, in milliseconds:
+
+| Cache condition | Read-ahead | Native | Splash |
+|---|---|---:|---:|
+| Cached | Off | 39.18 | 38.40 |
+| 393 matched missing experts | Off | 94.13 | 95.89 |
+| Cached | On | 40.04 | 37.83 |
+| 393 matched missing experts | On | 82.80 | 74.39 |
+
+Native read-ahead still helps relative to its own disabled control; removing
+it is not supported by these results. The important difference is how much
+benefit each engine obtains while that work overlaps the GPU.
+
+With partial misses and read-ahead on, native expert schedule preparation is
+about 1.9 ms per pass, compared with about 1.1 ms for Splash's broader graph
+preparation/submission span. Those scopes differ. Native's host read-wait span
+is about 27.5 ms, versus about 28.3 ms for Splash's host read-work accounting.
+These are overlapping host spans, not independent terms to add together.
+They do not support a shared-reader rewrite as the established main fix.
+
+GPU command timestamp spans total about 44.7 ms for native and 38.8 ms for
+Splash in this control. Without read-ahead they total about 35.9 and 38.6 ms.
+The native command stream has 197 buffers per pass, versus 50 for Splash,
+but buffer count alone does not establish cost. Command intervals can include
+waits and scheduling effects; they are not kernel utilization. The remaining
+cause could involve read-ahead transfer/visibility, command handoff or execution
+under concurrent I/O. This study does not choose between them.
+
+## One small candidate and correctness
+
+The 11-line candidate changes only raw Q2 forecast reads. It reads the exact
+requested bytes directly into an unpublished ticket's destination, removing
+the intermediate private-scratch copy. Existing checked bounds, injected read
+faults, cancellation and ticket lifetime remain. Cache policy, kernels, demand
+reads, capacity and Fast are unchanged.
+
+This differs from the older live-pool direct-read experiment that stalled;
+see the direct-read constraint in [[records/measurements/native-prepared-execution]].
+It does not establish that direct writes into arbitrary GPU-shared storage
+are safe or faster. The candidate uses exact reads, not Splash's padded,
+aligned staging, so it is not a complete test of that layout.
+
+The controlled ABBA preserves the baseline's full native logits exactly.
+Its final baseline arm pages, excluding the whole aggregate from qualified
+timing claims; see
+[[sources/runs/2026/10/2026-10-25-q2-direct-read-replay-excluded]]. Its diagnostic
+results also show no benefit, so there is no favorable subset or retry.
+
+Relevant independent original-byte, mixed demand/forecast, cache transition,
+cancellation, retry and Metal API validation checks pass. All 16 production
+width/trace and partial-rollback cases retain the frozen v68 full FP32-logit
+and recurrent-state hashes. These checks establish correctness in the tested
+paths, not negligible quantization loss or full application readiness.
+
+## Clean complete requests reject the change
+
+Uninstrumented production builds run ABCCBA: A is frozen v68, B the direct-read
+candidate, and C Splash 1.4.0 at commit 1482f6b with its host spin absent.
+Each fresh process runs the same two warmups and two timed code/prose requests,
+with 384 output tokens each, matched prompt IDs and 4,067 actual slots. Normal
+adaptive verification and read-ahead remain enabled. All six arms pass the
+15 GB physical ceiling, no-paging and nominal-thermal gates.
+
+| Task | Baseline request seconds | Candidate request seconds | Splash request seconds | Baseline tokens/s | Candidate tokens/s | Splash tokens/s |
+|---|---:|---:|---:|---:|---:|---:|
+| Code | 11.690 | 11.932 | 10.550 | 35.80 | 35.02 | 40.08 |
+| Prose | 12.509 | 13.069 | 11.822 | 33.02 | 32.78 | 35.38 |
+
+The candidate is about 3.27% slower by geometric mean request time, with both
+tasks slower. It fails the frozen requirement of at least 2% improvement and
+no task regression. It is reverted. The restored baseline remains about
+10.8% slower than Splash for code and 5.8% for prose by request time in this
+protocol. This is a clean result at 15 GB on this Mac, not a claim across the
+16–64 GB hardware range.
+
+The complete-request outputs vary even between the two unchanged baseline
+arms, which retain the adaptive controller. These length-limited throughput
+prompts are not full task-quality passes: the code is truncated, and the prose
+examples do not establish correct write-skew reasoning. Preserve the outputs;
+do not call them byte-identical or use speed completion as an app-quality gate.
+The candidate's arithmetic preservation is established by the fixed-work and
+state checks above, not these adaptive outputs.
+
+## Result and next action
+
+All 509 runtime input hashes and the five default build artifacts are restored
+to v68; the executable SHA-256 is
+`db1af8ffd201d3dfb83d64b036db12383b08ac0a522d9079c3343acebe78c89b`.
+No production optimization is retained, no release is made and Smart is not
+changed. Fast's performance path is unchanged, and its known recall failures
+remain separate in [[records/measurements/native-prepared-execution]].
+
+The next useful experiment should distinguish command/event handoff from
+concurrent I/O and memory visibility: keep the captured small-pass work and
+miss counts fixed, replay already prepared weights with matched readiness
+boundaries, then introduce reads into bounded private scratch. Use low-allocation
+instrumentation and a trace-disabled control. Only an attributable delay should
+justify changing reader scheduling or adding padded GPU staging. The shared
+reader pool is still a hypothesis, and another broad port is not supported.
+
+## Q2 handoff and overlap diagnosis
+Q2 still misses the requested complete-request speed target. This study retains
+no production change and leaves Fast unchanged. It narrows several hypotheses
+without establishing the remaining cause: extra command buffers, event wake-up,
+thread priority, residency requests and forecast copies do not yet justify a
+new production path. Native language and MLX are not evidence of superiority.
+
+The raw scripts, captured fixtures, source and binary identities, guards,
+timestamps, failures, rejected patches and restoration proof are preserved in
+[[sources/runs/2026/10/2026-10-25-q2-handoff-diagnostics]]. Excluded protocols are
+registered separately in [[sources/runs/2026/10/2026-10-25-q2-handoff-excluded]].
+The new clean complete-request comparison is
+[[sources/runs/2026/10/2026-10-25-q2-handoff-complete-requests]]. This follows
+[[records/measurements/q2-typical-verification]].
+
+## Work, controls and instrumentation
+
+The main component fixture is the captured four-row code verification at
+position 317, with 393 common logical missing experts across 48 layers. Both
+engines use a 15 GB budget, 4,067 actual slots, 8,192-token context, BF16
+activation/KV and FP32 recurrent state. Each condition has two warmups and
+three timed passes. Native full FP32 logits preserve SHA-256
+`c6cc487735173af3198566071fbc3a2016f3e970a1f576523f046386cea94d22` in the completed
+fixed-work candidate protocols. Cross-engine prefix arithmetic and some routes
+remain slightly different, as recorded in the preceding study.
+
+The first observer records readiness publication, event waits, encoder creation
+and command timestamps. A second interposes the same pread boundary in both
+engines, using bounded preallocated records. The stage observer attaches
+public Metal timestamp counters to existing compute encoders, preserving their
+dispatch type. It does not add GPU work, commits or waits. These are diagnostic
+instruments, not production builds or uninstrumented speed claims.
+
+This M5 Pro exposes stage-boundary timestamp sampling but no public per-dispatch
+or utilization counters. The first oversized sample-buffer probe fails; the
+corrected implementation uses bounded 32 KB buffers and passes original-byte
+expert checks with Metal validation. Recorded stage intervals fit their parent
+command intervals; measured passes have complete samples. GPU intervals can
+still include scheduling or memory stalls. They are not ALU utilization, and
+CPU waiting alone does not prove an idle GPU.
+
+A global model reservation now spans each whole protocol, including cooldowns;
+children use a private lock beneath that reservation. Later guards also record
+competing compiler processes. Other builds contaminated several earlier arms.
+Those complete protocols remain excluded. No other task's processes were
+stopped. Clean timing remains separate from arithmetic and physical-memory
+acceptance; global paging does not turn a correct functional check into a
+product failure.
+
+## Clean readiness and read-work observations
+
+The readiness NSSN shows native and Splash resuming GPU work only after the
+CPU publishes readiness. Per-pass resume spans are about 3.70 and 4.04 ms;
+route-result pickup totals about 1.99 and 1.88 ms. These scopes overlap work
+elsewhere and cannot be added to the request wall time. They do not support
+an event-wake rewrite as the main fix.
+
+A separate clean, symmetric pread observation gives the following average of
+process medians, in milliseconds. Read/GPU overlap is counted once in wall time.
+
+| Condition | Native wall | Splash wall | Native GPU intervals | Splash GPU intervals | Native read union | Splash read union |
+|---|---:|---:|---:|---:|---:|---:|
+| Cached, read-ahead off | 39.191 | 38.838 | 29.157 | 27.979 | 0 | 0 |
+| Partial misses, off | 93.222 | 94.425 | 36.292 | 38.031 | 43.785 | 44.424 |
+| Cached, on | 40.093 | 38.453 | 30.450 | 29.461 | 28.179 | 29.103 |
+| Partial misses, on | 81.993 | 74.720 | 45.179 | 38.712 | 72.383 | 69.058 |
+
+For partial misses with read-ahead, read/GPU overlap totals about 40.00 ms
+native and 35.52 ms Splash. Neither observed interval covers about 4.70 and
+2.51 ms respectively. Those uncovered intervals are not automatically wasted
+CPU time. Read latency medians are similar, about 187 and 191 microseconds,
+and observed bytes are about 797 and 794 MB. Native demand concurrency peaks
+below Splash, but native is already slightly faster with read-ahead disabled.
+That does not establish that more readers or a unified reader pool fixes the
+gap. Both implementations use four background forecast readers.
+
+Additional stage observations locate the extra native duration inside several
+compute encoders while read-ahead runs, rather than solely at readiness waits
+or a single repack stage. Their whole timing protocols have exclusions, so
+these are localization evidence, not a qualified cross-engine speed ratio.
+Native host preparation measurements are small relative to the whole pass;
+the sparse host profiler does not identify a large preparation term to remove.
+
+## Candidates and rejected explanations
+
+- Delaying expert submission preserves logits but slows clean partial/on
+  replay from about 82.47 to 86.72 ms. It is rejected.
+- Coalescing expert execution removes command boundaries but the completed
+  candidate arm is much slower. The later interrupted protocol is incomplete;
+  it is preserved without a qualified aggregate or production adoption.
+- Page-padding forecast storage alone is clean and essentially flat:
+  partial/on is about 80.65 versus 80.86 ms. The existing charged reserve and
+  actual cache capacity remain unchanged.
+- Page-aligned direct forecast reads carry payload offsets into the GPU repack
+  and avoid the scratch copy. Passive destination observations prove that the
+  branch executes, and fixed logits match. Earlier protocols have competing
+  builds. After those builds finish, one new BAAB is attempted; its final arm
+  has 16 global swap-in pages. The whole protocol is excluded, and even its
+  diagnostic aggregate falls short of the preregistered improvement threshold
+  while other conditions regress. The seven-file candidate is not retained.
+- Forcing serial encoders instead of MLX's concurrent encoders preserves
+  tested arithmetic but gives no repeatable material gain; the whole timing
+  protocol has an external-build exclusion. It is not retained.
+- Requesting MLX residency alone or alongside direct reads gives no repeatable
+  benefit in the recorded controls. Their protocols have external-build
+  exclusions. A diagnostic cleanup crash was repaired and the bounded check
+  passes, but this does not qualify a production residency policy.
+- Native command creation predominantly runs at user-initiated QoS, while
+  Splash uses user-interactive QoS. Earlier self-priority setters on managed
+  Swift threads did not actually change it. An explicit serial-queue diagnostic
+  proves that the requested priority applies. Its ABCCBA has paging in the
+  first baseline arm and does not support a production priority boost.
+- A final clean ABBA disables only optional early attention submission.
+  Commands fall from 197 to 149 and compute encoders from 147 to 100, with
+  exact logits. Partial/on changes from about 81.97 to 81.77 ms, only about
+  0.25%; other controls are effectively flat. Fewer submissions alone do not
+  earn this change. The default remains unchanged.
+
+All incomplete, excluded and failed attempts, including cancelled forecast,
+arena controls and the stopped invalid priority intervention, remain in the
+archive. A favorable individual arm never replaces its whole protocol.
+
+## Distinguish CPU polling from the removed GPU spin
+
+The published Splash host polls for up to 5 ms before blocking. An already
+completed clean same-Splash ABBA, recovered from the earlier prepared-execution
+archive, shows disabling that CPU polling increases request time by only about
+1.35% for code and 0.70% for prose. It does not explain the larger Q2 gap.
+The component reference used here already disables CPU polling. A proposed
+duplicate build stops at its source assertion before compilation or another
+model run; its draft and failure are preserved.
+
+The production comparison retains Splash's published CPU waiting behavior.
+Its separate GPU host-step spin library is absent. Earlier references to
+"host spin absent" mean that GPU library, not removal of all CPU polling.
+Do not compare native against a deliberately slowed upstream control and call
+that production parity. No CPU busy waiting or blanket priority boost is ported.
+
+## Fresh complete requests after competing builds stop
+
+A fresh ACCA uses unchanged native v68 and production Splash 1.4.0. Both run
+the same two warmups, code/prose prompts and 384-token output limits, with
+matched prompt IDs, precision, actual cache capacity and context. Ordinary
+adaptive verification and native Q2 read-ahead remain enabled. All four arms
+pass the physical ceiling, headroom, no-paging, nominal-thermal and continuous
+external-build checks.
+
+| Task | Native request seconds | Splash request seconds | Native tokens/s | Splash tokens/s |
+|---|---:|---:|---:|---:|
+| Code | 12.201 | 10.690 | 34.36 | 39.39 |
+| Prose | 13.992 | 11.999 | 30.32 | 34.82 |
+
+These paired-process medians leave native about 14.1% and 16.6% slower by
+request time. The first pair alone looks within 5%, but the reverse pair does
+not. That first pair is not a parity result. The earlier clean comparison's
+smaller gap remains valid for its recorded protocol; the new data shows that
+neither a favorable pair nor nominal thermal status guarantees stable timing.
+
+The second native process uses 109 versus 101 code verification passes and
+131 versus 122 prose passes. Its demand bytes increase and time per pass also
+changes. Adaptive width, generated tokens and cache state are coupled, so
+this is extra observed work, not proof of a defective controller or a complete
+causal decomposition. The limited throughput outputs remain archived; they
+are not full task-quality or app-readiness passes.
+
+## Checkpoint and next discriminating experiment
+
+All 509 runtime input hashes and the five default artifacts match frozen v68.
+The executable remains
+`db1af8ffd201d3dfb83d64b036db12383b08ac0a522d9079c3343acebe78c89b`.
+Fast's qualified performance path is unchanged; its recall failures remain
+tracked in [[records/measurements/native-prepared-execution]]. There is no
+release, Smart promotion, new performance default or full app-readiness claim.
+
+The remaining work is unresolved. Reconstruct a slow complete request's actual
+verification-width and routing/cache sequence, then replay equal work before
+changing another scheduler. Separate extra verification work from per-pass
+execution under concurrent I/O. A single fixed four-row state cannot explain
+all request variance. Keep the published Splash baseline intact, retain only
+repeatable complete-request improvements and qualify power, memory and user
+responsiveness before adopting any priority or polling policy.
+
+Restoration, repository gates and the Metal capability query are captured in
+[[sources/runs/2026/10/2026-10-25-q2-handoff-checkpoint]].
+
+## Q2 continuation replay and staging-copy diagnosis
+Neither staging-copy candidate earns a production change. The latest clean
+15 GB comparison leaves the demanded-read candidate 7.4% slower than Splash
+on code and 3.8% slower on prose, with less than 1% improvement over current
+native requests. The earlier combined change improves prose but regresses code.
+Fast, normal defaults and the five v68 build artifacts remain unchanged. No
+release, Smart promotion or full application readiness is claimed.
+
+The raw evidence is in [[sources/runs/2026/10/2026-10-25-q2-continuation-diagnostics]],
+with excluded phases in [[sources/runs/2026/10/2026-10-25-q2-continuation-excluded]]
+and full requests in [[sources/runs/2026/10/2026-10-25-q2-copy-complete-requests]].
+This follows [[records/measurements/q2-handoff-and-overlap-diagnosis]].
+
+## Evolving verification work
+
+The main fixture freezes 111 real code verification passes, widths one through
+eight and 384 accepted input tokens. Both engines receive the same prompt,
+proposed rows and retained prefixes while their caches evolve naturally. The
+original comparison uses 4,067 actual slots at 15 GB, BF16 activation/KV and
+FP32 recurrent state. It includes real rollback. It excludes proposal generation,
+sampling, per-pass full-logit hashing and state commit from verification time;
+those exclusions do not establish absence of effects on surrounding execution.
+Cross-engine prefix arithmetic and some routing differ, so matched inputs and
+capacity do not imply identical internal state.
+
+Clean NSSN with two timed rounds per process gives 11.366 seconds native versus
+9.459 Splash, about 20.2% longer. Every full same-engine FP32 hash repeats.
+Native agrees with all 383 captured accepted-next-token checks; Splash agrees
+with 382. Cross-engine top-one agreement is 471 of 472 rows. This is a narrow
+continuation check, not a capability-loss estimate.
+
+Turning read-ahead off slows both engines: 12.807 versus 11.058 seconds. The
+first native timed round is unusually slow at 15.206 seconds and remains in the
+aggregate. Read-ahead alone does not explain the gap.
+
+## What the causal controls show
+
+| Controlled intervention | Control seconds | Changed seconds | Result |
+| --- | ---: | ---: | --- |
+| Native early-attention submission removed | 11.658 | 12.283 | 5.4% slower |
+| Native dedicated demand workers | 11.214 | 11.633 | 3.7% slower |
+| Native GDN upcoming-state load order matched | 11.259 | 11.412 | 1.4% slower |
+| Splash waits before encoding subsequent GPU work | 9.178 | 9.239 | 0.7% slower |
+| Splash adds an aligned scratch-to-staging CPU copy | 9.140 | 10.300 | 12.7% slower |
+| Native exact unaligned direct reads | 11.237 | 12.405 | 10.4% slower |
+| Native aligned direct demand and forecast reads | 11.635 | 10.098 | 13.2% faster in this component |
+| Native aligned direct demanded reads only | 11.404 | 10.826 | 5.1% faster in this component |
+
+Each row is its own interleaved protocol; do not compare unrelated controls as
+one stable absolute baseline. All listed controls are clean and preserve exact
+same-engine full logits. Earlier unqualified runs are kept separately. The
+dedicated-worker control changes only demand scheduling and does not establish
+the effect of a unified demand/forecast reader queue.
+
+The upstream extra-copy intervention is the strongest causal lead. It preserves
+the reference's kernels and read destinations while inserting a real CPU copy.
+User CPU rises from roughly 0.71–0.75 seconds to 2.54–2.60. Observed GPU frequency
+also drops, but that does not identify the underlying scheduling/power mechanism
+or authorize clock manipulation. Read grouping and page extents differ slightly
+from native, so it is not an exact reconstruction of native overhead.
+
+Removing native copying without aligned I/O regresses. Padded private staging
+preserves alignment, with per-piece offsets consumed by the same GPU repack
+arithmetic. The demand reserve rises from 110,592,000 to 117,966,400 bytes before
+cache sizing, reducing the 15 GB cache to 4,062 slots. The combined experiment
+also pads the forecast arena within its existing 128 MiB reserve. The narrower
+experiment restores the original forecast arena and reader entirely.
+
+Both padded candidates pass installed-byte, failure/retry, resize, forecast
+ownership and independent GPU arithmetic checks with Metal validation. Their
+four native arms each preserve all 222 full-logit hashes, also matching the
+earlier native reference. The narrow reverse pair improves by only 0.6%; its
+median component gain does not erase that uncertainty.
+
+CPU sampling locates routing/GPU and demand-batch waits, with concurrent worker
+reads and copies. It does not prove GPU idleness. Stage counters show delay
+across several native sections; wider passes sometimes split encoders, invalidating
+fixed-position stage labels. Process CPU times sum overlapping threads and are
+not wall-time percentages. Original rusage fields were mislabeled nanoseconds;
+the preserved analysis converts Mach ticks using the measured timebase. Passive
+whole-device clocks correlate with the changed work but do not establish a
+power-state root cause.
+
+## Complete requests reject both changes
+
+Each separate ABCCBA uses two warmups and 384-token code/prose requests with
+normal adaptive verification. All twelve arms meet memory, headroom, no-paging,
+nominal-thermal and no-competing-build gates. Prompt IDs match and reused prefix
+counts are zero. Frozen native v68 has 4,067 slots; both candidates and their
+Splash references have the correctly charged 4,062 slots. All budgets are 15 GB.
+
+| Candidate and task | v68 seconds | Candidate seconds | Splash seconds |
+| --- | ---: | ---: | ---: |
+| Combined direct reads, code | 12.194 | 12.887 | 11.523 |
+| Combined direct reads, prose | 13.382 | 12.711 | 12.771 |
+| Demand-only direct reads, code | 12.532 | 12.423 | 11.567 |
+| Demand-only direct reads, prose | 13.441 | 13.357 | 12.864 |
+
+The combined change regresses code by 5.7% despite a 5.0% prose win. The narrow
+change gains only 0.87% and 0.63%, below the declared 2% retention threshold.
+Neither meets the separate within-5%-of-Splash target on both tasks. No failing
+arm is discarded and no smaller-budget result substitutes for these comparisons.
+
+Ordinary adaptive requests change verification widths, cache work and sometimes
+output tokens even across unchanged v68 processes. This is preserved in
+prior-controller-output-variation.json and request work counters. It does not
+prove a new copying-induced arithmetic bug or establish that adaptation alone
+causes the missing benefit. Full-logit replay exactness and request-level output
+variation answer different questions.
+
+## Quality and next action
+
+Four ordinary-decoding extraction, email, Python-function and tool-selection
+prompts separately compare v68 with the demand-only candidate. Exact prompt IDs,
+tokens, text, stream and parsed tool calls agree, with successful stop terminals
+inside the 15 GB ceiling. Independent values/function/tool checks and the manual
+email review are preserved in the quality receipts. This narrow control does not
+establish broad model quality, application readiness or negligible quantization
+loss. Both arms return correct clamp behavior but add a Markdown code fence
+despite the only-code instruction; this unchanged strict-format failure remains
+visible. Existing Fast recall failures remain tracked separately in
+[[records/measurements/native-prepared-execution]].
+
+The next focused control fixes the chosen speculative depth during complete
+generation, while retaining proposal generation, target verification, sampling,
+rollback, streaming and read-ahead. It will compare copy versus aligned-direct
+staging in the same binary, without full-logit readback between passes. This is
+planned, not executed here and not a proposed product mode. If the gain survives
+identical complete work, investigate adaptive work changes; if it disappears,
+the component result does not transfer even without batch variation. Avoid
+another scheduler port or parity promise until that distinction is measured.
+
+## Q2 complete-generation copy controls and layout isolation
+The clean layout control finds no consistent padding penalty. The complete
+fixed-work controls preserve exact generation but fail timing qualification
+because of global paging in their last arms. No optimization is adopted, and
+Splash parity remains unproved. Fast, normal defaults and all five v68 build
+artifacts remain unchanged.
+
+This follows [[records/measurements/q2-continuation-and-copy-diagnosis]]. Raw
+fixed-depth results are in [[sources/runs/2026/10/2026-10-25-q2-fixed-depth-excluded]], the clean layout comparison in
+[[sources/runs/2026/10/2026-10-25-q2-padding-layout-control]], and recorded-choice replay in [[sources/runs/2026/10/2026-10-25-q2-recorded-choices-excluded]]. The earlier clean
+ordinary-request rejection of both direct-read candidates remains authoritative.
+
+## Separate layout from copying and adaptive work
+
+The earlier fixed-depth test used padded storage in both arms, while normal
+retention compared the candidate against original v68. Those are different
+baselines. A fixed-depth gain alone could not identify the adaptive selector
+as the cause of the lost ordinary-request benefit.
+
+The new normal-adaptive ABBA therefore disables direct reads and diagnostic
+depth choices. A is v68 at 4,067 slots; B is padded storage with original copies
+at 4,062 slots. It tests the full charged layout tradeoff at 15 GB and
+8,192-token context. All four arms pass the clean-run and actual-memory gates.
+
+| Task | v68 median request seconds | Padded-copy median request seconds |
+| --- | ---: | ---: |
+| Code | 12.758 | 12.602 |
+| Prose | 13.567 | 13.555 |
+
+The differences are about 1.2% and 0.1%, with opposite signs across pair orders.
+They do not demonstrate a stable gain or a material layout penalty in these
+requests. They do not prove layout has zero cost or establish a controller bug.
+
+## Complete matched-work controls
+
+Two depth-three ABBA protocols preserve identical outputs and core work in all
+32 requests. Their final A arms record four and 51 global swap-in pages,
+respectively. Both whole timing protocols remain excluded; the repeat does not
+replace the original result.
+
+A separate diagnostic freezes the actual adaptive choices from the first normal
+padded-copy arm, including zero through seven proposals. It retains complete
+proposal generation, verification, sampling, rollback and streaming, without
+per-pass full-logit readback. A and B share one binary and 4,062 slots at 15 GB;
+only scratch/copy versus aligned direct reads changes. All 16 requests reproduce
+the captured outputs and core work exactly, including the two warmups.
+
+The final A arm records eight global swap-in pages during timed prose. The
+entire protocol is timing-excluded despite consistent favorable raw ratios.
+No swap-outs or competing build are observed, and actual memory, headroom and
+thermal checks pass. Global paging is not attributed to the model. Functional
+acceptance remains valid; selecting the first three arms would not qualify speed.
+These controls do not establish broad model quality or resolve the existing
+Fast recall failures in [[records/measurements/native-prepared-execution]].
+
+## Next action and limits
+
+The layout hypothesis is narrower, while a clean complete-generation copy gain
+and the adaptive interaction remain unresolved. Do not repeat these fixed-work
+benchmarks just to obtain a passing aggregate. The prepared ordinary copy-toggle
+control has not run because its declared prerequisite was not satisfied.
+
+The next focused investigation should buffer the cost table and confidence used
+at each ordinary adaptive decision, chosen width, exploration state, accepted
+labels and actual cycle work. Locate the first divergence and separate changed
+cost estimates, changed outputs/routes and external timing noise. A trace-enabled
+behavior control needs a trace-disabled counterpart before speed attribution.
+Neither a controller rewrite nor a production fixed schedule is justified yet.
+Keep only a later targeted fix that passes correctness and trace-disabled complete
+requests against both v68 and Splash. No release, Smart promotion or app-readiness
+claim follows from this checkpoint.
+
+## Q2 adaptive costs and demand boundaries
+The adaptive selector follows its implemented cost model, and the measured
+32-record demand boundary is too rare to explain the Q2 gap. No new runtime
+optimization is retained. Fast stays unchanged, and Splash parity remains
+unproved. This follows [[records/measurements/q2-complete-copy-controls]];
+raw evidence is in [[sources/runs/2026/10/2026-10-25-q2-cost-and-demand-diagnosis]].
+
+## Observe choices before changing the controller
+
+A bounded diagnostic records the cost table, confidence, fitted acceptance,
+selected width, actual cycle duration, preparation flag and cache work. It
+buffers records and writes once per request, with no per-read logging or GPU
+readback. A refused 15 GB launch is preserved. Both subsequent controls use
+12 GB, 1,892 actual slots and 8,192-token context. Smaller-budget behavior does
+not establish 15 GB performance.
+
+The frozen-choice A/B control reproduces all eight complete requests' output
+and core verification work. The ordinary A/B control uses the normal adaptive
+selector. Both compare scratch/copy and aligned-direct paths in one executable;
+all four processes pass the environment and actual-memory gates. Timing with
+the trace enabled is not a retention result.
+
+The first ordinary choice differs at cycle four, context 100: confidence and
+acceptance coefficients still match, but the cost tables choose one versus zero
+proposals. Swapping only those tables swaps the decision. This establishes a
+cost-driven work divergence; it does not establish that either choice is wrong
+or explain the whole request gap. Subsequent acceptance fits and work diverge.
+The measured steady actual/predicted median ratios by width are roughly
+0.84 to 1.12, without an obvious persistent width-specific cost cliff.
+
+Actual Swift policy replay reproduces all 2,290 snapshots exactly. This is
+stronger than a separate approximate selector implementation. An initial
+untyped JSON parser changed a stored coefficient by one ULP; using typed
+Float/Double decoding corrects the harness without relaxing exact equality.
+
+## Preparation is a startup effect, not the demonstrated steady bottleneck
+
+The first cost observation can include one-off pipeline preparation. In the
+frozen-copy control it lasts 3.235 seconds; the next three-row pass is predicted
+at 2.311 seconds but takes 0.338 seconds. In the later ordinary control the
+first cycle is only 0.296 seconds, illustrating warm preparation variability.
+
+Offline replay can omit that observation while keeping actual widths,
+confidences, acceptance labels and cycle counts fixed. Early choices change,
+but no hypothetical choices change in either timed request of any arm, and
+cost-table differences have almost disappeared by then. Real alternate early
+choices could affect later labels; this held-work replay does not test that.
+Do not claim that omission is universally harmless or faster.
+
+The earlier v60 omission candidate in
+[[records/measurements/native-prepared-execution]] is not a new untried fix:
+its protocol was heat-excluded and it was removed. The new evidence does not
+justify reviving it or rewriting the adaptive controller to improve one trace.
+
+## Read traffic and demand boundaries
+
+The earlier physical-read observer is timing-excluded because native pages.
+Its successful reads still support bounded offline accounting. Over the same
+frozen 111 passes, native reads 94.658 GB and Splash 87.324 GB. Exact repeated
+extents within a native pass total 1.148 GB, about 1.21% of its bytes; 0.725 GB
+are concurrent repeats. Splash has no exact repeats in that trace. Repeats do
+not by themselves prove avoidable wall time, and explain only a small part of
+the byte difference.
+
+Native's fetched counter excludes adopted forecasts, whereas Splash's read
+counter includes those misses. Correcting that comparison gives 45,109 versus
+45,009 logical demanded records. Both implementations exclude already-resident
+forecast candidates. There is no missing residency filter. Extra traffic can
+reflect forecast lifetime, prediction differences, padding or simply more time
+available for read-ahead; it is not automatically the cause of slower execution.
+
+A fresh buffered demand observer runs at 15 GB with 4,067 slots. Every full
+logit hash across two rounds and 111 passes matches the original v68 sequence.
+The measured round has 5,328 layer events, 45,109 logical misses, 21,993 adopted
+forecasts and 23,116 demand reads. Only 14 events exceed the 32-record batch
+limit. Actual direct batches equal the sum of the predicted ceiling counts,
+4,501 versus 4,487 if every nonempty demand used one batch.
+
+Those 14 complete host demand spans total 66.418 ms out of 12.377 seconds of
+verification, about 0.54%. Even eliminating those entire spans would not explain
+the multi-second component gap. Their spans overlap GPU work, and real removal
+would save less. This rules out that batching boundary as the main explanation
+for this captured workload, not every possible cache budget or prompt. Keep
+its existing memory bound instead of enlarging it on a source-code hunch.
+
+## Retained state and next action
+
+Runtime sources and default artifacts remain byte-identical to v68. Preserve
+the earlier whole-request rejection of combined and demand-only copy changes,
+and the separate Fast recall failures. This diagnostic is not app readiness,
+a new release, hardware-range qualification or evidence of negligible Q2 loss.
+
+The sustained-sequence copy ablation remains the strongest causal lead. A
+narrow forecast-only aligned-read control can now distinguish that contribution
+while retaining the original demand staging and cache capacity. The earlier
+unaligned forecast candidate failed complete requests; the aligned forecast
+candidate failed an earlier single-state component gate and did not reach
+complete requests. Neither result should be conflated with the other or erased.
+Keep a change only after a repeatable trace-disabled sequence benefit and clean
+normal complete requests against v68 and published Splash.
+
+## Q2 forecast-only continuation control
+The narrower aligned forecast-read candidate preserves arithmetic, but its
+whole timing protocol is excluded by global paging. It is not retained, and
+the requested Q2 speed target remains unachieved. Fast is unchanged. This
+follows [[records/measurements/q2-adaptive-cost-and-demand-shape]]; evidence is
+in [[sources/runs/2026/10/2026-10-25-q2-forecast-only-sequence-excluded]].
+
+## Why this intervention was distinct
+
+The earlier unaligned forecast-only candidate failed complete requests. The
+later aligned forecast-only candidate failed a single-state component gate
+and never reached complete requests. The new sustained-sequence study showed
+larger copy sensitivity: combined demand/forecast removal improved frozen
+work, while demand-only removal recovered much less. That contrast motivates
+isolating forecasts, but is not an additive causal decomposition.
+
+This control reuses the checked aligned forecast patch without the larger
+padded demand staging. It keeps original demand reads, batching and 4,067
+slots, fitting padded forecasts within the existing 128 MiB reservation. It
+changes no controller, sampling, weights or Fast execution. Original-byte,
+cache replacement, mixed forecasts, cancellation, failure/retry, resize and
+Metal API validation checks pass. Native full logits across all four arms
+match v68 exactly; Splash retains its own repeatable numerical reference.
+
+## Whole-protocol exclusion
+
+One trace-disabled ABSSBA runs the frozen 111-pass code continuation at 15 GB,
+8,192-token context and 4,067 slots. Every process runs two rounds, first warmup.
+Actual memory stays below 15 GB, headroom passes, thermal state stays nominal
+and no competing compiler is observed. Reverse B records 14 global swap-in
+pages, with no swap-outs. This excludes the entire timing protocol under its
+frozen rules. It does not prove the model caused paging or explain the duration
+change. The earlier favorable arms cannot rescue the aggregate.
+
+For audit only, the recorded verification seconds are:
+
+| Arm | Forward order | Reverse order |
+| --- | ---: | ---: |
+| Native v68 | 11.894 | 11.823 |
+| Aligned forecasts only | 10.453 | 11.491 |
+| Splash fixed verification | 9.513 | 9.499 |
+
+These are excluded diagnostic values, not qualified speed claims. The two
+candidate/baseline ratios differ substantially. The prepared normal-adaptive
+complete-request comparison does not run because its component prerequisite
+fails. No retry replaces the exclusion. All 509 runtime input hashes and five
+default build artifacts are restored to v68. No release, Smart promotion or
+application readiness follows.
+
+## Next discriminating observation
+
+The demand observer also identifies a narrower scheduling question. Native
+assigns piece jobs to fixed reader lanes; Splash lets a free reader claim the
+next job. The earlier dedicated-thread experiment retained the native lane
+body, so it did not test dynamic job distribution. In the captured measured
+round, 526 layer events have at least 11 demand records, enough for more than
+32 piece jobs. Their entire host spans total 1.052 seconds.
+
+That is an upper bound including useful reads, adoption and synchronization,
+with GPU overlap. It is not 1.052 seconds of lost time or proof that a shared
+reader pool helps. Measure whether some lanes are idle while another lane
+still owns multiple queued reads before changing the scheduler. Prefer a small
+job-distribution fix if justified; do not port an entire reader architecture
+or repeat excluded copy tests merely to obtain a passing aggregate.
+
+## Q2 forecast-reader count and scheduling triage
+Reducing Q2 forecast readers from four to two does not earn retention. The
+full timing protocol is excluded by paging, and its raw paired directions
+reverse. Production and Fast remain unchanged. The speed target remains
+unachieved. This follows [[records/measurements/q2-forecast-only-continuation]];
+raw evidence is in [[sources/runs/2026/10/2026-10-25-q2-forecast-reader-count-excluded]].
+
+## Test the scheduling hypothesis before importing a scheduler
+
+The earlier physical trace can identify each native demand piece using its
+GGUF offset and destination. All 111 pass counters equal the resulting number
+of three-piece demand records, and the recorded order matches native's static
+lane partition. Four dominant destinations belong to forecast scratch; the
+remaining 18 belong to demand workers.
+
+An offline model assigns those observed pread durations to static lanes versus
+an earliest-free worker queue. Across 4,493 batches, its predicted critical
+path totals are 2.852 versus 2.906 seconds. This model does not support a
+substantial dynamic-job win. It excludes copying, task/queue overhead, actual
+GCD policy, changed read latency and GPU overlap. The underlying trace is
+paging-excluded. These are modeled service times, not measured speed or proof
+that workers or the GPU are never idle. No shared-pool rewrite follows.
+
+The fresh demand observer records 52,900 issued forecast tickets, 21,993
+adoptions, 17,464 ready expirations and 13,443 cancellations. Ready expirations
+represent 24.142 GB of completed payload that was unused. Cancelled tickets
+are not equivalent to physical bytes read. Blocking joins total only 4.2 ms,
+so they do not explain a multi-second gap in this trace. These observations
+justify testing less speculative concurrency, not assuming it is the cause.
+
+## One bounded reader-count intervention
+
+The candidate changes only Q2 forecast concurrency and its diagnostic identity.
+Demand readers, layout, CPU copies, 128 MiB reservation, weights, arithmetic,
+controller and 4,067 cache slots stay unchanged. Fast's path stays unchanged.
+One ABSSBA runs at 15 GB and 8,192 context, with two rounds per process and
+the first used as warmup. The measured continuation contains 111 actual
+verification passes with evolving cache and rollback state.
+
+For audit only, the recorded verification seconds are:
+
+| Arm | Forward order | Reverse order |
+| --- | ---: | ---: |
+| Native v68, four readers | 11.518 | 11.556 |
+| Native candidate, two readers | 10.712 | 12.142 |
+| Splash fixed verification | 9.536 | 9.406 |
+
+The raw paired candidate/baseline ratios are 0.930 and 1.051. Final A also
+records 924 global swap-in pages, excluding the entire protocol under its
+frozen rules. All other paging checks, actual memory/headroom, thermal state
+and competing-build checks pass. No competing compiler or model was found
+after the user's request to check the other chat again. The paging is not
+attributed to the model or treated as a correctness failure.
+
+The two candidate arms both pass their environmental checks, but their
+verification times differ by 1.430 seconds. Measured demand-I/O spans are
+4.281 and 4.203 seconds, slightly lower in the slower run. This does not
+support attributing that variability solely to demand-read waits. These spans
+overlap GPU work; subtracting them is not an additive GPU execution budget.
+Sampled CPU user and system times also rise. Neither CPU waiting nor command
+duration proves that the GPU is idle or measures its arithmetic utilization.
+
+## Correctness and retained state
+
+Every native full-logit hash matches the earlier v68 reference, including the
+two-reader arms. Generic lane-budget/lifetime checks and installed Q2 original
+bytes, grouped mixtures and Metal validation pass. The existing piece-reader
+test uses four queues; a prepared parameterized two-queue cancellation,
+failure and promotion test is explicitly unexecuted. The diagnostic change
+also does not update the app's expected-configuration identity contracts.
+It is a component candidate, not a qualified app configuration.
+
+The component gate fails. Prepared complete-request, smaller-cache and extra
+lifetime comparisons do not run. No repeat selects a more favorable aggregate.
+All 509 runtime input hashes and five default build artifacts match v68.
+No release, Smart promotion or app-readiness claim follows, and known Fast
+recall failures remain separate.
+
+The remaining cause is unresolved. The sustained extra-copy ablation remains
+the strongest causal lead, while fixed reader count, demand batch boundaries
+and modeled static lane imbalance have not earned a fix. Further work should
+separate actual copy/preparation work from device work during representative
+mixed-hit passes, or isolate the observed adaptive-work divergence at a safely
+fitting budget. Another port or reader-count sweep needs new evidence; smaller
+budget diagnosis cannot establish the requested 15 GB result.
+
+## Q2 matched complete work at 12 GB
+Holding actual verification choices fixed reproduces complete work exactly,
+but does not establish a repeatable copy-removal benefit. The timing protocol
+is excluded and no runtime change is retained. This follows
+[[records/measurements/q2-forecast-reader-count]] and the earlier trace-enabled
+[[records/measurements/q2-adaptive-cost-and-demand-shape]]; evidence is in
+[[sources/runs/2026/10/2026-10-25-q2-matched-work-12gb-excluded]].
+
+This is a new, smaller-cache diagnostic, not a replacement for excluded 15 GB
+protocols. One trace-disabled ABBA compares copies versus aligned direct reads
+in the same padded binary at 12 GB, 1,892 slots and 8,192 context. Each process
+runs two warmups and then code and prose, 384 output tokens each. Actual depth
+lists come from the prior 12 GB ordinary baseline, not a newly invented fixed
+depth. All 16 outputs and core work match that recorded reference exactly.
+
+First A records four global swap-in pages and reverse B twelve; no swap-outs
+occur. Peak physical footprint stays below 9.31 GB, with the headroom, thermal
+and competing-build gates passing. The entire timing protocol is excluded
+under its frozen rules. This is not an out-of-memory or correctness failure,
+and the pages are not attributed to the model.
+
+For audit only, copy-path code durations are 17.721 and 20.551 seconds; direct
+durations are 16.769 and 17.155. Prose copy durations are 18.693 and 21.307;
+direct durations are 17.667 and 23.189. These are excluded observations, not
+qualified speed claims. Prose changes direction across pairs even though the
+tokens and verification work are fixed. The observations do not justify
+attributing all remaining variability to the adaptive controller.
+
+The prerequisite for the prepared ordinary-adaptive follow-up fails, so it
+does not run. No retry follows. Original v68 runtime inputs and default
+artifacts are unchanged, including Fast. Smaller-cache diagnosis does not
+establish 15 GB performance, negligible quantization loss, or app readiness.
+Further investigation needs attributable preparation/copy/device evidence
+under concurrent reads; another complete-request retry is not a root cause.
+
+## Q2 weight-copy attribution and GPU-stage identity
+The new traces identify substantial native weight-copy traffic and explain the
+variable encoder count. They do not establish a retained fix or Splash parity.
+Original v68 and Fast remain unchanged. This follows
+[[records/measurements/q2-matched-work-12gb]]; sources, guard receipts,
+instrumentation checks and analysis are in
+[[sources/runs/2026/10/2026-10-25-q2-copy-and-stage-diagnosis]].
+
+## Matched scope and observer checks
+
+Both diagnostic pairs use the exact Q2 checkpoint, 15 GB budget, 4,067 actual
+expert slots, 8,192 context and the frozen 111-pass code continuation. Each
+process runs two rounds; the first is warmup. Native keeps four forecast
+readers, original copies and normal MLX limits. Both engines receive the same
+observer set within each pair. These are target-verification localization
+experiments, not ordinary adaptive complete requests or new semantic quality
+tests. Native full logits remain byte-identical to earlier v68.
+
+The corrected copy observer records large memcpy/memmove calls in bounded
+preallocated storage and writes only numeric metadata at exit. A four-thread
+fixture verifies copied bytes, overlapping memmove, return pointers, eight
+large records and exclusion of small copies. An initial thread-local-bootstrap
+abort is preserved as an instrumentation failure; no model ran with that
+version. The named-stage observer independently checks known GPU output and
+exact pipeline/encoder counts. No trace overflows occur.
+
+Both fresh native/Splash pairs pass global paging, actual footprint, headroom,
+thermal and competing-build guards. Native's named-trace preview is parsed
+after native exits and during Splash setup; the instrumented pair is not used
+for speed qualification. CPU/GPU intervals retain their attribution limits.
+
+## Copies overlap useful work
+
+The copy trace attributes a weight copy only when its source lies inside the
+last completed read on that same thread and maps to an exact original GGUF
+expert-piece extent. Four dominant scratch destinations identify forecast
+readers; the remaining demand counts independently match all pass counters.
+
+Across the measured native passes, demand performs 70,716 piece copies,
+32.586 GB, and forecasts perform 116,788, 53.816 GB. All pieces are 460,800
+bytes. Splash records no corresponding large CPU copies. Native demand-copy
+CPU service totals 1.090 seconds and forecast-copy service 1.584 seconds.
+These parallel service sums are not additive request time.
+
+Native verification spans total 11.957 seconds. Copy intervals cover 2.291
+seconds, with 2.195 seconds overlapping reads and 1.330 overlapping measured
+GPU stages. Triple overlap is 1.305 seconds. Only 0.071 seconds of copies lies
+outside both read and GPU-stage intervals. This does not mean copies are free:
+they can compete for shared memory while other work runs. It also does not
+justify subtracting 2.291 seconds from a request or treating CPU waits as GPU
+idleness. The earlier Splash added-copy ablation in
+[[records/measurements/q2-continuation-and-copy-diagnosis]] is the stronger
+causal sensitivity evidence.
+
+The category table in the raw analysis spans first-pass start to last-pass end,
+including commit gaps. Its 220 unattributed copies occur in those gaps, outside
+the verification spans summarized above. Do not silently count them as expert
+transfers or combine gap and pass totals.
+
+## Extra encoder count is explained, not a major device interval
+
+MLX can commit after either an operation count or an input-byte threshold.
+Separate relaxed-byte and relaxed-operation controls do not remove the variable
+encoder pattern. Raising both together also leaves it. All native logits stay
+exact. The byte-only B arm has four global swap-in pages, so no speed comparison
+is drawn from that protocol; the combined control is clean. No limit change
+is retained, and another threshold sweep is not the next action.
+
+The named trace records 17,090 native encoders versus the ordinary three-per-layer
+plus-tail pattern's 16,317. Every one of the 773 extras contains only
+`g1_copybfloat16bfloat16`. Their total device interval is 0.003242 seconds.
+That rules out a large amount of device execution inside those extra encoders;
+it does not measure their full host/submission cost. Earlier command-count
+reductions also failed to establish a useful complete-request improvement.
+
+Native's 5,328 expert encoder groups total 3.300 seconds, including repack,
+gather and expert projection work where needed. All other groups total 3.545
+seconds. Splash's 5,550 stages total 4.757 seconds, but each stage usually
+combines expert work with the following resident computation and routing.
+Those totals are not an equal-kernel decomposition. Public stage timestamps
+include scheduling/memory effects, not ALU utilization. Generic prepared
+projection names are `run`; their semantic identity is not inferred from that
+name. Both engines have zero unknown or unmatched pipeline assignments.
+
+## Best next action
+
+Use a fixed-capacity, same-binary and same-layout native copy-on/copy-free
+control with these named stages, alongside Splash. Hold verification inputs,
+cache capacity, widths and precision fixed. Test whether removing CPU transfers
+shortens the overlapping expert GPU intervals, rather than inferring that from
+total copy service time. Keep the earlier failed complete-request direct-read
+candidate rejected unless a new justified fix passes ordinary old/new/Splash
+requests. A microbenchmark or fewer submissions alone cannot reopen it.
+
+No new runtime change is retained. All 509 runtime inputs and five default
+artifacts match v68. Fast recall failures remain separately tracked in
+[[records/measurements/native-prepared-execution]]. Quantization quality, Smart
+promotion, full app readiness and the complete-request speed goal remain open.
+
+## Q2 metadata costs and paired-code decoder rejection
+A smaller Q2 decoder improves cached expert kernels but does not earn a
+repeatable complete-request or partial-miss verification improvement. It is
+reverted. Repeated file-stamp checks are also not a sufficient explanation for
+the gap. Original v68 and Fast remain unchanged; parity remains unproved.
+This follows [[records/measurements/q2-copy-and-stage-diagnosis]]. Raw commands,
+source snapshots, identities, full outputs and guards are preserved in
+[[sources/runs/2026/10/2026-10-25-q2-decoder-and-metadata-diagnosis]].
+
+## Copy/stage control remains excluded as a timing aggregate
+
+The same padded native binary runs with copies on/off at 4,062 actual slots,
+15 GB and 8,192 context, alongside matched Splash. The first A arm has 124 global
+swap-in pages, excluding the whole ABSSBA timing protocol. The other five arms
+are clean but cannot rescue that aggregate. All native full logits match v68;
+B eliminates the observed expert CPU copies. Every named pipeline assignment
+resolves. The no-copy branch's zero-copy count is expected, not a failed
+three-copies-per-demand integrity check.
+
+The two clean copy-free B runs still differ substantially. Expert GPU-stage
+intervals total 3.421 and 2.561 seconds; other stages total 3.583 and 2.679.
+Both categories are about one-third longer in the slower run, while read
+interval unions differ by about 11%. These observations localize broader
+execution variation. They do not establish GPU utilization, clock causation,
+or a qualified direct-read speedup. The earlier failed complete-request
+copy-control decision remains in force.
+
+## Actual metadata cost is much smaller than a tight-loop probe suggests
+
+Every ordinary Q2 piece read validates both shard descriptors before and after
+reading. A continuous metadata-only probe shows considerable CPU contention:
+22 threads making 785,648 fstats take about 0.59 seconds of wall time and
+7.3 seconds of summed CPU time. That artificial concentration is not the
+interleaved inference schedule and cannot be quoted as recoverable request time.
+
+The actual clean verification trace records 778,106 successful fstats during
+11.306 seconds of measured passes. Their summed syscall service time is
+0.366 seconds, their interval union is 0.315 seconds, and only 0.010 seconds
+lies outside both read and GPU-stage intervals. Median service is 0.375
+microseconds; p99 is 2.583 microseconds. Every full native logit hash stays exact.
+Parallel service times and overlapping intervals must not be added together.
+This evidence does not justify a new batch-validation API as the primary fix;
+all source-change rejection and publication boundaries remain intact.
+
+## A genuine cached-kernel gain is insufficient
+
+The native decoder originally extracts four adjacent codes repeatedly. A small
+Q2-only candidate spreads eight codes once, then reconstructs four pairs with
+the same FP32 scale and FP16 rounding. Slot representation and capacity stay
+unchanged; the Fast affine branch retains its arithmetic.
+
+A clean cached-kernel probe compares original native, candidate and pinned
+Splash on identical compressed values and inputs. Gate/up and down, 10/30/60
+tiles and 1/2/3/8 live rows give 24 shape combinations. Candidate median kernel
+time falls 3.37% to 15.22%, with all 192 measured candidate/baseline round
+comparisons favorable. All active output bits match both other implementations.
+This is synthetic cached expert work, excluding shared experts, repacking,
+resident layers, reads and complete generation.
+
+Native correctness checks pass, including raw compressed-byte arithmetic,
+Fast affine kernels and GPU ownership. A real 111-pass continuation over two
+rounds reproduces all 222 v68 full-logit hashes exactly. These are arithmetic
+and integration checks, not evidence of negligible target-quantization loss.
+
+## Clean ordinary requests reject the candidate
+
+All engines use 15 GB, 4,067 actual slots and 8,192 context. ABCCBA has two
+warmups and two 384-token timed prompts per process, normal automatic drafting,
+zero reused prefix tokens and no timing observers. Every arm passes memory,
+paging, thermal and competing-build guards.
+
+| Complete-request median, seconds | Original v68 | Candidate | Splash |
+| --- | ---: | ---: | ---: |
+| Code | 12.9562 | 12.4829 | 11.7603 |
+| Prose | 13.3910 | 13.5403 | 13.3725 |
+
+Code improves 3.65% in the median but remains 6.14% behind Splash. Prose
+regresses 1.12% against native and remains 1.26% behind Splash. Candidate/native
+pair ratios reverse: code 1.0194 and 0.9125, prose 0.9737 and 1.0498. This fails
+the declared keep gate of improvement in both directions and at least 1% in
+both task medians, and fails the separate 5% Splash gate. Do not retain a
+synthetic win by overlooking these ordinary-request outcomes.
+
+Automatic choices differ. In the first code pair, original/candidate verify
+472/491 target tokens and fetch 24,737/25,883 demanded experts despite the same
+384-token output limit. Emitted token sequences also differ across normal
+runs; batch-dependent target arithmetic and changing choices must remain
+separate from the exact fixed-input implementation check. The first warmup
+has 141/150/2/141 zero-proposal cycles across A/B/B/A and 213/211/111/213 target
+passes. This identifies substantial startup/adaptation variation but does not
+prove a new compiler or controller fix. Earlier preparation-cost investigations
+and the heat-excluded v60 candidate are preserved in
+[[records/measurements/q2-adaptive-cost-and-demand-shape]] and
+[[records/measurements/native-prepared-execution]].
+
+## Holding work fixed does not rescue the decoder
+
+A post-rejection ABBA runs the same 111 verification passes, two rounds per
+process, original/candidate, 15 GB and 4,067 slots, with no injected observers.
+All four arms are clean. Every measured round has 45,109 logical misses and all
+888 full logit hashes match v68. Forecast adoption and physical read scheduling
+can still vary; fixed logical work does not claim identical physical I/O.
+
+Measured verification totals are A 11.1448, B 10.8133, B 11.2305, A 10.9823
+seconds. Median candidate time is only 0.38% lower; paired ratios reverse at
+0.9703 and 1.0226. Thus the ordinary selector is not the sole reason the cached
+kernel gain fails to produce a stable useful-work improvement. The candidate
+stays reverted; this attribution control is not a replacement retention test.
+
+## Retained state and next diagnostic boundary
+
+All 509 runtime inputs and five default artifacts match v68. No Fast change,
+new release, Smart promotion or app-readiness claim follows. Fixed-length
+throughput prompts are not complete semantic jobs. Existing Fast recall and
+Python-only formatting failures remain separately tracked.
+
+The unresolved lead is the interaction between partial misses, CPU transfers
+and GPU execution rate. Before another reader or kernel port, align read-only
+GPU frequency observations with exact frozen-pass and GPU-stage windows.
+Reuse the already verified rootless macmon instrument in the prepared-execution
+study; powermetrics requiring root is not an observability blocker. The earlier
+whole-device frequency association is evidence, not a causal conclusion or
+permission to alter power states. Compare cached and partial-miss work,
+account for overlap and instrumentation, and change only useful execution.
+Do not revive GPU spin, priority boosts or a wholesale format rewrite merely
+to chase a favorable timing.
+
+## Q2 streaming interaction and passive GPU frequency
+Q2 complete-request parity remains unachieved. No production change is retained and Fast remains unchanged. The clean control localizes an additional slowdown to partial misses combined with read-ahead; it does not establish the underlying scheduler or hardware cause. This follows [[records/measurements/q2-decoder-and-metadata-diagnosis]]. Raw evidence and individual exclusions are in [[sources/runs/2026/10/2026-10-25-q2-frequency-and-cache-diagnosis]].
+
+## Exact-window observations and tracing control
+
+The existing rootless macmon monitor works without administrator access. Its 200 ms whole-device samples are aligned to exact frozen verification windows. The first NSSN adds symmetric named GPU-stage/read observations. Native's measured stage intervals total about 7.51 and 7.23 seconds at stage-weighted frequencies around 711 and 749 MHz. Splash totals about 5.01 and 4.93 seconds around 1,374 and 1,410 MHz. Both native arms record global swap-ins, excluding the whole timing protocol. These are localization observations, not a qualified speed comparison or proof of GPU utilization.
+
+A second NSSN removes both injected observers. Native verification-window frequencies remain about 776 and 704 MHz; Splash observes about 1,384 and 1,286 MHz. Shifting sample boundaries by one interval does not remove the frequency separation. One Splash arm records four global swap-in pages, so this whole timing aggregate is also excluded. The repeated association without injected tracing argues against tracing alone causing the low native frequencies. It does not establish clock frequency as an independently controllable cause of the complete-request gap.
+
+## Clean cached and controlled-miss comparison
+
+Both engines replay the same four-row input at the same prefix, with BF16 activation/KV, FP32 recurrent state, 8,192 context and 4,067 slots under a 15 GB ceiling. The partial condition discards the same 393 common routed keys before each pass. Each condition has two warmups and 64 measured passes; process order is NSSN. All four arms pass the complete guard protocol. Native peaks at about 11.63 GB and Splash at about 12.65 GB; sampled headroom stays above 11 GB.
+
+Every native full logit hash equals the previous reference, and every Splash pass retains its separate exact reference. The native diagnostic changes only the test command and eviction seam. No inference kernel, cache capacity, precision or Fast path changes.
+
+| Condition | Native median pass ms | Splash median pass ms | Native observed MHz | Splash observed MHz |
+| --- | ---: | ---: | ---: | ---: |
+| Cached, read-ahead off | 39.59 | 39.41 | 1,601 | 1,606 |
+| Partial misses, off | 94.06 | 94.36 | 1,418 | 1,484 |
+| Cached, on | 40.84 | 38.92 | 1,603 | 1,603 |
+| Partial misses, on | 111.39 | 96.03 | 630 | 917 |
+
+Each row reports the median of the two process medians, rather than treating repeated passes as independent machines. Frequencies are weighted over the measured verification intervals. Cached/off is effectively equal. Demand-only partial misses are also effectively equal. Partial/on leaves native about 16% slower in this controlled workload and shows a deeper frequency reduction in both native processes. Both engines slow as that sustained condition continues; Splash also enters the lower-frequency regime.
+
+Cached/on still issues unused forecasts. It is not a pure compute control. Native partial/on adopts roughly half its demanded records, preserving exactly 393 logical misses per pass. Demand counts alone therefore cannot explain elapsed time, and adoption is not automatically a useful-work speedup.
+
+## What this establishes and what remains open
+
+A general native arithmetic or demand-read deficiency does not explain this particular controlled gap: those isolated controls match. The interaction among streaming forecasts, useful GPU work and execution rate is the stronger remaining lead. A frequency reading is an outcome of the workload and OS scheduling, not proof of a defective governor, GPU idleness or a reason to force higher clocks.
+
+The fixed condition order is a remaining confound. Partial/on follows cached/on, and the longer sustained replay differs from the earlier short controls. GPU temperature falls during partial/on as observed GPU power falls, but nominal thermal state and these temperatures cannot exclude other power-management effects. Counterbalance that phase order before assigning causality to the read-ahead transition.
+
+Do not remove read-ahead based on this single-state control. The clean evolving continuation in [[records/measurements/q2-continuation-and-copy-diagnosis]] found that it helps both engines. Complete adaptive requests remain the adoption gate. The rejected decoder, direct-copy, delayed-submission, priority and reader-count experiments do not become qualified because this new association is suggestive.
+
+The next bounded experiment should separate sustained phase/order effects from the forecast/readiness interaction while preserving the same useful work, actual slots and exact logits. Then change only the demonstrated source of delay and compare complete requests against v68 and published Splash. Do not add power tricks, broaden the port, or rewrite a shared reader on the strength of clock association alone. Existing Fast recall and Q2 formatting failures remain separate app-quality gates.
+
+## Q2 condition order, execution context and validation controls
+Q2 complete-request parity remains unachieved. No production change is retained; Fast remains unchanged. These controls follow [[records/measurements/q2-frequency-and-cache-diagnosis]] and narrow the explanation of its sustained partial-miss slowdown. Sources, exclusions and exact-output checks are preserved in [[sources/runs/2026/10/2026-10-25-q2-order-executor-and-validation]].
+
+## Clean condition-order control
+
+The same fixed four-row verification is replayed with 393 common missing keys, 4,067 actual slots, 8,192 context and the same precision boundaries under a 15 GB ceiling. A seed pass precedes both condition orders. Each condition has two warmups and 64 measured passes. Process order is native, Splash, Splash, native; the second pair reverses the four conditions. All four processes pass the guard protocol and retain exact full logits within each engine.
+
+| Condition | Native median pass ms | Splash median pass ms | Native observed MHz | Splash observed MHz |
+| --- | ---: | ---: | ---: | ---: |
+| Cached, read-ahead off | 39.21 | 38.77 | 1,610 | 1,601 |
+| Partial misses, off | 92.98 | 95.41 | 1,531 | 1,504 |
+| Cached, on | 40.31 | 38.59 | 1,606 | 1,605 |
+| Partial misses, on | 116.74 | 76.54 | 572 | 1,371 |
+
+Values are medians of the two process medians, with frequency weighted over measured verification intervals. Native partial/on is about 52.5% longer in this particular control. The earlier clean control showed about 16%; this variation is part of the evidence and must not be collapsed into a stable product speed ratio. Reversing condition order does not remove the separation. Cached and demand-only controls still fail to show a general native compute or read deficiency.
+
+A structural check of the earlier fixed-pass trace also finds that both native partial/off and partial/on already begin each host-readiness wait before the first compute encoder. The extra preceding encoders seen in some evolving-continuation buffers cannot explain this fixed-pass result. No command-buffer patch is justified by that observation.
+
+## Longer execution-context diagnostic
+
+The earlier short queue test did not cover the sustained low-frequency regime. A bounded ABCCBA now compares the original Swift task, a dedicated serial queue at the same user-initiated priority, and a dedicated serial queue at user-interactive priority. The actual executing thread class is asserted; shared Swift executor threads are never boosted.
+
+One arm has eight global swap-in pages, excluding the entire comparative timing protocol. Preserve its results as diagnostic observations: raw partial/on medians aggregate near 114.8, 115.1 and 114.5 ms respectively, with observed frequencies near 588, 598 and 594 MHz. Both higher-priority arms are individually clean but retain the low-frequency slowdown. All 1,584 full outputs match. This does not qualify a priority policy or prove that every scheduling effect is absent; it provides no attributable fix worth carrying into production.
+
+## Output-inspection placement diagnostic
+
+The clean phase-order control has roughly 4.5 ms between native partial/on passes versus 2.6 ms for Splash. Those gaps include both validation and next-pass setup, not solely hashing. Work outside a stopwatch can affect later measured execution, so an ABBA moves native full-output inspection after each condition while retaining evaluated outputs within the physical memory ceiling. Every full output is still checked.
+
+The change reduces native interpass gaps to roughly 2.7 ms and removes about 1.4 ms of immediate validation. It does not produce a sustained improvement. A preliminary segment of B1 runs near 79 ms, then falls back to the slow regime; the first quartile's median is about 83.6 ms and the following three are about 118.4, 117.3 and 117.4 ms. Clean reverse-order B2 has a 117.7 ms median and about 560 MHz. The early apparent gain was transient and is explicitly not a retained win.
+
+B1 has four global swap-in pages, excluding the whole timing aggregate. The observations do not establish a clean speed ratio. All 1,056 full outputs match, and retained-output peak memory stays below 11.90 GB. Inspection overhead alone does not repair the sustained behavior observed here. No production code changes arise from the experiment.
+
+## Next discriminating measurement
+
+Order reversal, a different execution queue, higher submission priority and shorter diagnostic inspection gaps have not yielded a fix. The clock association remains an observed outcome, not an identified root cause. Do not repeat these probes or add a priority, event or power workaround on the basis of a favorable early segment.
+
+Profile ordinary complete requests next, with the normal adaptive controller, sampling, rollback and streaming, without full-logit inspection between target passes. Align passive frequency observations to real request and verification boundaries and compare actual work, rather than transferring a fixed-pass ratio to the product. Establish whether the same sustained execution-rate pattern contributes materially to the remaining complete-request gap before another reader or GPU scheduling change. Preserve the original native baseline and published Splash reference.
+
+All 509 runtime inputs and five default artifacts remain identical to v68. No new complete-request speed or quality qualification is claimed. Existing Fast recall failures and the Q2 strict-format failure remain separate readiness gates in [[records/measurements/native-prepared-execution]] and [[records/measurements/q2-continuation-and-copy-diagnosis]].
+
+## Q2 ordinary requests and submission boundaries
+Q2 parity remains unachieved. No production change is retained and Fast remains
+unchanged. This follows [[records/measurements/q2-order-executor-and-validation]];
+raw observations, instrumentation checks and exclusions are preserved in
+[[sources/runs/2026/10/2026-10-25-q2-ordinary-request-and-submission-diagnosis]].
+
+## Fixed-pass behavior does not establish ordinary-request behavior
+
+A timestamp-only ACCA compares normal complete requests under the same 15 GB
+ceiling, actual cache capacity, context and precision. Native timed-request
+frequencies range from about 1,144 to 1,184 MHz, while Splash ranges from about
+1,101 to 1,189 MHz. The much lower native clock seen in the earlier fixed-pass
+control does not carry directly into these ordinary requests. Frequency is a
+whole-device observation, not arithmetic utilization or a proven cause.
+
+The whole ACCA timing aggregate is excluded by paging in C1 and A3. Its raw
+request times cannot qualify parity. Both engines also produce different texts
+across their own repeated adaptive requests. Pass counts therefore measure
+actual work but do not isolate an efficiency defect by themselves.
+
+Splash's public speculation `cycles` counter excludes anchor-only passes;
+native's verification counter includes them. Use the change in Splash's target
+scheduler batch counter, checked against 48 expert-layer loads per batch.
+Comparing the two public cycle counters directly would miscount the work.
+No product counter or controller is changed.
+
+## Ordinary-request overlap observation
+
+A separate native/Splash pair uses bounded read and named Metal encoder
+observations. Both pass the environmental guards. It remains an instrumented
+diagnostic with different adaptive work, not an eligible speed comparison.
+
+| Timed request | Native encoder union s | Splash encoder union s | Native outside both reads and encoders s | Splash outside both s |
+| --- | ---: | ---: | ---: | ---: |
+| Code | 6.404 | 6.465–6.484 | 1.167 | 0.443–0.462 |
+| Prose | 7.010 | 6.916–6.934 | 1.199 | 0.484–0.502 |
+
+Splash ranges bound missing encoder timestamps by their completed enclosing
+command spans. The bounds are conservative. Encoder intervals include hardware
+scheduling and stalls; neither their sum nor their complement is pure compute
+or recoverable CPU delay. Reads overlap encoder execution and each other.
+Native's read time outside encoder intervals is about 5.10 and 5.40 seconds,
+versus Splash's upper bounds of about 4.59 and 5.02 seconds. These are observed
+interval unions, not additive syscall service times.
+
+The largest native gap group precedes expert repack/gather/execution. Its
+portion outside observed reads totals about 0.42–0.44 seconds per request.
+Smaller gaps precede draft graph execution and per-token sampling. This locates
+further investigation at host preparation and handoff, but does not establish
+that all of those gaps are removable. Unequal work and higher native observer
+call counts limit differential attribution.
+
+## Submission origin and a bounded control
+
+Native's two traced timed requests contain 2,506 and 2,978 successful command
+submissions with zero-length public GPU spans and no observed compute-encoder
+creation or host-readiness wait. That is not proof that they are useless: the
+observer does not capture every event signal or blit.
+
+A clean native-only sampled-stack follow-up identifies 763 sampled zero-span
+submissions. Of those, 718 originate in `NativeExpertSchedule.submit`, through
+MLX asynchronous evaluation's finalizer. MLX can split the real work at its
+automatic thresholds and then submit a separate completion signal. Removing
+that signal without preserving completion, error and resource ownership is
+unsafe.
+
+Reanalysis of the earlier fixed-work control confirms that raising both split
+thresholds reduces command count from 22,393 to 16,427 and zero-span submissions
+from 2,764 to zero. Its verification time remains approximately 11.91 versus
+11.85 seconds. This is a structural observation, not a paired speed win. It
+does not justify a global cap change.
+
+One new untraced ABCCBA tests whether that reduction helps ordinary requests.
+A uses production thresholds, B uses high thresholds only in its isolated Q2
+process, and C is published Splash. All use the same native runtime where
+applicable. The protocol has a paging exclusion and is retained in full:
+
+| Arm | Code request s | Prose request s | Environmental guard |
+| --- | ---: | ---: | --- |
+| 0-A | 12.064 | 13.912 | pass |
+| 1-B | 12.207 | 13.562 | excluded |
+| 2-C | 11.618 | 12.500 | excluded |
+| 3-C | 11.238 | 12.509 | pass |
+| 4-B | 12.437 | 13.650 | pass |
+| 5-A | 12.753 | 14.105 | excluded |
+
+Median B/A ratios are 0.9930 for code and
+0.9713 for prose. These excluded raw values cannot
+qualify a speed claim, and the paired directions must be assessed together.
+No threshold setting or production change is adopted. Do not repeat the
+protocol merely to find a favorable aggregate.
+
+## Remaining work
+
+The ordinary-request observations narrow the next question to useful host
+work around expert handoff and draft preparation. Measure CPU copying and
+preparation against the already observed read/GPU intervals in ordinary
+requests, without treating overlapped service time as delay. Establish the
+avoidable part before another reader architecture or prepared-block port.
+Do not transfer the fixed-pass clock gap to the product, count unequal cycle
+metrics as equal work, or remove completion signals because their GPU span is
+zero. Native language choice still does not promise parity.
+
+All 509 runtime inputs and five default build artifacts match v68. Capped
+streams, memory and instrumentation checks pass within their declared scope;
+no new semantic quality or complete app qualification follows. Existing Fast
+recall failures and the Q2 strict-format failure remain separate gates in
+[[records/measurements/native-prepared-execution]] and
+[[records/measurements/q2-continuation-and-copy-diagnosis]].
+
+## Q2 ordinary-request host work and submission gaps
+No new optimization is retained. Q2 parity remains unachieved and Fast stays
+unchanged. This narrows the ordinary-request observation in
+[[records/measurements/q2-ordinary-request-and-submission-diagnosis]]. Raw
+traces, guards, exact sources and analyses are preserved in
+[[sources/runs/2026/10/2026-10-25-q2-ordinary-host-attribution]].
+
+## Copy service is mostly overlapped
+
+A clean instrumented native/Splash pair measures ordinary adaptive requests
+at the same 15 GB ceiling, 4,067 slots and 8,192 context. It is attribution evidence,
+not a speed comparison or equal-verification-work test.
+
+| Native request | Expert CPU copies | Copied GB | Parallel copy service s | Copy interval union s | Copy outside reads and GPU encoders s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Code | 180645 | 83.241 | 2.474 | 2.091 | 0.061 |
+| Prose | 188112 | 86.682 | 2.518 | 2.155 | 0.064 |
+
+Splash has no corresponding attributed expert copies. Native intervals outside
+reads and GPU encoders total about 1.152 and 1.126 seconds. Copying alone therefore
+does not account for most of that uncovered interval. It can still contend for
+memory while other work runs; the parallel service sum is not a removable
+request delay. This observation does not reopen the previously rejected
+copy/direct-read controls in [[records/measurements/q2-complete-copy-controls]].
+
+## Expert preparation is also a small exposed term
+
+A separate clean native diagnostic adds bounded host timestamps around cache
+selection, expert preparation and asynchronous evaluation. Parent and child
+scopes overlap and must not be summed.
+
+| Native request | Total expert-submit scope s | Async-evaluation child s | All measured host scopes outside reads/GPU s | Entire request outside reads/GPU s |
+| --- | ---: | ---: | ---: | ---: |
+| Code | 0.256 | 0.168 | 0.110 | 1.166 |
+| Prose | 0.272 | 0.181 | 0.119 | 1.175 |
+
+The async-evaluation child itself contributes only about 0.058 and 0.064 seconds
+outside reads/GPU. The measurement does not justify another substantial reader
+rewrite or deferring expert submission on the theory that preparation explains
+the whole gap. These are elapsed scopes, not exclusive CPU utilization.
+
+## The stronger remaining lead is before command submission
+
+Partition each observed gap between GPU encoders at submission of the next
+encoder's parent command. Count overlap with reads once. The ordinary copy
+pair gives:
+
+| Request/engine | Before submission, outside reads s | After submission, outside reads s |
+| --- | ---: | ---: |
+| Code native | 0.720 | 0.432 |
+| Code Splash | 0.100 | 0.367 |
+| Prose native | 0.670 | 0.456 |
+| Prose Splash | 0.119 | 0.447 |
+
+The native host-scope follow-up gives about 0.724/0.720 seconds before submission
+and 0.440/0.455 seconds after it, consistent with the localization. Missing Splash
+stage samples widen its gap bound; their enclosing command intervals limit
+that uncertainty in the companion analysis. Different adaptive work and higher
+native observation counts prevent interpreting these differences as an exact
+recoverable speedup.
+
+Readiness handoff does not identify a larger native delay in the measured
+first-encoder subset. Its resume intervals outside reads/GPU total about
+0.090/0.100 seconds native and 0.107/0.129 seconds Splash. Waits following an earlier
+encoder are not included in that comparison. Command time alone is not proof
+of GPU idleness, and no polling, priority or power intervention is justified.
+
+Existing one-in-eight commit stacks are joined to these pre-submission gaps.
+They locate sampled intervals in target forward/readback evaluation, draft
+proposal evaluation, expert submission and draft-context updates. The samples
+are deterministic and cover only part of the gap; do not multiply their sums
+by eight or turn them into CPU wall-time percentages. In particular, the
+sampled target-forward group includes prefill, so it is not a pure decode term.
+
+## Next focused action
+
+Separate host construction and evaluation in the target resident/router path
+and draft proposal path, using the existing submission-origin evidence to
+choose one bounded intervention. Compare the same useful work before assuming
+that a reusable larger block helps; earlier whole-GDN blocks failed their
+complete-request gates. A proposed fix must remove demonstrated work or delay
+and then pass baseline/candidate/Splash complete requests. Do not resume a
+copy rewrite, global submission-cap sweep, event-wake rewrite or shared-reader
+port from service-time sums or command counts alone.
+
+The two diagnostic protocols complete all 384-token streams within their memory
+limits. This does not add semantic quality or app-readiness evidence. Known
+Fast recall and Q2 strict-format failures remain separately tracked. All 509
+runtime inputs and five default build artifacts match v68; Smart selection,
+Fast, app packaging and release state remain unchanged.
+
+
+## Read-size scope clarification
+
+The read intervals in this record include calls of at least 64 KiB. Smaller
+token-embedding and PLE reads were outside that union; an uncovered interval
+therefore was not necessarily host computation. The all-positive-read analysis
+in [[records/measurements/q2-small-work-and-readiness]] refines that attribution,
+preserving these original observations and raw traces. Overlapped copying and
+preparation may still affect the critical path or contend for memory; small
+exposed time alone does not prove that their implementation is optimal.
+
+## Q2 small-work controls and dependency localization
+Q2 parity remains unachieved. Two small candidates preserve their tested
+arithmetic but fail the frozen complete-request repeatability gate. Neither
+is retained. Fast and production v68 remain unchanged. Exact sources, failures,
+raw outputs, guards and analyses are preserved in
+[[sources/runs/2026/10/2026-10-25-q2-small-work-and-readiness]]. This continues
+[[records/measurements/q2-ordinary-host-attribution]].
+
+## Graph construction and previously omitted small reads
+
+A clean native ordinary-request diagnostic separates graph construction from
+evaluation. It uses the same 15 GB ceiling, 4,067 slots, 8,192 context, BF16
+activations/KV and FP32 recurrent state as the preceding work. Instrumented
+requests are attribution evidence, not speed qualification.
+
+Draft hidden-graph construction totals about 34/39 ms for code/prose. Expert
+submission totals about 251/280 ms, of which 72/102 ms lies outside positive
+read and GPU-encoder intervals. Parent and child scopes overlap. These scopes
+do not justify a broad graph or reader port; they also do not prove that
+overlapped work cannot affect the critical path or contend for memory.
+
+The earlier read union omitted calls smaller than 64 KiB. Native Q2 embeddings
+read a 1,100-byte compressed row per token ID, including repeated mask IDs in
+each draft proposal. These are real reads, not host graph construction. The
+graph diagnostic sees 1,478/1,609 such reads taking 179/120 ms in aggregate;
+each request uses only 209 distinct offsets. PLE reads are smaller still but
+almost entirely overlap other observed activity. Splash has no corresponding
+1,100-byte embedding reads because it retains its prepared compressed table.
+This is not evidence that retaining the whole table would earn its memory cost.
+
+Counting all positive reads leaves about 1.130/1.141 seconds outside reads and
+GPU encoders. Recorded host scopes cover 0.470/0.501 seconds of that interval.
+The residual is about 0.660/0.640 seconds. These complements are elapsed
+intervals, not pure CPU time or guaranteed removable delay.
+
+## Per-lookup embedding deduplication is not retained
+
+The first candidate reads each distinct token row once within an embedding
+lookup and copies duplicate rows inside the same bounded output buffer. It
+adds no persistent cache and changes no arithmetic or Fast path. The graph
+trace identifies 672/810 duplicate mask reads within draft embedding calls,
+with about 71/48 ms of read service. That is demonstrated redundant work,
+not a predicted complete-request speedup.
+
+Twenty-eight original-byte embedding comparisons pass across repeated,
+mixed and unique IDs at 1, 2, 7, 8, 17, 64 and 512 rows. Three invalid-ID
+refusals pass. An independent read observer sees exactly the expected 3,103
+reference-plus-candidate row reads. The test helper's first build attempted
+to access an internal property across modules; its geometry-based correction
+and the failed build are preserved without changing the runtime candidate.
+
+One frozen ABCCBA compares A=v68, B=dedup, C=published Splash 1.4.0. Every
+fresh process uses two warmups and two timed 384-token code/prose requests,
+normal adaptive verification and read-ahead, matched prompt IDs and actual
+cache capacity. No read or GPU observers are injected into timed comparisons;
+macmon is passive. All six arms pass memory, no-paging, nominal thermal and
+no-competing-build gates.
+
+| Task | Baseline median request s | Dedup median request s | Splash median request s | Dedup/baseline | Dedup/Splash |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Code | 12.271 | 11.760 | 11.169 | 0.9584 | 1.0529 |
+| Prose | 13.318 | 13.310 | 12.541 | 0.9994 | 1.0614 |
+
+Code improves in both order directions, but prose is flat in aggregate and
+regresses about 1.30% in the reverse pair. It fails the preregistered
+requirement that each fixture improve in both directions. Adaptive work
+changes, so the larger code gain cannot be attributed solely to the removed
+read service. Neither a favorable task nor an aggregate close to flat earns
+the additional path.
+
+## Joint greedy choices are also not retained
+
+The second candidate starts again from v68. For Q2 greedy sampling with zero
+presence penalty, it evaluates the target logits together with row-wise
+argmax decisions, then consumes the decisions through the existing sequential
+acceptance, cancellation, EOS and rollback logic. Random sampling, penalties
+and Fast retain their original paths. The embedding candidate is not included.
+Earlier ordinary traces identify 384 individual argmax boundaries per timed
+request and about 72-74 ms of preceding exposed gaps.
+
+Two hundred exact comparisons pass against the sequential sampler: FP32/BF16,
+1/2/3/7/8 rows, small/irregular/full vocabulary widths, ties, infinities and
+NaNs. Greedy RNG state is unchanged and unsupported settings fall back. The
+short component process ends too quickly for its footprint sampler to capture
+the real peak; that sampled value is not a memory measurement of the workload.
+
+A second frozen ABCCBA, under the same complete-request contract, is clean in
+all six arms. Its verify phase now includes greedy reduction, so complete
+request time is the comparable metric.
+
+| Task | Baseline median request s | Joint-greedy median request s | Splash median request s | Candidate/baseline | Candidate/Splash |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Code | 12.110 | 12.205 | 11.710 | 1.0079 | 1.0422 |
+| Prose | 13.433 | 13.130 | 12.371 | 0.9774 | 1.0613 |
+
+Prose improves in both directions, but code regresses in the forward pair and
+in aggregate. The same frozen repeatability gate fails. The candidate also
+misses the within-5% target for prose. Removing host waits is not sufficient
+evidence of a useful speedup when extra reductions and changed adaptive work
+can offset it.
+
+## Dependency readiness does not establish the reader as the missing fix
+
+Offline analysis joins each encoded host-ready wait to its publication and
+the following measured GPU encoder. Internal waits use the preceding encoder
+boundary. For first encoders, the lower boundary is the later of command
+submission and the preceding observed GPU encoder end. Metal GPUStartTime can
+follow publication and would incorrectly hide that queued dependency interval.
+Upstream event pointer/value reuse is matched by publication time within the
+owning command, not by assuming a globally unique pointer/value pair.
+
+In the earlier clean copy-attribution pair, native has about 3.552/3.724 seconds
+queued before readiness versus Splash's 4.468/4.980 seconds. Different adaptive
+work and missing upstream encoder timestamps prevent a causal speed estimate.
+The upstream pair omits 184 wait boundaries with missing stage timestamps;
+other missing samples can widen uncovered intervals. After readiness, intervals
+outside reads/encoders are about 0.106/0.111 seconds native and 0.101/0.123
+seconds Splash. The named-trace pair gives the same qualitative result.
+
+This does not show an excess native event-release delay or prove that all
+reader scheduling is optimal. It weakens the case for rewriting the shared
+reader from CPU wait sums, command counts or the previously observed fixed
+probe alone. Useful overlap and actual dependency boundaries must be preserved.
+
+## Narrowing the remaining unobserved regions
+
+Offline localization of the graph diagnostic finds 0.263/0.268 seconds of
+uncovered intervals between expert-demand preparation and the following MoE
+return, and 0.206/0.213 seconds between the final target-layer tail and draft
+context append. Adjacent scope names localize code regions; they are not
+causal stacks or exclusive CPU attribution. The next diagnostic splits those
+regions into demand reads/joins, promoted-ticket joining/adoption, publication,
+target-call execution, logits evaluation, sampling and rollback.
+
+The additional bounded diagnostic completes cleanly at a sampled physical
+peak of 12.294 GB. It records the following code/prose scope totals. These
+are native elapsed intervals; target-call scopes contain the smaller scopes
+and cannot be added to them.
+
+| Scope | Total elapsed s, code/prose | Outside reads/encoders s, code/prose |
+| --- | ---: | ---: |
+| Demand read function, including launch/join/copy/bookkeeping | 4.648 / 4.766 | 0.149 / 0.158 |
+| Publish result and start next forecast | 0.114 / 0.124 | 0.085 / 0.093 |
+| Join promoted forecasts | 0.009 / 0.008 | 0.002 / 0.002 |
+| Adopt joined forecasts | 0.003 / 0.003 | 0.003 / 0.003 |
+| Evaluate final logits | 0.251 / 0.280 | 0.022 / 0.025 |
+| Sequential sampling loop | 0.084 / 0.086 | 0.068 / 0.070 |
+| Rollback and reconcile before draft-context append | 0.055 / 0.057 | 0.053 / 0.054 |
+
+The publication scope includes the `startForecast` callback, which ranks the
+already computed forecast and expires/issues tickets. It must not be described
+as event-signaling cost alone. Joining unfinished forecasts is too small here
+to support an expensive shared-reader rewrite aimed at that join. The sampling
+scope also limits what the rejected greedy-batching idea could remove.
+
+The broader target-call scope contains about 0.475/0.534 seconds outside reads
+and encoders, including its child preparation and demand scopes. Only about
+0.138/0.123 seconds of the full requests remains outside all measured scopes,
+reads and encoders. That is improved localization, not a removed delay.
+Empty demand calls can have equal clock timestamps; the offline analyzer
+accepts and counts those zero-duration scopes rather than rejecting valid
+traces. No model rerun is used to repair that analysis assumption.
+
+The next useful comparison is the demand-read lifecycle under the same real
+verification work: separate launching/joining demand lanes, scratch copying,
+metadata publication and concurrent forecast issue, with observer overhead
+controlled. Current native scope totals alone do not establish an upstream
+excess or justify another architecture port. Preserve the 15 GB baseline and
+measure any narrowly justified change through complete requests.
+
+## Limits and retained state
+
+Both throughput comparisons complete their requested streams within the
+15 GB physical ceiling. They do not establish semantic task quality,
+negligible Q2 quantization loss, model-wide speed or app readiness. Known
+Fast recall and Q2 strict-format failures remain separate. No default,
+model-selection, app-packaging or release change is made.
+
+All 509 runtime source inputs and five default build artifacts are restored
+to v68, whose executable SHA-256 remains
+`db1af8ffd201d3dfb83d64b036db12383b08ac0a522d9079c3343acebe78c89b`.
+No rejected candidate is combined with another to rescue its failed gate.
+Keep the next intervention limited to attributable useful work, then require
+correctness and clean baseline/candidate/Splash complete requests again.
+
+## Q2 demand lifecycle and buffer triage
+Q2 parity remains unachieved. No runtime change is retained, and Fast stays
+unchanged. These diagnostics follow [[records/measurements/q2-small-work-and-readiness]];
+raw evidence is in [[sources/runs/2026/10/2026-10-25-q2-demand-lifecycle-triage]].
+
+## Reader distribution does not yet justify a rewrite
+
+The existing clean ordinary copy trace identifies all 77,754/80,910 code/prose
+decode demand pieces. Unmatched raw copies equal exactly the prefill piece
+counts and precede decode, where prefill uses CPU repacking. Every decoded
+record has three unique pieces. All 4,718/4,928 batches validate against the
+fixed-stride, same-thread lane order; no ambiguous groups are dropped.
+
+For 637/652 batches with more jobs than lanes, the interval from the first
+observed worker's last copy to the final read's start totals only
+0.0573/0.0620 seconds. That is a conditional opportunity for stealing queued
+work after an observed worker finishes, holding prior service fixed. It is
+not a bound on every alternate scheduler, proof of worker idleness or a speed
+prediction. It provides no evidence of a large benefit from replacing the pool.
+
+A separate typical-route capture has consecutive missing-key group savings
+of only 2.76%/2.23% before forecast adoption. Longest runs are three/four experts;
+caps of eight or nine give identical counts. These are not actual demand jobs
+or a bound on the fraction remaining after forecast adoption. Broad coalescing
+is not justified by this count alone.
+
+## Where readiness gaps occur
+
+Decomposing previously matched native readiness windows gives about
+0.026/0.026 seconds before the first observed read, 0.098/0.104 after the last,
+and 0.002/0.002 between reads. Splash has about 0.096/0.107 before and
+0.051/0.068 after. The source readiness analysis excludes missing upstream
+encoder boundaries and records unequal adaptive work. All positive reads,
+including unrelated forecasts, can overlap these windows. These temporal
+positions are not exclusive CPU categories or causal speed estimates.
+The longer native post-read portion is tens of milliseconds, not an established
+explanation of the full request gap.
+
+## Two small hypotheses checked
+
+Both engines read the same original GGUF files. Native also requests
+`F_RDAHEAD=0`; Splash leaves that flag at its default while both request
+`F_NOCACHE=1`. An isolated native change enabling OS read-ahead compiles,
+but a review of [Apple's published XNU read path](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/bsd/vfs/vfs_cluster.c#L4590)
+weakens the mechanism: uncached reads select direct/contiguous I/O, and the
+copy fallback suppresses read-ahead when `IO_NOCACHE` is set. The candidate
+is abandoned before six expensive full-request arms. This source review is
+not a measurement of the installed APFS implementation.
+
+The other probe holds recorded offsets, read lengths, scratch pool, static
+GCD lanes and copies constant while changing scratch allocation from aligned
+ordinary RAM to shared Metal buffers. It replays the first 128 actual decode
+demand batches, 2,814 reads and 1,342,773,248 requested bytes per round, without
+GPU work or forecasts. Two warmups precede ABBA twice. Every batch's full
+original-byte SHA-256 matches in all ten rounds, and paging does not change.
+
+Median summed read/copy time is 0.130273 seconds with ordinary RAM and
+0.130405 with Metal backing, a ratio of 1.0010. Paired directions vary. There
+is no useful isolated gain worth adding another allocation policy. This does
+not rule out a difference under concurrent GPU/forecast work. Hashing, original
+interbatch gaps, metadata checks, adaptive control and model execution are
+outside this narrow probe.
+
+## Retained state and next investigation
+
+All 509 runtime source inputs and five build artifacts match v68, including
+executable SHA-256
+`db1af8ffd201d3dfb83d64b036db12383b08ac0a522d9079c3343acebe78c89b`.
+There is no new complete-request speed or semantic-quality result, no Smart
+promotion and no release. Known Fast recall and Q2 strict-format failures stay
+separate from these byte and timing controls.
+
+The remaining question is the interaction of actual expert GPU execution with
+concurrent forecast reads and transfers during ordinary requests. The isolated
+buffer control does not reproduce that interaction. Further work must identify
+an attributable delay there before adding another reader policy or repeating
+full comparisons. Keep the failed full-request copy candidates rejected; a
+component-only result or a favorable early segment cannot rehabilitate them.
+
+## Q2 forecast dispatch and launch-boundary control
+Consistent Q2 parity remains unproven. No runtime change is retained, and Fast stays
+unchanged. This follows [[records/measurements/q2-demand-lifecycle-triage]];
+raw evidence is in [[sources/runs/2026/10/2026-10-25-q2-forecast-launch-control]].
+
+## Forecast dispatch gaps are small
+
+Offline correlation of the existing clean ordinary traces identifies
+115,097/120,524 code/prose forecast reads, using the original GGUF extents and
+four independently validated scratch destinations. Grouping by physical layer
+and chronological pass accounts for every read. A layer's forecast reads can
+overlap its neighbor, which the grouping explicitly permits.
+
+Across 5,263/5,536 observed groups, gaps inside the union of forecast reads and
+their following copies total only 0.501/0.466 milliseconds. The corresponding
+read/copy spans total 6.183/6.477 seconds. This weakens the hypothesis of large
+global dispatch gaps once a burst starts. It does not measure per-worker idle
+time, initial dispatch latency, or prove that overlapping reads cause no
+contention. No batch scheduler rewrite follows.
+
+Host publication counts are not layer counts: fully ready layers can omit
+the event. The initial incorrect indexing assumptions and repaired analyzer
+are preserved; no mismatched reads are silently dropped.
+
+## A one-call-site launch-boundary control
+
+Native starts forecasts immediately after publishing expert input readiness,
+before constructing/submitting the final combine. Splash has the following
+step work queued before its host callback starts read-ahead. This is a source
+ordering difference, not a proven speed cause or identical execution graph.
+
+The isolated candidate passes no forecast callback at that Q2 call site. The
+existing fallback submits the combine result before starting forecast reads.
+Reader count, ranks, cache policy/capacity, precision and arithmetic are unchanged.
+Fast's branch is untouched. This trades later forecast availability for less
+concurrent reader work during combine construction/submission; it also changes
+a submission boundary. It therefore cannot isolate CPU contention alone.
+
+Original-weight and cache/lifetime checks pass with Metal validation. The
+candidate's fixed-input replay matches all baseline logits for 111 sequential
+passes and rollback boundaries, while exercising actual forecast adoption.
+This does not resolve known Fast recall or Q2 strict-format failures.
+
+One untraced ABCCBA compares v68, candidate and published Splash. Each fresh
+process uses two warmups then the same 384-token code/prose requests, normal
+adaptive verification and read-ahead, 15 GB ceiling, 4,067 actual cache slots,
+8,192 context, BF16 activations/KV and FP32 recurrent state. Work can differ
+because adaptation and generated outputs remain part of ordinary requests.
+
+| Task | Baseline median s | Candidate median s | Splash median s | Candidate/baseline forward / reverse | Candidate/Splash median |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Code | 12.415 | 12.448 | 11.921 | 0.9634 / 1.0465 | 1.0442 |
+| Prose | 13.270 | 13.291 | 13.457 | 0.9880 / 1.0159 | 0.9877 |
+
+All six arms pass the environmental gates. The candidate fails the frozen
+repeatability gate. All arms remain in the analysis. The result does not justify moving the production launch boundary.
+This tests the specific after-combine fallback, not every possible schedule.
+
+The unchanged baseline itself has median native/Splash ratios of 1.0415 for
+code and 0.9862 for prose in this protocol. That meets the numerical five-percent
+median target here, without the candidate. It does not erase earlier clean gaps
+or establish consistent parity. Code baseline times range from 11.733 to 13.097
+seconds; Splash ranges from 11.437 to 12.404. Candidate code improves 3.66% in
+the forward pair and regresses 4.65% in reverse; prose improves 1.20% then
+regresses 1.59%. Selecting only the first pair would retain an unsupported fix.
+
+Actual work also moves. The unchanged native code requests perform 110/105
+passes and read 27,050/23,291 demanded records; Splash performs 108/115 passes
+and reads 23,354/25,133 demanded records. These counters do not prove the full
+cause of timing variation. They do show why wall-time differences between
+open-ended adaptive generations are insufficient to locate execution overhead.
+
+The next controlled attribution should preserve the complete proposal/target
+workload while fixing inputs, verification widths and accepted prefixes in
+both engines. It must include real draft computation: previous target-only
+replays changed the load pattern and showed clock behavior absent in ordinary
+requests, as recorded in [[records/measurements/q2-frequency-and-cache-diagnosis]].
+Use that control to select a fix, then retain the ordinary user-request gate.
+Do not repeat the six arms merely to obtain a favorable average.
+
+All 509 runtime inputs and five default artifacts match v68. There is no Smart
+promotion, release or app-readiness claim. The remaining investigation must
+use attributable ordinary-request work and preserve the matched cache/precision
+conditions; neither continuous reads nor native language choice proves parity.
+
+## Q2 full-cycle execution and submission control
+The remaining Q2 difference is now **5.44% in a clean, fixed full-cycle code
+control**. Native takes 11.182 seconds versus source-built Splash's 10.606.
+This is diagnostic progress, not established ordinary-request parity or a new
+runtime optimization. Fast and production v68 remain unchanged. This follows
+[[records/measurements/q2-forecast-launch-control]]; evidence is in
+[[sources/runs/2026/10/2026-10-25-q2-full-cycle-execution-control]].
+
+## Match useful work before comparing execution
+
+Both engines execute the same 84 prompt IDs and 111 sequential target passes:
+472 target rows, widths one through eight, and 384 retained input tokens.
+Every cycle computes a real seven-token draft proposal, runs the target on the
+recorded inputs, computes greedy decisions and commits target/draft state using
+the recorded accepted prefix. Only the choices of target inputs, width and
+retention are frozen. Proposal computation is retained; it is not dummy work.
+
+Each engine's 111 full-logit hashes and greedy IDs match its own prior target
+reference. The two engines are not bit-identical to each other. All timing and
+attribution passes also retain the validated real proposal IDs and selected
+IDs. That establishes the diagnostic's target behavior, not semantic quality
+of an ordinary generated answer or a quantization-loss bound.
+
+Native uses v68 engine code with only the diagnostic CLI changed. Splash is
+built from commit `1482f6bbc2abf12375332725302019594150b6cb`, preserving its
+original CPU polling and using the published Metal library. Its actual draft,
+target, sampling and state commits stay in one submitted graph. Four tiny
+existing GPU copy operations save the actual proposals and impose fixed inputs,
+width and retention without a new host wait. This diagnostic overhead and its
+manual metadata finalization prevent equating it with the published executable.
+No power manipulation, GPU spin or fake computation is introduced.
+
+Both use the original Q2 weights, BF16 activations/KV, FP32 recurrent state,
+4,067 actual expert slots, natural cache evolution and a 15 GB physical ceiling.
+Fresh prompt/state initialization precedes each round. Native plans for 8,192
+context tokens; Splash allocates enough KV pages for the bounded fixture.
+Both committed target states reach 468 tokens, but reserved context capacity is
+not matched. There is no tokenizer, server, streaming or adaptive-controller
+choice in this control. It cannot replace the ordinary complete-request gate.
+
+## Clean timing result
+
+One frozen NSSN protocol runs one warmup and two measured sequences per process.
+Every arm passes: no paging, nominal thermal state, no competing build,
+maximum sampled footprint 12.650 GB and minimum sampled headroom 14.531 GB.
+No arm is selected away or retried. All timing occurs without injected
+read/GPU observers or full-logit readback. Passive frequency sampling is 200 ms.
+
+| Arm | Measured round 1 s | Measured round 2 s |
+| --- | ---: | ---: |
+| Native first | 11.151 | 11.189 |
+| Splash first | 10.509 | 10.660 |
+| Splash second | 10.551 | 10.724 |
+| Native second | 11.176 | 11.400 |
+
+Median native/Splash ratio is 1.054369. Native's measured-round GPU frequencies
+are about 1,156 to 1,223 MHz, versus Splash's 1,081 to 1,157 MHz. The earlier
+large low-frequency target-only gap does not recur with this full useful
+workload. This observation does not isolate drafting as the sole cause: the
+control also omits inter-pass full-logit validation and preserves a different
+execution rhythm. It does rule out low native frequency as the explanation
+for this comparison's remaining gap.
+
+Median demand reads are 25,893.5 native versus 24,390.5 Splash; adopted forecasts
+are 19,198.5 versus 20,655.5. Inputs and widths match, but routed keys, cache
+placement and forecast readiness can still differ. Native spends about 10.043
+seconds verifying, 0.909 drafting, 0.082 sampling and 0.125 committing per
+measured sequence. These sequential native scopes cannot be compared directly
+with Splash's overlapping GPU and host timing totals.
+
+## Submission is a stronger lead than extra reader waiting
+
+A separate native/Splash attribution pair repeats the same 111 full cycles with
+bounded read/copy and named GPU-encoder observations. Both pass environmental
+and selected-ID/proposal checks. Traced times are 11.195/10.930 seconds, compared
+with untraced warmup ranges of 11.434 to 11.463 and 10.725 to 10.801. The tracing
+changes the relative gap, so these are localization data, not a replacement
+speed estimate. All native encoder samples are valid; 66 Splash encoder
+boundaries are missing and remain counted.
+
+| Observed full-cycle interval | Native s | Splash s |
+| --- | ---: | ---: |
+| Measured GPU encoder intervals | 5.735 | 6.417 |
+| Queued dependency not yet published | 3.687 | 3.799 |
+| After publication, before next encoder | 0.614 | 0.608 |
+| GPU gap before next command submission | 0.912 | 0.069 |
+
+Rows are different classifications and must not be added as independent
+costs. Encoder intervals include stalls and scheduling, not pure instruction
+execution. Missing samples can overstate gaps. The before-submission interval
+identifies next work not yet submitted; it is not proof the CPU was running
+throughout or that every millisecond can be removed.
+
+About 0.677 seconds of native's pre-submission gaps fall in target verification,
+0.142 in drafting, 0.028 in sampling and 0.064 in commit. Classifying the next
+encoder locates 0.467 seconds before expert schedules. Only 0.034 seconds precede
+encoders containing the final combine. Moving that combine earlier therefore
+has a small observed scope and does not justify reviving the rejected
+forecast-launch candidate. Cache claims, routing readback and preparation
+before submission remain the stronger region to isolate.
+
+Native's 78,891 attributed demand copies exactly match three copies per fetched
+expert. Copies overlap reads/GPU work; their union outside both is 0.072 seconds.
+The larger parallel copy service sum is not removable request delay. Likewise,
+more demand records do not establish a larger exposed read wait: native's
+matched queued-readiness interval is slightly shorter here. Neither this trace
+nor CPU wait sums justify a shared-reader rewrite.
+
+## Next action and retained state
+
+Use this full-cycle control to align bounded route readback, cache-claim,
+expert-preparation and MLX-submission scopes with the 0.467-second region.
+The earlier ordinary host measurements in
+[[records/measurements/q2-ordinary-host-attribution]] already limit preparation
+alone; do not relabel the whole gap as preparation or repeat a broad port.
+Choose one measured sub-scope, test the smallest change, then require repeatable
+ordinary complete requests against v68 and the published Splash binary.
+The prior unchanged ordinary medians already reached within five percent in
+one protocol, but the history of varying work and earlier clean gaps remains.
+
+No runtime candidate is retained or proposed solely from this attribution.
+All 509 runtime inputs and five default artifacts match v68. Known Fast recall
+failures and Q2 strict-format failures remain separate. There is no Smart
+promotion, app-readiness claim or release.
+
+## Q2 expert submission boundary and rejected small fixes
+The extra route-readback call does **not** explain the remaining Q2 slowdown.
+Removing it gives no repeatable gain. Moving expert GPU submission into the
+existing demand-read batch also earns no retained change: correctness passes,
+but its timing protocol is excluded for global paging and its observed results
+are not promising. Production v68 and Fast remain unchanged.
+
+This follows [[records/measurements/q2-full-cycle-execution-control]]. Raw
+sources, failures and results are in
+[[sources/runs/2026/10/2026-10-25-q2-expert-submission-boundary]]. It does not
+replace the previous native/Splash comparison with a new parity claim.
+
+## Localize the submission boundary
+
+The existing clean ordinary host trace places 0.526 seconds of code and 0.574
+seconds of prose before expert command submission. About 0.261/0.284 seconds
+occur before entering the cache pool. Thus the whole region cannot be assigned
+to cache claims or expert job construction. Reused raw member hashes are
+verified against their original archives before these derived observations.
+
+A new bounded host probe surrounds route submission/evaluation/readback,
+deferred completion, cache entry and expert preparation. It runs the same
+111 real-draft full cycles as the preceding study: 84 prompt IDs, 472 target
+rows, widths one through eight, and 384 retained tokens. Original Q2 weights,
+BF16 activations/KV, FP32 recurrence, 4,067 cache slots, a 15 GB physical ceiling
+and the native 8,192-token plan remain fixed. Full logits are read only during
+validation. The trace's proposals and selected IDs match validation exactly.
+
+The separate attribution trace is clean and lasts 11.532 seconds. It records
+0.926 seconds before command submission, including 0.459 before expert work.
+The largest observed host scopes intersecting that expert region are:
+
+| Host scope | Calls | Total s | Before expert submission s |
+| --- | ---: | ---: | ---: |
+| Route evaluation and wait | 5,217 | 4.198 | 0.188 |
+| Complete expert submission | 5,328 | 0.220 | 0.159 |
+| Submission's async evaluation | 5,328 | 0.144 | 0.099 |
+| Pool work before preparing misses | 5,114 | 0.059 | 0.048 |
+| Swift job preparation | 5,328 | 0.042 | 0.033 |
+| C++ job preparation | 5,328 | 0.028 | 0.024 |
+| Deferred queue retirement | 5,217 | 0.0049 | 0.0043 |
+
+Parent/child scopes overlap. These are observed intervals, not exclusive CPU
+service or removable critical-path costs. Async evaluation has only about
+0.044 seconds outside both observed reads and GPU intervals; its entire
+0.144-second service sum is about 1.25% of the trace. Even that full sum is
+not a justified speedup prediction.
+
+The last observed encoder end to route-evaluation return totals 0.215 seconds,
+with a median around 41 microseconds. This includes Metal signal/notification
+and library-return overhead and may overlap other work. It is not an isolated
+scheduler-wakeup measurement. MLX's source waits on its event; reading the
+array already ensures evaluation. The existing same-Splash CPU-polling control
+in [[records/measurements/q2-handoff-and-overlap-diagnosis]] remains relevant;
+no polling or priority intervention is added.
+
+Deferred completion callbacks are not worth a scheduler rewrite. Their whole
+measured retirement cost is under five milliseconds. More importantly, the
+later completion can retry forecasts whose staging capacity was unavailable
+earlier. Deleting that tick would change useful behavior, not merely remove a
+duplicate notification.
+
+## Candidate one: one required route readback
+
+Only for Q2 with deferred callbacks but no deferred arrays, read route IDs
+once and then drain the existing callbacks. Preserve all callbacks, retries,
+observer ordering and other branches. This saves the explicit vector-eval
+wrapper; it cannot remove the required GPU wait.
+
+All 111 full-logit hashes, real proposals and selected IDs match v68. The
+existing independent original-weight, cache failure/retry/resize, forecast
+adoption and GPU ownership checks pass under Metal validation. No broader
+quality conclusion follows from these exact arithmetic checks.
+
+After the explicitly excluded archive-contaminated attempt, one clean ABBA
+runs with no concurrent analysis, decompression, archive or build. Each process
+has one warmup and two measured rounds. All eight measured rounds are kept.
+
+| Arm | Measured round 1 s | Measured round 2 s |
+| --- | ---: | ---: |
+| Baseline first | 11.584 | 11.580 |
+| Candidate first | 11.604 | 11.510 |
+| Candidate reverse | 11.473 | 11.564 |
+| Baseline reverse | 11.478 | 11.523 |
+
+Pooled medians are 11.551 seconds baseline and 11.537 candidate. Forward ratio
+is 0.997847, reverse 1.001605: a roughly 0.2% apparent win reverses into a
+roughly 0.2% loss. This fails the frozen both-direction and one-percent advance
+gates. The change is rejected, so it does not proceed to ordinary requests or
+another Splash comparison. No production branch or optional knob remains.
+
+## Candidate two: submit alongside existing reads
+
+Start from v68 again. Prepare the same expert job, then submit it as one joined
+work item alongside the existing Q2 demand-read lanes. Reader count, piece
+ordering within each lane, cache policy, event gating and arithmetic stay the
+same. There is no new persistent reader pool. Fast retains its original early
+submission and read-lane count.
+
+The read batch joins submission and reads before marking bytes ready. An
+all-adopted miss submits before publication when no demand batch exists.
+Cancellation publishes failure and drains work even before submission. Expanded
+checks exercise those branches, repeated cancellation, partial-read failure,
+retry, cache resize, mixed hit/adoption/demand and independent original bytes.
+They pass, as do all 111 exact logits, proposals and selected IDs.
+
+The one frozen ABBA has four global swap-in pages in its first baseline arm
+and 56 in its first candidate arm, with no swap-outs. The entire timing protocol
+is excluded; clean reverse arms do not rescue it. Raw forward/reverse ratios
+are about 1.057/1.055 and the pooled ratio 1.053, but these are preserved
+excluded observations, not a qualified slowdown estimate. There is no repeatable
+clean benefit to justify the added concurrency, and no retry. The candidate
+is not retained or advanced to ordinary requests.
+
+## What this establishes and what remains
+
+The redundant readback wrapper is ruled out as a useful speed fix. Queue
+retirement itself is too small to justify changed forecast retry semantics.
+Submitting earlier or overlapping it with reads is not automatically faster;
+service time and overlapping intervals are not recoverable wall time.
+
+The broader native submission gap remains unresolved. Before another change,
+identify a larger bounded contribution outside the already measured wrappers,
+or demonstrate a materially different execution dependency. Do not continue
+with low-ceiling changes because their source resembles Splash. Retain the
+published Splash baseline and require repeatable complete requests before any
+performance claim. No new ordinary native/Splash comparison is warranted for
+these rejected or unqualified candidates.
+
+All 509 runtime inputs and five default artifacts match the original v68
+identity. Maximum observed footprint across these probes/checks is 11.786 GB,
+with minimum sampled reclaimable headroom 13.493 GB, inside the declared limits.
+Fast recall failures and Q2 strict-format failures remain independent of these
+correctness checks. There is no Smart promotion, release or app-readiness claim.
+The performance goal remains open.
+
+## Q2 started forecasts and duplicate demand reads
+A small Q2 candidate eliminates the observed duplicate forecast/demand reads
+without changing tested output. Its speed benefit is **not qualified**: the
+single timing protocol is excluded for global paging. Keep the candidate as
+experimental evidence; production v68 and Fast remain unchanged.
+
+This follows [[records/measurements/q2-expert-submission-boundary]] and
+[[records/measurements/q2-full-cycle-execution-control]]. Raw evidence is
+[[sources/runs/2026/10/2026-10-26-q2-started-forecast-reuse]].
+
+## What differs from Splash
+
+Splash revision `1482f6bbc2abf12375332725302019594150b6cb` uses a shared reader
+pool. At demand, it halts unclaimed forecast tasks, preserves already started
+pieces and reads only the remaining pieces through foreground scheduling.
+Native uses separate demand lanes and four ordered forecast queues. It already
+cancels wrong predictions before demand and promotes forecasts with completed
+pieces. However, its `claimSplit` discards a ticket with zero completed pieces
+even when a checked read has already started. Cancellation can discard that
+read before its bytes are copied, then demand reads the same piece again.
+
+A copy-only trace misses this work. Match every successful expert pread to its
+exact original GGUF tensor, row and projection, then match forecast and demand
+within the same verification cycle. The corrected parser maps every large read
+and reconciles demand pieces exactly to three times the fetched-record count.
+
+| Trace | Demand pieces | Forecast pieces | Duplicate pieces | Affected records |
+| --- | ---: | ---: | ---: | ---: |
+| Prior full-cycle baseline | 78,891 | 109,516 | 4,387 | 2,596 |
+| Prior submission probe | 78,075 | 110,740 | 4,314 | 2,566 |
+| Started-forecast candidate | 70,581 | 113,786 | 0 | 0 |
+
+These are separate instrumented executions, not identical timing samples.
+Same-cycle matching is the stated scope; it is not a proof about arbitrary
+cross-cycle duplication. Forecast-reader classification is checked against the
+exact demand total. The candidate trace preserves all 111 proposals and selected
+token lists from its separate exact validation.
+
+The original duplicated demand reads have about 2.13/2.17 seconds of summed
+service and 1.26/1.28 seconds of interval union. Neither measures recoverable
+request time. Holding every other completion fixed and replacing duplicates
+with their earlier forecast completion advances the last demand completion by
+only 15.8/13.1 milliseconds across the whole trace. Those intervals are outside
+observed GPU encoders, but publication and other dependencies can still dominate.
+This argues against a broad scheduler rewrite based on duplicate-read sums.
+It does not measure the indirect contention effect of avoiding the reads.
+
+## Small candidate and correctness
+
+Record when a parallel forecast piece acquires its lane and enters the checked
+reader. For raw Q2 only, retain that ticket at existing demand priority even
+before its first piece completes. Queued-only tickets still fall back to demand.
+No shared pool, foreground takeover, new thread, priority change, polling,
+staging layout, GPU schedule, cache capacity or arithmetic change is added.
+Fast's production branch is not changed.
+
+Deterministic gates distinguish a queued forecast from an actually started,
+zero-completion read. They verify demand promotion, exact bytes and release.
+Existing cancellation/failure/ownership checks and installed original-weight
+pool checks pass under Metal validation. All 111 full-logit hashes, draft
+proposals and selected token lists match the native reference exactly.
+This establishes tested arithmetic preservation, not broader model quality.
+
+## Timing remains unqualified
+
+One ABBA uses the existing 111-cycle fixture, real draft work, BF16 activations
+and KV, FP32 recurrence, 4,067 slots, native 8,192-token context and a 15 GB
+physical ceiling. Each process has one warmup and two measured rounds.
+
+| Arm | Measured round 1 s | Measured round 2 s |
+| --- | ---: | ---: |
+| Baseline first | 11.429 | 11.205 |
+| Candidate first | 11.246 | 11.045 |
+| Candidate reverse | 11.149 | 11.112 |
+| Baseline reverse | 11.756 | 11.468 |
+
+The candidate reverse arm has eight global swap-in pages and no swap-outs.
+The **whole protocol is excluded**, including otherwise clean arms. Raw pooled
+medians are 11.449 seconds baseline and 11.131 candidate, ratio 0.972216;
+forward/reverse ratios are 0.984834/0.958549. These are excluded observations,
+not a qualified 2.8% speedup or evidence of Splash parity. There is no retry
+or advancement to ordinary requests under the frozen gate.
+
+Across checks, validation, timing and the separate trace, peak measured process
+footprint is 11.767 GB and minimum sampled reclaimable memory is 12.746 GB.
+Every physical-memory and correctness gate passes. The separate attribution
+trace has no paging, competing build or thermal failure; its duration is not a
+product-speed result and is not compared against the prior trace as one.
+
+## Next action and limits
+
+The specific cancellation decision demonstrably wastes reads. The bounded
+candidate removes that behavior; a shared-reader rewrite remains unjustified
+without further critical-path evidence. Preserve this candidate for a separately
+predeclared clean qualification before retention, then compare complete requests
+against both v68 and published Splash. Do not silently retry this frozen ABBA
+or choose its clean/favorable arms. The goal of repeatable complete-request
+performance within five percent of Splash remains open.
+
+All default artifacts and runtime sources match v68. No release, Smart promotion
+or app-readiness claim follows. Known Fast recall and Q2 strict-format failures
+remain separate from these exact arithmetic and read-ownership checks.
+
+## Q2 forecast requests and immutable draft-mask reuse
+Neither follow-up earns a production change. The started-forecast request
+comparison is excluded for paging; the immutable-mask candidate does not pass
+the complete-request retention gate. Keep v68 and Fast unchanged. Consistent
+Q2 request performance within five percent of Splash remains unproven.
+
+This follows [[records/measurements/q2-started-forecast-reuse]] and
+[[records/measurements/q2-small-work-and-readiness]]. Raw evidence is
+[[sources/runs/2026/10/2026-10-26-q2-started-forecast-requests]] and [[sources/runs/2026/10/2026-10-26-q2-mask-reuse]].
+
+## Started forecasts in complete requests
+
+The prior candidate demonstrably eliminates the observed duplicate reads and
+preserves all frozen logits. A separate, predeclared normal-request ABCCBA tests
+whether that mechanism helps the actual workload. It does not rewrite the
+earlier failed component gate. The whole protocol is excluded for 12/4 global
+swap-in pages in its first candidate/Splash arms. No arm selection or retry is
+used, and no speed or slowdown is qualified from those times.
+
+All requests complete 384 tokens, use 4,067 slots and pass physical memory
+checks. Candidate forecast joins total 55–81 ms per timed request versus
+5–8 ms for baseline. These waits do not establish the main remaining gap.
+Baseline itself first differs between repetitions at token 152 for code and
+284 for prose. Published Splash explicitly documents output variation with
+adaptive verification widths, including greedy decoding. Preserve those
+variations and the separate exact-width arithmetic controls; do not infer a
+new corruption bug from candidate text variation alone.
+
+## Reusing a fixed draft mask
+
+Native Q2 reads and decodes the anchor plus seven identical mask rows on every
+draft proposal. The earlier per-lookup read deduplication still decoded all
+eight rows and was rejected. This different candidate retains one decoded
+BF16 mask row inside its immutable checkpoint, reads/decodes only the anchor,
+and broadcasts/concatenates the mask into the original eight-row block. Fast
+and non-Q2 lookups keep the original expression. There is no reader, controller,
+expert-cache or arithmetic change.
+
+The persistent payload is 5,120 bytes, with an additional 16 KiB planner reserve.
+Clearing embedding storage releases the cached owner; a different checkpoint
+has independent state. The diagnostic tests 18 exact original-row cases,
+changing masks and anchors, clear/reload and four invalid IDs. All pass.
+All 111 full-logit hashes, real proposals and selected tokens match the frozen
+native reference. Validation retains 4,067 slots and passes its 15 GB ceiling.
+
+The synchronous 512-lookup component control takes 0.312/0.309 s baseline and
+0.111/0.105 s candidate under Metal API validation. That proves a local effect
+in that diagnostic, not a complete-request improvement. Extra tensor assembly
+and changed execution timing still have to earn their complexity in production.
+
+## Complete-request result
+
+One ABCCBA uses ordinary production adaptation, identical prompt IDs, two
+warmups, 384-token code/prose requests, BF16 activations/KV, FP32 recurrent
+state, 8,192 context and a 15 GB physical ceiling. A is the timestamp-only v68
+baseline; B is only the mask candidate; C is published Splash 1.4.0 with its
+normal CPU polling and no GPU spin. Actual cache capacity is 4,067 everywhere.
+The predeclared retention gate requires improvement in both directions and
+at least one percent pooled improvement for each fixture. Parity separately
+requires candidate/Splash no greater than 1.05 in both directions.
+
+All six arms pass the declared environment guards. The candidate fails the repeatable complete-request improvement gate.
+
+| Arm | Code s | Prose s | Environment eligible |
+| --- | ---: | ---: | --- |
+| mask-15-0-A | 12.857 | 14.035 | True |
+| mask-15-1-B | 12.928 | 14.119 | True |
+| mask-15-2-C | 12.179 | 12.658 | True |
+| mask-15-3-C | 11.734 | 13.459 | True |
+| mask-15-4-B | 12.719 | 14.322 | True |
+| mask-15-5-A | 13.300 | 13.679 | True |
+
+- timed-2: candidate/baseline forward and reverse 1.005484/0.956337; pooled 0.980495. Candidate/Splash 1.061442/1.083989.
+- timed-3: candidate/baseline forward and reverse 1.005952/1.047009; pooled 1.026216. Candidate/Splash 1.115456/1.064150.
+
+These are clean observed request times.
+The baseline/Splash pooled gaps are 9.38% for code and
+6.12% for prose in this protocol. Maximum combined
+footprints are 12.278 GB baseline, 12.312 GB candidate and
+13.887 GB Splash, all below the configured ceiling.
+The candidate is not retained and there is no favorable retry. Throughput
+completion is not task-quality success: these 384-token fixtures are capped
+before necessarily finishing the requested code or prose. The known Fast
+recall and Q2 strict-format failures remain separate. No release, Smart
+promotion or app-readiness claim follows.
+
+## Next diagnosis
+
+Avoid another embedding-cache or shared-reader rewrite from local savings.
+The next bounded lead is command construction and completion bookkeeping in
+the MLX execution adapter: its GPU primitive path registers buffer-lifetime
+handlers per operation. This differs from the already tested empty-signal
+command count and submission-threshold changes in
+[[records/measurements/q2-ordinary-request-and-submission-diagnosis]].
+It is source evidence of a mechanism, not evidence
+that it causes the gap. Measure its contribution on the existing real-cycle
+work, aligned with read and GPU intervals, before proposing a change. Preserve
+buffer ownership, error cleanup and Fast's path. Do not replay these rejected
+timing protocols or promise parity from native language choice.
+
+## Q2 MLX ownership and graph diagnosis
+Buffer-lifetime bookkeeping does not justify a production rewrite. No runtime
+change is retained; v68, Fast, Smart selection and app packaging remain unchanged.
+The complete-request parity target remains unmet. This follows
+[[records/measurements/q2-forecast-requests-and-mask-reuse]]. Raw evidence and
+exclusions are [[sources/runs/2026/10/2026-10-26-q2-metal-lifecycle]], [[sources/runs/2026/10/2026-10-26-q2-mlx-ownership]] and [[sources/runs/2026/10/2026-10-26-q2-mlx-graph]].
+
+## Scope and controls
+
+Use the existing 111 real draft/target/commit cycles: 84 prompt IDs, widths one
+through eight, 472 target rows and 384 retained tokens. Each native process has
+4,067 cache slots, a 15 GB physical ceiling, 8,192-token context, BF16
+activations/KV and FP32 recurrence. This fixes proposal/target inputs and retained
+prefixes, not forecast completion timing or adaptive production behavior.
+The original frozen native/Splash references are checked against their archived
+member hashes before reuse. Source-built Splash keeps its existing bounded
+fixture arena, so that first lifecycle comparison is diagnostic only.
+
+The initial four-arm lifecycle protocol is excluded for accidental concurrent
+analysis and an excessive native control shift. Preserve its unaffected native
+localization without promoting it to a clean native/Splash result. The two
+later native-only probes each use one warmup before the observed round, with
+no simultaneous model, build or analysis. Their separate correctness runs
+pass under Metal API validation; four/eight global swap-in pages exclude those
+validation timings. Both timing pairs pass environment and memory guards.
+
+## Direct buffer ownership and operation setup
+
+The initial unaffected native trace records 639,836 caller completion-handler
+registrations. Their original Metal service totals 35.316 ms, with 4.508 ms
+outside observed reads and GPU encoders. All five measured command lifecycle
+methods together total 175.113 ms, with 30.986 ms outside those intervals.
+These calls exclude C++ capture construction and later callback destruction.
+Counts alone are not grounds for a scheduler port.
+
+The direct MLX probe then separates those missing ownership costs from primitive
+encoding, registration and local cleanup. Its warmed off/on round times are
+11.607052 and 11.719758 seconds, a 0.97%
+shift within the declared sensitivity limit. All 594,394 rows are complete and
+ordered; 6,080 operations take the split/commit branch. The whole-operation
+row contains the other rows and must not be added to them.
+
+| MLX GPU-operation scope | Total observed s | Outside observed reads and GPU encoders s |
+| --- | ---: | ---: |
+| Whole operation | 0.820499 | 0.114775 |
+| Primitive encoding | 0.634946 | 0.083009 |
+| Captured buffer-owner construction | 0.034023 | 0.004640 |
+| Cleanup registration or split/commit | 0.117556 | 0.023263 |
+| Front setup | 0.016343 | 0.001780 |
+| Local cleanup and autorelease-pool tail | 0.012171 | 0.001476 |
+
+The entire captured-owner construction is only 34 ms, so it cannot account
+for the remaining roughly half-second fixed-cycle gap. Event registration,
+autorelease-pool removal, a new buffer-owner container and fewer callback counts
+do not have a measured case for adoption. The direct primitive interval also
+includes allocation, binding and dispatch work; it is not pure CPU utilization.
+
+The pipeline join finds no large single exposed encoding signature. The
+repack/gather/gate-up/down signature has about 19.853 ms outside reads/GPU;
+417,246 operations have no observed pipeline assignment and together contribute
+about 10.797 ms of whole-operation time outside those intervals. No assignment
+does not mean no necessary work. Debug buffer labeling is compiled behind
+`MLX_METAL_DEBUG`, which the actual release recipe does not enable.
+
+## Graph traversal and actual waiting
+
+The follow-up records 162,066 graph/event scopes. Its warmed off/on passes take
+11.890739 and 11.557855 seconds. The -2.80% shift exceeds
+the two-percent sensitivity gate, so these are actual instrumented observations,
+not representative costs or a speed improvement. Preserve that limitation.
+Parent/child scopes in the following table overlap.
+
+| Graph/event scope | Calls | Observed s | Outside observed reads and GPU encoders s |
+| --- | ---: | ---: | ---: |
+| setup and graph preparation | 17,034 | 0.122283 | 0.020308 |
+| degree DFS | 17,034 | 0.044362 | 0.007489 |
+| BFS tape build and local cache cleanup | 17,034 | 0.018081 | 0.002508 |
+| event construction | 17,034 | 0.053214 | 0.009074 |
+| event destruction | 9,184 | 0.029782 | 0.000456 |
+| event signals and stream finalization | 17,034 | 0.080799 | 0.008288 |
+| scheduler wait_for_one | 0 | 0.000000 | 0.000000 |
+| actual Metal waitUntilSignaledValue | 6,378 | 5.501672 | 0.222586 |
+
+There are no `scheduler::wait_for_one` calls in this pass: MLX's task-count or
+active-memory throttle is not observed blocking it. Executor work outside the
+GPU-operation scopes and scheduler/event waits totals 106.563 ms, only 8.299 ms
+outside observed reads/GPU. Synchronous wrapper work outside graph evaluation
+and the actual Metal wait totals about 0.813 ms.
+
+Of 5.502 seconds inside Metal event waits, 5.042 seconds overlaps observed GPU
+encoder intervals. About 0.223 seconds overlaps neither reads nor encoders.
+The full wait is not wasted host work, and the uncovered part is not an isolated
+wakeup delay. Existing CPU-polling controls and rejected prepared-block tests
+remain authoritative; this does not justify busy waiting or another broad port.
+
+Across this graph trace, observed MLX scopes cover about 0.379 of the 0.738 seconds
+outside reads/GPU, leaving 0.359 seconds outside these scopes. All-positive-read
+overlap includes speculative reads that may not serve the current dependency.
+Consequently, uncovered intervals are neither pure idle time nor an upper bound
+on potential gains: overlapping work can still delay the critical dependency or
+compete for memory bandwidth. Do not add service sums or rule out such effects
+solely because a forecast read was active.
+
+## Next focused action and retained state
+
+Do not implement an ownership-container, event-pool or generic graph scheduler
+rewrite from these counts. The next comparison should bind each expert readiness
+event to its actual demanded records, adopted forecasts and last required read
+or copy, then compare that dependency path in native and Splash. Reuse existing
+traces where they have the necessary identities; collect only missing identities
+otherwise. Distinguish useful adoption from unrelated background reads before
+changing reader scheduling. A new candidate still needs a justified mechanism,
+exact checks and clean complete requests against v68 and published Splash.
+
+Both probe builds restore the dependency's exact source bytes and modes and its
+clean Git state; all 509 production inputs and five default v68 artifacts match.
+There is no optional runtime knob, release or Smart promotion. The known Fast
+recall and Q2 strict-format failures remain separate; frozen logits do not prove
+semantic quality or complete app readiness.
+
+## Q2 required dependencies and native preparation
+The remaining Q2 gap is concentrated between operations, not in a newly found
+large post-read publication delay. No production optimization is retained, Fast
+is unchanged and complete-request parity remains unachieved. This follows
+[[records/measurements/q2-mlx-ownership-and-graph]]. Raw evidence is
+[[sources/runs/2026/10/2026-10-26-q2-required-dependencies]] and [[sources/runs/2026/10/2026-10-26-q2-expert-preparation]].
+
+## Resolve required dependencies before attributing delay
+
+Both engines replay the same frozen 111 draft/target/commit cycles, prompt IDs,
+target widths and retained prefixes, with 4,067 expert slots and a 15 GB physical
+ceiling. Native requests 8,192 context; source Splash retains the bounded fixture
+arena. Activations/KV are BF16 and recurrence FP32. Forecast completion and
+actual routed/cache work may still differ. This is a controlled diagnostic,
+not an ordinary-request speed qualification or cross-engine bit-identity claim.
+
+The four-arm trace passes every environmental and memory guard. Additional
+dependency markers shift each engine's observed median by less than one percent,
+inside the predeclared two-percent control. A separate native preparation probe
+also passes that control and its guards. Both new native builds and the source
+Splash build preserve all 111 own-reference full-logit hashes, proposals and
+selected tokens under Metal API validation. No model retry is selected.
+
+For every payload-bearing expert job, resolve all bytes through actual completed
+reads/copies and join its real readiness event to the first consuming encoder.
+All 5,328 expert jobs per observed round resolve in each engine, with zero
+unmatched or ambiguous dependencies. Native has 5,126/5,124 payload-bearing jobs;
+Splash has 5,116/5,119. Positive background reads no longer stand in for the
+dependencies of whichever GPU step is being discussed.
+
+## Where the observed cycle time goes
+
+| Temporal coverage in observed cycles | Native round 1 / 2 s | Splash round 1 / 2 s |
+| --- | ---: | ---: |
+| Observed GPU encoders | 5.979314 / 5.866110 | 5.834638 / 6.001567 |
+| Before required reads finish | 3.826841 / 3.850908 | 3.713639 / 3.670085 |
+| Required read to final payload write | 0.064274 / 0.078412 | 0.000000 / 0.000000 |
+| Final payload write to publication entry | 0.056529 / 0.053658 | 0.052213 / 0.054313 |
+| Publication return to first consumer | 0.595212 / 0.594246 | 0.576550 / 0.553415 |
+| Outside GPU and tracked dependency phases | 0.992092 / 0.960787 | 0.334950 / 0.328089 |
+
+
+These are temporal classifications, clipped to cycle windows and unioned to
+avoid double counting. Host phases report only their portion outside observed
+GPU encoder spans. They are not pure GPU-idle time, independent causes or a
+guarantee that every classified interval can be removed. Publication-marker
+overhead is separately retained in the raw decomposition, not hidden in a
+production claim. Raw read-to-publication sums can start before a job begins
+when forecasts already supplied bytes; clipping to job creation matters.
+
+GPU encoder coverage is almost equal in these two rounds. The native path has
+roughly 0.07 seconds of required-read-to-copy tail and only a few additional
+milliseconds from the final payload write to publication entry. Publication-to-
+GPU difference is also small compared with the complete gap. A broad shared-
+reader rewrite is not justified by those post-read delays. The earlier read
+phase still differs and includes changed adoption/physical traffic and queue
+timing; this does not rule out every reader interaction.
+
+The larger residual is about 0.96-0.99 seconds native versus 0.33 seconds Splash.
+Named GPU commands place 0.390/0.379 seconds of native residual before expert
+encoder construction. Across all native residual signatures, 0.744/0.728
+seconds precede encoder construction, versus 0.063/0.063 in Splash. These
+following-command signatures locate gaps; they do not assign all preceding
+cost to that kernel or prove a reusable graph will eliminate them.
+
+## Narrow the native preparation hypothesis
+
+The second probe records real function boundaries, preserving every operation.
+All 5,328 operations in each measured round have complete ordered markers.
+
+| Actual native host scope | Outside observed GPU, round 1 / 2 s |
+| --- | ---: |
+| before router eval -> after router eval | 0.283735 / 0.296295 |
+| pending staging metadata ready -> asyncEval returned | 0.154102 / 0.152302 |
+| schedule submit enter -> native tile grouping done | 0.031139 / 0.030769 |
+| ensureCore begins -> hit/miss maps and pin preparation done | 0.031068 / 0.030668 |
+| adaptive hit touches done -> victims claimed before prepare closure | 0.021677 / 0.021195 |
+| C arrays/geometry checked -> C metadata arrays and staging ready | 0.021507 / 0.021211 |
+
+
+The larger intervals are the required route-result synchronization and async
+expert submission. No individual cache/grouping/allocation routine contributes
+hundreds of milliseconds. Some of these scopes occur inside the dependency
+intervals above; never add both tables as independent costs. The required route
+wait overlaps several seconds of GPU work. CPU waiting still does not establish
+GPU idleness, and the 0.15-second submission span is not proof of recoverable
+time from another scheduler.
+
+## Retained state and next experiment
+
+All 509 production runtime inputs and five artifacts match v68. Temporary probe
+headers and source changes are removed. No extra option, thread, priority policy,
+polling loop or reusable buffer owner enters production. The existing rejected
+route-wrapper, parallel-submission, graph-block, mask and copy experiments remain
+rejected; these scope totals do not rehabilitate them.
+
+The latest clean ordinary-request evidence remains
+[[records/measurements/q2-forecast-requests-and-mask-reuse]]: about nine percent
+more time for code and six percent for prose. These new fixed-cycle timings do
+not replace it. Exact arithmetic checks are not semantic quality tests. Fast
+recall and Q2 strict-format failures remain separate, with no Smart promotion,
+release or complete app-readiness claim.
+
+Before another substantial port, separate the actual route-result pickup from
+submission preparation and compare the same ready work. A bounded prepared
+adapter would need to remove demonstrably repeated host work while preserving
+MLX ownership, failures and stream ordering. Cache metadata pooling alone has
+too little measured cost to justify a broad rewrite. Test one justified change
+against v68 and published Splash on complete requests, retaining it only for a
+repeatable benefit. Native language and matching source structure still do not
+promise parity.
+
+## Q2 early expert preparation: exact but not faster
+Preparing Q2 expert work before the required router readback preserves tested arithmetic, but this implementation fails its clean speed gate. It is not retained. Fast and v68 remain unchanged, and complete-request parity with Splash remains open. This is the targeted follow-up to [[records/measurements/q2-required-dependencies-and-preparation]]. Evidence is [[sources/runs/2026/10/2026-10-26-q2-early-expert]].
+
+## One bounded scheduling change
+
+The existing path waits for route IDs, then prepares and submits the expert job. The candidate prepares and submits a gated expert job while the already-submitted router runs. After the router finishes, it binds actual grouping, pool slots and staging destinations, performs the same required reads and publishes the same readiness event. It changes no reader count, cache policy, arithmetic, worker pool, polling or GPU power policy.
+
+Unknown routes require bounded maximum-capacity metadata and padded output rows. Inactive expert tiles return without matrix arithmetic; the fixed final tile holds the shared expert. This can still add gathering, dispatch and allocation work, so equal arithmetic is not a speed argument. Only the eligible Q2 mixed path enters; deferred readback arrays and unavailable staging capacity fall back to the existing path.
+
+The early job must share the existing 110,592,000-byte raw staging reserve with every still-live previous raw allocation. Reservations follow actual MLX data owners through GPU completion, not merely the Swift ticket's scope. Failure, cancellation or unavailable capacity cannot acquire a second reserve. Forecasts still do not select victims or change cache ownership.
+
+## Correctness and real branch coverage
+
+Original compressed-byte checks cover mixed hits/misses, raw forecast adoption, partial-read failure, retry, growth/shrink and independent routed/shared outputs. Additional cases cover unbound publication, repeated cancellation, invalid routes, duplicate staging destinations, rebinding, temporary tensor owners, one/two/eight input rows and reservation refusal. All pass under Metal validation. The small safety process peaks at 0.701 GB with no paging.
+
+The exact final candidate validates 111 complete draft/target/commit cycles against its v68 reference. Every full-logit hash, proposed ID and selected ID matches. It takes the early path 3,860 times and refuses 1,357 times for the existing staging limit; the final live reservation is zero. This establishes actual branch execution and arithmetic equivalence for these fixtures, not semantic task quality or release readiness.
+
+## Reject the clean timing result
+
+Use the frozen 111 cycles, same prompt IDs, widths, retained state and actual 4,067 cache slots. Native context is 8,192, budget 15 GB, activation/KV BF16 and recurrence FP32. Each process has one warmup and two observed rounds. The fixed ABBA passes all memory, paging, competing-build and thermal checks.
+
+| Arm | Mean of two observed cycle rounds, s |
+| --- | ---: |
+| Baseline forward | 11.277322 |
+| Candidate forward | 11.538707 |
+| Candidate reverse | 11.468844 |
+| Baseline reverse | 11.293252 |
+
+
+Candidate/baseline ratios are 1.023178 forward and 1.015548 reverse, pooled 1.019360. The candidate is about 1.94 percent slower. It fails both directional improvement and the predeclared one-percent pooled improvement gate, so it does not advance to ordinary requests against published Splash. Existing ordinary-request gaps remain recorded in [[records/measurements/q2-forecast-requests-and-mask-reuse]]; this experiment does not replace them.
+
+## Profile the failure without selecting a better rerun
+
+A separately declared off/on/on/off diagnostic uses the existing Metal stage/pipeline observer. Baseline and candidate traced/untraced ratios are 0.997975 and 0.998290, within the two-percent sensitivity bound. All environment checks pass, all measured stage timestamps resolve, and pipeline/encoder assignment has zero unknown or unassigned entries. Each observed round contains 5,328 expert encoders in both versions.
+
+| Observed round | Baseline GPU, s | Candidate GPU, s | Baseline outside GPU, s | Candidate outside GPU, s |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 5.956818 | 6.006568 | 5.403453 | 5.345410 |
+| 2 | 5.970643 | 5.826495 | 5.403143 | 5.378001 |
+
+
+Expert-containing encoder coverage is 2.519622/2.536951 seconds baseline and 2.571401/2.513114 seconds candidate. The data do not establish a large, repeatable extra GPU penalty that would justify rewriting the padded kernels. Time outside recorded GPU execution falls only 0.058042/0.025142 seconds in this diagnostic. These are clipped temporal coverage measurements, not pure GPU-idle time or a causal savings budget; read timing/adoption and overlap still differ.
+
+The profiling process order happens to favor the candidate by less than one percent, unlike the original clean ABBA. Its own tracing controls pass, but it is not an independent replacement retention gate. Preserve both observations. Neither the small exposed-time reduction nor the timing reversal earns this added mutable metadata, reservation accounting and padded work.
+
+## Consequence and next bounded question
+
+Do not retain this candidate in the production path and retain its evidence. Native language choice, matching source structure and an observed preparation gap do not prove that moving preparation earlier helps completed work. The earlier proof of CPU/GPU overlap must be tested with all new work included.
+
+Before another scheduler change, use the already-resolved native/Splash payload dependencies to compare when required reads are first issued relative to route readiness and preparation. Distinguish actual delayed issuance from CPU scopes already hidden by GPU execution or forecast reads. The earlier submission-as-a-reader-work-item candidate remains separately rejected/unqualified in [[records/measurements/q2-expert-submission-boundary]]; do not silently repeat it. A new change needs evidence for a materially different dependency and must still beat v68 on complete requests before comparison with Splash can qualify it.
+
+Across this checkpoint, maximum observed process footprint is 11.848 GB and minimum sampled reclaimable headroom is 12.903 GB. All 509 runtime inputs and five default artifacts match v68. No Fast change, Smart promotion, release or app-readiness claim is made. Fast recall and Q2 strict-format failures remain separate from arithmetic and performance acceptance. The goal remains active and incomplete.
+
+## Q2 routing work, read issuance and staging ablation
+The same frozen Q2 inputs do not produce identical internal routes, but the aggregate required expert work is almost equal. This does not explain the remaining speed gap. A clean ablation also finds no repeatable penalty from the rejected early candidate's common staging machinery alone. No production change is retained, Fast remains unchanged and complete-request parity is still open.
+
+This follows [[records/measurements/q2-early-expert-preparation]] and [[records/measurements/q2-required-dependencies-and-preparation]]. New evidence is [[sources/runs/2026/10/2026-10-26-q2-routing-and-read-issuance]].
+
+## First required read is not a new large native delay
+
+Use the previously resolved exact payload ancestry, including useful forecast reads. For a job with a required read beginning after job creation, measure creation to its first such read. The union is 0.246050/0.235274 seconds native versus 0.278348/0.257226 seconds Splash in the two observed rounds. Almost all lies outside recorded GPU encoder intervals. The corresponding native medians are 51.5/49.4 microseconds versus 15.3/14.5 upstream, but Splash has a longer tail; choosing only the median would misrepresent the aggregate.
+
+The boundaries differ: native C job creation versus Splash load entry. Neither is a shared router-ready timestamp, and the first required read can be a forecast. This comparison does not establish equivalent handoffs, recoverable idle time or an advantage for native scheduling. It fails to expose a larger native aggregate delay after these particular job boundaries. The earlier unresolved interval before job creation remains relevant.
+
+## Isolate the rejected candidate's common machinery
+
+The original early-preparation ABBA slowed draft and commit phases too, even though it directly changes expert verification. Across that protocol, mean extra phase time is about 0.062 seconds draft, 0.146 verification and 0.009 commit. That makes a single padded-kernel explanation insufficient.
+
+Run the same final candidate binary with early preparation disabled. This keeps its common staging-owner accounting and compiled layout while taking the normal schedule. All 111 full-logit hashes, proposals and selected tokens match v68 under Metal validation; early prepared/refused/bound counts and final live reservations are zero. One ABBA, each process with one warmup and two observed rounds, passes all environmental and physical-memory guards.
+
+| Arm | Mean observed cycle time, s |
+| --- | ---: |
+| Baseline forward | 11.540983 |
+| Disabled candidate forward | 11.426069 |
+| Disabled candidate reverse | 11.360658 |
+| Baseline reverse | 11.308726 |
+
+
+Candidate/baseline ratios are 0.990043 forward and 1.004592 reverse, pooled 0.997244. Direction reverses and the pooled difference is under one percent. This does not establish a common-machinery slowdown or a retained improvement. It does not overturn the original early-scheduling rejection or justify keeping its extra complexity.
+
+## Compare the work actually routed
+
+Both engines execute the same 111 frozen cycles with real draft proposals, fixed target inputs/retained prefixes, BF16 activations/KV, FP32 recurrence and 4,067 expert slots. The capture uses existing CPU-visible values, without additional GPU waits or the public native observer that changes execution policy. Each instrument exactly matches its own full-logit, proposal and selected-token reference. Both are clean and remain below the 15 GB physical ceiling.
+
+Native records ranked IDs plus a histogram and pre-demand residency. Splash exposes grouped descriptors, so compare their expert counts, not invented per-token ranks. Forecast lists preserve their order. There are 5,328 current route events and 5,217 forecasts per engine. Splash passes eight capacity rows and masks inactive rows; native passes the actual one-to-eight rows. Assert every current histogram against the frozen active width. Equal live expert rows do not imply identical GPU launch geometry or full arithmetic.
+
+| Observed work | Native | Splash |
+| --- | ---: | ---: |
+| Actual expert-row selections | 226,560 | 226,560 |
+| Unique demanded experts | 144,844 | 144,862 |
+| Cache misses | 45,487 | 45,452 |
+| Forecast candidates | 138,878 | 138,911 |
+| Nonresident forecast candidates | 53,377 | 53,335 |
+| Current misses covered by a forecast | 25,859 | 25,801 |
+
+
+Native has only 35 additional cache misses out of roughly 45,000. Its route sets differ in 1,508 layer passes, with 1,473 native-only versus 1,491 Splash-only expert selections. Those substitutions nearly balance; they do not establish a large increase in required SSD work. Both forecasts cover about 25,800 actual misses, with nearly equal useful-candidate rank. The full ordered prediction lists differ in 3,919 events, so do not call the executions internally identical.
+
+This capture adopts 20,237 forecast records natively and 22,339 in Splash; demand supplies 25,250 versus 23,113. Read readiness and ownership handoff still differ despite similar possible coverage. These are instrumented work counts, not representative timing controls or proof that all extra demand reads delay the critical path. The already tested started-forecast candidate removes duplicate reads, but its prior request protocol is excluded and offers no qualified gain; see [[records/measurements/q2-started-forecast-reuse]] and [[records/measurements/q2-forecast-requests-and-mask-reuse]]. Do not substitute the adoption-count difference for evidence supporting a shared-reader rewrite.
+
+Across the own-reference files, 34 of 777 draft IDs and one of 384 selected target IDs differ between engines. This is a numerical implementation difference, not by itself a semantic quality regression or an explanation for required work. Own-reference exactness is deliberately distinct from cross-engine identity.
+
+## Preserve the remaining question
+
+An offline join of the prior dependency trace places only 0.039/0.031 seconds of residual time before encoders containing native expert combination, with less than two milliseconds before their construction. Earlier combination submission therefore lacks a large measured opportunity in this trace. It is not implemented speculatively. These following-encoder categories can overlap and locate intervals rather than prove causes.
+
+The larger known residual remains before expert encoder construction, including route synchronization and host preparation. The failed early-submission experiment demonstrates that simply moving preparation earlier does not solve it. The next useful comparison should resolve that specific transition under matched actual route/cache work, separating event readiness, host wakeup and metadata/submission work. Keep already rejected broad graph, polling and reader changes rejected unless new causal evidence changes their case.
+
+All 509 runtime source inputs and five default artifacts remain v68. No Fast performance change, Smart promotion, release or app-readiness claim follows. Fast recall and Q2 strict-format failures stay separate. The latest clean ordinary-request comparison remains about 9.4 percent slower for code and 6.1 percent for prose; this diagnostic does not replace it. The parity goal remains active and incomplete.
+
+## Q2 event readiness and packed routing metadata
+The exact readiness joins are complete, but their native instrumentation fails the sensitivity gate. A separate, uninstrumented test of the smallest metadata reduction preserves exact output and delivers no repeatable speed gain. The candidate is rejected, Fast remains unchanged and Q2 complete-request parity is still open.
+
+This follows [[records/measurements/q2-routing-and-read-issuance]] and the clean host-phase attribution in [[records/measurements/q2-required-dependencies-and-preparation]]. Raw evidence is [[sources/runs/2026/10/2026-10-26-q2-event-readiness]] and [[sources/runs/2026/10/2026-10-26-q2-packed-routing-metadata]].
+
+## Readiness boundaries resolve, but timing control fails
+
+Match each CPU readiness pickup to its actual GPU event/value, signaling command and last preceding encoder. Both engines resolve all 5,328 observations in each measured round, with no ambiguous or invalid joins. Each also preserves its own 111-cycle full-logit, proposal and selected-token reference. This validates the relationships, not cross-engine numerical identity.
+
+The fixed off/on comparison passes environmental guards but adds 4.78 percent to native median cycle time, above the two-percent measurement limit. Splash changes by minus 0.84 percent. Keep the entire native result, including its slower round. Do not promote the trace's timing totals to representative costs or repeat it merely to obtain a passing control.
+
+For diagnostic context, recorded readiness tails sum to 0.2173/0.2173 seconds native and 0.2063/0.2070 seconds Splash. Native then records 0.2098/0.2115 seconds before C job creation; source records less than one millisecond before its load-entry marker. Those last boundaries differ: Splash's metadata work follows load entry. They cannot support a direct 0.21-second native penalty. Last pre-signal encoder end is only a lower bound on event visibility, and same-process encoder coverage does not establish global GPU idle time. No polling, priority or wakeup optimization follows from these observations.
+
+## Test one bounded metadata reduction
+
+The earlier clean phase trace exposes approximately 0.021 seconds in C metadata preparation and 0.153 seconds in asynchronous submission outside recorded encoder scopes. These are overlapping diagnostic categories, not a promised saving. Test reducing four immutable routing arrays to one MLX-owned allocation, with unchanged byte contents and offset bindings. Keep mutable ready/staging state, all validation, reader policy, GPU arithmetic and affine/Fast buffer layouts intact.
+
+Original-byte arithmetic, failure/retry/resize and forecast-lifetime checks pass under Metal validation. The candidate exactly matches all 111 full-logit hashes, draft proposals and selected IDs. The uninstrumented ABBA uses 15 GB, 4,067 slots, 8,192 native context, one warmup and two observed rounds per process. Every arm passes the environmental guards; all 1,332 cycles retain exact proposals and selected IDs.
+
+| Arm | Mean observed cycle time, s |
+| --- | ---: |
+| Baseline forward | 11.374418 |
+| Candidate forward | 11.369662 |
+| Candidate reverse | 11.367634 |
+| Baseline reverse | 11.357099 |
+
+
+Candidate/baseline ratios are 0.999581863 forward and 1.000927588 reverse; pooled 1.000254213, about 0.03 percent slower. The change fails both-direction improvement and the one-percent advancement threshold. Remove it rather than broadening or retrying the benchmark. This experiment does not prove allocation is free; it demonstrates that this specific reduction earns no retained gain.
+
+## Best next investigation
+
+Check actual allocator lock contention and completion-thread buffer cleanup before changing ownership or adding reuse. The pinned MLX allocator shares a mutex between allocation and release, while the previously measured ownership scopes cover capture construction and registration, not later callback destruction; see [[records/measurements/q2-mlx-ownership-and-graph]]. That is a testable implementation difference, not an established bottleneck. Attribute waits to the request thread and overlap them with useful GPU/read work. Require bounded probes and a passing sensitivity control before a fix; summed background cleanup time is not removable request latency.
+
+All 509 runtime inputs and five default artifacts remain v68. Ordinary requests are not rerun after this candidate fails its gate. The latest clean ordinary-request comparison therefore remains about 9.4 percent slower for code and 6.1 percent for prose. No parity, Smart promotion, release or app-readiness claim follows. Fast recall and Q2 strict-format failures remain separately tracked.
+
+## Q2 allocator diagnostics and read-latency variance
+The allocator investigation does not earn a runtime change. Both probes preserve exact output but fail their timing-sensitivity controls. Existing traces then locate the slow control arm primarily in longer read-completion coverage and lower forecast adoption, rather than a new large interval outside reads/GPU work. This changes the next investigation toward read-latency sensitivity; it does not establish a missing scheduler optimization or solve parity.
+
+This follows [[records/measurements/q2-event-readiness-and-metadata]] and [[records/measurements/q2-mlx-ownership-and-graph]]. Full evidence is [[sources/runs/2026/10/2026-10-26-q2-allocator-waits]].
+
+## Measure actual allocator boundaries
+
+Bracket eight methods in the pinned MLX Metal allocator, preserving its original mutex, cache policy, allocation, unlock/relock, release and buffer lifetimes. Record complete API calls separately from their nested lock acquisition, held and unlock intervals. Track request-owner and background threads separately. A bounded recorder does not change model arithmetic or add GPU work.
+
+The first recorder is undersized for the revised validation's 1,635,211 events and fails without a specific saved error code. Preserve that failure. Both the larger all-thread recorder and the later owner-only recorder pass 111 full-logit/proposal/selected-ID checks under Metal validation. Known two-thread contention self-tests pass. The owner-only revision ignores background spans before accessing counters and separates read-mostly enable state from written counters, reducing potential observer contention. Its background service is intentionally unmeasured.
+
+Each control freezes off/on/on/off, with one warmup and one measured round per process. All arms meet the 15 GB, 4,067-slot and 8,192-context recipe and pass the environmental guards.
+
+| Probe | Off forward, s | On forward, s | On reverse, s | Off reverse, s | Pooled on/off |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| All threads | 11.491047 | 12.470251 | 11.673155 | 11.340668 | 1.057450 |
+| Request owner only | 12.887935 | 11.589894 | 11.415521 | 11.473195 | 0.944349 |
+
+
+The all-thread direction ratios are 1.085215 and 1.029318. The owner-only ratios are 0.899282 and 0.994973. Both complete protocols fail the two-percent sensitivity gate. The reverse owner-only pair alone cannot rescue the failed aggregate, and none of these ratios is a speed improvement.
+
+For diagnostic context only, the owner-only traces record 6.873/6.715 milliseconds of request-thread allocator-lock waiting, with 2.084/2.071 milliseconds outside recorded reads and GPU encoders. Complete allocator API unions are 0.186830/0.187883 seconds, with about 0.035 seconds outside those intervals. The earlier all-thread observations are of similar scale. These are unqualified instrumented observations, not representative production costs or removable latency. No allocator rewrite, extra buffer pool or callback-ownership port follows. The scope does not cover general CPU allocation, all Swift object lifetime work or driver cleanup outside these allocator methods.
+
+## Locate the slow arm without another model run
+
+Both off arms use the same binary with allocator recording disabled. Their measured rounds have the same required cache misses: 45,109. The slower arm adopts 1,593 fewer forecasts and fetches that many more records on demand, while issuing fewer total successful read bytes. Read completions have a longer tail; no extra required expert work explains it.
+
+| Captured work or coverage | Slow off arm | Later off arm |
+| --- | ---: | ---: |
+| Cycle wall time, s | 12.858479 | 11.444843 |
+| Recorded GPU encoder union, s | 6.196094 | 5.981949 |
+| Read coverage outside recorded GPU, s | 5.925194 | 4.703530 |
+| Outside both recorded reads and GPU, s | 0.737191 | 0.759364 |
+| Forecast records adopted | 17,604 | 19,197 |
+| Records fetched on demand | 27,505 | 25,912 |
+| Successful read bytes, GB | 87.354 | 89.237 |
+| Read-service median, microseconds | 246.542 | 217.917 |
+| Read-service p95, microseconds | 1168.375 | 746.625 |
+
+
+The slow arm adds about 1.414 seconds of cycle wall time. Recorded GPU coverage grows about 0.214 seconds, read coverage outside recorded GPU grows about 1.222 seconds, and the residual outside both shrinks about 0.022 seconds. Summed concurrent read service is 76.285 versus 60.187 seconds; that sum must not be presented as request waiting. The dominant read size is identical at 475,136 bytes, and its observed median also increases. This is evidence of changed read-completion latency alongside lost forecast readiness, not proof of physical SSD throttling, background interference or causality in either direction.
+
+These coverage categories do not prove global GPU idleness or that every outstanding forecast is a required dependency. Failed probe controls remain failed. The paired observation does explain why nominal thermal state, no paging and no competing build are insufficient to guarantee a stable timing control. Do not drop the slow arm or infer a native/Splash speed gap from these native-only runs.
+
+## Best next controlled comparison
+
+Test whether the native forecast handoff amplifies slower read completion. Use bounded frozen verification work, matching cache capacity and precision in both engines, with explicitly controlled read-completion latency. Separate already-started forecasts, ready adoption, actual demand work and critical waiting. Keep shared-reader scheduling a hypothesis until that experiment exposes a meaningful causal delay. Existing started-forecast reuse is only an ablation candidate; fewer duplicated reads or improvement under artificial delay would not qualify it for production. Any retained fix still requires clean, unmodified complete requests against v68 and Splash.
+
+The pinned Splash code owns reusable decode arenas; the native allocator already caches buffers. That implementation difference alone is not a reason to port another arena. Both codebases request uncached expert-file reads, so a missing cache-bypass flag is not established either. The latest clean ordinary-request comparison remains about 9.4 percent slower for code and 6.1 percent for prose. All 509 runtime inputs and five default artifacts remain v68, Fast stays unchanged, and known Fast recall/Q2 strict-format failures remain separate. No parity, Smart promotion, release or app-readiness claim follows.
+
+## Q2 controlled read latency rejects the forecast-amplification hypothesis
+The matched read-delay experiment does not support native forecast handling as an amplifier of slower reads. Native loses more ready forecasts under the intervention, yet its complete frozen cycles slow less than Splash's in both orders. Do not revive the rejected started-forecast change or port the shared reader on the strength of adoption counts. No production change is retained, and the Q2 parity goal remains open.
+
+This tests the next hypothesis from [[records/measurements/q2-allocator-and-read-latency]]. Full evidence is [[sources/runs/2026/10/2026-10-26-q2-read-latency]].
+
+## Controlled intervention and correctness
+
+Reuse the original frozen 111-cycle code fixture: identical requested target inputs, widths from one to eight, accepted prefixes, actual seven-token draft work, greedy decisions and state commits. Both engines have 4,067 expert slots, BF16 activations/KV and FP32 recurrence within a 15 GB physical ceiling. Native retains its 8,192-context recipe and source-built Splash its original bounded diagnostic arena. Own-engine output equality does not mean cross-engine arithmetic or routes are byte-identical.
+
+A small diagnostic interposer adds a requested 100 microseconds after every successful read wholly inside the original expert tensor regions, including their page-aligned margins. The zero-delay arms use the same library with the wait disabled. Actual reads, bytes, original coalescing, forecast and demand scheduling remain; this is an explicit latency intervention, not an optimization. The independent self-test checks exact bytes, region selection, partial reads, EOF, errno and failed reads. Both delayed engines then match all 111 own-reference full-logit hashes, draft proposals and selected IDs under Metal validation.
+
+Freeze N0,N100,S100,S0,S0,S100,N100,N0, with one warmup and two measured rounds per process. All eight arms pass nominal thermal, no paging, no competing heavy work, physical ceiling and headroom gates. Peaks are at most 11.731 GB native and 12.652 GB Splash; sampled headroom stays above 14.39 GB. Every timing proposal and selected ID is exact against its own reference. Required misses are unchanged between zero/delayed conditions within each engine and round: native 45,109/45,061 and Splash 45,009/45,083 for measured rounds one/two.
+
+## Result
+
+| Engine/direction | Zero-delay seconds | Delayed seconds | Increase |
+| --- | ---: | ---: | ---: |
+| Native forward | 11.445254 | 12.747179 | 11.38% |
+| Native reverse | 11.549984 | 13.207308 | 14.35% |
+| Splash forward | 10.830323 | 13.252806 | 22.37% |
+| Splash reverse | 10.710557 | 13.131645 | 22.60% |
+
+
+The realized added wait averages 146.88–147.05 microseconds per native read and 144.15–144.28 for Splash in wholly contained 250 ms bins. Report these actual values instead of assuming the requested wait was exact. The small extra wait in native cannot explain a claim that Splash received the harsher intervention. Summed worker I/O/wait times overlap and are not critical waiting or request wall time. Inside/intersecting bins preserve boundary uncertainty.
+
+Native's slowdown is 8.26–10.99 percentage points smaller, opposite the predeclared trigger requiring at least two points of greater native sensitivity in both directions. Native adoption falls from roughly 19,100–19,500 to 11,900–12,600 records; Splash falls from roughly 20,500–20,900 to 15,900–16,300. More missed forecast opportunities do not by themselves establish a larger latency penalty. Keep the full reverse native pair, including its 13.6389-second measured round; do not select the faster repeat.
+
+This does not prove all read-latency distributions harmless or that no duplicated forecast can ever matter. It tests a uniform added completion delay with actual reads and original schedulers. It does not isolate every critical dependency, distinguish physical SSD behavior from OS completion time, or qualify a scheduler optimization. The candidate-ablation trigger is not met, so no started-forecast rebuild or artificial-delay tuning follows.
+
+## Remaining scope
+
+Return to the native execution cost outside useful expert-read dependencies identified in [[records/measurements/q2-required-dependencies-and-preparation]]. The read-only audit finds one specific coverage gap: the earlier [[records/measurements/q2-mlx-ownership-and-graph]] probe measures construction/registration of captured owners, not destruction when completion-handler storage is released. MLX's end-encoding callback also locks its output map and prunes fences. General object destruction and this mutex are outside the allocator-method probe. These are hypotheses, not measured bottlenecks.
+
+The next bounded diagnostic should bracket actual completion cleanup, captured-owner destruction and output-map lock acquisition without changing lifetime or publication order. Correlate them with required-read and GPU intervals before implementing anything. Do not infer cost from a large count of references or port a larger arena. A justified fix must still pass exactness and clean ordinary requests against both v68 and published Splash.
+
+All 509 runtime inputs, five v68 artifacts and the clean MLX checkout remain unchanged. Fast remains stable. The latest qualified ordinary-request gap is still about 9.4 percent for code and 6.1 percent for prose; this intervention does not replace it. Fast recall and Q2 strict-format failures remain separate. No parity, Smart promotion, release or app-readiness claim follows.
+
+## Q2 completion cleanup is too small to explain the remaining gap
+MLX completion cleanup and its output-map mutex do not account for a meaningful part of the remaining Q2 slowdown. Keep this path unchanged. This closes the specific coverage gap from [[records/measurements/q2-controlled-read-latency]]; evidence is [[sources/runs/2026/10/2026-10-26-q2-completion-cleanup]].
+
+The bounded diagnostic preserves container copy/move ownership and destroys the whole original container at the original capture-lifetime boundary, including bucket storage. It brackets callback bodies, temporary arrays, captured data owners, fence/output sets, event vectors and the existing submission/completion mutex. A standalone lifetime and known-contention check passes. Under Metal validation, all 111 full-logit hashes, proposals and selected IDs match the native reference.
+
+At 15 GB, 8,192 context and 4,067 actual expert slots, the original-baseline/new-instrument off/on/on/off control measures 11.4111/11.5309/11.5705/11.4394 seconds. Both directions pass the two-percent sensitivity bound; the pooled instrument cost is 1.10 percent. All environmental gates pass. Each process has one warmup and one measured 111-cycle round. This is frozen complete-cycle diagnosis, not normal adaptive request qualification.
+
+Both instrumented rounds resolve every one of 5,328 required jobs. Request-thread destruction totals 11.26/12.05 milliseconds, with only 0.970/0.981 milliseconds outside the union of recorded GPU work and actual required-read dependencies. Output-map acquisition waiting totals 0.285/0.396 milliseconds; only 0.033/0.031 milliseconds lie outside that union. No request-thread wait overlaps a recorded background holder of the same mutex. Background destruction covers 130.1/128.3 milliseconds, of which 46.2/44.7 lie outside that union. Concurrent background work is not request waiting. Nested intervals are unioned, never added.
+
+The recorder covers cleanup that starts during the measured request; it drains already-active writes afterward. Later-starting cleanup is unmeasured. Recorded GPU intervals are not kernel utilization, and this result does not prove every reference-management operation free. It rejects this concrete cleanup/mutex hypothesis as the large direct cause. No allocator, fence, buffer-pool or ownership rewrite is justified.
+
+The next useful observation is normal adaptive requests with aligned forecast-only reads, preserving the original demand path and cache capacity. That candidate has exact arithmetic evidence but has never completed ordinary request qualification. Its old component protocol remains paging-excluded, and its original conditional follow-up remains unrun. A separately frozen ordinary-request experiment directly tests the missing user-facing question; it must not reinterpret that excluded prerequisite as passed or reuse favorable historical timing arms. The independent Splash extra-copy intervention motivates this scope after the reader, delay and cleanup hypotheses failed to explain enough of the gap.
+
+Fast remains unchanged. Existing Fast recall and Q2 strict-format failures stay separate; no release or Smart-default promotion follows.
+
+## Q2 aligned forecast reads improve code but regress prose
+Aligned forecast-only direct reads fail normal-request retention: code becomes 6.69 percent faster, but prose becomes 3.16 percent slower. Both effects have the same direction in forward and reverse order. Keep v68. Fast's retained production path is unchanged, and the Q2 parity goal remains open.
+
+This directly tests the missing ordinary-request scope identified after [[records/measurements/q2-completion-cleanup]]. The prior [[records/measurements/q2-forecast-only-continuation]] remains paging-excluded, and its own conditional follow-up remains unrun. The new experiment is explicitly frozen separately; it neither reruns that target-only protocol nor counts its favorable arms. Evidence is [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-requests]].
+
+The candidate removes forecast scratch copies with page-aligned read extents, leaving the original demand path, 4,067-slot cache and 128 MiB forecast reserve. Reuse the exact checked binary; seven runtime files differ from v68, plus an unused diagnostic CLI command. No new model rebuild or arithmetic change enters this request study. Both engines use identical prompt IDs, BF16 activations/KV, FP32 recurrence, 8,192 requested context and a 15 GB physical ceiling. Published Splash retains its CPU polling; its GPU spin library is absent.
+
+One ABCCBA has two warmups then 384-token code and prose requests per fresh process. All six arms pass observed memory, paging, thermal and competing-build gates. Peak physical use is at most 12.300 GB native and 13.887 GB Splash; observed remaining headroom stays above 13.009 GB.
+
+| Engine | Code seconds, forward/reverse | Prose seconds, forward/reverse |
+| --- | ---: | ---: |
+| Native v68 | 12.8985 / 13.9233 | 13.7084 / 13.3274 |
+| Aligned forecasts | 12.3411 / 12.6857 | 14.2249 / 13.6648 |
+| Published Splash | 11.5761 / 12.1798 | 12.9650 / 12.7023 |
+
+The candidate remains 5.35 percent slower than Splash on pooled code and 8.66 percent slower on pooled prose; it misses the separate within-five-percent target. The unchanged baseline is 12.91/5.33 percent slower in this protocol. These are current two-request measurements, not model-wide performance estimates or the best historical speeds.
+
+The amount of work changes under normal adaptation. Native code uses 111/106 passes and 475/490 target rows; the candidate uses 111/113 and 456/500. Native prose uses 126/126 passes and 465/479 rows; the candidate uses 133/134 and 468/478. Candidate prose reads 27,367/28,668 demand records versus 26,992/26,782. Timed outputs also diverge between unchanged baseline processes. These facts explain why fixed-component timing cannot simply predict whole requests; they do not prove a controller bug or assign a causal percentage to extra passes.
+
+The next discriminating experiment holds the original 111 target passes and retained prefixes fixed while executing complete cycles, including real drafting, greedy selection and commits. It differs from the older target-only component. A faster fixed cycle would locate an interaction with changing work; a flat cycle would show that the old component copy effect does not transfer to complete work. Neither outcome alone can reverse this normal-request rejection.
+
+The candidate is isolated and never installed. Its common C++ Job metadata allocation would also need a Q2-only boundary before any future retention to preserve Fast's allocation path; this study never runs Fast through the candidate. All 509 production runtime inputs and five default artifacts remain byte-identical to v68. No Smart promotion, release or complete app-readiness claim follows.
+
+## Q2 copy removal helps fixed prose work but normal requests fail retention
+Aligned forecast-only reads reduce complete fixed-prose cycle time by 3.50 percent, with improvement in both orders. The candidate is within five percent of source-built Splash in both orders on this fixture. Normal prose requests still regress, so this does not qualify the change for production or complete the Q2 parity goal. Keep v68 and Fast unchanged.
+
+This separates the fixed-work effect from the changing workload in [[records/measurements/q2-aligned-forecast-normal-requests]]. Evidence is [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-fixed-prose]]. A wrongly selected code timing attempt was stopped without using its timing results; the corrected prose protocol and cleanup repair were frozen before any prose timing. Neither replaces an unfavorable measured prose arm.
+
+## Correctness and matched work
+
+Freeze the failing task's 63-token prompt, 136 verification passes, 467 target rows and 383 retained input tokens. Execute real seven-token drafting, target verification, greedy selection and state commits. Both native arms use the same requested target inputs, widths, accepted prefixes, exact reference arithmetic and logical cache misses. The latter are 46,891/46,798 in measured rounds one/two. Forecast adoption can change with read timing; it is not a different logical cache requirement.
+
+The candidate matches all 136 fresh baseline full-logit hashes, proposals and selected IDs under Metal validation. All 2,448 later timing cycles match their own engine's proposals/selected IDs; timing does not read back full logits. Source-built Splash retains its own repeatable numerical reference, not cross-engine byte identity.
+
+One ABSSBA uses a 15 GB ceiling and 4,067 actual slots, BF16 activations/KV and FP32 recurrence. Each process has one warmup and two measured rounds. Native retains its 8,192-context recipe. The pinned source diagnostic preallocates its smaller bounded arena sufficient for the fixture; do not claim equal reserved context capacity or replace the published-engine ordinary-request comparison. It retains original CPU polling and has no GPU spin library. All arms pass the environmental gates; peak physical usage is at most 11.679 GB native and 12.650 GB Splash, with observed headroom above 13.778 GB.
+
+## Result
+
+Each cell is the mean of the two measured rounds in its process. All rounds, including Splash's 13.1721-second observation, remain included.
+
+| Engine | Forward seconds | Reverse seconds | Pooled seconds |
+| --- | ---: | ---: | ---: |
+| Native v68 | 12.464270 | 12.634355 | 12.549313 |
+| Aligned forecasts | 12.007852 | 12.212069 | 12.109961 |
+| Source-built Splash | 12.663446 | 12.037339 | 12.350392 |
+
+The candidate improves over native by 3.66/3.34 percent, and is 5.18 percent faster / 1.45 percent slower than Splash across orders. Its pooled time is 1.95 percent lower than Splash's. This is one fixed-prose control, not a universal speed claim. The unmodified native baseline is also close on this fixed fixture, further limiting any explanation based on uniformly slower native execution.
+
+## What this proves and the next discriminating step
+
+Removing the aligned forecast scratch copy has a real complete-cycle benefit when native work is held fixed. The normal-request prose regression is therefore not explained by a uniformly slower per-cycle read implementation. Whole-request adaptation, changed outputs/cache work and the remaining request boundaries still matter. This does not isolate a faulty controller equation or prove all remaining delay comes from batch choice.
+
+In the ordinary comparison, the candidate takes 133/134 prose passes versus 126/126. Anchor-only choices rise to 10/9 versus 5/1, while required work and eventual text differ. Both engines retain bounded calibration across requests. A read-only source audit also confirms different cost-timer boundaries: native prices host cycle work, whereas Splash uses backend submission-to-completion time. Native's real host cost should not simply be hidden to imitate a source timer.
+
+The next focused diagnostic should capture native normal-prose cost tables, confidence, chosen widths, acceptance/bonus outcomes and cycle boundaries at the first decision divergence, with a trace-sensitivity control. Check whether the extra narrow passes are supported by observed acceptance and marginal costs before changing the selector. Also account for prefill and callback time rather than equating a fixed-cycle result with a whole request. Do not force a larger minimum batch, reset calibration or port more reader/kernel machinery on this evidence alone. Test one identified pricing/selection correction against both original v68 and the isolated read candidate, then repeat complete requests only for that new causal question.
+
+The seven-file candidate remains isolated because it fails ordinary-request retention. If a future combined fix earns retention, its shared Job metadata allocation must first be bounded to Q2 so Fast's allocation path stays unchanged. All 509 production runtime inputs and five default artifacts are restored. Existing Fast recall and Q2 strict-format failures stay separate. No Smart promotion, release or application-readiness claim follows.

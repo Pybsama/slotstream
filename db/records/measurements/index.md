@@ -2,11 +2,53 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-14T15:16:12.682687Z
+updated: 2026-10-26T11:04:52.789473Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-aligned-forecast-fixed-prose]] — Q2 copy removal helps fixed prose work but normal requests fail retention
+- [[records/measurements/q2-aligned-forecast-normal-requests]] — Q2 aligned forecast reads improve code but regress prose
+- [[records/measurements/q2-completion-cleanup]] — Q2 completion cleanup is too small to explain the remaining gap
+- [[records/measurements/q2-controlled-read-latency]] — Q2 controlled read latency rejects the forecast-amplification hypothesis
+- [[records/measurements/q2-allocator-and-read-latency]] — Q2 allocator diagnostics and read-latency variance
+- [[records/measurements/q2-event-readiness-and-metadata]] — Q2 event readiness and packed routing metadata
+- [[records/measurements/q2-routing-and-read-issuance]] — Q2 routing work, read issuance and staging ablation
+- [[records/measurements/q2-early-expert-preparation]] — Q2 early expert preparation: exact but not faster
+- [[records/measurements/q2-required-dependencies-and-preparation]] — Q2 required dependencies and native preparation
+- [[records/measurements/q2-mlx-ownership-and-graph]] — Q2 MLX ownership and graph diagnosis
+- [[records/measurements/q2-forecast-requests-and-mask-reuse]] — Q2 forecast requests and immutable draft-mask reuse
+- [[records/measurements/q2-started-forecast-reuse]] — Q2 started forecasts and duplicate demand reads
+- [[records/measurements/q2-expert-submission-boundary]] — Q2 expert submission boundary and rejected small fixes
+- [[records/measurements/native-fast-q2-scheduling]] — Bounded Q2 read-ahead improves clean native comparisons; Fast read-ahead and buffer reuse are rejected, with full app and timing limits retained
+- [[records/measurements/native-fast-q2-execution-kernels]] — Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
+- [[records/measurements/q2-full-cycle-execution-control]] — Q2 full-cycle execution and submission control
+- [[records/measurements/q2-forecast-launch-control]] — Q2 forecast dispatch and launch-boundary control
+- [[records/measurements/q2-demand-lifecycle-triage]] — Q2 demand lifecycle and buffer triage
+- [[records/measurements/q2-ordinary-host-attribution]] — Q2 ordinary-request host work and submission gaps
+- [[records/measurements/q2-small-work-and-readiness]] — Q2 small-work controls and dependency localization
+- [[records/measurements/q2-ordinary-request-and-submission-diagnosis]] — Q2 ordinary requests and submission boundaries
+- [[records/measurements/q2-order-executor-and-validation]] — Q2 condition order, execution context and validation controls
+- [[records/measurements/q2-frequency-and-cache-diagnosis]] — Q2 streaming interaction and passive GPU frequency
+- [[records/measurements/q2-decoder-and-metadata-diagnosis]] — Q2 metadata costs and paired-code decoder rejection
+- [[records/measurements/q2-copy-and-stage-diagnosis]] — Q2 weight-copy attribution and GPU-stage identity
+- [[records/measurements/q2-matched-work-12gb]] — Q2 matched complete work at 12 GB
+- [[records/measurements/q2-forecast-reader-count]] — Q2 forecast-reader count and scheduling triage
+- [[records/measurements/q2-forecast-only-continuation]] — Q2 forecast-only continuation control
+- [[records/measurements/q2-adaptive-cost-and-demand-shape]] — Q2 adaptive costs and demand boundaries
+- [[records/measurements/q2-complete-copy-controls]] — Q2 complete-generation copy controls and layout isolation
+- [[records/measurements/q2-continuation-and-copy-diagnosis]] — Q2 continuation replay and staging-copy diagnosis
+- [[records/measurements/q2-handoff-and-overlap-diagnosis]] — Q2 remains slower; readiness, read-work and bounded scheduling controls reject unearned complexity
+- [[records/measurements/q2-typical-verification]] — Typical Q2 verification narrows the overlap gap; clean complete requests reject direct forecast reads
+- [[records/measurements/q2-focused-bottleneck]] — Controlled Q2 diagnosis rejects a faster repack kernel without repeatable complete-request benefit
+- [[records/measurements/native-prepared-execution]] — Native prepared execution on the 48 GiB Mac: qualified Fast speed, cache-dependent Q2 results, ownership checks and preserved workflow failures
+- [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
+- [[records/measurements/native-q2-splash-execution-comparison]] — Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs
+- [[records/measurements/fast-splash-execution-comparison]] — Fast native scheduling ports preserve measured quality; matched-cache observations still show a larger-cache Splash gap and exclude clean aggregate speed claims
+- [[records/measurements/smart-dflash-native-and-q2-review]] — Historical native Smart DFlash reference and small-task review; Q2 performance and the adoption priority are corrected by the exact-recipe follow-up.
+- [[records/measurements/exact-q2-performance-and-quality-followup]] — Exact upstream Q2 is substantially faster in bounded coding controls; preserve capability failures and prioritize native qualification over the earlier DFlash-only conclusion
+- [[records/measurements/release-0-2-30-published-2026-10-19]] — v0.2.30 published and accepted; mirror contributor notified
+- [[records/measurements/mirrored-checkpoint-review-2026-10-18]] — Mirrored checkpoint reads: final review corrections and three-arm comparison
 - [[records/measurements/issue54-native-boundary-probe-2026-10-13]] — Native trained attention and real cache growth pass on local and portable paths without reproducing the sustained issue 54 cliff
 - [[records/measurements/issue54-full-model-2026-10-14]] — Six public-release full-model requests on M5 do not reproduce the sustained 32k cliff; M4 cause and release-fix status remain unresolved
 - [[records/measurements/issue54-boundary-followup-2026-10-13]] — Issue 54 remains unverified after expanded path probes; full-model attempt refused before launch for insufficient headroom

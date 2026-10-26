@@ -143,12 +143,18 @@ public final class NgramStore {
         self.ringOrder = FIFOKeys(capacity: cacheCapacity)
         self.index = index
         self.cfg = index.config
-        self.pleLayerIndex = cfg.pleLayerIndices[0]
+        self.pleLayerIndex = cfg.pleLayerIndices.first ?? -1
         self.plePosition = 0
         self.nHeads = (cfg.ngramSize - 1) * cfg.headsPerNgram
         self.headDim = cfg.pleEmbedDim / nHeads
         self.eos = Int64(cfg.eosTokenId)
 
+        if cfg.isFast {
+            rowsPerShard = 0; wRowBytes = 0; sRowBytes = 0
+            rowReader = RowReader(index: index, rowsPerShard: 0, headDim: headDim, qGroup: cfg.ngramQGroup,
+                wRefs: [], sRefs: [], bRefs: [], wRowBytes: 0, sRowBytes: 0)
+            return
+        }
         let base = "model.layers.\(pleLayerIndex).ple.ple_embedding."
         if resident.has(base + "layer_multipliers") {
             multipliers = resident.tensor(base + "layer_multipliers").asArray(Int64.self)
@@ -184,6 +190,12 @@ public final class NgramStore {
         let padded = (total + div - 1) / div * div
         self.rowsPerShard = Int((padded + Int64(cfg.splitNgramParts) - 1) / Int64(cfg.splitNgramParts))
 
+        if index.q2 != nil {
+            self.wRowBytes = 90; self.sRowBytes = 0
+            self.rowReader = RowReader(index: index, rowsPerShard: rowsPerShard, headDim: headDim, qGroup: cfg.ngramQGroup,
+                wRefs: [], sRefs: [], bRefs: [], wRowBytes: 90, sRowBytes: 0)
+            return
+        }
         for s in 0 ..< cfg.splitNgramParts {
             let b = base + "ngram_embedding.shard_\(s)."
             wRefs.append(index.ref(b + "weight"))
@@ -248,6 +260,11 @@ public final class NgramStore {
         let wRowBytes: Int
         let sRowBytes: Int
         func read(_ gid: Int64,handles: [[TensorReadHandle]]?,fault: ReadFault?,shouldContinue: () -> Bool = { true }) throws -> [Float] {
+            if let q2 = index.q2 {
+                guard shouldContinue() else { throw CheckpointReadError.cancelled }
+                try fault?.beforeRead()
+                return try q2.pleRow(gid)
+            }
             guard let value = Int(exactly: gid), value >= 0, value / rowsPerShard < wRefs.count,
                 value % rowsPerShard < wRefs[value / rowsPerShard].shape[0]
             else { throw CheckpointReadError.invalidRange }

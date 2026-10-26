@@ -19,6 +19,7 @@ struct MacCommand {
         .init(title: "Response Details", key: "i", modifiers: [.command, .option], shortcut: "⌥⌘I"),
         .init(title: "Home", key: "1", shortcut: "⌘1"),
         .init(title: "Apps & Skills", key: "2", shortcut: "⌘2"),
+        .init(title: "Data", key: "3", shortcut: "⌘3"),
         .init(title: "Attach Files…", key: "a", modifiers: [.command, .shift], shortcut: "⌘⇧A"),
         .init(title: "Toggle Sidebar", key: "s", modifiers: [.command, .control], shortcut: "⌃⌘S")
     ]

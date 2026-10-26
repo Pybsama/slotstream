@@ -44,4 +44,5 @@ swiftc -lc++ -L "$BIN" -o "$TMP/checks" -module-name SlotstreamHomeUIChecks -Xli
   -I "$FW" -L "$FW" -sdk "$SDK" -g
 OUT=${SLOTSTREAM_UI_OUT:-$PWD/.build/slotstream-home-ui}
 mkdir -p "$OUT"
-SLOTSTREAM_UI_OUT="$OUT" SLOTSTREAM_FONTS="$PWD/apps/macos/Resources/Fonts" SLOTSTREAM_DBMD="$DBMD" "$TMP/checks"
+SLOTSTREAM_UI_OUT="$OUT" SLOTSTREAM_FONTS="$PWD/apps/macos/Resources/Fonts" SLOTSTREAM_DBMD="$DBMD" "$TMP/checks" | tee "$OUT/checks.log"
+grep -qx 'Home switching and native UI checks passed\.' "$OUT/checks.log"

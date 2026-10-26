@@ -118,7 +118,7 @@ package final class ExpertPrefetchAccounting {
 package final class ExpertPrefetchScratch {
     private let lock = NSLock()
     private var free: [UnsafeMutableRawPointer] = []
-    private let bytes: Int
+    package let bytes: Int
     package private(set) var temporaries = 0
 
     /// True when each buffer is sized for a complete record, so a worker may
@@ -206,6 +206,8 @@ package final class ExpertPrefetchTicket {
     private let accounting: ExpertPrefetchAccounting
     private let lock = NSLock()
     private var buffers: [UnsafeMutableRawPointer]?
+    private let releaseBuffers: () -> Void
+    private let forecastLease: NativeForecastArena.Lease?
     /// Slot mode: the reserved pool slot and its nine piece destinations,
     /// owned by the pool; the worker writes there and never frees them.
     package let slotReservation: SpeculativeSlotReservation?
@@ -227,11 +229,19 @@ package final class ExpertPrefetchTicket {
     package var progress: Int { lock.lock(); defer { lock.unlock() }; return piecesDone }
 
     /// Allocation reserves against the cap; nil when the cap is exhausted.
-    package init?(key: ExpertKey, pass: Int, revision: UInt64, pieceBytes: [Int], accounting: ExpertPrefetchAccounting) {
+    package init?(key: ExpertKey, pass: Int, revision: UInt64, pieceBytes: [Int], accounting: ExpertPrefetchAccounting,
+                  arena: NativeForecastArena? = nil) {
         let total = pieceBytes.reduce(0, +)
         guard !pieceBytes.isEmpty, pieceBytes.allSatisfy({ $0 > 0 }), accounting.reserve(total) else { return nil }
         var allocated: [UnsafeMutableRawPointer] = []
-        for pb in pieceBytes {
+        let lease: NativeForecastArena.Lease?
+        if let arena {
+            guard arena.pieceBytes == pieceBytes, let acquired = arena.acquire() else {
+                accounting.release(total); return nil
+            }
+            lease = acquired; allocated = acquired.buffers
+        } else { lease = nil }
+        for pb in (arena == nil ? pieceBytes : []) {
             var p: UnsafeMutableRawPointer? = nil
             let rc = posix_memalign(&p, 16384, pb)
             guard rc == 0, let p else {
@@ -243,6 +253,9 @@ package final class ExpertPrefetchTicket {
         }
         self.key = key; self.pass = pass; self.revision = revision; self.bytes = total
         self.pieceBytes = pieceBytes; self.accounting = accounting; self.buffers = allocated
+        self.forecastLease = lease
+        let owned = allocated
+        releaseBuffers = { if let lease { lease.release() } else { owned.forEach { free($0) } } }
         self.slotReservation = nil
     }
 
@@ -254,6 +267,7 @@ package final class ExpertPrefetchTicket {
         self.key = key; self.pass = pass; self.revision = revision
         self.pieceBytes = reservation.pieceBytes; self.bytes = reservation.pieceBytes.reduce(0, +)
         self.accounting = accounting; self.buffers = nil
+        self.forecastLease = nil; self.releaseBuffers = {}
         self.slotReservation = reservation
     }
 
@@ -262,7 +276,7 @@ package final class ExpertPrefetchTicket {
     deinit {
         // A ticket dropped without adoption or discard must not leak; a live
         // worker always transitions out of `workerOwnsBuffers` before leaving.
-        if let owned = buffers { owned.forEach { free($0) }; accounting.release(bytes) }
+        if buffers != nil { releaseBuffers(); accounting.release(bytes) }
     }
 
     package var state: State { lock.lock(); defer { lock.unlock() }; return stateValue }
@@ -363,6 +377,52 @@ package final class ExpertPrefetchTicket {
         }
     }
 
+    /// Ordered pieces share the existing bounded readers. A record stays owned
+    /// until every scheduled piece has left, including failed/cancelled reads.
+    /// This lets the highest-ranked record finish across several readers.
+    package func startPieces(reader: @escaping ExpertPieceReader, lanes: IOLaneBudget,
+                             queues: [DispatchQueue], firstQueue: Int) {
+        precondition(!queues.isEmpty && firstQueue >= 0)
+        lock.lock()
+        guard stateValue == .queued, !started, slotReservation == nil, let owned = buffers else {
+            lock.unlock(); return
+        }
+        stateValue = .reading; started = true; workerOwnsBuffers = true; lanesRef = lanes
+        piecesPending = pieceBytes.count
+        // Register every piece before publishing the reading state through
+        // the lock, and before any queue can finish the record.
+        for _ in pieceBytes { group.enter() }
+        lock.unlock()
+        let began = RuntimeClock.now()
+        for piece in pieceBytes.indices {
+            queues[(firstQueue + piece) % queues.count].async { [self] in
+                defer { group.leave() }
+                var succeeded = false
+                var failure: Error?
+                if canReadPiece,
+                   lanes.acquireSpeculative(shouldContinue: { self.canReadPiece }, priority: { self.isPromoted }) {
+                    do {
+                        try reader(key, piece, owned[piece], { self.canReadPiece })
+                        succeeded = true
+                    } catch { failure = error }
+                    lanes.releaseSpeculative()
+                }
+                lock.lock()
+                if succeeded { piecesDone += 1 }
+                if errorValue == nil { errorValue = failure }
+                piecesPending -= 1
+                let last = piecesPending == 0, completed = piecesDone, error = errorValue
+                lock.unlock()
+                if last { finishWorker(began: began, completed: completed, failure: error) }
+            }
+        }
+    }
+
+    private var piecesPending = 0
+    private var canReadPiece: Bool {
+        lock.lock(); defer { lock.unlock() }; return !cancelled && errorValue == nil
+    }
+
     /// Shared completion for both read shapes: record the timing, publish the
     /// state, free owned buffers exactly once and hand an unused slot back.
     private func finishWorker(began: UInt64, completed: Int, failure: Error?) {
@@ -373,7 +433,7 @@ package final class ExpertPrefetchTicket {
         if cancelled || failure != nil || completed != pieceBytes.count {
             // The model thread may already have asked for a discard while
             // this worker held the buffers; free exactly once, here.
-            if let owned = buffers { owned.forEach { free($0) }; buffers = nil; accounting.release(bytes) }
+            if buffers != nil { releaseBuffers(); buffers = nil; accounting.release(bytes) }
             stateValue = failure != nil && !cancelled ? .failed : .discarded
             errorValue = failure
         } else {
@@ -418,8 +478,8 @@ package final class ExpertPrefetchTicket {
     package func discard() {
         lock.lock()
         cancelled = true
-        if !workerOwnsBuffers, let owned = buffers {
-            owned.forEach { free($0) }
+        if !workerOwnsBuffers, buffers != nil {
+            releaseBuffers()
             buffers = nil
             accounting.release(bytes)
         }
@@ -440,12 +500,12 @@ package final class ExpertPrefetchTicket {
         guard shapes.count == pieceBytes.count, let owned = adopt() else { return nil }
         let accounting = self.accounting
         let bytes = self.bytes
-        let counter = ReleaseCounter(count: owned.count) { accounting.release(bytes) }
+        let release = releaseBuffers
+        let counter = ReleaseCounter(count: owned.count) { release(); accounting.release(bytes) }
         var out: [MLXArray] = []
         for (p, spec) in shapes.enumerated() {
             let pointer = owned[p]
             out.append(MLXArray(rawPointer: pointer, [1] + spec.shape, dtype: spec.dtype) {
-                free(pointer)
                 counter.release()
             })
         }
@@ -454,11 +514,25 @@ package final class ExpertPrefetchTicket {
 
     /// Adopt into caller-managed raw buffers (diagnostics only): the caller
     /// frees them and releases the accounting through `finishedRaw`.
-    package func adoptRaw() -> (buffers: [UnsafeMutableRawPointer], release: () -> Void)? {
+    package func adoptRaw() -> (buffers: [UnsafeMutableRawPointer], release: () -> Void,
+                                forecast: NativeForecastArena.Lease?)? {
         guard let owned = adopt() else { return nil }
         let accounting = self.accounting
         let bytes = self.bytes
-        return (owned, { owned.forEach { free($0) }; accounting.release(bytes) })
+        let release = releaseBuffers
+        let once = RawRelease { release(); accounting.release(bytes) }
+        return (owned, { once.release() }, forecastLease)
+    }
+
+    private final class RawRelease {
+        private let lock = NSLock()
+        private var body: (() -> Void)?
+        init(_ body: @escaping () -> Void) { self.body = body }
+        func release() {
+            let action = lock.withLock { let action = body; body = nil; return action }
+            action?()
+        }
+        deinit { release() }
     }
 
     private final class ReleaseCounter {
@@ -533,6 +607,8 @@ public struct ExpertPrefetchObservation: Codable, Equatable {
     public var recordReads = 0
     /// Workers launched piece by piece, including every fall back from record mode.
     public var pieceModeReads = 0
+    /// Raw Q2 forecasts whose pieces share the fixed reader queues.
+    public var parallelPieceRecords: Int?
     public var slotReservations = 0
     public var slotReleases = 0
     public var slotRefusals = 0
@@ -594,6 +670,9 @@ package struct ExpertPrefetchConfiguration: Equatable {
     /// layer's demand reads so the readout's GPU work runs while they are in
     /// flight (true). Meaningful with the attention-readout tap only.
     package var readoutAfterDemand = false
+    /// Diagnostic next-input recipe: GPU-selected routes ordered by summed
+    /// weights, issued after current expert compute, on four fixed readers.
+    package var inputForecast = false
     package var correctionBytes = 0
     /// Incremental runtime reservation charged before expert capacity is solved.
     package var reserveBytes = 0
@@ -754,6 +833,8 @@ package final class ExpertPrefetchScheduler {
     private var closed = false
     private var observationValue = ExpertPrefetchObservation()
     private let workerQueue: DispatchQueue
+    /// Fixed readers avoid parking one GCD worker for every predicted record.
+    private let orderedReaderQueues: [DispatchQueue]
     /// Slot mode: host scratch for the file reads (see `ExpertPrefetchScratch`).
     /// Record mode buys one buffer per lane at record size; piece mode keeps the
     /// original piece-sized buffers. `usesRecordReads` gates both together so a
@@ -777,11 +858,17 @@ package final class ExpertPrefetchScheduler {
     package var reservedSlots: Int { slotsOut }
     package var usesSlotAdoption: Bool { slotProvider != nil && configuration.adoption == .slot }
 
+    /// The representation belongs to this scheduler, never mutable store state.
+    /// Generic pool callers must prepare raw tickets before publishing them.
+    package let stagesRawQ2: Bool
+    package private(set) var nativeForecastArena: NativeForecastArena?
+
     package init(reader: @escaping ExpertPieceReader, isResident: @escaping (ExpertKey) -> Bool,
                  pieceBytes: [Int], configuration: ExpertPrefetchConfiguration,
                  predictor: ExpertPredictor?, layers: Int, experts: Int,
                  workerQueue: DispatchQueue = DispatchQueue.global(qos: .userInitiated),
-                 recordReader: ExpertRecordReader? = nil) {
+                 recordReader: ExpertRecordReader? = nil, stagesRawQ2: Bool = false) {
+        self.stagesRawQ2 = stagesRawQ2
         self.recordReader = recordReader
         self.reader = reader; self.isResident = isResident; self.pieceBytes = pieceBytes
         self.configuration = configuration; self.predictor = predictor
@@ -789,8 +876,11 @@ package final class ExpertPrefetchScheduler {
         self.recordBytes = pieceBytes.reduce(0, +)
         self.lanes = IOLaneBudget(speculativeLanes: configuration.lanes)
         self.accounting = ExpertPrefetchAccounting(capBytes: min(configuration.capRecords,
-            ExpertPrefetchConfiguration.maximumCapRecords) * recordBytes)
+            configuration.inputForecast ? 64 : ExpertPrefetchConfiguration.maximumCapRecords) * recordBytes)
         self.workerQueue = workerQueue
+        orderedReaderQueues = configuration.inputForecast ? (0..<configuration.lanes).map {
+            DispatchQueue(label: "slotstream.expert-input-reader.\($0)", qos: .userInitiated)
+        } : []
         observationValue.mode = configuration.shadow ? "shadow" : (configuration.enabled ? "on" : "diagnostic")
         observationValue.adoption = configuration.adoption.rawValue
         observationValue.readShape = configuration.readShape.rawValue
@@ -804,6 +894,11 @@ package final class ExpertPrefetchScheduler {
                 : configuration.tap == .boundary
                     ? "router-reuse:strides=\(configuration.strides.map(String.init).joined(separator: ","))"
                     : "router-reuse:tap=\(configuration.tap.rawValue)\(correctionIdentity)")
+        if configuration.inputForecast {
+            observationValue.predictorIdentity = "next-input:gpu-topk:sum-weights:four-readers"
+                + (stagesRawQ2 ? ":raw-q2" : "")
+            observationValue.forecastTap = "next-input"
+        }
     }
 
     /// The corrected attention tap's factors (`ExpertPrefetchConfiguration.correctionPath`),
@@ -828,13 +923,25 @@ package final class ExpertPrefetchScheduler {
 
     package convenience init(store: ExpertStore, pool: SlotPool, configuration: ExpertPrefetchConfiguration,
                              predictor: ExpertPredictor?, layers: Int, experts: Int) {
+        let raw = configuration.inputForecast && configuration.adoption == .staging
+            && configuration.readShape == .piece && store.isQ2 && !store.supportsRecordReads
+            && Q2PackedExperts.enabled && NativeExpertSchedule.enabled && NativeExpertSchedule.gpuStagingEnabled
+        // Input forecasts distribute ordered pieces across four reader queues. Their owned
+        // aligned buffers are included in the existing forecast reservation.
+        let scratch = raw ? ExpertPrefetchScratch(
+            pieceBytes: (store.pieceRowBytes.max() ?? 1) + 2 * ExactRead.pageBytes,
+            count: configuration.lanes) : nil
         self.init(reader: { key, piece, destination, shouldContinue in
-            try store.readPieceChecked(into: destination, key: key, piece: piece, shouldContinue: shouldContinue)
+            try store.readPieceChecked(into: destination, key: key, piece: piece,
+                shouldContinue: shouldContinue, rawCopy: raw, scratch: scratch)
         }, isResident: { [unowned pool] key in pool.isResident(key) }, pieceBytes: store.pieceRowBytes,
            configuration: configuration, predictor: predictor, layers: layers, experts: experts,
            recordReader: store.supportsRecordReads ? { key, destination, shouldContinue in
                try store.readRecordChecked(into: destination, key: key, shouldContinue: shouldContinue)
-           } : nil)
+           } : nil, stagesRawQ2: raw)
+        if raw && NativeForecastArena.enabled {
+            nativeForecastArena = try? NativeForecastArena(pieceBytes: store.pieceRowBytes)
+        }
     }
 
     /// The pool drained a returned reservation (model thread): one fewer out.
@@ -911,8 +1018,17 @@ package final class ExpertPrefetchScheduler {
         observationValue.scheduleSeconds += RuntimeClock.seconds(since: scheduleStart)
     }
 
-    /// Main-pass router IDs, for the recent-routes policy only.
+    /// Drop wrong next-input predictions before demand begins. In particular,
+    /// a serial reader must not park an unneeded ticket ahead of a promoted
+    /// demand ticket while the demand lane budget is active.
     package func observeRoutes(layer: Int, ids: [Int32]) {
+        if configuration.inputForecast {
+            let needed = Set(ids)
+            for (key, ticket) in tickets where key.layer == layer && !needed.contains(Int32(key.expert)) {
+                retire(ticket, key: key)
+            }
+            return
+        }
         guard configuration.policy == .recent, layer >= 0, layer < layers else { return }
         if layer == 0 || recentRoutes.isEmpty {
             recentRoutes.append(Array(repeating: [], count: layers))
@@ -1027,7 +1143,7 @@ package final class ExpertPrefetchScheduler {
                     reservation: reservation, accounting: accounting)
             } else {
                 guard let allocated = ExpertPrefetchTicket(key: key, pass: currentPass, revision: revision,
-                    pieceBytes: pieceBytes, accounting: accounting) else {
+                    pieceBytes: pieceBytes, accounting: accounting, arena: nativeForecastArena) else {
                     observationValue.capRefusals += 1
                     return false
                 }
@@ -1035,9 +1151,17 @@ package final class ExpertPrefetchScheduler {
             }
             tickets[key] = ticket
             let wholeRecord = usesRecordReads && ticket.isSlotMode
-            ticket.start(reader: reader, lanes: lanes, queue: workerQueue,
-                         scratch: ticket.isSlotMode ? scratch : nil,
-                         recordReader: wholeRecord ? recordReader : nil)
+            let queue = orderedReaderQueues.isEmpty ? workerQueue
+                : orderedReaderQueues[issuedPerTarget[layer] % orderedReaderQueues.count]
+            if stagesRawQ2, !orderedReaderQueues.isEmpty, !ticket.isSlotMode, !wholeRecord {
+                ticket.startPieces(reader: reader, lanes: lanes, queues: orderedReaderQueues,
+                    firstQueue: issuedPerTarget[layer] * pieceBytes.count)
+                observationValue.parallelPieceRecords = (observationValue.parallelPieceRecords ?? 0) + 1
+            } else {
+                ticket.start(reader: reader, lanes: lanes, queue: queue,
+                             scratch: ticket.isSlotMode ? scratch : nil,
+                             recordReader: wholeRecord ? recordReader : nil)
+            }
             if wholeRecord { observationValue.recordReads += 1 } else { observationValue.pieceModeReads += 1 }
             observationValue.issued += 1
             observationValue.issuedBytes += ticket.bytes

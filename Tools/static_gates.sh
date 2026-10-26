@@ -11,6 +11,7 @@ done
 sh -n install.sh
 python3 -m py_compile Tools/*.py Tools/reference/*.py Tools/slotpack/*.py
 python3 Tools/static_gates_binary_test.py
+python3 Tools/checkpoint_mirror_cli_test.py
 python3 Tools/installer_gates_binary_test.py
 python3 Tools/installer_metal_test.py
 python3 Tools/verify_binary_test.py
@@ -27,6 +28,8 @@ python3 Tools/context_qualification_checks.py
 python3 Tools/process_cleanup_checks.py
 python3 Tools/launch_request_deadline_test.py
 python3 Tools/safetensors_empty_test.py
+python3 Tools/native_schedule_headers_gate_test.py
+python3 Tools/native_schedule_headers_gate.py
 # These use tiny fixtures or mocked processes; none loads MLX, builds Swift,
 # reads model weights, or takes the live model lock. Syntax checks alone do
 # not exercise their benchmark validity and artifact-identity assertions.
@@ -50,10 +53,15 @@ if grep -En 'File\(path: .*sha256: nil\)' Sources/Slotstream/PinnedModel.swift; 
 fi
 
 python3 Tools/mtp_process_guard_gate.py --binary "$BIN"
+python3 Tools/checkpoint_mirror_cli.py --binary "$BIN" --weights-free
+python3 Tools/vision_mirror_gate.py --binary "$BIN"
 "$BIN" runtime-check
+"$BIN" q2-format-check --fixtures bench/q2/formats.json --policy-fixtures bench/q2/verify-budget.json --policy-fixtures bench/q2/verify-budget-complete.json --mix-fixtures bench/q2/mix-quantization.json
+"$BIN" q2-experts-check
 # Native OS accounting regression with at most 192 MiB of live Metal buffers.
 # It compiles the production counter directly, without MLX or model weights.
 python3 Tools/process_memory_gate.py
+python3 Tools/checkpoint_mirror_thread_gate.py
 "$BIN" pull-check
 python3 Tools/slotpack/cli_checks.py --binary "$BIN" --selection-only --receipt .build/model-pack-selection.json
 python3 Tools/pull_interrupt_gate.py

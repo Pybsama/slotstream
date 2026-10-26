@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63aeyxs2cah7a9v4b1nt
 created: 2026-09-14T16:14:44.046090+00:00
-updated: 2026-10-16T06:32:38.213585+00:00
+updated: 2026-10-22T03:24:41.565724+00:00
 summary: Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
 ---
 # Native runtime contract
@@ -129,3 +129,63 @@ The shared native text module recognizes canonical, page-annotated and grouped e
 The app and model prompt disclose current missing capabilities: live web search/browsing, audio transcription, arbitrary code execution and general image understanding. Saved pages and transcripts can be attached, project changes can be reviewed and tested externally, and images provide OCR text. These disclosure improvements do not implement those capabilities.
 
 Policy: [[records/decisions/qualify-complete-native-workflows]]. Baseline failures: [[sources/runs/2026/10/2026-10-14-sevra-capability-audit]].
+
+## Home data and local integrations (October 21, 2026)
+
+The native app, `slotstream-home` command and local MCP adapter resolve Homes
+through one device registry at `~/Library/Application Support/Slotstream/homes.json`.
+Its lock serializes selection changes, and migration preserves existing app
+paths without moving their contents. A command or server binds one Home at
+startup. Changing the registry default affects subsequent commands and the next
+app launch; an open app switches through its native Home lifecycle. Missing
+Homes fail explicitly. An explicit development Home does not change the saved
+default. Removing a registry entry never removes a Home.
+
+The Data view groups records, sources, conversations, activity, advanced state,
+schemas and database log. Records have structured fields, exact bounded saved
+content, links, backlinks and fingerprints. Memory and Journal retain their
+own native editing controls. Browsing does not grant AI memory admission or
+change authority. SQL and generic raw record editing are outside this scope.
+
+`HomeStore.data` is the shared deterministic read contract. With an open app,
+the authenticated same-user local endpoint queues the read behind durable
+writes. Otherwise a short-lived HomeStore owner verifies and reads the Home
+without instantiating inference or saving conversation state on close. Reads
+retain existing integrity and dbmd boundaries. Incognito and device credentials
+are unavailable. Literal search is case-insensitive; repeated field filters
+are ANDed. Counts describe the complete matched set, pages have an explicit
+next offset, and a digest of the sorted records rejects stale continuation.
+Sidecars retain db.md's explicit index-maintenance contract for external imports.
+
+Data request policy bounds are 100 rows per page, a 100,000 offset, 16 filters,
+512 UTF-8 bytes per search/filter, 256 KiB for one source file, 512 KiB for schema
+or log output and 768 KiB per encoded reply. They bound UI/IPC work and leave
+room inside the existing local envelope; they are conservative resource caps,
+not measured scale or performance claims. The existing helper timeout and
+output ceiling remain authoritative. Oversized queries fail rather than silently
+truncating a complete-result claim. Revisit these policies with representative
+large-Home fixtures and measured UI latency/memory, keeping revision binding.
+
+`ask` uses the selected Home's open app owner, its existing model, admitted
+memory, thread context and attachments. It does not automatically ingest every
+Home record. Acceptance returns a durable run ID and nonce; retrying identical
+input with the same nonce reconciles acceptance. Native review remains the only
+approval path. The legacy explicit `--dbmd` development owner mode remains
+available under the existing local CLI contract.
+
+`serve` speaks newline-delimited JSON-RPC over MCP stdio, with initialization,
+tool discovery and bounded requests. It opens no network listener. Read-only
+Home/data tools are the default. `--allow-ask` explicitly adds submit, observe
+and stop, never approve. The server remains bound to its startup Home across
+registry changes. The input ceiling is 64 KiB per message, a protocol resource
+policy rather than a prompt-capacity promise. Stored content is quoted data,
+never authority. HTTP publication and remote authentication remain outside
+this adapter.
+
+The bundle carries the CLI and repository-owned `slotstream-home` agent skill.
+Connections installs the command link in `~/.local/bin` and the skill into a
+chosen Codex or Claude Code skill directory. An unrelated command or customized
+skill is preserved. Managed skill updates require a matching previous-content
+receipt. MCP configuration names the exact executable and Home; it does not
+rewrite an agent client's existing settings. The independent `slotstream`
+engine and `slotstream-local` compatibility product remain usable.

@@ -44,8 +44,11 @@ public struct ModelPack: Sendable {
         let rows = files.sorted { $0.path < $1.path }.map {
             [$0.path, String($0.size), $0.sha256 ?? "missing", $0.optional ? "optional" : "required"]
         }
+        let draftRows = usesDFlash ? draftFiles.sorted { $0.path < $1.path }.map {
+            ["dflash/" + $0.path, String($0.size), $0.sha256 ?? "missing", "required"]
+        } : []
         let object: [String: Any] = ["schema": 1, "id": id, "checkpoint": checkpointRevision,
-            "conversion": conversionRevision, "layout": layout, "compatibility": compatibility, "files": rows]
+            "conversion": conversionRevision, "layout": layout, "compatibility": compatibility, "files": rows + draftRows + (id == PinnedQ2Model.name ? PinnedQ2Model.metadataFiles.map { [$0.path, String($0.size), $0.sha256!, "required"] } : [])]
         let bytes = try! JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
         return SHA256.hash(data: bytes).map { String(format: "%02x", $0) }.joined()
     }
@@ -73,7 +76,7 @@ public struct ModelPackDecision: Sendable {
 }
 
 public enum ModelPackRegistry {
-    public static let baseline = ModelPack(id: PinnedModel.name, title: "Original 4-bit",
+    public static let baseline = ModelPack(id: PinnedModel.name, title: "Smart",
         checkpointRevision: "de4b8e4d43b917e7706784d8bb445c9af86a3540",
         conversionRevision: PinnedModel.revision, deployment: .original, memoryProfile: .original, startupDefaults: .original,
         directoryName: PinnedModel.dirName, layout: "affine-4-group64-ple-group32",
@@ -85,7 +88,38 @@ public enum ModelPackRegistry {
 
     /// Research VQ exports intentionally do not appear here. A smaller bit
     /// label or component parity cannot grant service or download eligibility.
-    public static let supported: [ModelPack] = [baseline]
+    public static let fast = ModelPack(id: PinnedFastModel.name, title: "Fast",
+        checkpointRevision: PinnedFastModel.revision, conversionRevision: PinnedFastModel.revision,
+        deployment: try! WeightDeployment(repository: PinnedFastModel.repository,
+            revision: PinnedFastModel.revision, files: PinnedFastModel.files,
+            rawBases: ["https://huggingface.co/" + PinnedFastModel.repository + "/resolve/" + PinnedFastModel.revision]),
+        memoryProfile: .fast, startupDefaults: .fast, directoryName: PinnedFastModel.directoryName,
+        layout: "qwen36-affine4-group64-router8", compatibility: "slotstream-qwen36-v1",
+        supportEvidence: ["db/records/decisions/fast-and-smart.md"],
+        qualifiedAutomaticProfiles: [], decodeForecastFiles: [])
+
+    /// Explicit qualification candidate. The Smart alias remains unchanged
+    /// until complete native workflow, speed and quality gates pass.
+    public static let q2Candidate = ModelPack(id: PinnedQ2Model.name, title: "Smart Q2 candidate",
+        checkpointRevision: baseline.checkpointRevision, conversionRevision: PinnedQ2Model.revision,
+        deployment: PinnedQ2Model.deployment, memoryProfile: .q2, startupDefaults: .q2,
+        directoryName: PinnedQ2Model.directoryName, layout: "gsq-rco-mixed-gguf-q2-native-v1",
+        compatibility: "slotstream-qwen38-gsq-q2-v1",
+        supportEvidence: ["db/records/decisions/smart-dflash-and-target-quantization.md"],
+        qualifiedAutomaticProfiles: [], decodeForecastFiles: [])
+
+    // Explicit candidates can use the native loader without entering normal
+    // setup, automatic selection or incumbent retention before qualification.
+    public static let supported: [ModelPack] = [fast, baseline]
+
+    public static func alias(_ name: String) -> ModelPack? {
+        switch name.lowercased() {
+        case "smart-q2", PinnedQ2Model.name, PinnedQ2Model.directoryName: return q2Candidate
+        case "fast", PinnedFastModel.name, PinnedFastModel.directoryName: return fast
+        case "smart", PinnedModel.name, PinnedModel.dirName: return baseline
+        default: return nil
+        }
+    }
 
     /// The exact exported bundle exercises the same loader, planner and
     /// startup recipe used by product owners. It stays outside supported,
@@ -181,10 +215,10 @@ public enum ModelPackRegistry {
                     : "Keeps your installed pack; no qualified profile matches this configuration.",
                 automatic: true)
         case .pack(let id):
-            guard let pack = supported.first(where: { $0.id == id }) else {
+            guard let pack = alias(id) ?? supported.first(where: { $0.id == id }) else {
                 throw SelectionError()
             }
-            return ModelPackDecision(pack: pack, reason: "Uses your selected quantization.", automatic: false)
+            return ModelPackDecision(pack: pack, reason: "Uses your selected model. Speed is not verified for your current configuration.", automatic: false)
         }
     }
 
@@ -211,7 +245,7 @@ extension ModelPack {
         guard plan.resources == memoryProfile else {
             throw PlanError("The selected model pack and load plan have different resource contracts")
         }
-        let admitted = [ModelPackRegistry.baseline, ModelPackRegistry.researchStandalone]
+        let admitted = [ModelPackRegistry.fast, ModelPackRegistry.baseline, ModelPackRegistry.q2Candidate, ModelPackRegistry.researchStandalone]
         guard admitted.contains(where: { $0.id == id && $0.manifestDigest == manifestDigest }) else {
             throw PlanError("The selected model pack has no supported loader in this build")
         }

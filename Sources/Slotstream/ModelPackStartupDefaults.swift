@@ -11,7 +11,7 @@ import Crypto
 /// provide its own recipe; neither its bit width nor a downloaded manifest
 /// inherits the original pack's ceiling or optimizations.
 public struct ModelPackStartupDefaults: Sendable {
-    public enum Lookahead: String, Sendable { case originalAutomatic, off, uncorrected }
+    public enum Lookahead: String, Sendable { case originalAutomatic, off, uncorrected, nativeInput }
     /// Compatibility interpretation for activation records written before
     /// explicit startup recipes. Keep this identity when later defaults change.
     public static let legacyOriginalPolicyID = "original-desktop-startup-v1"
@@ -51,6 +51,22 @@ public struct ModelPackStartupDefaults: Sendable {
 
     /// Existing Desktop choices, moved without enlarging any budget or
     /// claiming new qualification. The total ceiling already includes MTP.
+    // Use the existing hardware/headroom ceiling so the smaller model can
+    // become fully resident when it fits; expert slots still stop at its size.
+    package static let fast = Self(id: "qwen36-fast-startup-v1",
+        automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
+        draftMode: .off, draftPlacement: .automatic, draftDepth: 0,
+        lookahead: .off, prefixCacheEnabled: true,
+        shortPromptTokens: 1536, shortPromptChunk: 512,
+        reference: "db/records/decisions/fast-and-smart.md")
+
+    package static let q2 = Self(id: "gsq-q2-native-startup-v2",
+        automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
+        draftMode: .off, draftPlacement: .automatic, draftDepth: 0,
+        lookahead: .nativeInput, prefixCacheEnabled: true,
+        shortPromptTokens: 1536, shortPromptChunk: 256,
+        reference: "db/records/decisions/smart-dflash-and-target-quantization.md")
+
     package static let original = Self(id: "original-desktop-startup-v2",
         automaticCeilingBytes: Int64(Planner.usefulCeilingGB * 1e9), contextTokens: 32768,
         draftMode: .auto, draftPlacement: .automatic, draftDepth: 2,
@@ -79,6 +95,7 @@ public struct ModelPackStartupDefaults: Sendable {
               (0...contextTokens).contains(shortPromptTokens),
               (256...4096).contains(shortPromptChunk),
               lookahead != .originalAutomatic || resources == .original,
+              lookahead != .nativeInput || resources.nativeInputReadAheadReserveBytes > 0,
               lookahead != .uncorrected || resources == .affine3GroupedLookaheadControl || resources == .affine3Native else {
             throw PlanError("This pack's startup recipe is incomplete or incompatible with its resource contract")
         }
@@ -93,6 +110,7 @@ public struct ModelPackStartupDefaults: Sendable {
     package func planningLookahead(original: DecodeLookaheadPlanning) -> DecodeLookaheadPlanning {
         switch lookahead {
         case .originalAutomatic: return original
+        case .nativeInput: return .automatic
         case .off: return .off
         case .uncorrected: return .retained(enabled: true, bytes: DecodeLookahead.reserveBytes)
         }

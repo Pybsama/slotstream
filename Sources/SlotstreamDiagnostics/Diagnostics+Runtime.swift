@@ -31,6 +31,11 @@ extension Diagnostics {
             from: JSONSerialization.data(withJSONObject: oldStats))
         c.expect("statistics predating the lifetime footprint field still decode",
             oldDecoded.lifetimePhysicalFootprintPeakBytes == nil && oldDecoded.peakMemoryGB == memoryStats.peakMemoryGB)
+        oldStats.removeValue(forKey: "mirrorBytes")
+        let preMirror = try JSONDecoder().decode(GenStats.self,
+            from: JSONSerialization.data(withJSONObject: oldStats))
+        c.expect("statistics predating mirrors still decode",
+            preMirror.mirrorBytes == nil && preMirror.peakMemoryGB == memoryStats.peakMemoryGB)
         var disk = PersistentPrefixObservation()
         disk.saveOutcome = "saved"; disk.savedTokens = 2_048; disk.saveBytes = 4_096; disk.reusedBytes = 1_024
         disk.sharedSaveOutcome = "saved"; disk.sharedSavedTokens = 768; disk.sharedSaveSeconds = 0.25
@@ -102,6 +107,11 @@ extension Diagnostics {
             ("applegpu_g17x", 26, 2, false)] {
             c.equal("fused capability \(arch)/\(major).\(minor)",
                 FusedPrefillAttention.supportsNAX(architecture: arch, major: major, minor: minor), expected)
+        }
+        for (family, major, minor, expected) in [(true, 26, 1, true), (false, 26, 4, false),
+            (true, 26, 0, false), (true, 15, 9, false), (true, 27, 0, true)] {
+            c.equal("MPP capability family9=\(family) / \(major).\(minor)",
+                Q2PackedExperts.supportsMPP(appleFamily9: family, major: major, minor: minor), expected)
         }
         c.expect("backend arithmetic overrides separate cache identity",
             FusedPrefillAttention.environmentIdentity(["MLX_ENABLE_TF32": "0"])

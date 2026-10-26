@@ -26,6 +26,7 @@ SECTIONS = [
     ('Engine.swift', 'public struct ChatMessage {', 'public final class Engine {'),
     ('Observation.swift', 'public enum RuntimeClock {', 'public struct ImagePreparationObservation:'),
     ('Layers.swift', 'public enum SweepTuning {', '// MARK: - hyper-connections'),
+    ('NativeExpertSchedule.swift', 'package final class NativeExpertSchedule {', '    package static var eventStats:'),
 ]
 
 
@@ -57,6 +58,10 @@ def shims():
         if text.count(start) != 1 or text.count(end) != 1:
             raise ValueError(f'pure declaration boundary changed: {name}')
         chunks.append(text[text.index(start):text.index(end)])
+        if name == 'NativeExpertSchedule.swift':
+            # Only the pure activation policy and charged geometry above the
+            # first GPU observer are needed. Keep their production bytes.
+            chunks.append('}')
     prefix = (ROOT / 'Sources/Slotstream/PrefixCache.swift').read_text()
     constants = []
     for name in ('bytesPerToken', 'fixedBytesPerEntry', 'maxEntries'):
@@ -65,6 +70,11 @@ def shims():
             raise ValueError(f'prefix geometry needs explicit review: {name}')
         constants.append(matches[0])
     chunks += ['public enum PrefixCache {\n' + '\n'.join(constants) + '\n}',
+               '''package enum Q2PackedExperts {
+    // An explicitly injected platform capability, never the runner's GPU.
+    // Each variant gets a fresh process because production policies are static.
+    package static let enabled = CommandLine.arguments.contains("--proxy-native-staging")
+}''',
                '''extension Planner {
     // Deliberately unreadable observers. Every successful test injects its
     // machine values; forgotten injection cannot borrow real host headroom.
@@ -105,6 +115,15 @@ def run(out, swiftc=None):
             report['contracts'] = json.loads(result.stdout)
             if result.returncode or report['contracts'].get('passed') is not True:
                 raise ValueError('source contracts failed')
+            supported = subprocess.run([str(temp / 'contracts'), str(ROOT / 'Tools/fixtures/context-default-v3.json'),
+                                        '--proxy-native-staging'],
+                                       env=env, capture_output=True, text=True, timeout=120)
+            (out / 'contracts-native-staging.stdout.json').write_text(supported.stdout)
+            (out / 'contracts-native-staging.stderr.txt').write_text(supported.stderr)
+            report['native_staging_exit_code'] = supported.returncode
+            report['native_staging_contracts'] = json.loads(supported.stdout)
+            if supported.returncode or report['native_staging_contracts'].get('passed') is not True:
+                raise ValueError('source contracts with native staging capability failed')
         if report['source_sha256'] != selected_sources():
             raise ValueError('source changed during source contract verification')
         report['passed'] = True
