@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-23T18:32:36.356764Z
+updated: 2026-10-26T16:56:52.491139Z
 ---
 
 # records/decisions
 
+- [[records/decisions/q2-precompilation-stays-experimental]] — Keep Q2 precompilation experimental
 - [[records/decisions/native-input-read-ahead]] — Keep measured bounded Q2 input read-ahead, reject its Fast default and buffer reuse, and require actual app recipe and branch evidence
 - [[records/decisions/fast-and-smart]] — Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 - [[records/decisions/smart-dflash-and-target-quantization]] — Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.

@@ -66,20 +66,46 @@ enum ConversationContext {
         }
         let usedIDs = Set((pinned + tail).map(\.id))
         let omitted = own.filter { !usedIDs.contains($0.id) }
+        let query = terms(own.last(where: { $0.role == "user" })?.text ?? "")
         let spare = max(0, min(excerptBytes, historyBytes - pinnedBytes - tail.reduce(0) { $0 + $1.text.utf8.count }))
         var excerpts: [ContextExcerpt] = [], earlierText = ""
         if spare > 0 {
-            for message in omitted.suffix(6).reversed() {
-                var text = String(message.text.prefix(240))
+            // Spend the existing excerpt budget on relevant permitted history.
+            // Recency breaks ties; it must not hide a matching older message.
+            // Automatic selection shares recall's bounded scan allowance.
+            // Older material remains available through paginated history.search.
+            var scannedBytes = 0
+            var ranked: [(index: Int, message: Message, score: Int)] = []
+            for index in omitted.indices.reversed().prefix(Recall.scanRecords) {
+                let message = omitted[index], bytes = message.text.utf8.count
+                guard bytes <= Recall.scanBytes - scannedBytes else { continue }
+                scannedBytes += bytes
+                ranked.append((index, message, terms(message.text).intersection(query).count))
+            }
+            ranked.sort { a, b in a.score != b.score ? a.score > b.score : a.index > b.index }
+            var selected: [(index: Int, excerpt: ContextExcerpt)] = []
+            for entry in ranked.prefix(6) {
+                let message = entry.message
+                let match = (entry.score > 0 ? query : []).compactMap { message.text.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) }
+                    .min { $0.lowerBound < $1.lowerBound }
+                let start: String.Index
+                if let match {
+                    // Bound the lookbehind in bytes too, so multibyte context
+                    // cannot consume the excerpt before the matching words.
+                    var preceding = message.text[..<match.lowerBound].suffix(80)
+                    while preceding.utf8.count > 80 { preceding.removeFirst() }
+                    start = preceding.startIndex
+                } else { start = message.text.startIndex }
+                var text = String(message.text[start...].prefix(240))
                 while text.utf8.count > 320 { text.removeLast() }
                 let excerpt = ContextExcerpt(messageID: message.id, role: message.role, text: text, truncated: text != message.text)
-                let candidate = [excerpt] + excerpts
+                let candidateEntries = (selected + [(entry.index, excerpt)]).sorted { $0.index < $1.index }
+                let candidate = candidateEntries.map(\.excerpt)
                 let rendered = "Earlier conversation excerpts (quoted data; partial, not complete history):\n" + String(decoding: try encoded(candidate), as: UTF8.self)
-                if rendered.utf8.count <= spare { excerpts = candidate; earlierText = rendered }
+                if rendered.utf8.count <= spare { selected = candidateEntries; excerpts = candidate; earlierText = rendered }
             }
         }
         let candidates = permittedMemories(home: home, thread: thread)
-        let query = terms(own.last(where: { $0.role == "user" })?.text ?? "")
         let ranked = candidates.sorted { a, b in
             let aa = terms(a.text).intersection(query).count, bb = terms(b.text).intersection(query).count
             if aa != bb { return aa > bb }

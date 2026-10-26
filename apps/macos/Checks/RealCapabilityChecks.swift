@@ -100,6 +100,7 @@ func realCapabilitiesIfRequested() async throws -> Bool {
                     "startup_policy": configuration?.startupPolicyID ?? "missing",
                     "execution_policy_identity": configuration?.executionPolicyIdentity ?? "missing",
                     "name": name, "prompt": prompt, "state": job.state.rawValue, "status": job.status, "answer": answer, "seconds": Date().timeIntervalSince(start), "trace": job.trace,
+                    "context_earlier_excerpts": (job.context?.earlierExcerpts ?? []).map { ["message_id": $0.messageID, "text": $0.text] },
                     "excerpts": (job.excerpts ?? []).map { ["id": $0.id, "path": $0.path, "method": $0.method ?? "", "content": $0.content ?? "", "sha256": $0.hash] }, "changes": (job.changes?.changes ?? []).map { ["path": $0.display, "content": $0.content] }]
                 rows.append(row); try save()
                 print("FINISH \(name) \(job.state.rawValue)\n\(answer)"); fflush(stdout)
@@ -123,7 +124,11 @@ func realCapabilitiesIfRequested() async throws -> Bool {
                     expect(parsed?["receipt_id"] as? String == "R-4826" && parsed?["currency"] as? String == "USD" && ((parsed?["total"] as? NSNumber)?.decimalValue == Decimal(string: "47.35") || (parsed?["total"] as? String) == "47.35"), "receipt returns raw parseable JSON with exact extracted values")
                 case "csv": expect(answer.contains("67.34") && job.trace.contains { $0.hasPrefix("source.table: computed") }, "CSV sum is computed by the table tool")
                 case "bulk_csv": expect(answer.contains("30") && job.trace.contains { $0.hasPrefix("source.table: computed") } && (job.excerpts ?? []).contains { ($0.content ?? "").contains("\"sum\":\"30\"") && ($0.content ?? "").contains("\"count\":3000") }, "large-table answer uses the complete host computation")
-                case "history_recall": expect(answer.contains("ORCHARD-9157") && job.trace.contains { $0.hasPrefix("history.search: returned") }, "model retrieves a detail outside the initial history window")
+                case "history_recall":
+                    let retrievedInitially = job.context?.earlierExcerpts.contains {
+                        $0.messageID == seed.threads[0].messages[0].id && $0.text.contains("ORCHARD-9157")
+                    } == true
+                    expect(answer.contains("ORCHARD-9157") && (retrievedInitially || job.trace.contains { $0.hasPrefix("history.search: returned") }), "model answers from retrieved conversation evidence")
                 case "meeting_notes": expect(folded.contains("omar") && folded.contains("20") && folded.contains("8450") && !CitationReferences.inMarkdown(answer).isEmpty, "meeting notes retain the agreed owner, revised date, budget and source")
                 default: break
                 }

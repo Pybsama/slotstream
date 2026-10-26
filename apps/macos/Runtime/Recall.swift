@@ -5,6 +5,8 @@ import Foundation
 enum Recall {
     static let resultBytes = 8_192
     static let jobBytes = 16_384
+    static let scanRecords = 512
+    static let scanBytes = 1_048_576
     static func search(_ call: ProposedTool, home: HomeState, thread: WorkThread, used: inout Int) throws -> String {
         guard thread.mode != .incognito else { throw AppRuntimeError.refused("Incognito cannot search saved history or memories.") }
         let query = try call.string("query")
@@ -30,7 +32,7 @@ enum Recall {
         }
         // Each call scans at most a bounded number of records/bytes. Empty
         // results are not exhaustion until complete is true.
-        while offset < candidates.count, rows.count < 6, scanned < 512, scannedBytes < 1_048_576 {
+        while offset < candidates.count, rows.count < 6, scanned < scanRecords, scannedBytes < scanBytes {
             let entry = candidates[offset]
             scanned += 1; scannedBytes += entry.text.utf8.count
             guard words.allSatisfy({ entry.text.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) != nil }) else { offset += 1; continue }

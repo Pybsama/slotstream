@@ -60,6 +60,20 @@ first-use compilation separately from recurring execution and cache misses,
 including its effect on adaptive batching. If preparation moves before engine
 readiness, measure preparation plus the first request so the cost stays visible.
 
+The [compiler isolation study](../db/records/measurements/q2-compiler-identity-and-precompiled-shaders.md)
+finds that identical source and options can still have very different creation
+costs. Offline compilation removes one source of spikes but does not pass the
+complete-request retention gate. Full-model checks also catch changes missed
+by small kernel checks. Keep the experiment isolated and profile model loading
+before adding another execution path. Native implementation gives us control;
+its benefit still has to appear in useful, reliable work.
+
+The [conversation retrieval check](../db/records/measurements/relevant-conversation-excerpts.md)
+separates an app context-selection problem from draft acceleration. Prefer
+bounded, relevant evidence with inspectable provenance, and test the original
+question through the real model. Preserving a correct answer matters more than
+requiring one particular tool call, but a failed answer must stay a failure.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)

@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T13:16:22.512027Z
+updated: 2026-10-26T16:56:52.466178Z
 ---
 
 # records/measurements
 
+- [[records/measurements/relevant-conversation-excerpts]] — Relevant conversation excerpts repair tested factual recall; citation quality remains open
+- [[records/measurements/q2-compiler-identity-and-precompiled-shaders]] — Q2 compilation spikes isolated; offline treatment does not earn integration
 - [[records/measurements/q2-cold-compilation-and-row-counts]] — Q2 runtime row counts remove repeated compilation; first-request qualification stays open
 - [[records/measurements/q2-aligned-forecast-fixed-prose]] — Q2 copy removal helps fixed prose work but normal requests fail retention
 - [[records/measurements/q2-aligned-forecast-normal-requests]] — Q2 aligned forecast reads improve code but regress prose

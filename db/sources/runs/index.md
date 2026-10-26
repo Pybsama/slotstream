@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T13:16:22.433178Z
+updated: 2026-10-26T16:56:52.360814Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-compiler-and-workflow-checkpoint]] — Q2 compiler isolation, complete requests and app recall qualification
 - [[sources/runs/2026/10/2026-10-26-q2-cold-compilation-and-row-counts]] — Q2 first-pass compilation and runtime row-count experiment
 - [[sources/runs/2026/10/2026-10-26-q2-adaptive-decisions-and-preparation]] — Q2 adaptive decision trace and prepared-cost ablation
 - [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-fixed-prose]] — Q2 aligned forecast fixed-prose full-cycle control
@@ -506,9 +507,8 @@ updated: 2026-10-26T13:16:22.433178Z
 - [[sources/runs/2026/09/2026-09-10-release-0-2-12-prepublication-corrections]] — Release build identity and coverage corrections before v0.2.12 publication
 - [[sources/runs/2026/09/2026-09-10-user-server-small-benchmark-paging-repeat-discarded]] — Discarded timing for the completed resumed summary repeat with system paging
 - [[sources/runs/2026/09/2026-09-10-user-server-small-benchmark-pressure-attempt-discarded]] — Discarded small-benchmark request canceled on memory pressure
-- [[sources/runs/2026/09/2026-09-10-user-server-three-prompts-small-benchmark]] — Small sequential benchmark of three prompts on the existing user server, with repeats and follow-ups
 
 ## More
 
-This folder has 999 files. The 500 most recent are listed above.
+This folder has 1000 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

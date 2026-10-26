@@ -717,3 +717,9 @@ Correct mistaken extraFast metadata-isolation prerequisite here and in fixed-pro
 ## [2026-10-26 13:16] update | records/measurements/q2-cold-compilation-and-row-counts.md
 Qualified first-pass compilation probe and exact expert-cache-reset replay. Runtime token counts remove twelve redundant verification pipeline creations, pass expanded independent tests and 72 exact model passes, and improve warmed code/prose in both orders. Preserve all eight clean ordinary arms; forward first-request regression fails retention and full parity. Production and Fast remain unchanged. Next inspect ordinary compilation source/options and preparation plus first-request latency.
 
+## [2026-10-26 16:56] update | records/measurements/q2-compiler-identity-and-precompiled-shaders.md
+Closed bounded compiler investigation: preserve exact source/options evidence, failed shared-library arithmetic and all request arms. Q2-only offline treatment passes frozen logits but fails repeatable retention and Splash parity; no engine change. Profile startup phases next.
+
+## [2026-10-26 16:56] update | records/measurements/relevant-conversation-excerpts.md
+Reproduced Fast recall failure with and without drafting. Retained bounded relevant excerpts with Unicode byte-boundary correction, passing context/privacy checks and final real app workflows including model switches. Keep unsupported citation markers and prior quality failures open; no release or Smart promotion.
+

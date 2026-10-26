@@ -354,14 +354,17 @@ arbitrary edits to owned state are not silently imported.
 ## Long conversations and inspectable context
 
 Slotstream keeps the full saved conversation while selecting a bounded recent window
-of complete exchanges for each request. Older partial excerpts are labeled as
-such. **Context** shows which messages and saved memories were used and what was
+of complete exchanges for each request. Within a bounded scan of older messages,
+it prefers excerpts that share words with the current question, using recency
+to break ties. Excerpts remain labeled as partial quoted history. **Context**
+shows which messages and saved memories were used and what was
 omitted. An oversized current request or pinned Home exchange is refused with
 its text preserved; attach long material as a source instead.
 
 Saved memories are selected by word overlap with the request, thread scope and
 recency, within a bounded budget. This is deterministic retrieval, not a claim
-of semantic recall. Forget excludes the source event from future windows and
+of semantic recall. Older material beyond automatic selection remains available
+through conversation search. Forget excludes the source event from future windows and
 derived excerpts. New Thread only conversations may read shared memories but
 keep newly saved memories within that thread. Older Thread only conversations
 retain their stricter reading scope until you explicitly allow shared memories.

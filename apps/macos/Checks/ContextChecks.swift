@@ -59,5 +59,57 @@ func longConversationChecks(root: URL, dbmd: URL) async throws {
     let optedIn = await probe.observedContexts
     try require(optedIn.last!.first!.content.contains("ORCHARD-CANARY-729"), "explicit old-thread opt-in enables shared memory")
     try await runtime.shutdown()
+    try await relevantConversationExcerptChecks(root: root, dbmd: dbmd)
     print("PASS: long Home recent windows, exact retained history, inspectable partial excerpts, matching-memory ranking, bounded full-memory text, suppression lineage and thread-only read/write scope")
+}
+
+private func relevantConversationExcerptChecks(root: URL, dbmd: URL) async throws {
+    let destination = root.appendingPathComponent("relevant-history-home")
+    var seed = HomeState()
+    let workshop = Message(role: "user", text: String(repeating: "A separate topic. ", count: 40)
+        + String(repeating: "🧭", count: 96) + "\nThe workshop storage code is QUARTZ-739. "
+        + String(repeating: "Unrelated closing remarks. ", count: 30))
+    let packing = Message(role: "user", text: "The packing team meets on Tuesdays at noon.")
+    seed.threads[0].messages = [workshop, packing]
+    for n in 0..<60 {
+        seed.threads[0].messages.append(Message(role: n % 2 == 0 ? "assistant" : "user",
+            text: String(repeating: "Unrelated later conversation \(n). ", count: 20)))
+    }
+    var other = WorkThread(title: "Separate conversation")
+    other.messages = [Message(role: "user", text: "Workshop storage code PRIVATE-OTHER-882.")]
+    seed.threads.append(other)
+    do { let store = try HomeStore(root: destination, dbmd: dbmd); try store.save(seed) }
+    let probe = ScriptedInference(turns: Array(repeating: EngineTurn(text: "Evidence inspected."), count: 4))
+    let runtime = try SlotstreamRuntime(homeURL: destination, dbmd: dbmd, inference: probe)
+    try await runtime.submit(threadID: "home", text: "What storage code did I mention for the workshop?", nonce: "relevant-workshop")
+    let first = try await terminal(runtime, "home")
+    let receipt = first.run!.context!
+    let excerpt = receipt.earlierExcerpts.first { $0.messageID == workshop.id }
+    try require(!receipt.messageIDs.contains(workshop.id) && excerpt?.text.contains("QUARTZ-739") == true,
+        "a matching old conversation detail is retrieved beyond the recent complete-message window")
+    try require(excerpt?.truncated == true && excerpt!.text.utf8.count <= 320,
+        "a bounded excerpt centers on the relevant detail beyond the message's opening")
+    let contexts = await probe.observedContexts
+    try require(contexts[0].first!.content.contains("quoted data; partial, not complete history")
+        && !contexts[0].contains { $0.content.contains("PRIVATE-OTHER-882") },
+        "retrieved history remains quoted evidence and cannot cross conversation boundaries")
+    try await runtime.submit(threadID: "home", text: "When does the packing team meet?", nonce: "relevant-packing")
+    let second = try await terminal(runtime, "home")
+    try require(second.run!.context!.earlierExcerpts.contains { $0.messageID == packing.id && $0.text.contains("Tuesdays at noon") },
+        "selection follows a different question without a task-specific recall phrase")
+    try await runtime.remember(threadID: "home", messageID: workshop.id, text: "Workshop detail", admitted: true)
+    let saved = await runtime.snapshot()
+    try await runtime.forget(memoryID: saved.home.memories.last!.id)
+    try await runtime.submit(threadID: "home", text: "What was the workshop storage code?", nonce: "relevant-forgotten")
+    let forgotten = try await terminal(runtime, "home")
+    let after = await probe.observedContexts
+    try require(!forgotten.run!.context!.earlierExcerpts.contains { $0.messageID == workshop.id }
+        && !after[2].contains { $0.content.contains("QUARTZ-739") }, "relevance never restores forgotten evidence")
+    let privateID = try await runtime.newThread(mode: .incognito)
+    try await runtime.submit(threadID: privateID, text: "When does the packing team meet?", nonce: "relevant-incognito")
+    _ = try await terminal(runtime, privateID)
+    let privateContexts = await probe.observedContexts
+    try require(!privateContexts[3].contains { $0.content.contains("Tuesdays at noon") }, "Incognito receives no other conversation's excerpts")
+    try await runtime.shutdown()
+    print("PASS: bounded relevant history excerpts, late-message facts, different questions, quoted provenance, Forget and isolation")
 }
