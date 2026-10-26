@@ -654,3 +654,6 @@ Preserved ordinary-request clocks, overlap bounds, commit origins and excluded A
 ## [2026-10-25 23:07] update | records/measurements/q2-ordinary-host-attribution.md
 Archived clean ordinary copy and host-scope diagnostics. Copies and expert preparation explain little exposed time; remaining lead is pre-submission target/draft evaluation. No runtime candidate adopted; all509sources and five artifacts restored. Brain, links, projections and354claims checks pass.
 
+## [2026-10-26 00:15] update | records/measurements/q2-small-work-and-readiness.md
+Preserved five verified archives: graph/small-read attribution, rejected embedding dedup and joint-greedy ABCCBA comparisons, dependency readiness and demand/tail scopes. All timing protocols clean; neither candidate meets frozen repeatability or full parity gates. Joining promoted forecasts is small; publication includes next-forecast scheduling. Corrected prior read-size attribution. All 509 runtime inputs and five artifacts match v68; Fast and production unchanged. Zero-error/zero-warning brain validation, 354 claims, projections, local links and whitespace pass. Goal remains active.
+

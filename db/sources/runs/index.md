@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-25T23:07:19.069322Z
+updated: 2026-10-26T00:14:21.804771Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-small-work-and-readiness]] — Q2 small-work controls and dependency attribution
 - [[sources/runs/2026/10/2026-10-25-q2-ordinary-host-attribution]] — Q2 ordinary-request copying, host scopes and submission gaps
 - [[sources/runs/2026/10/2026-10-25-q2-ordinary-request-and-submission-diagnosis]] — Q2 ordinary-request frequency, overlap and submission controls
 - [[sources/runs/2026/10/2026-10-25-q2-order-executor-and-validation]] — Q2 condition order, execution context and validation placement
@@ -506,9 +507,8 @@ updated: 2026-10-25T23:07:19.069322Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-startup-swapin-stop]] — Corrected MTP long cohort stops on eight startup swap-in pages with ample headroom
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-delivery-correction]] — Exact final MTP long-workload delivery correction passes49model-free checks and freezes
 - [[sources/runs/2026/09/2026-09-10-optimization-final-long-on-delivery-refusal]] — Final MTP-on long cohort refuses incompatible legacy large-memory protocol before model launch
-- [[sources/runs/2026/09/2026-09-10-optimization-final-long-off-complete-pass]] — Final MTP-off sustained cohort completes all512-output work with13clean pairs
 
 ## More
 
-This folder has 975 files. The 500 most recent are listed above.
+This folder has 976 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

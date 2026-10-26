@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5tn1p6fyxwvv1v4snd7rkzr
 created: 2026-10-25T23:06:35.087763+00:00
-updated: 2026-10-25T23:07:19.045256+00:00
+updated: 2026-10-26T00:14:21.902262+00:00
 summary: Q2 ordinary-request host work and submission gaps
 date: 2026-10-25
 doc: measurements
@@ -102,3 +102,14 @@ limits. This does not add semantic quality or app-readiness evidence. Known
 Fast recall and Q2 strict-format failures remain separately tracked. All 509
 runtime inputs and five default build artifacts match v68; Smart selection,
 Fast, app packaging and release state remain unchanged.
+
+
+## Read-size scope clarification
+
+The read intervals in this record include calls of at least 64 KiB. Smaller
+token-embedding and PLE reads were outside that union; an uncovered interval
+therefore was not necessarily host computation. The all-positive-read analysis
+in [[records/measurements/q2-small-work-and-readiness]] refines that attribution,
+preserving these original observations and raw traces. Overlapped copying and
+preparation may still affect the critical path or contend for memory; small
+exposed time alone does not prove that their implementation is optimal.
