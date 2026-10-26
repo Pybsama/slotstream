@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T03:50:49.818937Z
+updated: 2026-10-26T04:32:29.819278Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-forecast-requests-and-mask-reuse]] — Q2 forecast requests and immutable draft-mask reuse
 - [[records/measurements/q2-started-forecast-reuse]] — Q2 started forecasts and duplicate demand reads
 - [[records/measurements/q2-expert-submission-boundary]] — Q2 expert submission boundary and rejected small fixes
 - [[records/measurements/native-fast-q2-scheduling]] — Bounded Q2 read-ahead improves clean native comparisons; Fast read-ahead and buffer reuse are rejected, with full app and timing limits retained
