@@ -18,29 +18,6 @@ public enum CheckpointReadError: Error, CustomStringConvertible {
 /// A bounded syscall seam. A completed transfer is the only publishable
 /// outcome; callers must discard the partially written destination on error.
 package enum ExactRead {
-    /// Expand a range to whole Apple-silicon pages only when the entire read
-    /// remains inside the tensor and the caller's private scratch. The logical
-    /// payload starts at `skip`; neither neighboring tensors nor EOF are read.
-    package static let pageBytes = 16_384
-    package struct PageSpan {
-        package let offset: Int, count: Int, skip: Int
-    }
-    package static func pageSpan(base: Int, length: Int, offset: Int, count: Int,
-                                 capacity: Int) throws -> PageSpan {
-        let absolute = try tensorOffset(base: base, length: length, offset: offset, count: count)
-        guard capacity >= count else { throw CheckpointReadError.invalidRange }
-        let exact = PageSpan(offset: offset, count: count, skip: 0)
-        guard count > 0 else { return exact }
-        let start = absolute / pageBytes * pageBytes
-        let end = absolute + count
-        let extra = (pageBytes - end % pageBytes) % pageBytes
-        guard start >= base, !end.addingReportingOverflow(extra).overflow else { return exact }
-        let alignedEnd = end + extra
-        let relative = start - base, size = alignedEnd - start
-        guard relative <= length, size <= length - relative, size <= capacity else { return exact }
-        return PageSpan(offset: relative, count: size, skip: absolute - start)
-    }
-
     package static func tensorOffset(base: Int, length: Int, offset: Int, count: Int) throws -> Int {
         guard base >= 0, length >= 0, offset >= 0, count >= 0,
             offset <= length, count <= length - offset,

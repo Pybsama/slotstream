@@ -15,7 +15,6 @@ public struct ModelError: Error, CustomStringConvertible {
 // MARK: - Config
 
 public struct ModelConfig {
-    public private(set) var isFast = false
     public var hiddenSize = 2560
     public var numLayers = 48
     public var numAttentionHeads = 24
@@ -115,7 +114,6 @@ public struct ModelConfig {
                     + "\(PinnedModelName.display) checkpoint — check --model")
         }
         var c = ModelConfig()
-        c.isFast = root["model_type"] as? String == "qwen3_5_moe"
         func i(_ k: String, _ d: Int) -> Int { (t[k] as? Int) ?? d }
         func f(_ k: String, _ d: Float) -> Float {
             if let v = t[k] as? Double { return Float(v) }
@@ -214,8 +212,7 @@ public struct ModelConfig {
                 guard c.quantizationOverrides[name] == nil else { throw ModelError("duplicate quantization descriptor for \(name)") }
                 let descriptor = try AffineQuantization(bits: bits, groupSize: group)
                 let expectedGroup = name.contains("ngram_embedding") ? 32 : 64
-                let fastRouter = c.isFast && (name.hasSuffix(".mlp.gate") || name.hasSuffix(".mlp.shared_expert_gate"))
-                guard bits == (fastRouter ? 8 : 4), group == expectedGroup else {
+                guard bits == 4, group == expectedGroup else {
                     throw ModelError("unqualified quantization layout for \(name); the installed adapter requires affine 4-bit")
                 }
                 c.quantizationOverrides[name] = descriptor
@@ -223,12 +220,6 @@ public struct ModelConfig {
         }
         guard root["vq_modules"] == nil, root["vq_ple"] == nil else {
             throw ModelError("VQ candidate decoding is experimental; this pack has not qualified for Engine.load")
-        }
-        if c.isFast {
-            c.outputGateType = "silu"
-            c.hcCount = 1
-            c.pleLayerIds = []
-            c.admittedExpertRecordBytes = 1_769_472
         }
         try c.validate()
         return c
@@ -241,21 +232,6 @@ public struct ModelConfig {
     private func validate() throws {
         func bad(_ detail: String) throws -> Never {
             throw ModelError("unsupported or invalid text_config (\(detail)) — check --model")
-        }
-        if isFast {
-            guard hiddenSize == 2048, numLayers == 40, numAttentionHeads == 16,
-                  numKVHeads == 2, headDim == 256, vocabSize == 248_320,
-                  maxPositionEmbeddings == 262_144, fullAttentionInterval == 4,
-                  numExperts == 256, topK == 8, moeIntermediate == 512,
-                  sharedExpertIntermediate == 512, linearNumKHeads == 16,
-                  linearNumVHeads == 32, linearKHeadDim == 128, linearVHeadDim == 128,
-                  convKernel == 4, qBits == 4, qGroup == 64,
-                  rmsNormEps == 1e-6, ropeTheta == 10_000_000, partialRotaryFactor == 0.25,
-                  layerTypes == (0..<40).map({ ($0 + 1) % 4 == 0 ? "full_attention" : "linear_attention" }),
-                  eosTokenId >= 0, eosTokenId < vocabSize else {
-                try bad("checkpoint geometry does not match Qwen3.6-35B-A3B-4bit")
-            }
-            return
         }
         guard hiddenSize == 2560, numLayers == 48, maxPositionEmbeddings == ContextPolicy.modelLimit,
             numAttentionHeads == 24, numKVHeads == 2, headDim == 256,
@@ -396,21 +372,6 @@ package struct TensorReadHandle {
         do { try readChecked(into: dst, offset: offset, count: count) }
         catch { preconditionFailure(String(describing: error)) }
     }
-
-    /// Private aligned scratch only, never a live GPU slot. Authenticated
-    /// tensors keep their exact verified read boundary.
-    package func readPageAlignedChecked(into dst: UnsafeMutableRawPointer, capacity: Int,
-        offset: Int, count: Int, shouldContinue: () -> Bool = { true }) throws -> UnsafeRawPointer {
-        guard capacity >= count else { throw CheckpointReadError.invalidRange }
-        let span = try ExactRead.pageSpan(base: base, length: length, offset: offset,
-            count: count, capacity: capacity)
-        if verifiedFile != nil || Int(bitPattern: dst) % ExactRead.pageBytes != 0 {
-            try readChecked(into: dst, offset: offset, count: count, shouldContinue: shouldContinue)
-            return UnsafeRawPointer(dst)
-        }
-        try readChecked(into: dst, offset: span.offset, count: span.count, shouldContinue: shouldContinue)
-        return UnsafeRawPointer(dst + span.skip)
-    }
 }
 
 /// Parses every shard header once; provides absolute (file, offset) for any tensor.
@@ -421,7 +382,6 @@ public final class CheckpointIndex {
     /// One descriptor per replica, in replica order, with `dir`'s own copy
     /// first. Replicas hold identical bytes, so a read may use any of them.
     private var fds: [URL: [Int32]] = [:]
-    package private(set) var q2: Q2Checkpoint?
     private let authenticatedFiles: [URL: VQTensorFile]
     package let affineExpertArtifact: AffineExpertControl.Artifact?
     package let authenticatedStorageIdentity: String?
@@ -474,23 +434,6 @@ public final class CheckpointIndex {
         }
         try requireExpectedTensors()
         try requireIdenticalMirrors(files)
-    }
-
-    package init(q2Directory directory: URL, shouldContinue: () -> Bool = { true }) throws {
-        let source = try Q2Checkpoint(directory: directory, shouldContinue: shouldContinue)
-        self.q2 = source; self.dir = directory; self.config = source.config
-        self.mirrorDirs = []; self.mirror = MirrorRouter(replicaCount: 1)
-        self.authenticatedFiles = [:]; self.affineExpertArtifact = nil
-        self.authenticatedStorageIdentity = PinnedQ2Model.revision
-        for (name, tensor) in source.mapped where name.contains(".switch_mlp.") {
-            tensors[name] = TensorRef(file: tensor.file.url, dtype: "U8",
-                shape: [512, tensor.shape[1], tensor.rowBytes], byteOffset: tensor.offset, byteCount: tensor.byteCount)
-        }
-        for file in source.files {
-            let descriptor = dup(file.fd)
-            guard descriptor >= 0 else { throw ModelError("Cannot retain Q2 read descriptor") }
-            fds[file.url] = [descriptor]
-        }
     }
 
     /// Tensor offsets from the primary are reused on every replica. Check
@@ -559,7 +502,6 @@ public final class CheckpointIndex {
     }
 
     package func verifyAuthenticatedFilesUnchanged() throws {
-        for file in q2?.files ?? [] { try file.verifyUnchanged() }
         for file in authenticatedFiles.values { try file.verifyUnchanged() }
     }
 
@@ -703,8 +645,7 @@ public final class CheckpointIndex {
             linear(base + ".input_mix_weight_up")
             if inject { required.append(base + ".block_inject_weight.weight") }
         }
-        if config.isFast { required.append("model.norm.weight") }
-        else { hyper("model.hyper_connection_mixer", inject: false) }
+        hyper("model.hyper_connection_mixer", inject: false)
         for l in 0 ..< config.numLayers {
             let layer = "model.layers.\(l)"
             let mlp = layer + ".mlp"
@@ -716,12 +657,8 @@ public final class CheckpointIndex {
             for piece in ExpertStore.pieces {
                 required.append(mlp + ".switch_mlp." + piece)
             }
-            if config.isFast {
-                required += [layer + ".input_layernorm.weight", layer + ".post_attention_layernorm.weight"]
-            } else {
-                hyper(layer + ".attn_hyper_connection", inject: true)
-                hyper(layer + ".mlp_hyper_connection", inject: true)
-            }
+            hyper(layer + ".attn_hyper_connection", inject: true)
+            hyper(layer + ".mlp_hyper_connection", inject: true)
 
             if config.layerTypes[l] == "linear_attention" {
                 let b = layer + ".linear_attn"
@@ -738,11 +675,9 @@ public final class CheckpointIndex {
                 }
                 required.append(b + ".q_norm.weight")
                 required.append(b + ".k_norm.weight")
-                if !config.isFast {
-                    linear(b + ".indexer.index_qk_proj")
-                    required.append(b + ".indexer.q_layernorm.weight")
-                    required.append(b + ".indexer.k_layernorm.weight")
-                }
+                linear(b + ".indexer.index_qk_proj")
+                required.append(b + ".indexer.q_layernorm.weight")
+                required.append(b + ".indexer.k_layernorm.weight")
             }
 
             if config.pleLayerIndices.contains(l) {
@@ -843,7 +778,6 @@ public final class CheckpointIndex {
     /// opened: it and the router are both sized from `mirrorDirs`.
     fileprivate func readRouted(_ descriptors: [Int32], into dst: UnsafeMutableRawPointer,
         absolute: Int, count: Int, shouldContinue: () -> Bool) throws {
-        for file in q2?.files ?? [] { try file.verifyUnchanged() }
         // A single copy skips the router: there is no choice to make, and its
         // lock would otherwise be taken by every read of an unmirrored run.
         let routed = mirror.replicaCount > 1
@@ -860,7 +794,6 @@ public final class CheckpointIndex {
             throw error
         }
         if routed { mirror.release(replica, byteCount: count, completed: true) }
-        for file in q2?.files ?? [] { try file.verifyUnchanged() }
     }
 
     /// Compatibility wrapper. A corrupt checkpoint still fails closed; it

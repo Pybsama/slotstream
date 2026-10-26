@@ -2,14 +2,16 @@
 type: decision
 id: 01m5g6zxj15k238q4qc7zw0ajr
 created: 2026-10-21T21:48:32.705335+00:00
-updated: 2026-10-22T19:06:51.425895+00:00
+updated: 2026-10-26T18:09:26.115048+00:00
 summary: Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 decided_on: 2026-10-21
 evidence: '[[records/measurements/smart-dflash-native-and-q2-review]], [[records/measurements/exact-q2-performance-and-quality-followup]], [[records/measurements/native-exact-q2-qualification]], [[records/measurements/native-q2-splash-execution-comparison]]'
 reversible_if: Complete native workflows show the exact Q2 candidate loses more useful work than its speed benefit justifies, or another qualified configuration provides a better measured tradeoff.
 title: Smart DFlash and compressed Smart targets
-status: standing
+status: reversed
 ---
+**Archived October 26, 2026.** [[records/decisions/one-maintained-model]] supersedes the active model choices and continuation instructions below. Preserve this dated decision and its evidence as experiment history.
+
 # Smart DFlash and compressed Smart targets
 
 ## Q2 follow-up: prioritize the exact candidate

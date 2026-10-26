@@ -24,9 +24,9 @@ a 125-billion-parameter open model, on Macs with 16 to 64 GB of memory.
 Our 48 GB M5 Pro measured **20.91–23.69 tok/s** across three workloads in
 development tests at a 33 GB memory budget, using the original 4-bit model
 ([results and test conditions](#speed)). This repository also contains a
-native Mac app and additional model choices in development.
+native Mac app you can build from source.
 
-[Get started](#install) · [Mac app](#native-mac-app) · [Models](#fast-and-smart) · [Speed](#speed) · [Get help](#support)
+[Get started](#install) · [Mac app](#native-mac-app) · [Model](docs/MODELS.md) · [Speed](#speed) · [Get help](#support)
 
 ## Available now
 
@@ -39,30 +39,24 @@ starts Claude Code on the local model, and Codex, Pi, opencode and Hermes work
 the same way. Developers can connect their own apps through its Ollama-,
 OpenAI- and Anthropic-compatible APIs or its Swift library.
 
-## In development
+<a id="in-development"></a>
+<a id="fast-and-smart"></a>
 
-The following work is available in source on `main`. The v0.2.30 engine
-download does not include it, and there is no published Mac app installer yet.
+## One maintained model
 
-### Fast and Smart
+Slotstream focuses on **Qwen3.8-Flash-Next 4-bit**. The work goes into making
+this capable model useful on a Mac that cannot hold all its weights in RAM:
+SSD streaming, memory use, context, tool use and the native app.
 
-Development builds let you choose a model for the work at hand:
+We maintain one model at a time. A future successor needs evidence from
+complete tasks on the hardware we support. The [model guide](docs/MODELS.md)
+records the current checkpoint and defaults; earlier model experiments are
+[archived](experiments/fast-q2/README.md).
 
-| Choice | Model | Intended use |
-|---|---|---|
-| **Fast** | Qwen3.6-35B-A3B, MLX 4-bit | Everyday questions, writing, summaries and tools |
-| **Smart** | Qwen3.8-Flash-Next, original MLX 4-bit | More demanding reasoning |
+## Native Mac app
 
-Fast is the default for a new **Mac app** installation. Existing app settings
-keep their model, and the **CLI still defaults to the original model**, now
-called Smart. Both use the native engine, streaming experts when they do not
-fit in memory. Fast can keep all its experts resident when there is room.
-
-See [choosing a model](docs/MODELS.md) for the `fast` and `smart` commands,
-setup and limitations. The smaller [Smart Q2 candidate](docs/ENGINEERING.md#native-compressed-smart-candidate)
-is an explicit experiment; it has not replaced Smart or entered normal setup.
-
-### Native Mac app
+The app is available to build from source. The v0.2.30 engine download does
+not include it, and there is no published Mac app installer yet.
 
 The app runs the engine directly in a SwiftUI and AppKit interface. You can
 work with local documents, ask questions with citations, draft and review
@@ -75,8 +69,8 @@ The bundled `slotstream-home` command, agent skill and local MCP server give
 other tools access to the same Home. Proposed changes still go through the
 app's review controls.
 
-This is a development app. Its [guide](docs/SLOTSTREAM-MAC.md) explains how to
-build it and what each workflow supports today. See [Homes and integrations](docs/SLOTSTREAM-HOMES.md)
+Its [guide](docs/SLOTSTREAM-MAC.md) explains how to build it, what each workflow
+supports today, and what remains before an app installer can ship. See [Homes and integrations](docs/SLOTSTREAM-HOMES.md)
 for data access and agent connections.
 
 ## Who it's for
@@ -84,7 +78,7 @@ for data access and agent connections.
 Slotstream focuses on Macs with **16 to 64 GB** of memory, where running the
 larger model depends on managing what stays in RAM and what comes from SSD.
 The CLI and APIs suit people using local chat apps or coding agents; the Mac
-app in development brings the engine to document work and personal knowledge.
+app brings the engine to document work and personal knowledge.
 
 The original model also runs on 96 GB and larger Macs, but those are outside
 the optimization target: engines that keep it fully resident report faster
@@ -104,8 +98,7 @@ Windows, Linux and Intel Macs are not supported. The
 ## Speed
 
 These measurements and planning ranges describe the **original
-Qwen3.8-Flash-Next 4-bit model**, called Smart in development builds. They are
-not benchmarks of Fast or the Q2 candidate. Every published result links to
+Qwen3.8-Flash-Next 4-bit model**. Every published result links to
 its method; unsuccessful experiments stay in the [measurements](MEASUREMENTS.md).
 
 `tok/s` means tokens per second; a token is a small piece of text, often part
@@ -262,8 +255,8 @@ again. Follow the [step-by-step setup](docs/GETTING-STARTED.md) for more help.
 
 | What would you like to do? | Guide |
 |---|---|
-| Build the native Mac app in development | [Slotstream for Mac](docs/SLOTSTREAM-MAC.md) |
-| Choose Fast or Smart in a development build | [Models](docs/MODELS.md) |
+| Build the native Mac app from source | [Slotstream for Mac](docs/SLOTSTREAM-MAC.md) |
+| Understand the maintained model and defaults | [Model](docs/MODELS.md) |
 | Inspect a Home or connect an agent to the app | [Homes and integrations](docs/SLOTSTREAM-HOMES.md) |
 | Chat in Open WebUI or another app | [Connect a chat app](docs/CLIENTS.md) |
 | Ask about a picture | [Use an image](docs/GETTING-STARTED.md#ask-about-a-picture) |
@@ -291,8 +284,8 @@ build instructions, and tests. [Release notes](CHANGELOG.md) show what changed.
 
 ## How it works
 
-The maintained models use a *mixture-of-experts* architecture: generating each
-piece of text uses only a subset of their expert networks. Slotstream keeps shared
+The model uses a *mixture-of-experts* architecture: generating each
+piece of text uses only a subset of its expert networks. Slotstream keeps shared
 weights in memory and reads the needed experts from SSD into a cache.
 Frequently used experts stay in RAM, reducing repeated disk reads.
 
@@ -309,12 +302,10 @@ covers the implementation.
 Slotstream is fully native. Swift owns the command-line tool, HTTP server,
 model, memory planner, expert cache and request lifecycle. Apple's MLX and
 Slotstream's own Metal kernels execute the tensor operations on the GPU.
-Development builds also use C++ adapters for prepared Metal execution on
-the same MLX stream. No Python runtime or interpreter sits between a request
-and the GPU. The Mac app uses SwiftUI and AppKit and calls the engine in process.
+No Python runtime or interpreter sits between a request and the GPU. The Mac app uses SwiftUI and AppKit and calls the engine in process.
 
-That is deliberate. Built around a small maintained set of models on Apple
-Silicon, each layer is tuned for the one below it: experts are read from SSD
+That is deliberate. Built around Qwen3.8-Flash-Next on Apple Silicon,
+each layer is tuned for the one below it: experts are read from SSD
 into a bounded cache, the memory plan is checked against
 what the process really uses, and a governor resizes the cache while other apps
 need room. The engine installs with one command and exposes the same native
@@ -329,9 +320,8 @@ Apple Silicon. Windows and Linux are not supported.
 - **The larger model is not optimized for 96 GB and larger Macs**;
   see [Who it's for](#who-its-for).
 - **One generation at a time:** connected apps share the same running model.
-- **Model choice is explicit:** development builds load one selected model.
-  Fast supports text and tools; direct engine image understanding uses Smart.
-  The development app extracts text from images with OCR.
+- **One maintained model:** Qwen3.8-Flash-Next 4-bit. The engine supports
+  text, tools and pictures; the Mac app currently reads images through OCR.
 - **Conversation length is limited:** longer histories take more memory and
   time. Auto mode picks a [window for each memory size](#speed-by-memory), and
   the coding agent guides include the larger window agents need.
@@ -408,10 +398,9 @@ No. The current engine requires Apple Silicon, MLX and Metal.
 
 ### Can I use a different model?
 
-The released engine runs Qwen3.8-Flash-Next. Development builds also support
-Qwen3.6-35B-A3B through the [Fast and Smart choices](docs/MODELS.md).
-Slotstream maintains specific models and their execution paths; it does not
-load arbitrary checkpoints. See [related projects](docs/ENGINEERING.md#related-projects)
+Slotstream maintains Qwen3.8-Flash-Next 4-bit and optimizes the whole stack
+for it. It does not load arbitrary checkpoints. Earlier alternatives are
+[archived experiments](experiments/fast-q2/README.md). See [related projects](docs/ENGINEERING.md#related-projects)
 for runtimes with broader model and hardware support.
 
 ## Why this exists
@@ -450,7 +439,7 @@ Thank you for supporting its development.
 I'm [Carlos Galarza](https://www.carlosgalarza.com). I build local AI and
 make it run efficiently on the computers people already own. Slotstream is
 written natively for the Mac and tuned as one system. The
-[Slotstream Mac app](docs/SLOTSTREAM-MAC.md) is under development in this repository.
+[Slotstream Mac app](docs/SLOTSTREAM-MAC.md) lives in this repository too.
 I also help teams run open models on their own hardware and debug agent
 workflows. For help or consulting, [email me](mailto:carloslfu@gmail.com).
 
@@ -474,58 +463,54 @@ See [credits](docs/ENGINEERING.md#credits) for the model and code this project b
 
 <!-- ===== docs/MODELS.md ===== -->
 
-# Fast and Smart
+# The maintained model
 
-Available in development builds on `main`; see the Unreleased changelog.
+Slotstream runs **Qwen3.8-Flash-Next 4-bit**. The app and independent CLI use
+the same maintained checkpoint. There is no Fast tier or model picker.
 
-Choose **Fast** for everyday questions, writing, summaries and tool use. Choose
-**Smart** for more demanding reasoning. These names describe the intended tradeoff;
-accuracy and speed still depend on the task and your Mac.
-
-| Choice | Maintained model | Acceleration |
-| --- | --- | --- |
-| Fast | Qwen3.6-35B-A3B, MLX four-bit | Native DFlash 2 with target verification and automatic depth reduction |
-| Smart | Qwen3.8-Flash-Next, existing four-bit checkpoint | Existing memory-aware MTP policy |
-
-In the native app, use the selector beside the composer. New installations
-start with Fast. Existing saved settings retain their previous model. Switching
-keeps your conversation and attached files, unloads the previous model, then
-loads your choice. Downloads are explicit and verified; an unavailable choice
-does not silently select another model. There is no task router.
-
-For the independent engine:
+The model is pinned to
+[`pipenetwork/Qwen3.8-Flash-Next-MLX-4bit`](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit/tree/aa7c790e804bbf9d491ddb109c3d61bc4a555f7c).
+It uses the original MLX affine 4-bit conversion. The checkpoint, tokenizer
+and download hashes stay pinned.
 
 ```sh
-slotstream pull fast
-slotstream run --model fast --prompt "Explain how a heat pump works."
-slotstream serve --model fast
-
-slotstream pull smart
-slotstream run --model smart --prompt "Review this argument step by step."
+slotstream pull
+slotstream doctor
+slotstream run --prompt "Explain how a heat pump works."
+slotstream serve
 ```
 
-Both aliases work with `doctor`. The exact model IDs remain available through
-`slotstream model-packs`. Existing commands without a model retain the previous
-Smart default for compatibility. A server runs its selected model; a client
-cannot load another model merely by sending another name.
+The explicit CLI ID remains `qwen3.8-flash-next:4bit`. Existing released
+commands, APIs, model files and Swift entry points keep their behavior.
+`--quantization auto` and the original explicit pack remain supported for
+existing integrations; both resolve to this checkpoint.
 
-Fast includes its draft component in setup. DFlash guesses several tokens;
-the target model decides what can be emitted. Rejected state is rolled back.
-The engine measures the cost during a request and reduces drafting or returns
-to ordinary decoding when it stops helping. Small or cold requests can still
-pay some startup and calibration overhead. Drafting does not guarantee a
-speedup, and batched arithmetic can produce a different valid answer from a
-separate plain-decoding run.
+The engine keeps its memory-aware MTP acceleration, expert lookahead, prefix
+cache and SSD streaming. These optimize how the model runs. They do not select
+a different target model. See [memory controls](CLI.md#memory-options) for
+setting a budget and [hardware](HARDWARE.md) for measured results and limits.
 
-Both models use bounded memory and SSD streaming when their expert weights do
-not fit. Fast has its own weight geometry and allocation plan; it does not
-inherit Smart's speed estimates. The available development Mac tests are
-recorded in the [engineering decision](../db/records/decisions/fast-and-smart.md).
-Simulated plans and smaller process budgets do not certify other physical Macs.
+## App settings saved by experimental builds
 
-The first Fast integration supports text, tools and the app's document/OCR
-workflows. Direct engine image understanding still uses Smart. App OCR reads
-text from an image; it does not replace visual understanding of a photograph.
+Current source builds restore saved Fast or Q2 preferences to the maintained
+model and show a notice in Settings. Memory limits, readiness settings, Homes,
+conversations and downloaded files are preserved. Missing model files still
+require explicit setup; an old experiment's activation receipt cannot verify
+the maintained model. Incompatible inference caches are not reused.
+
+The app is available to [build from source](SLOTSTREAM-MAC.md). The latest
+published engine release remains v0.2.30; the archive and app simplification
+on `main` do not constitute a new release.
+
+## Earlier experiments
+
+Fast, the compressed Q2 target and the associated DFlash work are
+[archived](../experiments/fast-q2/README.md), with their source, licenses,
+measurements and failures. They are no longer setup choices or maintained
+runtime paths. The archive explains how to inspect the original code.
+
+We maintain one capable model at a time. A successor needs complete-task,
+quality, latency and memory evidence on the Macs Slotstream is built for.
 
 
 <!-- ===== docs/GETTING-STARTED.md ===== -->
@@ -551,8 +536,8 @@ Less available memory can reduce the expert cache and slow replies; the chip,
 SSD and workload also matter. See the [hardware guide](HARDWARE.md)
 for measurements from real Macs and estimates for each memory size.
 
-The released CLI defaults to Qwen3.8-Flash-Next on Apple Silicon. Development
-builds also offer Qwen3.6-35B-A3B through the [Fast and Smart choices](MODELS.md).
+Slotstream maintains Qwen3.8-Flash-Next 4-bit on Apple Silicon. The app and CLI
+use this same [model](MODELS.md).
 Windows, Linux and arbitrary model imports are not supported.
 
 ## Install
@@ -708,50 +693,10 @@ and raw runs. `PLAN.md` and `MEASUREMENTS.md` are generated from its records.
 For AI agents, [llms.txt](../llms.txt) is the index and
 [llms-full.txt](../llms-full.txt) combines the documentation.
 
-The [Fast and Splash execution comparison](../db/records/measurements/fast-splash-execution-comparison.md)
-matches checkpoint bytes, actual expert slots, prompt tokens, context and
-sampling, and warms both engines before timing. It includes quality controls,
-native app workflows and unsuccessful experiments. Equal memory flags do not
-establish equal cache sizes or process footprints. Cached target execution,
-SSD waits and draft overhead need separate measurements before choosing a port.
-
-The [native kernel port](../db/records/measurements/native-fast-q2-execution-kernels.md)
-extends that work to compressed expert tiles, Fast's fused recurrent processing
-and Q2's narrow resident projections. It documents exact-byte arithmetic
-references, capability gates, actual app results and the remaining differences
-from Splash's execution schedule. Kernel compatibility alone is not complete
-runtime equivalence or a promise of equal speed.
-
-The [native scheduling follow-up](../db/records/measurements/native-fast-q2-scheduling.md)
-measures bounded Q2 input read-ahead, shared input preparation and aligned
-expert reads. It retains the rejected Fast read-ahead and buffer-reuse
-experiments, exact output checks and actual app startup identities. Final
-comparisons affected by paging or heat remain excluded from parity claims.
-
-The [prepared execution study](../db/records/measurements/native-prepared-execution.md)
-ports bounded Metal execution sections onto MLX's existing stream, with reusable
-plans and event leases, GPU weight staging and demand-owned adaptive cache
-replacement. It includes independent numerical references, actual application
-jobs and matched complete-request comparisons. Splash also encodes fresh GPU
-commands each cycle: reusing a plan is not replaying a pre-encoded command buffer.
-Keep host waits, GPU execution, SSD traffic and draft acceptance separate when
-explaining a remaining gap. Neither a CPU wait sample nor a successful kernel
-test proves where request time is lost.
-
-The [first-request compilation study](../db/records/measurements/q2-cold-compilation-and-row-counts.md)
-shows why warmed throughput alone cannot qualify a change. Use runtime dispatch
-metadata for token counts when they do not change a kernel's arithmetic. Check
-first-use compilation separately from recurring execution and cache misses,
-including its effect on adaptive batching. If preparation moves before engine
-readiness, measure preparation plus the first request so the cost stays visible.
-
-The [compiler isolation study](../db/records/measurements/q2-compiler-identity-and-precompiled-shaders.md)
-finds that identical source and options can still have very different creation
-costs. Offline compilation removes one source of spikes but does not pass the
-complete-request retention gate. Full-model checks also catch changes missed
-by small kernel checks. Keep the experiment isolated and profile model loading
-before adding another execution path. Native implementation gives us control;
-its benefit still has to appear in useful, reliable work.
+Fast, Q2, DFlash and their prepared execution work are
+[archived experiments](../experiments/fast-q2/README.md). Their fixed source
+revision and measurements remain available, including unsuccessful runs.
+The maintained runtime uses Qwen3.8-Flash-Next 4-bit and its existing MTP path.
 
 The [conversation retrieval check](../db/records/measurements/relevant-conversation-excerpts.md)
 separates an app context-selection problem from draft acceleration. Prefer
@@ -837,8 +782,7 @@ overhead that an engine keeping the model resident does not pay; see
 ## Native stack
 
 Slotstream is a fully native engine with a Swift-owned model and runtime,
-Apple's MLX and its own Metal kernels. Development builds also use C++
-execution adapters on the existing MLX stream. No Python runtime or
+Apple's MLX and its own Metal kernels. No Python runtime or
 interpreter runs on the inference path.
 
 | Layer | Implementation |
@@ -847,7 +791,6 @@ interpreter runs on the inference path.
 | Memory planner, expert store and slot cache, governor, sampler, speculative decode, prefix cache | Swift: `Sources/Slotstream` |
 | Tensor operations | [mlx-swift](https://github.com/ml-explore/mlx-swift), Apple's MLX, with its prebuilt `mlx.metallib` beside the binary |
 | Gated-delta recurrence, selected attention, partial rotation, block and router selection | Slotstream's own Metal kernels, compiled at run time through `MLXFast.metalKernel` |
-| Prepared Metal execution and cache-replacement adapters in development builds | C++: `Sources/CNativeSchedule`, using MLX's stream, allocator and dependency tracking; [implementation notes](../Sources/CNativeSchedule/README.md) |
 | Tokenizer | [swift-transformers](https://github.com/huggingface/swift-transformers) |
 | Slotpack download decoder | C, `Sources/CSlotpack`, with no external codec |
 | Expert and n-gram reads | `pread` into a fixed slot pool over parallel lanes, with lane counts chosen by measurement |
@@ -857,8 +800,8 @@ implementation the Swift port is checked against layer by layer, the numpy
 sampler oracle, the trace simulators and benchmark drivers, the model-free
 gates and the release checks. The [testing guide](TESTING.md) lists them.
 
-The stack is native on purpose. The engine supports a small maintained set
-of models on Apple Silicon, and each layer is tuned for the layer below it: expert records
+The stack is native on purpose. The engine maintains Qwen3.8-Flash-Next 4-bit
+on Apple Silicon, and each layer is tuned for the layer below it: expert records
 are read from the SSD into the slots the GPU computes from, process memory is
 accounted from real CPU and GPU allocations, and the governor resizes the
 cache under memory pressure. The same design ships as one binary, installs
@@ -1180,53 +1123,15 @@ reference. Model weights come from
 [pipenetwork/Qwen3.8-Flash-Next-MLX-4bit](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit)
 and remain under the [Qwen community license](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit/blob/main/LICENSE).
 
-## Smart draft comparison
+<a id="smart-draft-comparison"></a>
+<a id="native-compressed-smart-candidate"></a>
 
-Smart DFlash is an explicit engineering candidate. The app's Smart choice still
-uses its established MTP policy. `slotstream smart-dflash-check --help` describes
-the native comparison instrument for plain, MTP and DFlash requests with saved
-inputs and receipts. It supports streamed text, real tool schemas, bounded image
-inputs, cancellation and persistent-prefix tests. The separate
-`smart-dflash-replay` command compares captured draft inputs without loading the
-target model. Both use the production native implementation.
+## Archived model experiments
 
-See [the Smart DFlash measurement](../db/records/measurements/smart-dflash-native-and-q2-review.md)
-for tested source identities, failures and unfinished qualification. The
-[adoption decision](../db/records/decisions/smart-dflash-and-target-quantization.md)
-separates draft acceleration from replacing the target with a more compressed
-checkpoint. A draft acceptance rate is not a model-quality score or a speed
-claim.
-
-## Native compressed Smart candidate
-
-The exact GSQ-RCO checkpoint used by Splash is available to engineers as
-`smart-q2`. Slotstream loads its pinned files directly and runs its packed
-weights, SSD streaming and Smart DFlash component through Swift, MLX and Metal.
-The product does not launch Splash or Python. Installation includes the target,
-tokenizer metadata and draft, each with pinned hashes:
-
-```sh
-slotstream model-packs --selection smart-q2 --json
-slotstream pull smart-q2
-slotstream run --model smart-q2 --prompt "Explain how a disk cache works."
-```
-
-Use the CLI's explicit memory limit for controlled qualification runs. The app
-runtime can load the same explicit pack, and `slotstream-mac-checks
---real-capabilities --q2` exercises it through real app jobs in a disposable
-Home. The normal app picker and automatic selection continue to use maintained
-Fast and Smart choices. Existing saved candidate settings retain their title.
-
-This candidate has not earned promotion to Smart. It lacks the original vision
-tower, and native tests have not reproduced the upstream speed.
-The [native execution comparison](../db/records/measurements/native-q2-splash-execution-comparison.md)
-documents the compressed matrix kernels, fused arithmetic and state handling,
-with controlled comparisons and the remaining scheduling work. Matching model
-files alone does not match a deployment recipe.
-Document OCR is a separate native tool. See the
-[qualification record](../db/records/measurements/native-exact-q2-qualification.md)
-for exact source identities, quality failures, app results, memory evidence and
-remaining work. Component reference checks live in [bench/q2](../bench/q2/README.md).
+The [experiment archive](../experiments/fast-q2/README.md) preserves Fast,
+the exact compressed Q2 target, Smart DFlash and their kernel and scheduling
+studies. Their commands and runtime implementations are removed from `main`.
+Historical results describe those archived builds, not the maintained model.
 
 
 <!-- ===== docs/SLOTSTREAM-MAC.md ===== -->
@@ -1238,16 +1143,15 @@ on the Slotstream engine.
 The development app lives under `apps/macos`. This is ongoing implementation,
 not an announced alpha or a supported installer.
 
-## Choose Fast or Smart
+## The local model
 
-Use the **Fast / Smart** selector beside the composer, or choose **Model** in
-Settings. Fast is the default for a new installation. Smart uses the larger
-model for work that needs more reasoning. Existing saved choices are preserved.
-Switching keeps the conversation, attachments, memory and review requirements.
-The app loads one model at a time and asks you to finish setup if the selected
-model is missing. A running task finishes before a saved setting is applied.
+The app uses Qwen3.8-Flash-Next 4-bit through the native Slotstream engine.
+There is no model picker. Settings shows the model, download status and memory
+controls. Memory changes wait until the current task finishes.
 
-See [models](MODELS.md) for the underlying models, engine aliases and limitations.
+Saved Fast and Q2 experimental preferences migrate to the maintained model
+with a notice. Home data and memory preferences stay intact, and any missing
+model files still require explicit setup. See [model and defaults](MODELS.md).
 
 ## What works in the development app
 
@@ -1746,12 +1650,12 @@ records the exact observed scope and remaining gates.
 
 ## Memory and readiness
 
-Settings → Model separates **Quantization**, **Memory budget**, and **While running**.
-Each defaults to automatic behavior. Quantization currently selects the original
-supported pack; alternative representations remain in qualification. You can
-pin the original pack independently of the memory controls. An unavailable
-saved pack stays visible and blocks activation until you select an available
-choice. Auto does not confer a speed qualification on the original pack.
+Settings shows **Qwen3.8-Flash-Next 4-bit**, **Memory budget**, and **While
+running**. There is no model or quantization picker. Saved experimental model
+preferences return to this model with a notice; memory settings stay intact.
+An unknown saved model stays unavailable until you choose **Use
+Qwen3.8-Flash-Next 4-bit**. That action still requires verified model files.
+Automatic memory planning does not confer a speed qualification.
 
 Memory budget defaults to **Automatic (Recommended)**. The app uses
 Slotstream’s memory planner and elastic cache governor, keeping the current
@@ -2603,11 +2507,8 @@ ID shown in the list. Omitting the option preserves existing custom-model
 behavior. Pack choice, the memory ceiling and runtime cache resizing remain
 independent controls. See [memory options](#memory-options).
 
-Fast and Smart are the supported choices. Use `--model fast` or `--model smart`
-on `run`, `serve` and `doctor`, and `slotstream pull fast` or `slotstream pull smart`
-to install them. Existing commands without a model keep their Smart behavior.
-Research formats do not appear as supported choices. See [models](MODELS.md). The list explains the recommendation and reports
-available evidence; it does not certify a speed for your current configuration.
+Qwen3.8-Flash-Next 4-bit is the maintained model. Commands without `--model`
+use it; the explicit ID remains `qwen3.8-flash-next:4bit`. See [model and defaults](MODELS.md).
 
 ### `slotstream run`
 
@@ -2735,9 +2636,9 @@ are stored once and reported as one total.
 
 Download losslessly compressed model weights from Hugging Face, reconstructing
 the original files with resumable transfers and hash verification.
-The default remains `qwen3.8-flash-next:4bit` (Smart). Development builds also
-accept `fast` and `smart`; `pull fast` installs and verifies the target and its
-required DFlash component together. See [Fast and Smart](MODELS.md).
+The default remains `qwen3.8-flash-next:4bit`. The former Fast and Q2
+choices are [archived experiments](../experiments/fast-q2/README.md); their
+aliases and dedicated diagnostic commands are no longer available on `main`.
 
 | Flag | Meaning |
 |---|---|
@@ -5843,40 +5744,33 @@ different arithmetic schedules are not a cache-corruption oracle.
 `prefix-exact-check` remains a required, separate gate for bit-identical raw
 logits and tokens under the actual cache schedule.
 
-## Fast and Smart development checks
+<a id="fast-and-smart-development-checks"></a>
 
-Fast and Smart need separate model and application checks. Build the engine,
-install and verify the selected weights, and run one real-model process at a
-time. Use new disposable output/Home directories for each replay.
+## Native app workflow checks
+
+Build and test the maintained Qwen3.8-Flash-Next 4-bit model through both the
+engine and the app. Use new disposable output and Home directories, and run
+one real-model process at a time with the required memory headroom.
 
 ```bash
-python3 Tools/fast_smart_acceptance.py --out .build/fast-smart-acceptance
-Tools/check_slotstream_mac.sh
+bash Tools/check_slotstream_mac.sh
 apps/macos/.build/release/slotstream-mac-checks --real-capabilities \
-  --home "$PWD/.build/fast-smart-workflows" --memory-gb 9 --switch-models
+  --home "$PWD/.build/model-workflows" --memory-gb 10
 apps/macos/.build/release/slotstream-mac-checks --real-cache \
-  --home "$PWD/.build/fast-cache-check"
-Tools/build_slotstream_mac.sh
+  --home "$PWD/.build/model-cache-check"
+bash Tools/build_slotstream_mac.sh
 ```
 
-The native acceptance script exercises both aliases, Fast with and without
-DFlash, a smaller memory budget and a longer prompt. The app fixtures check
-actual selected-model receipts, explicit budgets, tools and reviewed effects.
-The cache fixture uses its default 10 GB budget. All real checks require spare
-memory before loading. These observations are not clean speed benchmarks.
+The capability fixtures verify the actual model, startup recipe, memory
+ceiling, retrieved evidence, tools and reviewed file changes. Use `--case
+code_edit`, `--case ocr_receipt` or `--case history_recall` for a focused replay
+in another new Home. These functional checks are not speed benchmarks.
 
-For a focused workflow replay, add `--case code_edit`, `--case ocr_receipt` or
-`--case history_recall` to `--real-capabilities`, using another new Home.
-`--smart` selects Smart for that fixture; `SLOTSTREAM_DFLASH=0` provides a Fast
-plain-decoding control. Preserve unsuccessful outputs. A nonzero capability
-result can identify a model-quality miss or an incorrect test assertion as well
-as a runtime defect; investigate the specific result before changing a gate.
-
-The initial Fast qualification retained word-limit misses and an old-history
-retrieval miss in repetitive context. The [engineering decision](../db/records/decisions/fast-and-smart.md)
-separates these from verified installation, storage, review, cache and model
-switching. Planning checks across the target memory range and smaller budgets
-on the development Mac do not replace physical tests on other Macs.
+Preserve unsuccessful outputs. A capability failure can reflect model quality,
+a runtime defect or an incorrect assertion; investigate before changing a gate.
+Planning simulations and smaller budgets on the development Mac do not certify
+other physical Macs. Fast and Q2 checks remain in the
+[fixed experiment archive](../experiments/fast-q2/README.md).
 
 
 <!-- ===== docs/TROUBLESHOOTING.md ===== -->
@@ -6745,47 +6639,20 @@ determines which version the installer downloads.
 
 ## Unreleased
 
-- Add native prepared Metal execution sections for Fast and the explicit Q2
-  candidate, using MLX's stream and allocator. Share compiled pipelines across
-  batch widths using bounded dispatch parameters, reuse bounded event
-  leases, stage Q2 expert weights on the GPU and adapt cache replacement to
-  actual slots and pins. Preserve cancellation, failed-read recovery and memory
-  admission. Submit useful work earlier, fold retained speculative state into
-  its next pass, and retain bounded verification calibration for the explicit
-  Q2 candidate across ordinary requests. The [prepared execution study](db/records/measurements/native-prepared-execution.md)
-  records matched speed, quality, app checks and remaining limitations. Smart's
-  selected model is unchanged.
-
-- Add bounded next-input expert read-ahead to the explicit Q2 candidate's
-  native engine and app recipe, with charged staging and demand-owned cache
-  admission. Share eligible Q2 projection preparation and align bounded expert
-  reads. Keep Fast's existing recipe after its read-ahead experiment regressed
-  prose. The [scheduling study](db/records/measurements/native-fast-q2-scheduling.md)
-  preserves the measurements, app results and remaining Splash comparison limits.
-
-- Port compressed expert tiles and fused gate/up work into both native Fast
-  and the explicit Q2 candidate. Fast also uses fused recurrent processing and
-  prepared routing weights; Q2 adds narrow register projections with GPU-aware
-  reduction splits. Preserve bounded streaming, portable fallbacks and prefix
-  compatibility. The [kernel port study](db/records/measurements/native-fast-q2-execution-kernels.md)
-  records the tests, rejected experiments and remaining comparison limits.
-
-- Reduce Fast's draft and target scheduling overhead with native GPU candidate
-  selection, bounded deferred evaluation, fused recurrent verification and
-  grouped short-prefill work. Use one verification controller that can recover
-  after expensive early passes. Preserve target verification and memory limits;
-  the [matched Splash comparison](db/records/measurements/fast-splash-execution-comparison.md)
-  records the remaining gap and qualification limits.
-
-- Preserve literal JSON brackets in saved conversations and tool results. Table
-  output no longer becomes an accidental db.md link, and interrupted saves recover.
-
-- Add Fast and Smart to the native app's composer and settings. New installs
-  start with Fast; existing choices, conversations and review boundaries remain.
-- Add native Qwen3.6-35B-A3B inference with pinned DFlash 2, bounded SSD expert
-  streaming and adaptive target verification. Keep Smart's existing MTP path.
-- Add `fast` and `smart` engine aliases, complete target/draft setup verification,
-  model-specific memory planning and persistent caches for Fast's attention layout.
+- Focus the app and engine on Qwen3.8-Flash-Next 4-bit. Archive Fast, Q2,
+  Smart DFlash and their dedicated execution paths, tests and tooling at a
+  [fixed source revision](experiments/fast-q2/README.md). The original model's
+  MTP, expert lookahead, SSD streaming and released CLI/API behavior remain.
+- Remove the app's Fast/Smart picker. Saved experimental preferences return
+  to the maintained model with a notice; memory settings, Home data and
+  downloaded files are preserved. Missing model files still require setup.
+- Preserve literal JSON brackets in saved conversations and tool results.
+  Table output no longer becomes an accidental db.md link, and interrupted
+  saves recover.
+- Retrieve relevant conversation history and expose Home records through the
+  Data browser, bundled CLI and local MCP integration, with the same review
+  and permission boundaries. These app changes are available in source;
+  there is no published Mac app installer.
 
 ## 0.2.30 - 2026-10-19
 

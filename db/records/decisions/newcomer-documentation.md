@@ -2,7 +2,7 @@
 type: decision
 id: 01m21jj97w5hteckpk2khdy25h
 created: 2026-09-08T22:35:06.876703+00:00
-updated: 2026-10-26T17:43:15.800651+00:00
+updated: 2026-10-26T18:09:26.297117+00:00
 summary: Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 decided_on: 2026-09-08
 reversible_if: The public setup changes or users demonstrate that a different entry point makes installation and first use clearer.
@@ -110,3 +110,6 @@ Selected GitHub description:
 > Run a 105 GB AI model on an Apple Silicon Mac with 16–64 GB of RAM by streaming experts from SSD. Fully native Swift on MLX and Metal. Offline, no Python. Released engine works with Claude Code, Codex, and Ollama/OpenAI/Anthropic clients. Native Mac app and Fast/Smart model choices in development.
 
 This is documentation maintenance, not a new model default, performance result or product release. Current engineering authority remains [[records/decisions/fast-and-smart]] and [[records/decisions/slotstream-app-identity]].
+
+## One maintained model, October 26, 2026
+The later owner decision [[records/decisions/one-maintained-model]] supersedes the Fast/Smart development positioning in the earlier section. Current surfaces name Qwen3.8-Flash-Next 4-bit only, keep SSD streaming and fully native Swift/MLX/Metal with no Python runtime prominent, and link retired experiments separately. Preserve the released engine versus source-built app distinction. v0.2.30 remains the latest release.

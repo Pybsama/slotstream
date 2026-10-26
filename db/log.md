@@ -726,3 +726,6 @@ Reproduced Fast recall failure with and without drafting. Retained bounded relev
 ## [2026-10-26 17:44] update | records/decisions/newcomer-documentation.md
 Align the README and selected GitHub description with the released engine and current native Mac app development. Preserve SSD streaming, native Swift and Python-free inference; distinguish Fast/Smart defaults, original-model measurements and the explicit Q2 candidate. Update native-stack references and generated documentation. Verified all 122 local document links, all 40 prior README anchors, 354 claim checks and 4303 brain links; full validation has zero errors or warnings.
 
+## [2026-10-26 18:13] update | records/decisions/one-maintained-model.md
+Archive Fast, Q2 and associated DFlash/native execution work at df208489af2ef5378444727172b6dfcf8ee1ed10. Restore the original-model engine, simplify app controls, migrate experimental preferences without relabeling activation receipts, and align active docs and plans. Engine build and 106 T0/T1 checks pass; app and real-workflow verification continues. No release.
+

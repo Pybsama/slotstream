@@ -711,9 +711,9 @@ public actor LocalInference: Inference {
         let verified: Bool
         do {
             verified = try modelVerification.check(manifestDigest: pack.manifestDigest,
-                files: pack.installationFiles(at: model),
+                files: pack.files.map { model.appendingPathComponent($0.path) },
                 shouldContinue: { !cancellation.isCancelled }) {
-                    try pack.installationStatus(at: model, shouldContinue: { !cancellation.isCancelled }).isReady
+                    try store.status(shouldContinue: { !cancellation.isCancelled }).isReady
                 }
         } catch { try cancellation.check(); throw error }
         guard verified else { throw AppRuntimeError.unavailable("The local model is missing or incomplete. Set up the model before sending.") }
@@ -811,11 +811,11 @@ public actor LocalInference: Inference {
         let store = WeightStore(modelDirectory: model, pack: pack)
         guard store.remainingBytes() == 0, ahead.begin() else { return }
         let cache = modelVerification, ahead = ahead
-        let files = pack.installationFiles(at: model)
+        let files = pack.files.map { model.appendingPathComponent($0.path) }
         let manifestDigest = pack.manifestDigest
         DispatchQueue.global(qos: .utility).async {
             _ = try? cache.check(manifestDigest: manifestDigest, files: files, shouldContinue: { !ahead.cancelled }) {
-                try pack.installationStatus(at: model, shouldContinue: { !ahead.cancelled }).isReady
+                try store.status(shouldContinue: { !ahead.cancelled }).isReady
             }
             ahead.end()
         }

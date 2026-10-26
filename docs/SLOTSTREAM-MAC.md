@@ -5,16 +5,15 @@ on the Slotstream engine.
 The development app lives under `apps/macos`. This is ongoing implementation,
 not an announced alpha or a supported installer.
 
-## Choose Fast or Smart
+## The local model
 
-Use the **Fast / Smart** selector beside the composer, or choose **Model** in
-Settings. Fast is the default for a new installation. Smart uses the larger
-model for work that needs more reasoning. Existing saved choices are preserved.
-Switching keeps the conversation, attachments, memory and review requirements.
-The app loads one model at a time and asks you to finish setup if the selected
-model is missing. A running task finishes before a saved setting is applied.
+The app uses Qwen3.8-Flash-Next 4-bit through the native Slotstream engine.
+There is no model picker. Settings shows the model, download status and memory
+controls. Memory changes wait until the current task finishes.
 
-See [models](MODELS.md) for the underlying models, engine aliases and limitations.
+Saved Fast and Q2 experimental preferences migrate to the maintained model
+with a notice. Home data and memory preferences stay intact, and any missing
+model files still require explicit setup. See [model and defaults](MODELS.md).
 
 ## What works in the development app
 
@@ -513,12 +512,12 @@ records the exact observed scope and remaining gates.
 
 ## Memory and readiness
 
-Settings → Model separates **Quantization**, **Memory budget**, and **While running**.
-Each defaults to automatic behavior. Quantization currently selects the original
-supported pack; alternative representations remain in qualification. You can
-pin the original pack independently of the memory controls. An unavailable
-saved pack stays visible and blocks activation until you select an available
-choice. Auto does not confer a speed qualification on the original pack.
+Settings shows **Qwen3.8-Flash-Next 4-bit**, **Memory budget**, and **While
+running**. There is no model or quantization picker. Saved experimental model
+preferences return to this model with a notice; memory settings stay intact.
+An unknown saved model stays unavailable until you choose **Use
+Qwen3.8-Flash-Next 4-bit**. That action still requires verified model files.
+Automatic memory planning does not confer a speed qualification.
 
 Memory budget defaults to **Automatic (Recommended)**. The app uses
 Slotstream’s memory planner and elastic cache governor, keeping the current

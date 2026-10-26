@@ -22,10 +22,6 @@ public final class Qwen4ExpModel {
     package let affineExpertArtifact: AffineExpertControl.Artifact?
     private let authenticatedStorageIdentity: String?
     package var authenticatedArtifactIdentity: String? {
-        if let q2 = pool.expertStore.index.q2 {
-            return "gsq-q2-native-v1:" + PinnedQ2Model.files.map { $0.sha256! }.joined(separator: ":")
-                + ":" + SmartDFlashDeployment.revision + ":" + String(q2.config.admittedExpertRecordBytes)
-        }
         guard let artifact = affineExpertArtifact else { return nil }
         if affineNativeArithmetic {
             return "native-affine3-v1:" + artifact.manifestSHA256 + ":standalone:" + authenticatedStorageIdentity!
@@ -81,9 +77,6 @@ public final class Qwen4ExpModel {
     public var residentExpertJoins: Int { moe.values.reduce(0) { $0 + $1.residentJoins } }
     public var residentExpertJoinSeconds: Double { moe.values.reduce(0) { $0 + $1.residentJoinSeconds } }
     public var sharedExpertPrelaunches: Int { moe.values.reduce(0) { $0 + $1.sharedPrelaunches } }
-    package var nativeExpertScheduledPasses: Int { moe.values.reduce(0) { $0 + $1.nativeScheduledPasses } }
-    package var nativeGPURepackedRecords: Int { moe.values.reduce(0) { $0 + $1.nativeGPURepackedRecords } }
-    package var nativeGPUForecastRecords: Int { moe.values.reduce(0) { $0 + $1.nativeGPUForecastRecords } }
     public var indexerSpecializedRows: Int { qsa.values.reduce(0) { $0 + $1.indexer.specializedRows } }
     private var routerCacheConfigured = false
     public var cachedRouterBytes: Int {
@@ -94,7 +87,7 @@ public final class Qwen4ExpModel {
     /// Request entry calls this before a cached MTP draft can advance. Direct
     /// model callers also prepare before touching main recurrent state.
     public var compiledNormFinishes: Int {
-        (attnHC + mlpHC + [mixer].compactMap { $0 }).reduce(0) { $0 + $1.compiledFinishes }
+        (attnHC + mlpHC + [mixer]).reduce(0) { $0 + $1.compiledFinishes }
     }
     public var readHandleCount: Int { pool.readHandleCount + ngram.readHandleCount }
     public var selectedAttentionTiles: Int {
@@ -102,9 +95,7 @@ public final class Qwen4ExpModel {
     }
     /// Scheduled upstream fused prefill tiles; evaluated results prove completion.
     public var fusedPrefillAttentionTiles: Int {
-        qsa.values.reduce(0) { $0 + $1.fusedPrefillAttentionTiles }
-            + fastAttention.values.reduce(0) { $0 + $1.fusedPrefillAttentionTiles }
-            + (mtpHead?.attn.fusedPrefillAttentionTiles ?? 0)
+        qsa.values.reduce(0) { $0 + $1.fusedPrefillAttentionTiles } + (mtpHead?.attn.fusedPrefillAttentionTiles ?? 0)
     }
     /// Multi-row verify passes (per attention layer) that took the split or exact vector-kernel path.
     public var multiRowSplits: Int {
@@ -130,13 +121,12 @@ public final class Qwen4ExpModel {
         mtpHead?.attn.selectedAttention = selected
         let fused = optimizations.fusedPrefillAttention == true && FusedPrefillAttention.available
         for layer in qsa.values { layer.fusedPrefillAttention = fused }
-        for layer in fastAttention.values { layer.fusedPrefillAttention = fused }
         mtpHead?.attn.fusedPrefillAttention = fused
         pool.directReadHandles = optimizations.directReadHandles
         ngram.directReadHandles = optimizations.directReadHandles
         let compiledNorm = optimizations.compiledNormFinish && CompiledArithmetic.prepare()
         if compiledNorm != compiledNormConfigured {
-            for unit in attnHC + mlpHC + [mixer].compactMap { $0 } { unit.compiledNormFinish = compiledNorm }
+            for unit in attnHC + mlpHC + [mixer] { unit.compiledNormFinish = compiledNorm }
             compiledNormConfigured = compiledNorm
         }
         mtpHead?.attnHC.compiledNormFinish = compiledNorm
@@ -174,54 +164,14 @@ public final class Qwen4ExpModel {
     var moe: [Int: MoELayer] = [:]
     /// Work deferred between decode barriers until the next routing readback.
     private let routingReadbacks = RoutingReadbackQueue()
-    private let nativeAttentionPrelaunch = ProcessInfo.processInfo.environment["SLOTSTREAM_NATIVE_ATTENTION_PRELAUNCH"] != "0"
-    private let nativeRouterRetirement = ProcessInfo.processInfo.environment["SLOTSTREAM_NATIVE_ROUTER_RETIREMENT"] != "0"
-    package private(set) var nativeRouterRetirementPasses = 0
     var attnHC: [GatedResidual] = []
     var mlpHC: [GatedResidual] = []
     var ple: [Int: PLELayer] = [:]
-    let mixer: GatedResidual?
-    var fastAttention: [Int: FastAttention] = [:]
-    var fastInputNorm: [RMSNorm] = []
-    var fastMLPNorm: [RMSNorm] = []
-    var fastFinalNorm: RMSNorm?
+    let mixer: GatedResidual
     let lmHead: QLinear
     /// The optional MTP draft head for self-speculative decode; loaded from
     /// mtp.safetensors on demand (`enableMTP`), everything resident.
     public private(set) var mtpHead: MTPHead? = nil
-    package var dflash: DFlashDraft?
-    package var capturesDraftFeatures = false
-    package var draftFeatures: (end: Int, rows: MLXArray)?
-    package var draftPrefillFeatures: (end: Int, rows: MLXArray)?
-    package var accumulatingDraftPrefill = false
-    private var capturedDraftLayers: [Int: MLXArray] = [:]
-    package func beginDraftCapture() {
-        draftFeatures = nil; capturedDraftLayers.removeAll()
-        capturesDraftFeatures = dflash != nil
-        draftPrefillFeatures = nil; accumulatingDraftPrefill = capturesDraftFeatures
-    }
-    package func endDraftCapture() {
-        capturesDraftFeatures = false; draftFeatures = nil; capturedDraftLayers.removeAll()
-        draftPrefillFeatures = nil; accumulatingDraftPrefill = false
-    }
-    private func captureDraftLayer(_ layer: Int, hidden: MLXArray) {
-        guard capturesDraftFeatures, dflash?.targetLayers.contains(layer) == true else { return }
-        let value = cfg.isFast ? hidden : mean(hidden.reshaped([1, hidden.dim(1), cfg.hcCount, cfg.hiddenSize]), axis: 2).asType(.bfloat16)
-        capturedDraftLayers[layer] = value
-    }
-    private func finishDraftCapture(end: Int) {
-        guard capturesDraftFeatures, let dflash, capturedDraftLayers.count == dflash.targetLayers.count else { return }
-        let rows = concatenated(dflash.targetLayers.map { capturedDraftLayers[$0]! }, axis: -1)
-        eval(rows); draftFeatures = (end, rows)
-        if accumulatingDraftPrefill {
-            let previous = draftPrefillFeatures
-            let continuous = previous?.end == end - rows.dim(1)
-            let joined = continuous ? concatenated([previous!.rows, rows], axis: 1) : rows
-            let bounded = contiguous(joined[0..., max(0, joined.dim(1) - DFlashDraft.window)..., 0...])
-            eval(bounded); draftPrefillFeatures = (end, bounded)
-        }
-        capturedDraftLayers.removeAll()
-    }
     /// Diagnostic observer; called on the serialized model thread with router-rank IDs.
     public var routerObserver: ((Int, [Int32]) -> Void)? {
         didSet { rebuildRouterObserver() }
@@ -346,33 +296,6 @@ public final class Qwen4ExpModel {
             ? affineControlContextLimit : ContextPolicy.modelLimit
         let arithmetic: BlockArithmeticProfile = affineControlReferenceArithmetic ? .vqPR1788 : .deployed
         self.optimizations = try InferenceOptimizations.environment()
-        if index.config.isFast || index.q2 != nil {
-            self.optimizations.automaticReadScope = false
-            self.optimizations.layerExpertWorkspace = false
-            if index.config.isFast {
-                // Bound outstanding expert readers to four layers, with
-                // DecodeLookahead's existing row/pool-capacity fallback.
-                self.decodeBarrierLayers = Self.environmentBarrierLayers ?? 4
-                if ProcessInfo.processInfo.environment["SLOTSTREAM_OPT_SHARED_OVERLAP"] == nil {
-                    self.optimizations.overlapSharedExpert = true
-                }
-                if ProcessInfo.processInfo.environment["SLOTSTREAM_OPT_GDN_RECORD"] == nil {
-                    self.optimizations.fusedGDNRecording = true
-                }
-            }
-            if index.q2 != nil {
-                // Q2 keeps only four layers pinned between barriers, bounded
-                // by DecodeLookahead.barrierPeriod when the pool is smaller.
-                self.decodeBarrierLayers = Self.environmentBarrierLayers ?? 4
-                // Submit useful resident work before demand I/O. The Q2
-                // qualification measures complete requests and actual memory.
-                if ProcessInfo.processInfo.environment["SLOTSTREAM_OPT_SHARED_OVERLAP"] == nil {
-                    self.optimizations.overlapSharedExpert = true
-                }
-                self.optimizations.fusedGDNProjection = false
-                self.optimizations.fusedPrefillWorkspace = false
-            }
-        }
         if affineControlReferenceArithmetic {
             // The independent PR1788 reference lets MLX select attention.
             // Forcing the newer fused kernel is a separate arithmetic profile;
@@ -396,7 +319,7 @@ public final class Qwen4ExpModel {
                 "expert-pool slot count must be between 1 and \(Geometry.totalRecords), got \(poolSlots)")
         }
         self.runLayers = selectedLayers
-        let store = try ExpertStore(index: index, nativeAffineTiles: index.config.isFast)
+        let store = try ExpertStore(index: index)
         // Reject a wrong/custom checkpoint before allocating the 3.8 GB
         // resident trunk or the expert pool.
         try Geometry.check(against: index.config, recordBytes: store.recordBytes)
@@ -420,25 +343,18 @@ public final class Qwen4ExpModel {
             if cfg.layerTypes[l] == "linear_attention" {
                 gdn[l] = GDNLayer(resident, layer: l, arithmetic: arithmetic)
             } else {
-                if cfg.isFast { fastAttention[l] = FastAttention(resident, layer: l) }
-                else { qsa[l] = QSAAttention(resident, layer: l, arithmetic: arithmetic) }
+                qsa[l] = QSAAttention(resident, layer: l, arithmetic: arithmetic)
             }
             moe[l] = MoELayer(resident, layer: l, pool: pool, arithmetic: arithmetic)
             moe[l]?.affineGroupedExperts = affineGroupedExperts
-            if cfg.isFast {
-                fastInputNorm.append(RMSNorm(weight: resident.tensor(base + ".input_layernorm.weight"), eps: cfg.rmsNormEps, groupSize: nil))
-                fastMLPNorm.append(RMSNorm(weight: resident.tensor(base + ".post_attention_layernorm.weight"), eps: cfg.rmsNormEps, groupSize: nil))
-            } else {
-                attnHC.append(GatedResidual(resident, base: base + ".attn_hyper_connection", useCombine: true, arithmetic: arithmetic))
-                mlpHC.append(GatedResidual(resident, base: base + ".mlp_hyper_connection", useCombine: true, arithmetic: arithmetic))
-            }
+            attnHC.append(GatedResidual(resident, base: base + ".attn_hyper_connection", useCombine: true, arithmetic: arithmetic))
+            mlpHC.append(GatedResidual(resident, base: base + ".mlp_hyper_connection", useCombine: true, arithmetic: arithmetic))
             if cfg.pleLayerIndices.contains(l) {
                 ple[l] = PLELayer(resident, layer: l, store: ngram, arithmetic: arithmetic)
             }
         }
-        if Self.debugDir != nil, !attnHC.isEmpty { attnHC[0].debugName = "hc0" }
-        mixer = cfg.isFast ? nil : GatedResidual(resident, base: "model.hyper_connection_mixer", useCombine: false, arithmetic: arithmetic)
-        if cfg.isFast { fastFinalNorm = RMSNorm(weight: resident.tensor("model.norm.weight"), eps: cfg.rmsNormEps, groupSize: nil) }
+        if Self.debugDir != nil { attnHC[0].debugName = "hc0" }
+        mixer = GatedResidual(resident, base: "model.hyper_connection_mixer", useCombine: false, arithmetic: arithmetic)
         lmHead = resident.linear("lm_head")
     }
 
@@ -457,7 +373,7 @@ public final class Qwen4ExpModel {
     /// `streamedExperts` loads the head without its routed experts, which
     /// then stream through a `PlannerCostModel.mtpStreamSlots` cache.
     public func enableMTP(modelDir: URL, streamedExperts: Bool) throws {
-        guard !cfg.isFast, affineExpertArtifact == nil else {
+        guard affineExpertArtifact == nil else {
             throw ModelError("this target requires independently authenticated draft admission; its expert recipe cannot configure the original head")
         }
         guard mtpHead == nil else { return }
@@ -559,7 +475,7 @@ public final class Qwen4ExpModel {
                 s.linear[l] = LinearCache()
             } else {
                 s.kv[l] = KVCache()
-                if !cfg.isFast { s.indexer[l] = IndexerCache(compactRaw: optimizations.compactIndexerRaw) }
+                s.indexer[l] = IndexerCache(compactRaw: optimizations.compactIndexerRaw)
             }
         }
         return s
@@ -649,7 +565,7 @@ public final class Qwen4ExpModel {
         guard maximumForwardTokens.map({ ids.count <= $0 }) ?? true else {
             throw ModelError("model forward exceeds this pack's admitted query-row bound")
         }
-        guard !(cfg.isFast || affineControlReferenceArithmetic || affineNativeArithmetic) || (state.tokenCount >= 0 && state.tokenCount <= inferenceContextLimit
+        guard !(affineControlReferenceArithmetic || affineNativeArithmetic) || (state.tokenCount >= 0 && state.tokenCount <= inferenceContextLimit
               && ids.count <= inferenceContextLimit - state.tokenCount) else {
             throw ModelError("model forward exceeds its admitted context or coefficient coverage")
         }
@@ -665,23 +581,12 @@ public final class Qwen4ExpModel {
               state.tokenCount >= 0, ids.count <= Int(Int32.max),
               state.tokenCount <= Int(Int32.max) - ids.count,
               state.linear.count == gdn.count,
-              state.kv.count == qsa.count + fastAttention.count, state.indexer.count == qsa.count,
-              fastAttention.keys.allSatisfy({ state.kv[$0]?.offset == state.tokenCount }),
+              state.kv.count == qsa.count, state.indexer.count == qsa.count,
               gdn.keys.allSatisfy({ state.linear[$0] != nil }),
               qsa.keys.allSatisfy({ state.kv[$0]?.offset == state.tokenCount
                   && state.indexer[$0]?.offset == state.tokenCount }) else {
             throw ModelError("model state is uninitialized, incompatible or offset-inconsistent; use makeState() or restore a committed checkpoint")
         }
-    }
-
-    /// Both maintained forward architectures share read-ahead ownership. A
-    /// prefill/state-only pass clears the prior narrow pass's forecast links.
-    private func configureMoELookahead(layer: Int, rows: Int) {
-        let inputForecast = lookahead?.prefetch?.configuration.inputForecast == true
-            && lookahead?.inMainPass == true && rows <= 8
-        moe[layer]!.routerObserver = combinedRouterObserver
-        moe[layer]!.inputForecastNext = inputForecast ? moe[layer + 1] : nil
-        moe[layer]!.inputForecastScheduler = inputForecast ? lookahead?.prefetch : nil
     }
 
     private func runHiddenMulti(
@@ -695,61 +600,6 @@ public final class Qwen4ExpModel {
         state.recordedTokenIds = state.recordingEnabled ? ids : nil
         state.recordingBaseTokenCount = state.recordingEnabled ? state.tokenCount : nil
         state.committedBoundaryValid = false
-        capturedDraftLayers.removeAll()
-        // A successful CPU router readback depends on the preceding layer's
-        // complete expert mixture. Stable, directly bound native pools can
-        // retire those completed readers there, before selecting new victims.
-        // Narrow early-submitted sections retain no larger lazy graph than the
-        // existing four-layer envelope. Other pool layouts keep their drains.
-        let retireNativeReadersAtRouter = nativeRouterRetirement
-            && NativeExpertSchedule.enabled && NativeExpertSchedule.earlySubmission
-            && (cfg.isFast || pool.expertStore.isQ2) && (1...8).contains(ids.count)
-            && pool.supportsScheduledDemand && perLayerHook == nil && routerObserver == nil
-            && contextNumericsObserver == nil && gdnPhaseProfile == nil
-            && !RouterTrace.on && !MemTrace.on
-        if retireNativeReadersAtRouter { nativeRouterRetirementPasses += 1 }
-        if cfg.isFast {
-            guard vision.isEmpty else { throw ModelError("Fast currently accepts text and extracted image text, not image embeddings") }
-            let period = DecodeLookahead.barrierPeriod(requested: decodeBarrierLayers, rows: ids.count,
-                topK: cfg.topK, experts: cfg.numExperts, slots: pool.slots, reservedSlots: 0)
-            pool.pinGenerations = retireNativeReadersAtRouter ? 1 : (period > 1 ? period + 1 : 1)
-            prepareOptimizationKernels(using: optimizations)
-            state.compactStateWindows = optimizations.compactStateWindows
-            let groupSmallPrefill = ProcessInfo.processInfo.environment["SLOTSTREAM_FAST_SMALL_SWEEP"] != "0"
-            var hidden = try resident.embedChecked(ids, shape: [1, ids.count]).asType(.bfloat16)
-            for layer in 0..<runLayers {
-                if shouldContinue?() == false { return nil }
-                configureMoELookahead(layer: layer, rows: ids.count)
-                gdn[layer]?.fusedRecording = optimizations.fusedGDNRecording
-                moe[layer]!.overlapShared = optimizations.overlapSharedExpert
-                moe[layer]!.overlapResident = optimizations.overlapResidentExperts
-                // Short prompts still contain enough routes to reuse an
-                // expert's weights across rows. Verification stays separate.
-                moe[layer]!.smallPrefillSweep = groupSmallPrefill && !state.recordingEnabled
-                let input = fastInputNorm[layer](hidden)
-                contextNumericsObserver?(layer, "input", input)
-                let attended = gdn[layer].map { $0(input, cache: state.linear[layer]) }
-                    ?? fastAttention[layer]!(input, rope: rope, cache: state.kv[layer]!)
-                contextNumericsObserver?(layer, "attention", attended)
-                hidden = hidden + attended
-                hidden = hidden + (try moe[layer]!(fastMLPNorm[layer](hidden)))
-                contextNumericsObserver?(layer, "output", hidden)
-                // The next router readback completes earlier readers. Keep
-                // their slots pinned until the bounded generation expires.
-                if layer == runLayers - 1 || (!retireNativeReadersAtRouter && (period <= 1 || (layer + 1) % period == 0)) {
-                    eval(hidden)
-                }
-                if optimizations.compactStateWindows, ids.count > 1, !state.recordingEnabled {
-                    state.linear[layer]?.compactWindows()
-                }
-                captureDraftLayer(layer, hidden: hidden)
-                perLayerHook?(layer, hidden)
-            }
-            state.tokenCount += ids.count
-            finishDraftCapture(end: state.tokenCount)
-            state.committedBoundaryValid = true
-            return hidden
-        }
         let S = ids.count
         let referenceRows: Int
         if alignSmallReferenceDispatch, smallPrefillSweep, state.tokenCount >= smallPrefillReferenceStart,
@@ -763,8 +613,7 @@ public final class Qwen4ExpModel {
         // Public full-output APIs, MTP and truncated diagnostic models retain
         // all rows. The pinned final layer is QSA; no recurrent update is
         // inferred from a configuration label or omitted for another family.
-        let needsTerminalDraftFeatures = capturesDraftFeatures && dflash?.targetLayers.contains(runLayers - 1) == true
-        let terminalPruning = !needsTerminalDraftFeatures && optimizations.terminalPrefillPruning && mtpHead == nil
+        let terminalPruning = optimizations.terminalPrefillPruning && mtpHead == nil
             && runLayers == cfg.numLayers && qsa[runLayers - 1] != nil
             && perLayerHook == nil && demand != .fullMulti
         let terminalLastQuery = terminalPruning && optimizations.terminalLastQuery && demand == .lastRow
@@ -792,7 +641,7 @@ public final class Qwen4ExpModel {
         let barrierPeriod = DecodeLookahead.barrierPeriod(requested: decodeBarrierLayers, rows: S,
             topK: cfg.topK, experts: cfg.numExperts, slots: pool.slots,
             reservedSlots: lookahead?.prefetch?.configuration.slotCap ?? 0)
-        pool.pinGenerations = retireNativeReadersAtRouter ? 1 : (barrierPeriod > 1 ? barrierPeriod + 1 : 1)
+        pool.pinGenerations = barrierPeriod > 1 ? barrierPeriod + 1 : 1
         prepareOptimizationKernels(using: optimizations)
         pool.workspacePiecewiseWrites = affinePiecewiseAllocation || optimizations.workspacePiecewiseWrites
         pool.admissionPiecewiseWrites = affinePiecewiseAllocation
@@ -807,7 +656,6 @@ public final class Qwen4ExpModel {
         if !vision.isEmpty { h0 = Self.spliceVision(h0, runs: vision, length: S, hidden: cfg.hiddenSize) }
         Self.debugDump("embed", h0)
         var h = tiled(h0, repetitions: [1, 1, cfg.hcCount])
-        if pool.expertStore.isQ2 { h = h.asType(.float32) }
 
         // n-gram history: rolling context + new ids
         let history = state.ngramCtx + ids.map { Int64($0) }
@@ -825,12 +673,11 @@ public final class Qwen4ExpModel {
         let attentionTaps = self.lookahead?.attentionForecastTaps ?? []
         for l in 0 ..< runLayers {
             if shouldContinue?() == false { return nil }
-            configureMoELookahead(layer: l, rows: S)
             if MemTrace.on { MemTrace.enterLayer(l, kind: gdn[l] != nil ? "gdn" : "qsa") }
             moe[l]!.specializedRouter = optimizations.routerTopK
             moe[l]!.overlapShared = optimizations.overlapSharedExpert
             moe[l]!.overlapResident = optimizations.overlapResidentExperts
-            moe[l]!.readbackQueue = (retireNativeReadersAtRouter || barrierPeriod > 1 || !attentionTaps.isEmpty) ? routingReadbacks : nil
+            moe[l]!.readbackQueue = barrierPeriod > 1 || !attentionTaps.isEmpty ? routingReadbacks : nil
             qsa[l]?.indexer.denseBypass = optimizations.denseIndexerBypass
             qsa[l]?.indexer.specializedSelector = optimizations.indexerBlockTopK
             moe[l]!.workspaceComputeRanges = layerMajor ? ranges : []
@@ -958,12 +805,6 @@ public final class Qwen4ExpModel {
                 attnOut = qsa[l]!(x1, rope: rope, cache: state.kv[l]!, idxCache: state.indexer[l]!,
                     lastQueryOnly: terminalLastQuery && l == runLayers - 1)
             }
-            // Diagnostic: overlap construction of the MLP input and router
-            // with useful attention work, retaining the ordinary MLX stream.
-            if nativeAttentionPrelaunch, S <= 8,
-               pool.expertStore.isQ2 || pool.expertStore.nativeAffineTiles {
-                asyncEval(attnOut)
-            }
             contextNumericsObserver?(l, "attn", attnOut)
             MemTrace.mark("attn", attnOut)
             if l == dbgLayer { Self.debugDump("attn", attnOut) }
@@ -975,12 +816,8 @@ public final class Qwen4ExpModel {
                 attentionInjection = inj1![0..., first..., 0...]
                 terminalQueryRowsSkipped += first
             } else { attentionInjection = inj1! }
-            if pool.expertStore.isQ2 {
-                h = Q2HyperConnection.combine(h, branch: attnOut, injection: attentionInjection)
-            } else {
-                h = h + (attnOut.expandedDimensions(axis: -2) * attentionInjection.expandedDimensions(axis: -1))
-                    .reshaped(h.shape)
-            }
+            h = h + (attnOut.expandedDimensions(axis: -2) * attentionInjection.expandedDimensions(axis: -1))
+                .reshaped(h.shape)
             contextNumericsObserver?(l, "hAfterAttn", h)
             if l == dbgLayer { Self.debugDump("hAfterAttn", h) }
 
@@ -1022,6 +859,7 @@ public final class Qwen4ExpModel {
             contextNumericsObserver?(l, "x2", x2)
             contextNumericsObserver?(l, "inj2", inj2!)
             MemTrace.mark("hc2", x2)
+            moe[l]!.routerObserver = combinedRouterObserver
             moe[l]!.useLayerWorkspace = optimizations.layerExpertWorkspace
             moe[l]!.disjointOutput = optimizations.disjointSweepOutput
             moe[l]!.boundedRows = optimizations.boundedSweepRows
@@ -1032,8 +870,7 @@ public final class Qwen4ExpModel {
             if let observe = contextNumericsObserver {
                 moe[l]!.contextNumericsObserver = { name, value in observe(l, name, value) }
             } else { moe[l]!.contextNumericsObserver = nil }
-            let computedMoE = try moe[l]!(x2)
-            let moeOut = pool.expertStore.isQ2 ? computedMoE.asType(.bfloat16) : computedMoE
+            let moeOut = try moe[l]!(x2)
             if let readout = deferredReadout, let session = self.lookahead {
                 // Consumed here, after the demand reads: the host copy waits only
                 // for whatever of the readout the GPU has not finished.
@@ -1042,12 +879,8 @@ public final class Qwen4ExpModel {
             contextNumericsObserver?(l, "moe", moeOut)
             if l == dbgLayer { Self.debugDump("moe", moeOut) }
             MemTrace.mark("moe", moeOut)
-            if pool.expertStore.isQ2 {
-                h = Q2HyperConnection.combine(h, branch: moeOut, injection: inj2!)
-            } else {
-                h = h + (moeOut.expandedDimensions(axis: -2) * inj2!.expandedDimensions(axis: -1))
-                    .reshaped(h.shape)
-            }
+            h = h + (moeOut.expandedDimensions(axis: -2) * inj2!.expandedDimensions(axis: -1))
+                .reshaped(h.shape)
 
             // synchronize the layer so pool references release before the next
             // layer's ensure() scatters (keeps slot writes in place, see PLAN §4.2)
@@ -1083,7 +916,7 @@ public final class Qwen4ExpModel {
             // arrived in bursts and too late to read ahead (decode serialization
             // round 3). K = 1 is the original path.
             let period = barrierPeriod
-            let mustBarrier = l == runLayers - 1 || (!retireNativeReadersAtRouter && (period <= 1 || (l + 1) % period == 0))
+            let mustBarrier = period <= 1 || l == runLayers - 1 || (l + 1) % period == 0
             if mustBarrier {
                 let evalStart = RuntimeClock.now()
                 eval([h] + routingReadbacks.arrays + (forecastBatch?.targets.map { $0.logits } ?? []))
@@ -1108,19 +941,14 @@ public final class Qwen4ExpModel {
             // The layer has finished reading the convolution parent. Compact
             // only multi-token passes; a one-token decode parent is bounded
             // to the small convolution window plus one row already.
-            // Recording owns every rollback window, so compacting the final
-            // one here cannot release the parent and only adds a GPU wait.
-            // The accepted windows are compacted together by rollbackChecked.
-            if optimizations.compactStateWindows, S > 1, !state.recordingEnabled {
+            if optimizations.compactStateWindows, S > 1 {
                 state.linear[l]?.compactWindows()
             }
             MemTrace.mark("layer-end", h)
-            captureDraftLayer(l, hidden: h)
             perLayerHook?(l, h)
         }
         if shouldContinue?() == false { return nil }
         state.tokenCount += S
-        finishDraftCapture(end: state.tokenCount)
         state.committedBoundaryValid = true
         return h
     }
@@ -1289,11 +1117,10 @@ public final class Qwen4ExpModel {
                           executionOptions: InferenceOptimizations? = nil) -> MLXArray {
         let optimizations = executionOptions ?? self.optimizations
         let ranges = computeRanges ?? stride(from: 0, to: h.dim(1), by: 4096).map { $0 ..< min(h.dim(1), $0 + 4096) }
-        if let fastFinalNorm { return fastFinalNorm(h) }
-        guard optimizations.layerExpertWorkspace, ranges.count > 1 else { return mixer!(h).0 }
+        guard optimizations.layerExpertWorkspace, ranges.count > 1 else { return mixer(h).0 }
         var outputs: [MLXArray] = []
         for range in ranges {
-            let mixed = mixer!(h[0..., range, 0...]).0
+            let mixed = mixer(h[0..., range, 0...]).0
             eval(mixed); outputs.append(mixed)
         }
         return concatenated(outputs, axis: 1)
@@ -1558,7 +1385,7 @@ extension Qwen4ExpModel.State {
         try validateRollback(keeping: n, ids: ids, checkpoint: c, ngramWindow: ngramWindow)
         if n < ids.count {
             for (_, cache) in linear {
-                if !cache.ssmStates.isEmpty || !cache.ssmPendingStates.isEmpty { cache.retainRecordedState(n - 1) }
+                if !cache.ssmStates.isEmpty { cache.ssmState = cache.ssmStates[n - 1] }
                 if !cache.convStates.isEmpty { cache.convState = cache.convStates[n - 1] }
                 if !cache.pleConvStates.isEmpty { cache.pleConvState = cache.pleConvStates[n - 1] }
             }
@@ -1571,8 +1398,7 @@ extension Qwen4ExpModel.State {
         invalidateCheckpoints(after: tokenCount, mtpOffset: nil)
         setRecording(false)
         if compactStateWindows {
-            let windows = linear.values.flatMap { $0.prepareCompactWindows() }
-            if !windows.isEmpty { eval(windows) }
+            for cache in linear.values { cache.compactWindows() }
         }
     }
 

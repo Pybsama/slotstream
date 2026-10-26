@@ -196,8 +196,7 @@ package final class ExpertLookaheadSession {
     /// Main verification passes forecast, and plain decode passes when
     /// `forecastsPlainPasses` is set; prefill never does.
     package var wantsRouterForecast: Bool {
-        prefetch?.configuration.inputForecast != true
-            && forecasts(currentPhase) && (forecastSelfCheck || !routerForecastStrides.isEmpty)
+        forecasts(currentPhase) && (forecastSelfCheck || !routerForecastStrides.isEmpty)
     }
     package func forecasts(_ phase: ExpertLookaheadPhase?) -> Bool {
         phase == .mainVerify || (forecastsPlainPasses && phase == .mainPlain)
@@ -206,7 +205,7 @@ package final class ExpertLookaheadSession {
     /// when it is not the boundary, then the observer-only taps. The corrected
     /// tap is evaluated only when a correction is loaded.
     package var attentionForecastTaps: [RouterForecastTap] {
-        guard forecasts(currentPhase), prefetch?.configuration.inputForecast != true else { return [] }
+        guard forecasts(currentPhase) else { return [] }
         // A corrected tap evaluates only with a correction fitted for it.
         let served = tapCorrection?.correctedTap
         func evaluates(_ tap: RouterForecastTap) -> Bool { tap != .boundary && (!tap.isCorrected || served == tap) }

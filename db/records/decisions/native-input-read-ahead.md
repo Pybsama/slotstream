@@ -2,14 +2,16 @@
 type: decision
 id: 01m5n0gft2t7mwd01ktdaa27k5
 created: 2026-10-23T18:31:27.810751+00:00
-updated: 2026-10-23T18:32:36.356764+00:00
+updated: 2026-10-26T18:09:26.157552+00:00
 summary: Keep measured bounded Q2 input read-ahead, reject its Fast default and buffer reuse, and require actual app recipe and branch evidence
 decided_on: 2026-10-23
 evidence: '[[records/measurements/native-fast-q2-scheduling]]'
 reversible_if: Complete-request, hardware or resource evidence shows a regression or a simpler schedule performs better
 title: Native input read-ahead
-status: standing
+status: reversed
 ---
+**Archived October 26, 2026.** [[records/decisions/one-maintained-model]] supersedes the active model choices and continuation instructions below. Preserve this dated decision and its evidence as experiment history.
+
 # Native input read-ahead
 
 Use bounded next-input expert read-ahead in the explicit Q2 candidate's native

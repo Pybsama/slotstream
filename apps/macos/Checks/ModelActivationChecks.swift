@@ -6,8 +6,8 @@ import Slotstream
 func modelActivationChecks(root: URL, dbmd: URL) async throws {
     typealias Journal = ModelActivationJournal
     func check(_ value: Bool, _ message: String) throws { try require(value, message) }
-    let original = try Journal.Selection(.init(budget: .custom, customGB: 10, quantization: .automatic))
-    let requested = try Journal.Selection(.init(budget: .custom, customGB: 9, quantization: .automatic, liveMemory: .fixed))
+    let original = try Journal.Selection(.init(budget: .custom, customGB: 10))
+    let requested = try Journal.Selection(.init(budget: .custom, customGB: 9, liveMemory: .fixed))
     func receipt(_ selection: Journal.Selection) -> Journal.Receipt {
         .init(selection: selection, generation: UUID(), arithmeticIdentity: String(repeating: "a", count: 64), healthTokens: 4)
     }
@@ -28,7 +28,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     // Durable selection retains the resolved pack independently of Auto.
     // Reopening or rollback validates that exact supported manifest instead
     // of asking a potentially newer hardware policy to select again.
-    let selected = try Journal.Selection(.init(quantization: .automatic), pack: ModelPackRegistry.baseline)
+    let selected = try Journal.Selection(.init(), pack: ModelPackRegistry.baseline)
     let encodedSelection = try JSONEncoder().encode(selected)
     let reopenedSelection = try JSONDecoder().decode(Journal.Selection.self, from: encodedSelection)
     try check(try reopenedSelection.validatedPack().manifestDigest == ModelPackRegistry.baseline.manifestDigest &&
@@ -74,9 +74,9 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     readiness.customGB = 11; readiness.hasCustomLimit = true
     try check(selected.matchesRequestedConfiguration(readiness),
         "readiness and an inactive custom slider do not replace a pending Auto load")
-    for changed in [PerformancePreferences(budget: .custom, customGB: 10, quantization: .automatic),
+    for changed in [PerformancePreferences(budget: .custom, customGB: 10),
                     PerformancePreferences(quantization: .pack(ModelPackRegistry.baseline.id)),
-                    PerformancePreferences(quantization: .automatic, liveMemory: .fixed)] {
+                    PerformancePreferences(liveMemory: .fixed)] {
         try check(!selected.matchesRequestedConfiguration(changed), "changed applied settings require a new selection")
     }
     try check(!original.matchesRequestedConfiguration(.init(budget: .custom, customGB: 9)),
@@ -149,12 +149,12 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     }
     let absentSetup = ModelSetup(model: root.appendingPathComponent("not-installed-model"))
     let absentHistory = root.appendingPathComponent("unaccepted-model-history")
-    let absentOwner = LocalInference(model: absentSetup.modelDirectory, preferences: .init(quantization: .automatic), activationDirectory: absentHistory)
+    let absentOwner = LocalInference(model: absentSetup.modelDirectory, activationDirectory: absentHistory)
     do { try await absentOwner.acceptModelSetup(absentSetup); throw AppRuntimeError.refused("CHECK FAILED: accepted unchecked setup") }
     catch { try check(!error.localizedDescription.contains("CHECK FAILED"), "an unchecked setup never grants acceptance") }
     try check(!FileManager.default.fileExists(atPath: absentHistory.path),
         "unchecked setup creates no acceptance history or model")
-    let offered = try await absentOwner.modelSetup(preferences: .init(quantization: .automatic))
+    let offered = try await absentOwner.modelSetup(preferences: .init())
     guard let offered else { throw AppRuntimeError.refused("CHECK FAILED: local setup offer absent") }
     try check(offered.packID == ModelPackRegistry.baseline.id && offered.offer?.automatic == true
         && !offered.snapshot().ready && !offered.snapshot().busy,
@@ -165,7 +165,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     try check(!FileManager.default.fileExists(atPath: absentHistory.path)
         && !FileManager.default.fileExists(atPath: absentSetup.modelDirectory.path),
         "reviewing setup creates no history or downloaded model")
-    var setupPreferences = PerformancePreferences(quantization: .automatic)
+    var setupPreferences = PerformancePreferences()
     setupPreferences.readiness = .keepReady; setupPreferences.customGB = 13.75
     try check(offered.matches(setupPreferences), "readiness and an inactive custom limit preserve the reviewed setup")
     setupPreferences.liveMemory = .fixed
@@ -337,7 +337,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     // settings retry without ever initializing Metal for missing weights.
     let missing = root.appendingPathComponent("missing-model")
     let localJournal = root.appendingPathComponent("missing-activation")
-    let inference = LocalInference(model: missing, preferences: .init(quantization: .automatic), activationDirectory: localJournal)
+    let inference = LocalInference(model: missing, activationDirectory: localJournal)
     for expected in ["missing or incomplete", "did not activate"] {
         do {
             _ = try await inference.turn(history: [.init(role: "user", content: "Hello")], tools: [],
@@ -345,8 +345,8 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
             throw AppRuntimeError.refused("CHECK FAILED: missing model produced a response")
         } catch { try check(error.localizedDescription.contains(expected), "missing pack and blocked retry remain distinct") }
     }
-    try await inference.configure(.init(quantization: .automatic))
-    try await inference.configure(.init(readiness: .keepReady, quantization: .automatic))
+    try await inference.configure(.init())
+    try await inference.configure(.init(readiness: .keepReady))
     do {
         _ = try await inference.turn(history: [.init(role: "user", content: "Hello")], tools: [],
             cancellation: Cancellation(), buffer: TurnBuffer())
@@ -362,8 +362,8 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     try FileManager.default.createDirectory(at: corruptDirectory, withIntermediateDirectories: true)
     let corruptState = Data("{not json".utf8)
     try corruptState.write(to: corruptDirectory.appendingPathComponent("state.json"))
-    let corruptInference = LocalInference(model: missing, preferences: .init(quantization: .automatic), activationDirectory: corruptDirectory)
-    let writeFailureInference = LocalInference(model: missing, preferences: .init(quantization: .automatic),
+    let corruptInference = LocalInference(model: missing, activationDirectory: corruptDirectory)
+    let writeFailureInference = LocalInference(model: missing, preferences: .init(),
         activationDirectory: root.appendingPathComponent("activation-bootstrap-write"), activationWriteFault: { point in
             if point == .beforeWrite { throw AppRuntimeError.refused("Injected initial intent failure") }
         })
@@ -379,7 +379,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
         }
     }
     do {
-        try await corruptInference.configure(.init(quantization: .automatic))
+        try await corruptInference.configure(.init())
         throw AppRuntimeError.refused("CHECK FAILED: settings retry ignored corrupt history")
     } catch { try check(error.localizedDescription.contains("unreadable"), "settings retry now checks accepted-version history before selection") }
     do {
@@ -389,7 +389,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     } catch { try check(error.localizedDescription.contains("did not activate"), "a failed settings retry retains the admission failure") }
     try check(try Data(contentsOf: corruptDirectory.appendingPathComponent("state.json")) == corruptState,
         "retry preserves unreadable activation bytes")
-    try check(corruptInference.performanceTelemetry?.snapshot(preferences: .init(quantization: .automatic), pending: false, busy: false).activationRecoveryAvailable == true,
+    try check(corruptInference.performanceTelemetry?.snapshot(preferences: .init(), pending: false, busy: false).activationRecoveryAvailable == true,
         "damaged owned record exposes explicit repair")
     try await corruptInference.recoverModelActivation()
     try check(corruptInference.performanceTelemetry?.activationFailureMessage == nil && corruptInference.performanceTelemetry?.isLoaded == false,
@@ -402,14 +402,14 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
             cancellation: Cancellation(), buffer: TurnBuffer())
         throw AppRuntimeError.refused("CHECK FAILED: repair bypassed model verification")
     } catch { try check(error.localizedDescription.contains("missing or incomplete"), "repaired setup still verifies its complete model") }
-    try check(corruptInference.performanceTelemetry?.snapshot(preferences: .init(quantization: .automatic), pending: false, busy: false).activationRecoveryAvailable == false,
+    try check(corruptInference.performanceTelemetry?.snapshot(preferences: .init(), pending: false, busy: false).activationRecoveryAvailable == false,
         "a missing model does not offer destructive setup repair")
     do { try await corruptInference.recoverModelActivation(); throw AppRuntimeError.refused("CHECK FAILED: valid setup reset again") }
     catch { try check(!error.localizedDescription.contains("CHECK FAILED"), "repeat repair refuses valid setup") }
 
-    let queuedInference = LocalInference(model: missing, preferences: .init(quantization: .automatic), activationDirectory: root.appendingPathComponent("queue-activation"))
+    let queuedInference = LocalInference(model: missing, activationDirectory: root.appendingPathComponent("queue-activation"))
     let runtime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("activation-queue-home"), dbmd: dbmd,
-        inference: queuedInference, performancePreferences: .init(quantization: .automatic))
+        inference: queuedInference)
     let second = try await runtime.newThread(mode: .shared)
     _ = try await runtime.submit(threadID: "home", text: "First request", nonce: "activation-first")
     _ = try await runtime.submit(threadID: second, text: "Keep this request queued", nonce: "activation-queued")
@@ -428,8 +428,8 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     let repairDirectory = root.appendingPathComponent("activation-runtime-repair")
     try FileManager.default.createDirectory(at: repairDirectory, withIntermediateDirectories: true)
     try corruptState.write(to: repairDirectory.appendingPathComponent("state.json"))
-    let repairOwner = LocalInference(model: missing, preferences: .init(quantization: .automatic), activationDirectory: repairDirectory)
-    let repairing = try SlotstreamRuntime(homeURL: root.appendingPathComponent("activation-repair-home"), dbmd: dbmd, inference: repairOwner, performancePreferences: .init(quantization: .automatic))
+    let repairOwner = LocalInference(model: missing, activationDirectory: repairDirectory)
+    let repairing = try SlotstreamRuntime(homeURL: root.appendingPathComponent("activation-repair-home"), dbmd: dbmd, inference: repairOwner)
     let waiting = try await repairing.newThread(mode: .shared)
     _ = try await repairing.submit(threadID: "home", text: "Preserve my first request", nonce: "repair-first")
     _ = try await repairing.submit(threadID: waiting, text: "Preserve my queued request", nonce: "repair-queued")
@@ -440,7 +440,7 @@ func modelActivationChecks(root: URL, dbmd: URL) async throws {
     try await Task.sleep(nanoseconds: 50_000_000)
     try check(await repairing.snapshot().home.threads.first(where: { $0.id == waiting })?.run?.state == .queued,
         "corrupt setup keeps later work queued")
-    let correctedPreferences = PerformancePreferences(quantization: .automatic, liveMemory: .fixed)
+    let correctedPreferences = PerformancePreferences(liveMemory: .fixed)
     do {
         try await repairing.setPerformancePreferences(correctedPreferences)
         throw AppRuntimeError.refused("CHECK FAILED: queued settings ignored corrupt history")
@@ -482,8 +482,8 @@ func realActivationCheckIfRequested() async throws -> Bool {
     guard !FileManager.default.fileExists(atPath: root.path), (Machine.current().availableGB ?? 0) >= 13 else {
         throw AppRuntimeError.refused("Activation check requires a new directory and 13 GB real reclaimable memory.")
     }
-    let original = PerformancePreferences(budget: .custom, customGB: 10, quantization: .automatic)
-    let requested = PerformancePreferences(budget: .custom, customGB: 9, quantization: .automatic, liveMemory: .fixed)
+    let original = PerformancePreferences(budget: .custom, customGB: 10)
+    let requested = PerformancePreferences(budget: .custom, customGB: 9, liveMemory: .fixed)
     let model = WeightStore.default.modelDirectory
     var remainingWrites = 0
     var remainingCommittedWrites = 0

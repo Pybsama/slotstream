@@ -648,7 +648,7 @@ public final class Server {
             respondJSON(
                 fd,
                 [
-                    "modelfile": "# slotstream: SSD-streamed \(modelArchitecture)",
+                    "modelfile": "# slotstream: SSD-streamed qwen4_exp",
                     "parameters": "num_ctx \(engine.maxContextTokens)",
                     "capabilities": ["completion"]
                         + (engine.visionAllowed && engine.visionAvailable ? ["vision"] : []),
@@ -656,9 +656,9 @@ public final class Server {
                     "details": modelDetails(live: true),
                     "context_policy": engine.contextPolicyJSON,
                     "model_info": [
-                        "general.architecture": modelArchitecture,
-                        "general.parameter_count": engine.model.cfg.isFast ? 35_000_000_000 : 176_000_000_000,
-                        "\(modelArchitecture).context_length": engine.maxContextTokens,
+                        "general.architecture": "qwen4_exp",
+                        "general.parameter_count": 176_000_000_000,
+                        "qwen4_exp.context_length": engine.maxContextTokens,
                     ],
                 ], cors: cors)
         case ("GET", "/coding-agent/v1/models"):
@@ -736,13 +736,11 @@ public final class Server {
     /// `live: false` for /api/tags and /api/ps, which are *listings* — a
     /// client may cache or diff them, so per-request counters do not belong
     /// there. /api/show is the endpoint that reports runtime state.
-    private var modelArchitecture: String { engine.model.cfg.isFast ? "qwen3_5_moe" : "qwen4_exp" }
-
     private func modelDetails(live: Bool = false) -> [String: Any] {
         let pool = engine.poolSnapshot()
         var d: [String: Any] = [
-            "format": "safetensors", "family": modelArchitecture,
-            "parameter_size": engine.model.cfg.isFast ? "35B-A3B" : "176B-A6B", "quantization_level": engine.modelQuantization,
+            "format": "safetensors", "family": "qwen4_exp",
+            "parameter_size": "176B-A6B", "quantization_level": engine.modelQuantization,
             "expert_cache_per_layer": Int(pool.slotsPerLayer.rounded()),
             "experts_per_layer": engine.model.cfg.numExperts,
         ]

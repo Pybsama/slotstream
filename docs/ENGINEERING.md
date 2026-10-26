@@ -23,50 +23,10 @@ and raw runs. `PLAN.md` and `MEASUREMENTS.md` are generated from its records.
 For AI agents, [llms.txt](../llms.txt) is the index and
 [llms-full.txt](../llms-full.txt) combines the documentation.
 
-The [Fast and Splash execution comparison](../db/records/measurements/fast-splash-execution-comparison.md)
-matches checkpoint bytes, actual expert slots, prompt tokens, context and
-sampling, and warms both engines before timing. It includes quality controls,
-native app workflows and unsuccessful experiments. Equal memory flags do not
-establish equal cache sizes or process footprints. Cached target execution,
-SSD waits and draft overhead need separate measurements before choosing a port.
-
-The [native kernel port](../db/records/measurements/native-fast-q2-execution-kernels.md)
-extends that work to compressed expert tiles, Fast's fused recurrent processing
-and Q2's narrow resident projections. It documents exact-byte arithmetic
-references, capability gates, actual app results and the remaining differences
-from Splash's execution schedule. Kernel compatibility alone is not complete
-runtime equivalence or a promise of equal speed.
-
-The [native scheduling follow-up](../db/records/measurements/native-fast-q2-scheduling.md)
-measures bounded Q2 input read-ahead, shared input preparation and aligned
-expert reads. It retains the rejected Fast read-ahead and buffer-reuse
-experiments, exact output checks and actual app startup identities. Final
-comparisons affected by paging or heat remain excluded from parity claims.
-
-The [prepared execution study](../db/records/measurements/native-prepared-execution.md)
-ports bounded Metal execution sections onto MLX's existing stream, with reusable
-plans and event leases, GPU weight staging and demand-owned adaptive cache
-replacement. It includes independent numerical references, actual application
-jobs and matched complete-request comparisons. Splash also encodes fresh GPU
-commands each cycle: reusing a plan is not replaying a pre-encoded command buffer.
-Keep host waits, GPU execution, SSD traffic and draft acceptance separate when
-explaining a remaining gap. Neither a CPU wait sample nor a successful kernel
-test proves where request time is lost.
-
-The [first-request compilation study](../db/records/measurements/q2-cold-compilation-and-row-counts.md)
-shows why warmed throughput alone cannot qualify a change. Use runtime dispatch
-metadata for token counts when they do not change a kernel's arithmetic. Check
-first-use compilation separately from recurring execution and cache misses,
-including its effect on adaptive batching. If preparation moves before engine
-readiness, measure preparation plus the first request so the cost stays visible.
-
-The [compiler isolation study](../db/records/measurements/q2-compiler-identity-and-precompiled-shaders.md)
-finds that identical source and options can still have very different creation
-costs. Offline compilation removes one source of spikes but does not pass the
-complete-request retention gate. Full-model checks also catch changes missed
-by small kernel checks. Keep the experiment isolated and profile model loading
-before adding another execution path. Native implementation gives us control;
-its benefit still has to appear in useful, reliable work.
+Fast, Q2, DFlash and their prepared execution work are
+[archived experiments](../experiments/fast-q2/README.md). Their fixed source
+revision and measurements remain available, including unsuccessful runs.
+The maintained runtime uses Qwen3.8-Flash-Next 4-bit and its existing MTP path.
 
 The [conversation retrieval check](../db/records/measurements/relevant-conversation-excerpts.md)
 separates an app context-selection problem from draft acceleration. Prefer
@@ -152,8 +112,7 @@ overhead that an engine keeping the model resident does not pay; see
 ## Native stack
 
 Slotstream is a fully native engine with a Swift-owned model and runtime,
-Apple's MLX and its own Metal kernels. Development builds also use C++
-execution adapters on the existing MLX stream. No Python runtime or
+Apple's MLX and its own Metal kernels. No Python runtime or
 interpreter runs on the inference path.
 
 | Layer | Implementation |
@@ -162,7 +121,6 @@ interpreter runs on the inference path.
 | Memory planner, expert store and slot cache, governor, sampler, speculative decode, prefix cache | Swift: `Sources/Slotstream` |
 | Tensor operations | [mlx-swift](https://github.com/ml-explore/mlx-swift), Apple's MLX, with its prebuilt `mlx.metallib` beside the binary |
 | Gated-delta recurrence, selected attention, partial rotation, block and router selection | Slotstream's own Metal kernels, compiled at run time through `MLXFast.metalKernel` |
-| Prepared Metal execution and cache-replacement adapters in development builds | C++: `Sources/CNativeSchedule`, using MLX's stream, allocator and dependency tracking; [implementation notes](../Sources/CNativeSchedule/README.md) |
 | Tokenizer | [swift-transformers](https://github.com/huggingface/swift-transformers) |
 | Slotpack download decoder | C, `Sources/CSlotpack`, with no external codec |
 | Expert and n-gram reads | `pread` into a fixed slot pool over parallel lanes, with lane counts chosen by measurement |
@@ -172,8 +130,8 @@ implementation the Swift port is checked against layer by layer, the numpy
 sampler oracle, the trace simulators and benchmark drivers, the model-free
 gates and the release checks. The [testing guide](TESTING.md) lists them.
 
-The stack is native on purpose. The engine supports a small maintained set
-of models on Apple Silicon, and each layer is tuned for the layer below it: expert records
+The stack is native on purpose. The engine maintains Qwen3.8-Flash-Next 4-bit
+on Apple Silicon, and each layer is tuned for the layer below it: expert records
 are read from the SSD into the slots the GPU computes from, process memory is
 accounted from real CPU and GPU allocations, and the governor resizes the
 cache under memory pressure. The same design ships as one binary, installs
@@ -495,50 +453,12 @@ reference. Model weights come from
 [pipenetwork/Qwen3.8-Flash-Next-MLX-4bit](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit)
 and remain under the [Qwen community license](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit/blob/main/LICENSE).
 
-## Smart draft comparison
+<a id="smart-draft-comparison"></a>
+<a id="native-compressed-smart-candidate"></a>
 
-Smart DFlash is an explicit engineering candidate. The app's Smart choice still
-uses its established MTP policy. `slotstream smart-dflash-check --help` describes
-the native comparison instrument for plain, MTP and DFlash requests with saved
-inputs and receipts. It supports streamed text, real tool schemas, bounded image
-inputs, cancellation and persistent-prefix tests. The separate
-`smart-dflash-replay` command compares captured draft inputs without loading the
-target model. Both use the production native implementation.
+## Archived model experiments
 
-See [the Smart DFlash measurement](../db/records/measurements/smart-dflash-native-and-q2-review.md)
-for tested source identities, failures and unfinished qualification. The
-[adoption decision](../db/records/decisions/smart-dflash-and-target-quantization.md)
-separates draft acceleration from replacing the target with a more compressed
-checkpoint. A draft acceptance rate is not a model-quality score or a speed
-claim.
-
-## Native compressed Smart candidate
-
-The exact GSQ-RCO checkpoint used by Splash is available to engineers as
-`smart-q2`. Slotstream loads its pinned files directly and runs its packed
-weights, SSD streaming and Smart DFlash component through Swift, MLX and Metal.
-The product does not launch Splash or Python. Installation includes the target,
-tokenizer metadata and draft, each with pinned hashes:
-
-```sh
-slotstream model-packs --selection smart-q2 --json
-slotstream pull smart-q2
-slotstream run --model smart-q2 --prompt "Explain how a disk cache works."
-```
-
-Use the CLI's explicit memory limit for controlled qualification runs. The app
-runtime can load the same explicit pack, and `slotstream-mac-checks
---real-capabilities --q2` exercises it through real app jobs in a disposable
-Home. The normal app picker and automatic selection continue to use maintained
-Fast and Smart choices. Existing saved candidate settings retain their title.
-
-This candidate has not earned promotion to Smart. It lacks the original vision
-tower, and native tests have not reproduced the upstream speed.
-The [native execution comparison](../db/records/measurements/native-q2-splash-execution-comparison.md)
-documents the compressed matrix kernels, fused arithmetic and state handling,
-with controlled comparisons and the remaining scheduling work. Matching model
-files alone does not match a deployment recipe.
-Document OCR is a separate native tool. See the
-[qualification record](../db/records/measurements/native-exact-q2-qualification.md)
-for exact source identities, quality failures, app results, memory evidence and
-remaining work. Component reference checks live in [bench/q2](../bench/q2/README.md).
+The [experiment archive](../experiments/fast-q2/README.md) preserves Fast,
+the exact compressed Q2 target, Smart DFlash and their kernel and scheduling
+studies. Their commands and runtime implementations are removed from `main`.
+Historical results describe those archived builds, not the maintained model.

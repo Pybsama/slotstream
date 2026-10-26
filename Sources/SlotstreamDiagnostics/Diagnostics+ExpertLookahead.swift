@@ -482,52 +482,6 @@ extension Diagnostics {
         shadow.passEnded()
         c.equal("shadow router policy issues no reads", lock.withLock { shadowReads }, 0)
         c.equal("shadow router policy still counts candidates", shadow.observation.forecastMerged, 3)
-        // Next-input scheduling keeps four serial workers, cancels wrong
-        // predictions before demand, and lets a partially read demanded record
-        // finish without waiting behind the active demand lane budget.
-        var inputConfiguration = configuration
-        inputConfiguration.inputForecast = true
-        inputConfiguration.tap = .attention
-        inputConfiguration.lanes = 4
-        inputConfiguration.capRecords = 16
-        inputConfiguration.issueCapPerTarget = 12
-        let inputEntered = DispatchSemaphore(value: 0)
-        var allowInput = false, activeInput = 0, peakInput = 0
-        let boundedReader: ExpertPieceReader = { key, piece, destination, continuing in
-            lock.withLock { activeInput += 1; peakInput = max(peakInput, activeInput) }
-            defer { lock.withLock { activeInput -= 1 } }
-            if piece == 1 {
-                inputEntered.signal()
-                let deadline = Date().addingTimeInterval(5)
-                while !lock.withLock({ allowInput }) && continuing() && Date() < deadline { usleep(1000) }
-            }
-            guard continuing() else { throw CheckpointReadError.cancelled }
-            fill(destination, key: key, piece: piece, bytes: pieces[piece])
-        }
-        let inputScheduler = ExpertPrefetchScheduler(reader: boundedReader, isResident: { _ in false },
-            pieceBytes: pieces, configuration: inputConfiguration, predictor: nil, layers: 6, experts: 16)
-        inputScheduler.beginPass(id: 4, features: [])
-        inputScheduler.forecast(target: 1, ids: (0..<12).map(Int32.init), margins: [])
-        for lane in 0..<4 {
-            c.expect("bounded input reader \(lane) entered", inputEntered.wait(timeout: .now() + 5) == .success)
-        }
-        let inputKey = ExpertKey(1, 3)
-        inputScheduler.observeRoutes(layer: 1, ids: [3])
-        c.equal("wrong input predictions removed before demand", inputScheduler.liveTickets, 1)
-        let inputClaim = inputScheduler.claimSplit([inputKey])
-        c.equal("partially read input prediction promoted", inputClaim.reading.count, 1)
-        inputScheduler.lanes.beginDemand()
-        lock.withLock { allowInput = true }
-        let inputFinished = inputScheduler.finishReading(inputClaim.reading)
-        inputScheduler.lanes.endDemand()
-        c.equal("input prediction completes during demand", inputFinished.count, 1)
-        if let bytes = inputFinished[inputKey]?.adoptRaw() {
-            c.equal("input prediction preserves its source bytes", bytes.buffers[0].load(as: UInt8.self), expected(key: inputKey, piece: 0))
-            bytes.release()
-        } else { c.expect("input prediction is publishable", false) }
-        inputScheduler.requestFinished()
-        c.expect("at most four input readers run together", lock.withLock { peakInput <= 4 })
-        c.equal("input reader reservation drained", inputScheduler.accounting.liveBytes, 0)
         return c.report()
     }
 

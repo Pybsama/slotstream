@@ -19,8 +19,8 @@ Less available memory can reduce the expert cache and slow replies; the chip,
 SSD and workload also matter. See the [hardware guide](HARDWARE.md)
 for measurements from real Macs and estimates for each memory size.
 
-The released CLI defaults to Qwen3.8-Flash-Next on Apple Silicon. Development
-builds also offer Qwen3.6-35B-A3B through the [Fast and Smart choices](MODELS.md).
+Slotstream maintains Qwen3.8-Flash-Next 4-bit on Apple Silicon. The app and CLI
+use this same [model](MODELS.md).
 Windows, Linux and arbitrary model imports are not supported.
 
 ## Install

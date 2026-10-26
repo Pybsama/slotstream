@@ -12,7 +12,7 @@ import Vision
         let out = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_UI_OUT"]!)
         let model = AppModel()
         let setupOwner = LocalInference(model: out.appendingPathComponent("uninstalled-fixture-model"))
-        guard let reviewedSetup = try await setupOwner.modelSetup(preferences: .init(quantization: .automatic)) else {
+        guard let reviewedSetup = try await setupOwner.modelSetup(preferences: .init()) else {
             throw NSError(domain: "MemoryUI", code: 6, userInfo: [NSLocalizedDescriptionKey: "local setup offer missing"])
         }
         let window = NSWindow(contentRect: NSRect(x: -30000, y: -30000, width: 620, height: 1050),
@@ -33,7 +33,6 @@ import Vision
                 let savedLimit = belowRange ? 10.0 : mode == "saved-fractional" ? 9.99 : 48.0
                 var preferences = custom ? PerformancePreferences(budget: .custom, customGB: savedLimit) : .init()
                 if mode == "fixed" { preferences.liveMemory = .fixed }
-                if mode == "unloaded-automatic" { preferences.quantization = .automatic }
                 if mode == "unavailable-pack" { preferences.quantization = .pack("removed-pack") }
                 model.performancePreferences = preferences
                 model.snapshot = RuntimeSnapshot(home: .init(), modelStatus: "Ready", error: nil, simulated: true)
@@ -82,7 +81,7 @@ import Vision
                     + (belowRange ? ["12 GB"] : [])
                     + (rangeAvailable ? [] : ["A supported memory range is unavailable"])
                     + (mode == "fixed" ? ["Fixed cache capacity", "Memory pressure can still stop"] : ["Automatic adjustment"])
-                    + (mode == "unavailable-pack" ? ["Unavailable saved pack"] : [])
+                    + (mode == "unavailable-pack" ? ["saved model is unavailable", "Use Qwen3.8-Flash-Next 4-bit"] : [])
                     + (mode == "automatic" ? ["Speed is not verified"] : [])
                     + (mode == "unloaded-automatic" ? ["when the model loads"] : [])
                 for label in labels where !text.localizedCaseInsensitiveContains(label) {
@@ -100,7 +99,7 @@ import Vision
                 print("PASS: \(name), rendered controls, current budget, supported range and pending state")
             }
             for setupMode in ["reviewed", "stale", "verified", "unavailable"] {
-                model.performancePreferences = setupMode == "stale" ? .init(quantization: .automatic, liveMemory: .fixed) : .init(quantization: .automatic)
+                model.performancePreferences = setupMode == "stale" ? .init(liveMemory: .fixed) : .init()
                 model.setup = setupMode == "unavailable" ? nil : reviewedSetup
                 model.setupIssue = setupMode == "unavailable" ? "The selected model pack is unavailable in this build. Your saved choice has been preserved." : nil
                 model.setupRequestPending = false

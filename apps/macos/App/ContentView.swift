@@ -52,11 +52,6 @@ struct ContentView: View {
     private var allSource: String { messages.map { "## " + speaker($0) + "\n\n" + $0.text }.joined(separator: "\n\n") }
     private var artifactOpen: Bool { model.panel == "Artifact" }
     private var ready: Bool { model.composer.ready }
-    private var selectedModelRole: String {
-        guard let pack = try? ModelPackRegistry.resolve(model.performancePreferences.quantization).pack else { return "unavailable" }
-        if pack.id == PinnedQ2Model.name { return PinnedQ2Model.name }
-        return pack.id == PinnedFastModel.name ? "fast" : "smart"
-    }
     var body: some View {
         GeometryReader { geometry in
             let wide = geometry.size.width >= 960
@@ -436,21 +431,6 @@ struct ContentView: View {
                         Divider(); Button("New Incognito Thread") { model.newThread(.incognito) }
                     } label: { Label(model.thread?.mode.title ?? "Shared memory", systemImage: model.thread?.mode == .incognito ? "eye.slash" : "circle.hexagongrid") }.disabled(!ready || model.busy)
                         .help("Choose which memories this thread can use")
-                    Picker("Model", selection: Binding(get: {
-                        selectedModelRole
-                    }, set: { role in
-                        guard role == "fast" || role == "smart" else { return }
-                        var preferences = model.performancePreferences
-                        preferences.quantization = .pack(role == "fast" ? PinnedFastModel.name : PinnedModel.name)
-                        model.setPerformance(preferences)
-                    })) {
-                        Text("Fast").tag("fast")
-                        Text("Smart").tag("smart")
-                        if selectedModelRole == PinnedQ2Model.name { Text("Q2 candidate").tag(PinnedQ2Model.name) }
-                        if selectedModelRole == "unavailable" { Text("Unavailable").tag("unavailable") }
-                    }.fixedSize().disabled(!ready || model.working)
-                        .accessibilityIdentifier("model-role")
-                        .help("Fast for everyday work; Smart for harder tasks. Switching keeps your conversation.")
                     Toggle(isOn: Binding(get: { model.thinkingEnabled }, set: { _ in model.toggleThinking() })) { Label("Think longer", systemImage: "brain") }
                         .toggleStyle(.button).disabled(!ready || model.thinkingUnavailable).help(thinkHelp)
                         .accessibilityIdentifier("think-longer").accessibilityHint(thinkHelp)
@@ -935,20 +915,22 @@ struct PerformanceSettings: View {
     }
     var body: some View {
         Section("Performance") {
-            Picker("Model", selection: Binding(get: { model.performancePreferences.quantization }, set: { choice in
-                var next = model.performancePreferences; next.quantization = choice; model.setPerformance(next)
-            })) {
-                if model.performancePreferences.quantization == .automatic {
-                    Text("Smart (previous automatic setting)").tag(ModelPackSelection.automatic)
+            LabeledContent("Model", value: ModelPackRegistry.baseline.title)
+            if model.performancePreferences.restoredArchivedModel {
+                Text("Your previous experimental model has been retired. Slotstream now uses Qwen3.8-Flash-Next 4-bit. Your memory settings and Home data are preserved. Model setup will ask before downloading any missing files.")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Button("Dismiss") {
+                    var next = model.performancePreferences; next.restoredArchivedModel = false
+                    model.setPerformance(next)
                 }
-                ForEach(ModelPackRegistry.supported, id: \.id) { pack in
-                    Text(pack.title).tag(ModelPackSelection.pack(pack.id))
-                }
-                if case .pack(let id) = model.performancePreferences.quantization,
-                   !ModelPackRegistry.supported.contains(where: { $0.id == id }) {
-                    Text(ModelPackRegistry.alias(id)?.title ?? "Unavailable saved pack").tag(ModelPackSelection.pack(id))
-                }
-            }.disabled(status == nil).help("Fast is the default for everyday work. Smart uses the larger model for harder tasks. Switching keeps your conversation.")
+            }
+            if (try? ModelPackRegistry.resolve(model.performancePreferences.quantization)) == nil {
+                Text("The saved model is unavailable in this build.").font(.callout)
+                Button("Use Qwen3.8-Flash-Next 4-bit") {
+                    var next = model.performancePreferences; next.quantization = .automatic
+                    model.setPerformance(next)
+                }.disabled(status == nil)
+            }
             if let reason = status?.selectionReason {
                 Text(reason).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
@@ -1050,9 +1032,9 @@ struct PerformanceSettings: View {
                 Text(status.detail).font(.callout).foregroundStyle(.secondary)
                 DisclosureGroup("Memory details", isExpanded: $showMemoryDetails) {
                     if let configuration = status.configuration {
-                        LabeledContent("Active model", value: ModelPackRegistry.alias(configuration.packID)?.title ?? configuration.packID)
+                        LabeledContent("Active model", value: ModelPackRegistry.supported.first(where: { $0.id == configuration.packID })?.title ?? configuration.packID)
                         LabeledContent("Context window", value: configuration.contextTokens.formatted() + " tokens")
-                        LabeledContent("Speculative decoding", value: configuration.dflash == true ? "DFlash (adaptive)" : configuration.mtp ? "MTP" : "Off")
+                        LabeledContent("Speculative decoding", value: configuration.mtp ? "MTP" : "Off")
                         LabeledContent("Live adjustment", value: configuration.liveMemory == .automatic ? "Automatic" : "Fixed capacity")
                     }
                     if let physical = status.physicalGB {

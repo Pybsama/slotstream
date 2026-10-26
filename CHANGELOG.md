@@ -8,47 +8,20 @@ determines which version the installer downloads.
 
 ## Unreleased
 
-- Add native prepared Metal execution sections for Fast and the explicit Q2
-  candidate, using MLX's stream and allocator. Share compiled pipelines across
-  batch widths using bounded dispatch parameters, reuse bounded event
-  leases, stage Q2 expert weights on the GPU and adapt cache replacement to
-  actual slots and pins. Preserve cancellation, failed-read recovery and memory
-  admission. Submit useful work earlier, fold retained speculative state into
-  its next pass, and retain bounded verification calibration for the explicit
-  Q2 candidate across ordinary requests. The [prepared execution study](db/records/measurements/native-prepared-execution.md)
-  records matched speed, quality, app checks and remaining limitations. Smart's
-  selected model is unchanged.
-
-- Add bounded next-input expert read-ahead to the explicit Q2 candidate's
-  native engine and app recipe, with charged staging and demand-owned cache
-  admission. Share eligible Q2 projection preparation and align bounded expert
-  reads. Keep Fast's existing recipe after its read-ahead experiment regressed
-  prose. The [scheduling study](db/records/measurements/native-fast-q2-scheduling.md)
-  preserves the measurements, app results and remaining Splash comparison limits.
-
-- Port compressed expert tiles and fused gate/up work into both native Fast
-  and the explicit Q2 candidate. Fast also uses fused recurrent processing and
-  prepared routing weights; Q2 adds narrow register projections with GPU-aware
-  reduction splits. Preserve bounded streaming, portable fallbacks and prefix
-  compatibility. The [kernel port study](db/records/measurements/native-fast-q2-execution-kernels.md)
-  records the tests, rejected experiments and remaining comparison limits.
-
-- Reduce Fast's draft and target scheduling overhead with native GPU candidate
-  selection, bounded deferred evaluation, fused recurrent verification and
-  grouped short-prefill work. Use one verification controller that can recover
-  after expensive early passes. Preserve target verification and memory limits;
-  the [matched Splash comparison](db/records/measurements/fast-splash-execution-comparison.md)
-  records the remaining gap and qualification limits.
-
-- Preserve literal JSON brackets in saved conversations and tool results. Table
-  output no longer becomes an accidental db.md link, and interrupted saves recover.
-
-- Add Fast and Smart to the native app's composer and settings. New installs
-  start with Fast; existing choices, conversations and review boundaries remain.
-- Add native Qwen3.6-35B-A3B inference with pinned DFlash 2, bounded SSD expert
-  streaming and adaptive target verification. Keep Smart's existing MTP path.
-- Add `fast` and `smart` engine aliases, complete target/draft setup verification,
-  model-specific memory planning and persistent caches for Fast's attention layout.
+- Focus the app and engine on Qwen3.8-Flash-Next 4-bit. Archive Fast, Q2,
+  Smart DFlash and their dedicated execution paths, tests and tooling at a
+  [fixed source revision](experiments/fast-q2/README.md). The original model's
+  MTP, expert lookahead, SSD streaming and released CLI/API behavior remain.
+- Remove the app's Fast/Smart picker. Saved experimental preferences return
+  to the maintained model with a notice; memory settings, Home data and
+  downloaded files are preserved. Missing model files still require setup.
+- Preserve literal JSON brackets in saved conversations and tool results.
+  Table output no longer becomes an accidental db.md link, and interrupted
+  saves recover.
+- Retrieve relevant conversation history and expose Home records through the
+  Data browser, bundled CLI and local MCP integration, with the same review
+  and permission boundaries. These app changes are available in source;
+  there is no published Mac app installer.
 
 ## 0.2.30 - 2026-10-19
 

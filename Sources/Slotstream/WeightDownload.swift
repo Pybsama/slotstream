@@ -59,13 +59,7 @@ public enum ModelLocator {
         if FileManager.default.fileExists(atPath: expanded) {
             return URL(fileURLWithPath: expanded)
         }
-        if ["smart-q2", PinnedQ2Model.name, PinnedQ2Model.directoryName].contains(spec) {
-            return userModelsDir.appendingPathComponent(PinnedQ2Model.directoryName)
-        }
-        if ["fast", PinnedFastModel.name, PinnedFastModel.directoryName].contains(spec) {
-            return userModelsDir.appendingPathComponent(PinnedFastModel.directoryName)
-        }
-        if spec == "smart" || spec == PinnedModel.name || spec == PinnedModel.dirName {
+        if spec == PinnedModel.name || spec == PinnedModel.dirName {
             if FileManager.default.fileExists(atPath: repoLocalDir.path) { return repoLocalDir }
             return userModelsDir.appendingPathComponent(PinnedModel.dirName)
         }

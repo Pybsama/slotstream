@@ -52,18 +52,26 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try performanceProfileBindingChecks()
     try modelVerificationChecks(root: root)
     try await modelActivationChecks(root: root, dbmd: dbmd)
-    try verifyPerformance(PerformancePreferences.restore(nil).quantization == .pack(ModelPackRegistry.fast.id),
-        "new installs choose Fast")
-    try verifyPerformance(try ModelPackRegistry.resolve(.pack("fast")).pack.id == ModelPackRegistry.fast.id
-        && ModelPackRegistry.resolve(.pack("smart")).pack.id == ModelPackRegistry.baseline.id, "stable role aliases resolve")
-    for ram in [16.0, 24, 32, 48, 64] {
-        for pack in ModelPackRegistry.supported {
-            let machine = Machine.simulated(ramGB: ram * 1.073741824, availableGB: ram - 4)
-            let plan = try PerformancePolicy.plan(.init(quantization: .pack(pack.id)), on: machine, mtpAvailable: true)
-            try verifyPerformance(plan.simulated && plan.expectedPeakGB <= (plan.targetGB ?? 0)
-                && plan.expertsPerLayerCached <= (pack.id == ModelPackRegistry.fast.id ? 256 : 512),
-                "each role fits its simulated hardware envelope without overallocating experts")
-        }
+    try verifyPerformance(ModelPackRegistry.supported.map(\.id) == [PinnedModel.name]
+        && ModelPackRegistry.resolve(PerformancePreferences.restore(nil).quantization).pack.id == PinnedModel.name,
+        "one maintained model is the new-install default")
+    for id in ["fast", "qwen3.6-35b-a3b:4bit", "qwen36-35b-a3b-4bit",
+               "smart-q2", "qwen3.8-flash-next:gsq-q2", "qwen38-flash-next-gsq-q2"] {
+        let saved = PerformancePreferences(budget: .custom, customGB: 9.75, readiness: .keepReady,
+            quantization: .pack(id), liveMemory: .fixed)
+        let data = try JSONEncoder().encode(saved)
+        let restored = PerformancePreferences.restore(data)
+        try verifyPerformance(restored.quantization == .automatic && restored.restoredArchivedModel
+            && restored.budget == saved.budget && restored.customGB == saved.customGB
+            && restored.readiness == saved.readiness && restored.liveMemory == saved.liveMemory
+            && restored.hasCustomLimit == saved.hasCustomLimit,
+            "retired preferences migrate with notice and preserve every memory setting")
+        try verifyPerformance(try JSONDecoder().decode(PerformancePreferences.self, from: data) == saved,
+            "decoding historical activation preferences does not relabel the old model")
+        try verifyPerformance((try? ModelPackRegistry.resolve(.pack(id))) == nil,
+            "retired experiments cannot be selected or downloaded")
+        try verifyPerformance(PerformancePreferences.restore(try JSONEncoder().encode(restored)) == restored,
+            "migration and notice survive saving and reopening")
     }
     var plans = 0, refused = 0
     for ram in [8.0, 16, 24, 32, 48, 64, 96, 128] {
@@ -96,7 +104,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     let minimum = try PerformancePolicy.plan(.init(budget: .custom, customGB: admittedRange.minimumGB),
         on: roomy, mtpAvailable: false)
     try verifyPerformance(minimum.expectedPeakGB <= admittedRange.minimumGB, "displayed minimum admits the complete requested context")
-    let frozenPackPlan = try PerformancePolicy.plan(.init(budget: .custom, customGB: 10, quantization: .automatic),
+    let frozenPackPlan = try PerformancePolicy.plan(.init(budget: .custom, customGB: 10),
         pack: ModelPackRegistry.baseline, on: roomy, mtpAvailable: false)
     try verifyPerformance(frozenPackPlan.targetGB == 10 && frozenPackPlan.memoryLimitGB == 10,
         "activation plans its frozen pack without selecting again")
@@ -109,11 +117,11 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
         PerformancePolicy.shortPromptTokens == ModelPackRegistry.baseline.startupDefaults.shortPromptTokens &&
         PerformancePolicy.shortPromptChunk == ModelPackRegistry.baseline.startupDefaults.shortPromptChunk,
         "legacy product constants project the original compiled recipe")
-    let fast = try PerformancePolicy.plan(.init(quantization: .pack(ModelPackRegistry.baseline.id)), on: roomy, mtpAvailable: true)
+    let fast = try PerformancePolicy.plan(.init(), on: roomy, mtpAvailable: true)
     try verifyPerformance(fast.mtpEnabled && fast.decodeLookahead, "Desktop enables qualified automatic MTP and lookahead when they fit")
     try verifyPerformance(fast.targetGB == Planner.usefulCeilingGB && fast.memoryLimitGB == Planner.usefulCeilingGB,
         "automatic MTP charges the head inside the displayed total ceiling")
-    let corrected = try PerformancePolicy.plan(.init(quantization: .pack(ModelPackRegistry.baseline.id)), on: roomy, mtpAvailable: true, decodeLookahead: .automaticCorrected(bytes: 40_000_000))
+    let corrected = try PerformancePolicy.plan(.init(), on: roomy, mtpAvailable: true, decodeLookahead: .automaticCorrected(bytes: 40_000_000))
     try verifyPerformance(corrected.lookaheadReserveBytes > fast.lookaheadReserveBytes && corrected.slots < fast.slots
         && corrected.targetGB == fast.targetGB, "a shipped forecast correction is charged inside the same budget")
     let small = try PerformancePolicy.plan(.init(budget: .custom, customGB: 10), on: roomy, mtpAvailable: true)
@@ -124,8 +132,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     let custom = PerformancePreferences(budget: .custom, customGB: 48)
     let larger = try PerformancePolicy.plan(custom, on: big)
     try verifyPerformance(larger.targetGB == 48 && larger.memoryLimitGB == 48, "custom can exceed automatic default")
-    let automatic = try PerformancePolicy.plan(.init(), on: big)
-    try verifyPerformance(larger.slots >= automatic.slots && (larger.slots > automatic.slots || automatic.fullyResident), "larger budgets retain or grow the cache up to full residency")
+    try verifyPerformance(larger.slots > PerformancePolicy.plan(.init(), on: big).slots, "larger custom limit buys more cache")
     let first = PerformancePreferences().selectingBudget(.custom, currentGB: 33, maximumGB: PerformancePolicy.maximumGB(on: big))
     try verifyPerformance(first.customGB == 33, "first Custom keeps the current budget")
     let firstWithComponents = PerformancePreferences().selectingBudget(.custom, currentGB: 10, minimumGB: 12, maximumGB: 33)
@@ -190,7 +197,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     try await recovering.configure(.init())
     try verifyPerformance(recovering.performanceTelemetry?.isLoaded == false, "choosing Auto recovers an unavailable selection without loading")
     let fixedPlan = try PerformancePolicy.plan(explicit, on: roomy, mtpAvailable: false)
-    let adaptivePlan = try PerformancePolicy.plan(.init(budget: .custom, customGB: 10, quantization: .pack(ModelPackRegistry.baseline.id)), on: roomy, mtpAvailable: false)
+    let adaptivePlan = try PerformancePolicy.plan(.init(budget: .custom, customGB: 10), on: roomy, mtpAvailable: false)
     try verifyPerformance(fixedPlan.slots == adaptivePlan.slots && fixedPlan.memoryLimitGB == adaptivePlan.memoryLimitGB,
         "live adjustment choice does not change startup selection or ceiling")
     try verifyPerformance(legacy.selectingBudget(.custom, currentGB: 24, maximumGB: 33).customGB == 24, "old unused default adopts current budget")
@@ -304,14 +311,14 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
     // The real LocalInference refuses the unchecked setup in activation checks.
     let setupProbe = PerformanceProbe()
     await setupProbe.release()
-    let setupRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("setup-performance-home"), dbmd: dbmd, inference: setupProbe, performancePreferences: .init(quantization: .automatic))
+    let setupRuntime = try SlotstreamRuntime(homeURL: root.appendingPathComponent("setup-performance-home"), dbmd: dbmd, inference: setupProbe)
     let setup = ModelSetup(model: root.appendingPathComponent("setup-probe-no-weights"))
     do { try await setupRuntime.acceptModelSetup(setup); throw AppRuntimeError.refused("CHECK FAILED: accepted setup outside maintenance") }
     catch { try verifyPerformance(!error.localizedDescription.contains("CHECK FAILED"), "setup acceptance requires stopped local work") }
     try verifyPerformance(await setupProbe.setupAcceptances == 0, "an invalid setup boundary never reaches inference")
     try await setupRuntime.beginModelMaintenance()
     let proposedOwner = LocalInference(model: root.appendingPathComponent("setup-proposal-no-weights"))
-    guard let staleSetup = try await proposedOwner.modelSetup(preferences: .init(quantization: .automatic, liveMemory: .fixed)) else {
+    guard let staleSetup = try await proposedOwner.modelSetup(preferences: .init(liveMemory: .fixed)) else {
         throw AppRuntimeError.refused("CHECK FAILED: missing local setup proposal")
     }
     do { try await setupRuntime.acceptModelSetup(staleSetup); throw AppRuntimeError.refused("CHECK FAILED: accepted stale setup settings") }
@@ -365,7 +372,7 @@ func performanceChecks(root: URL, dbmd: URL) async throws {
 /// granting a registry profile. The real loaded proof has no public initializer.
 private func performanceProfileBindingChecks() throws {
     let pack = ModelPackRegistry.baseline, generation = UUID()
-    let preferences = PerformancePreferences(budget: .custom, customGB: 14, quantization: .automatic)
+    let preferences = PerformancePreferences(budget: .custom, customGB: 14)
     let machine = Machine(ramGB: 48, workingSetGB: 36, availableGB: 40, isSimulated: false)
     func hardware(thermal: String? = "nominal", lowPower: Bool? = false, volume: String? = "fixture-volume") -> ModelPackHardware {
         ModelPackHardware(model: "fixture-model", chip: "fixture-chip", osBuild: "fixture-os", nativeARM64: true,
@@ -440,7 +447,7 @@ func realPerformanceCheckIfRequested() async throws -> Bool {
         throw AppRuntimeError.refused("Requires a new Home and 13 GB real reclaimable memory.")
     }
     let dbmd = URL(fileURLWithPath: ProcessInfo.processInfo.environment["SLOTSTREAM_DBMD"] ?? NSHomeDirectory() + "/.dbmd/bin/dbmd")
-    let preferences = PerformancePreferences(budget: .custom, customGB: 10, quantization: .pack(ModelPackRegistry.baseline.id))
+    let preferences = PerformancePreferences(budget: .custom, customGB: 10)
     let inference = LocalInference(preferences: preferences)
     let runtime = try SlotstreamRuntime(homeURL: root, dbmd: dbmd, inference: inference, performancePreferences: preferences)
     await runtime.maintainPerformance()

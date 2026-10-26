@@ -11,13 +11,16 @@ public struct PerformancePreferences: Codable, Equatable, Sendable {
     public var readiness: Readiness
     public var quantization: ModelPackSelection
     public var liveMemory: LiveMemoryManagement
+    /// A notice for preferences migrated from the retired model experiments.
+    /// This is not an activation receipt or permission to download a model.
+    public var restoredArchivedModel = false
     public init(budget: Budget = .automatic, customGB: Double = 10, readiness: Readiness = .automatic,
-                quantization: ModelPackSelection = .pack(PinnedFastModel.name), liveMemory: LiveMemoryManagement = .automatic) {
+                quantization: ModelPackSelection = .automatic, liveMemory: LiveMemoryManagement = .automatic) {
         self.budget = budget; self.customGB = customGB; self.readiness = readiness
         self.quantization = quantization; self.liveMemory = liveMemory
         self.hasCustomLimit = budget == .custom || customGB != 10
     }
-    private enum CodingKeys: String, CodingKey { case budget, customGB, hasCustomLimit, readiness, quantization, liveMemory }
+    private enum CodingKeys: String, CodingKey { case budget, customGB, hasCustomLimit, readiness, quantization, liveMemory, restoredArchivedModel }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         budget = try c.decode(Budget.self, forKey: .budget)
@@ -26,12 +29,25 @@ public struct PerformancePreferences: Codable, Equatable, Sendable {
         hasCustomLimit = try c.decodeIfPresent(Bool.self, forKey: .hasCustomLimit)
         quantization = try c.decodeIfPresent(ModelPackSelection.self, forKey: .quantization) ?? .automatic
         liveMemory = try c.decodeIfPresent(LiveMemoryManagement.self, forKey: .liveMemory) ?? .automatic
+        restoredArchivedModel = try c.decodeIfPresent(Bool.self, forKey: .restoredArchivedModel) ?? false
     }
     public static func restore(_ data: Data?) -> Self {
         guard let data, var value = try? JSONDecoder().decode(Self.self, from: data),
               value.customGB.isFinite, value.customGB > 0 else { return .init() }
         // The old automatic default stored 10 even before Custom was used.
         if value.hasCustomLimit == nil { value.hasCustomLimit = value.budget == .custom || value.customGB != 10 }
+        // Migrate only user preferences, never decoded activation history.
+        // Old receipts must still validate their original model and manifest.
+        if case .pack(let id) = value.quantization {
+            switch id.lowercased() {
+            case "fast", "qwen3.6-35b-a3b:4bit", "qwen36-35b-a3b-4bit",
+                 "smart-q2", "qwen3.8-flash-next:gsq-q2", "qwen38-flash-next-gsq-q2":
+                value.quantization = .automatic
+                value.restoredArchivedModel = true
+            case "smart": value.quantization = .pack(PinnedModel.name)
+            default: break
+            }
+        }
         return value
     }
 

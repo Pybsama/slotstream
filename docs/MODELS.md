@@ -1,52 +1,48 @@
-# Fast and Smart
+# The maintained model
 
-Available in development builds on `main`; see the Unreleased changelog.
+Slotstream runs **Qwen3.8-Flash-Next 4-bit**. The app and independent CLI use
+the same maintained checkpoint. There is no Fast tier or model picker.
 
-Choose **Fast** for everyday questions, writing, summaries and tool use. Choose
-**Smart** for more demanding reasoning. These names describe the intended tradeoff;
-accuracy and speed still depend on the task and your Mac.
-
-| Choice | Maintained model | Acceleration |
-| --- | --- | --- |
-| Fast | Qwen3.6-35B-A3B, MLX four-bit | Native DFlash 2 with target verification and automatic depth reduction |
-| Smart | Qwen3.8-Flash-Next, existing four-bit checkpoint | Existing memory-aware MTP policy |
-
-In the native app, use the selector beside the composer. New installations
-start with Fast. Existing saved settings retain their previous model. Switching
-keeps your conversation and attached files, unloads the previous model, then
-loads your choice. Downloads are explicit and verified; an unavailable choice
-does not silently select another model. There is no task router.
-
-For the independent engine:
+The model is pinned to
+[`pipenetwork/Qwen3.8-Flash-Next-MLX-4bit`](https://huggingface.co/pipenetwork/Qwen3.8-Flash-Next-MLX-4bit/tree/aa7c790e804bbf9d491ddb109c3d61bc4a555f7c).
+It uses the original MLX affine 4-bit conversion. The checkpoint, tokenizer
+and download hashes stay pinned.
 
 ```sh
-slotstream pull fast
-slotstream run --model fast --prompt "Explain how a heat pump works."
-slotstream serve --model fast
-
-slotstream pull smart
-slotstream run --model smart --prompt "Review this argument step by step."
+slotstream pull
+slotstream doctor
+slotstream run --prompt "Explain how a heat pump works."
+slotstream serve
 ```
 
-Both aliases work with `doctor`. The exact model IDs remain available through
-`slotstream model-packs`. Existing commands without a model retain the previous
-Smart default for compatibility. A server runs its selected model; a client
-cannot load another model merely by sending another name.
+The explicit CLI ID remains `qwen3.8-flash-next:4bit`. Existing released
+commands, APIs, model files and Swift entry points keep their behavior.
+`--quantization auto` and the original explicit pack remain supported for
+existing integrations; both resolve to this checkpoint.
 
-Fast includes its draft component in setup. DFlash guesses several tokens;
-the target model decides what can be emitted. Rejected state is rolled back.
-The engine measures the cost during a request and reduces drafting or returns
-to ordinary decoding when it stops helping. Small or cold requests can still
-pay some startup and calibration overhead. Drafting does not guarantee a
-speedup, and batched arithmetic can produce a different valid answer from a
-separate plain-decoding run.
+The engine keeps its memory-aware MTP acceleration, expert lookahead, prefix
+cache and SSD streaming. These optimize how the model runs. They do not select
+a different target model. See [memory controls](CLI.md#memory-options) for
+setting a budget and [hardware](HARDWARE.md) for measured results and limits.
 
-Both models use bounded memory and SSD streaming when their expert weights do
-not fit. Fast has its own weight geometry and allocation plan; it does not
-inherit Smart's speed estimates. The available development Mac tests are
-recorded in the [engineering decision](../db/records/decisions/fast-and-smart.md).
-Simulated plans and smaller process budgets do not certify other physical Macs.
+## App settings saved by experimental builds
 
-The first Fast integration supports text, tools and the app's document/OCR
-workflows. Direct engine image understanding still uses Smart. App OCR reads
-text from an image; it does not replace visual understanding of a photograph.
+Current source builds restore saved Fast or Q2 preferences to the maintained
+model and show a notice in Settings. Memory limits, readiness settings, Homes,
+conversations and downloaded files are preserved. Missing model files still
+require explicit setup; an old experiment's activation receipt cannot verify
+the maintained model. Incompatible inference caches are not reused.
+
+The app is available to [build from source](SLOTSTREAM-MAC.md). The latest
+published engine release remains v0.2.30; the archive and app simplification
+on `main` do not constitute a new release.
+
+## Earlier experiments
+
+Fast, the compressed Q2 target and the associated DFlash work are
+[archived](../experiments/fast-q2/README.md), with their source, licenses,
+measurements and failures. They are no longer setup choices or maintained
+runtime paths. The archive explains how to inspect the original code.
+
+We maintain one capable model at a time. A successor needs complete-task,
+quality, latency and memory evidence on the Macs Slotstream is built for.

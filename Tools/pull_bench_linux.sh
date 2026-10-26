@@ -20,7 +20,6 @@ mkdir -p "$WORK/pullbench/Sources" "$WORK/pullbench/CSlotpack" "$WORK/model"
 cp -R Sources/CSlotpack/. "$WORK/pullbench/CSlotpack/"
 cp Sources/Slotstream/WeightDownload.swift Sources/Slotstream/WeightStore.swift \
    Sources/Slotstream/PinnedModel.swift Sources/Slotstream/Errors.swift \
-   Sources/Slotstream/PinnedFastModel.swift Sources/Slotstream/PinnedQ2Model.swift \
    Sources/Slotstream/DownloadHTTP.swift Sources/Slotstream/DownloadConcurrency.swift \
    Sources/Slotstream/SlotpackManifest.swift Sources/Slotstream/SlotpackDownload.swift \
    Sources/Slotstream/PinnedTransport*.swift "$WORK/pullbench/Sources/"
