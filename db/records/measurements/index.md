@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T06:52:26.085447Z
+updated: 2026-10-26T07:44:28.719844Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-routing-and-read-issuance]] — Q2 routing work, read issuance and staging ablation
 - [[records/measurements/q2-early-expert-preparation]] — Q2 early expert preparation: exact but not faster
 - [[records/measurements/q2-required-dependencies-and-preparation]] — Q2 required dependencies and native preparation
 - [[records/measurements/q2-mlx-ownership-and-graph]] — Q2 MLX ownership and graph diagnosis

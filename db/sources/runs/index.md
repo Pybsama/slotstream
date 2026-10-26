@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T06:53:06.287402Z
+updated: 2026-10-26T07:44:28.639882Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-routing-and-read-issuance]] — Q2 read issuance, staging ablation and actual expert routing
 - [[sources/runs/2026/10/2026-10-26-q2-early-expert]] — Q2 early expert preparation: exact checks, rejected speed candidate and GPU attribution
 - [[sources/runs/2026/10/2026-10-26-q2-expert-preparation]] — Q2 native expert preparation and route-readback phases
 - [[sources/runs/2026/10/2026-10-26-q2-required-dependencies]] — Q2 required-payload ancestry and matched readiness traces
@@ -506,9 +507,8 @@ updated: 2026-10-26T06:53:06.287402Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-thermal-recovery-preparation]] — Prospective full-cohort recovery from excluded completed fair responses passes 86 model-free checks
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-user-directed-thermal-stop]] — Capacity-qualified continuation stops at a completed reference response ending thermally fair
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-user-directed-guarded-launch]] — User-directed full MTP continuation starts after actual memory and nominal thermal readiness
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-quiet-interval-preparation]] — Separate complete MTP repetition prepared with unchanged protocol, awaiting a quiet machine interval
 
 ## More
 
-This folder has 989 files. The 500 most recent are listed above.
+This folder has 990 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

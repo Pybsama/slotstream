@@ -684,3 +684,6 @@ Resolve every required Q2 payload and readiness event; clean controls localize r
 ## [2026-10-26 06:51] update | records/measurements/q2-early-expert-preparation.md
 Reject bounded Q2 early-expert scheduling after exact original-byte/lifetime checks,111full-logit matches and a clean ABBA1.94percent slowdown. Controlled GPU attribution finds no large repeatable padded-kernel penalty. Preserve all evidence and timing reversal; all509sources and five artifacts remain v68, Fast unchanged, parity goal open.
 
+## [2026-10-26 07:44] update | records/measurements/q2-routing-and-read-issuance.md
+Compare actual Q2 routes and forecasts with111own-referenceexactcycles perengine: required cache misses differ by35ofabout45000, while forecast adoption differs. Preserve capacity-versus-active-row distinction and instrumented-work limits. Clean early-disabled ABBA finds no repeatable common-machinery penalty; offline first-required-read totals do not justify another reader rewrite. All509sources and five default artifacts restored; Fast unchanged, parity goal active.
+
