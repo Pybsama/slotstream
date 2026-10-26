@@ -657,3 +657,6 @@ Archived clean ordinary copy and host-scope diagnostics. Copies and expert prepa
 ## [2026-10-26 00:15] update | records/measurements/q2-small-work-and-readiness.md
 Preserved five verified archives: graph/small-read attribution, rejected embedding dedup and joint-greedy ABCCBA comparisons, dependency readiness and demand/tail scopes. All timing protocols clean; neither candidate meets frozen repeatability or full parity gates. Joining promoted forecasts is small; publication includes next-forecast scheduling. Corrected prior read-size attribution. All 509 runtime inputs and five artifacts match v68; Fast and production unchanged. Zero-error/zero-warning brain validation, 354 claims, projections, local links and whitespace pass. Goal remains active.
 
+## [2026-10-26 00:49] update | records/measurements/q2-demand-lifecycle-triage.md
+Preserved ordinary lane-tail/readiness/coalescing analyses and exact-byte128batch malloc/Metal read-copy control. No useful isolated buffer gain; OS read-ahead candidate compiled but abandoned before model timing after source review. No runtime change or new parity claim. All509runtimeinputs and five artifacts restored; Fast unchanged. Zero-warning validation,354claims, projections, local links and whitespace pass. Goal remains active.
+
