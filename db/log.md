@@ -687,3 +687,6 @@ Reject bounded Q2 early-expert scheduling after exact original-byte/lifetime che
 ## [2026-10-26 07:44] update | records/measurements/q2-routing-and-read-issuance.md
 Compare actual Q2 routes and forecasts with111own-referenceexactcycles perengine: required cache misses differ by35ofabout45000, while forecast adoption differs. Preserve capacity-versus-active-row distinction and instrumented-work limits. Clean early-disabled ABBA finds no repeatable common-machinery penalty; offline first-required-read totals do not justify another reader rewrite. All509sources and five default artifacts restored; Fast unchanged, parity goal active.
 
+## [2026-10-26 08:30] update | records/measurements/q2-event-readiness-and-metadata.md
+Resolve exact Q2 readiness ancestry but reject native timing attribution after4.78percent probe sensitivity. Test one immutable metadata packing change: original-byte/lifetime checks and111full-logit matches pass; clean ABBA is flat with direction reversal, so discard it. Restore509sources and five v68 artifacts. Fast unchanged, parity still open; investigate actual allocator contention before another ownership change.
+

@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T07:44:28.639882Z
+updated: 2026-10-26T08:30:19.112798Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-packed-routing-metadata]] — Q2 packed routing metadata exact checks and flat clean ABBA
+- [[sources/runs/2026/10/2026-10-26-q2-event-readiness]] — Q2 event readiness ancestry with failed native sensitivity control
 - [[sources/runs/2026/10/2026-10-26-q2-routing-and-read-issuance]] — Q2 read issuance, staging ablation and actual expert routing
 - [[sources/runs/2026/10/2026-10-26-q2-early-expert]] — Q2 early expert preparation: exact checks, rejected speed candidate and GPU attribution
 - [[sources/runs/2026/10/2026-10-26-q2-expert-preparation]] — Q2 native expert preparation and route-readback phases
@@ -505,10 +507,8 @@ updated: 2026-10-26T07:44:28.639882Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-long-on-complete-pass]] — Complete fixed-MTP sustained cohort qualifies with a measured speed-memory tradeoff
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-thermal-recovery-guarded-launch]] — Full thermal-recovery MTP-on cohort launches after real bounded nominal and capacity readiness
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-thermal-recovery-preparation]] — Prospective full-cohort recovery from excluded completed fair responses passes 86 model-free checks
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-user-directed-thermal-stop]] — Capacity-qualified continuation stops at a completed reference response ending thermally fair
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-user-directed-guarded-launch]] — User-directed full MTP continuation starts after actual memory and nominal thermal readiness
 
 ## More
 
-This folder has 990 files. The 500 most recent are listed above.
+This folder has 992 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
