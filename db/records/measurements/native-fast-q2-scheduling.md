@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5n0gfs94bpkm1arf04fh690
 created: 2026-10-23T18:31:27.785692+00:00
-updated: 2026-10-24T22:31:23.722937+00:00
+updated: 2026-10-26T02:12:42.764670+00:00
 summary: Bounded Q2 read-ahead improves clean native comparisons; Fast read-ahead and buffer reuse are rejected, with full app and timing limits retained
 date: 2026-10-23
 doc: measurements
@@ -41,11 +41,11 @@ order, nominal thermal checks and per-request global paging checks are frozen
 before execution. Upstream runs disable ANE, disk cache and the host-step GPU
 spin library. No spin or power-state manipulation enters the native engine.
 
-The [raw archive](../../sources/runs/2026/10/2026-10-23-native-scheduling.md)
+The [raw archive](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-23-native-scheduling.md)
 contains protocols, commands, memory observers, complete outputs, failed
 attempts, source snapshots and hashes. Frozen v11 source is authoritative;
 standalone Swift files at the archive root include intermediate experiments.
-The previous [kernel-port study](native-fast-q2-execution-kernels.md) retains
+The previous [kernel-port study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-fast-q2-execution-kernels.md) retains
 the earlier kernels, cached replays, failed instrumentation and quality limits.
 
 ## What changed

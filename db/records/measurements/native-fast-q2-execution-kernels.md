@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5k3eweq9dq3d64w0kg18j3e
 created: 2026-10-23T00:44:32.086907+00:00
-updated: 2026-10-24T22:31:23.751009+00:00
+updated: 2026-10-26T02:12:42.742604+00:00
 summary: Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
 date: 2026-10-22
 doc: measurements
@@ -65,7 +65,7 @@ cache ownership, memory governor and public interfaces.
 
 ## Experiments retained and rejected
 
-The [kernel source receipt](../../sources/runs/2026/10/2026-10-22-native-execution-kernels.md)
+The [kernel source receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-kernels.md)
 preserves frozen implementations, hashes, independent references, quality
 outputs, profiles and failures. It includes the initial JIT bounds failure,
 the corrected repack, the earlier packed-expert register probe, preflight
@@ -126,7 +126,7 @@ hardware-range qualification or permission to silently promote a candidate.
 
 ## Final matched-request observations
 
-The [final comparison receipt](../../sources/runs/2026/10/2026-10-22-native-execution-final-comparisons.md)
+The [final comparison receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-final-comparisons.md)
 contains both refused sixteen-GB launches and both completed fifteen-GB ABBA
 studies. The larger launches failed the twenty-GB headroom preflight before
 loading. The new fifteen-GB protocol was frozen before running and requires
@@ -198,7 +198,7 @@ is unchanged; Q2 has neither complete parity nor general quality qualification.
 The final v7 engine SHA-256 is
 `34086eff685e1ebf1b1c6065955c9c5d28fc19604c55b1167870420092f9754f`.
 Its frozen source archive and build inputs are retained in the
-[final validation receipt](../../sources/runs/2026/10/2026-10-22-native-execution-final-validation.md). The complete static gates pass, as does the check catalogue with
+[final validation receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-final-validation.md). The complete static gates pass, as does the check catalogue with
 108 checks and 41,385 assertions, no failures or skips. Independent tests cover
 lossless CPU/GPU transposition, original-byte projection arithmetic, actual
 Fast/Q2 geometries, all admitted resident quantization formats, register/staged
@@ -243,17 +243,17 @@ including both gate types and the saved rollback states.
 
 ### Host-side diagnostic
 
-The [Q2 CPU sample](../../sources/runs/2026/10/2026-10-22-native-q2-host-profile.md) captures a guarded run after two warmup requests. It locates recurring blocking at MoELayer routing readback through MLXArray.asArray and GPU events, expert-reader workers in pread and CPU repacking, and MLX graph/command encoding. Kernel-source hashing also appears, but the sample does not establish it as the dominant remaining cost. This narrows the next investigation to the execution and read handoffs already identified in the source comparison.
+The [Q2 CPU sample](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-q2-host-profile.md) captures a guarded run after two warmup requests. It locates recurring blocking at MoELayer routing readback through MLXArray.asArray and GPU events, expert-reader workers in pread and CPU repacking, and MLX graph/command encoding. Kernel-source hashing also appears, but the sample does not establish it as the dominant remaining cost. This narrows the next investigation to the execution and read handoffs already identified in the source comparison.
 
 A CPU thread waiting for a GPU event is not proof that the GPU is idle. Samples across parallel worker threads cannot be summed into request-wall-time percentages. This instrumented run supplies call-site evidence only; it neither changes the earlier timing exclusions nor establishes the gain from a proposed scheduling rewrite. The guarded process and sampler both complete, and input hashes match the committed engine and app sources.
 
 ### Implementation CI
 
-The [exact-commit CI receipt](../../sources/runs/2026/10/2026-10-22-native-execution-ci.md) records passing engine, native app, documentation and context workflows for fa398816ece5b85ca7a20ba601befc64bc1fde38. Engine goldens, the full catalogue, instrumented coverage, external library consumption and tested-candidate byte verification pass. App scripted checks, offscreen snapshots and the Xcode build pass. The frozen local engine and app input hashes match the committed implementation. Hosted CI has no real model weights and does not qualify another physical memory tier; its existing optional OCR policy is separate from the passing local OCR jobs. Later changes in this study are documentation and evidence only.
+The [exact-commit CI receipt](https://github.com/carloslfu/slotstream/blob/main/db/sources/runs/2026/10/2026-10-22-native-execution-ci.md) records passing engine, native app, documentation and context workflows for fa398816ece5b85ca7a20ba601befc64bc1fde38. Engine goldens, the full catalogue, instrumented coverage, external library consumption and tested-candidate byte verification pass. App scripted checks, offscreen snapshots and the Xcode build pass. The frozen local engine and app input hashes match the committed implementation. Hosted CI has no real model weights and does not qualify another physical memory tier; its existing optional OCR policy is separate from the passing local OCR jobs. Later changes in this study are documentation and evidence only.
 
 ## Scheduling follow-up, October 23
 
-The [native scheduling study](native-fast-q2-scheduling.md) adds bounded page-aligned reads, shared Q2 input preparation and next-input read-ahead with private staging. Its clean ablation supports Q2; a clean Fast regression and slower buffer-reuse experiment are retained and rejected. Final matched comparisons remain excluded for paging or thermal failures. The full app and quality checks retain their prior capability limits. This later schedule does not rewrite the unsuccessful earlier read-ahead experiments or establish complete Splash parity.
+The [native scheduling study](https://github.com/carloslfu/slotstream/blob/main/db/records/measurements/native-fast-q2-scheduling.md) adds bounded page-aligned reads, shared Q2 input preparation and next-input read-ahead with private staging. Its clean ablation supports Q2; a clean Fast regression and slower buffer-reuse experiment are retained and rejected. Final matched comparisons remain excluded for paging or thermal failures. The full app and quality checks retain their prior capability limits. This later schedule does not rewrite the unsuccessful earlier read-ahead experiments or establish complete Splash parity.
 
 ## Prepared execution follow-up, October 24, 2026
 

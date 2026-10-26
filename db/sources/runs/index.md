@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T01:23:29.935360Z
+updated: 2026-10-26T02:09:55.021741Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-25-q2-full-cycle-execution-control]] — Q2 full-cycle execution control evidence
 - [[sources/runs/2026/10/2026-10-25-q2-forecast-launch-control]] — Q2 forecast launch boundary control evidence
 - [[sources/runs/2026/10/2026-10-25-q2-demand-lifecycle-triage]] — Q2 demand lifecycle and buffer triage evidence
 - [[sources/runs/2026/10/2026-10-25-q2-small-work-and-readiness]] — Q2 small-work controls and dependency attribution
@@ -506,9 +507,8 @@ updated: 2026-10-26T01:23:29.935360Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-thermal-stop]] — Final MTP long cohort stops on fair thermal state with full partial work preserved
 - [[sources/runs/2026/09/2026-09-10-optimization-final-prefill-reconciliation-and-calibration-preparation]] — Closed automatic-prefill results reconciled and final calibration report prepared
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-startup-exclusion-preparation]] — Exact final MTP startup method excludes contaminated pairs and preserves resource stops
-- [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-long-startup-swapin-stop]] — Corrected MTP long cohort stops on eight startup swap-in pages with ample headroom
 
 ## More
 
-This folder has 978 files. The 500 most recent are listed above.
+This folder has 979 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T01:24:56.969093Z
+updated: 2026-10-26T02:12:42.764670Z
 ---
 
 # records/measurements
 
+- [[records/measurements/native-fast-q2-scheduling]] — Bounded Q2 read-ahead improves clean native comparisons; Fast read-ahead and buffer reuse are rejected, with full app and timing limits retained
+- [[records/measurements/native-fast-q2-execution-kernels]] — Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
+- [[records/measurements/q2-full-cycle-execution-control]] — Q2 full-cycle execution and submission control
 - [[records/measurements/q2-forecast-launch-control]] — Q2 forecast dispatch and launch-boundary control
 - [[records/measurements/q2-demand-lifecycle-triage]] — Q2 demand lifecycle and buffer triage
 - [[records/measurements/q2-ordinary-host-attribution]] — Q2 ordinary-request host work and submission gaps
@@ -28,8 +31,6 @@ updated: 2026-10-26T01:24:56.969093Z
 - [[records/measurements/native-prepared-execution]] — Native prepared execution on the 48 GiB Mac: qualified Fast speed, cache-dependent Q2 results, ownership checks and preserved workflow failures
 - [[records/measurements/native-exact-q2-qualification]] — Exact native Q2 passes component, bounded CLI and six real app jobs; retain Smart while speed, quality and vision tradeoffs remain
 - [[records/measurements/native-q2-splash-execution-comparison]] — Native Q2 grouped kernels, precision and speculative-state fixes improve execution; matched evidence still shows a Splash gap, equal small-suite Q2 scores and six passing app jobs
-- [[records/measurements/native-fast-q2-execution-kernels]] — Native expert and resident-kernel ports, independent arithmetic references, retained failed experiments, and execution-parity limits
-- [[records/measurements/native-fast-q2-scheduling]] — Bounded Q2 read-ahead improves clean native comparisons; Fast read-ahead and buffer reuse are rejected, with full app and timing limits retained
 - [[records/measurements/fast-splash-execution-comparison]] — Fast native scheduling ports preserve measured quality; matched-cache observations still show a larger-cache Splash gap and exclude clean aggregate speed claims
 - [[records/measurements/smart-dflash-native-and-q2-review]] — Historical native Smart DFlash reference and small-task review; Q2 performance and the adoption priority are corrected by the exact-recipe follow-up.
 - [[records/measurements/exact-q2-performance-and-quality-followup]] — Exact upstream Q2 is substantially faster in bounded coding controls; preserve capability failures and prioritize native qualification over the earlier DFlash-only conclusion
