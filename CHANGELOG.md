@@ -8,16 +8,6 @@ determines which version the installer downloads.
 
 ## Unreleased
 
-## 0.2.31 - 2026-10-26
-
-This release adds Fast alongside the original Smart model. The CLI still
-defaults to `qwen3.8-flash-next:4bit`; existing commands and model files keep
-working. Both supported models use 4-bit weights. The smaller Q2 candidate
-remains an explicit experiment, outside automatic model selection.
-
-The downloadable archive contains the engine and CLI. Mac app changes below
-are included in source; this release does not include a Mac app installer.
-
 - Add native prepared Metal execution sections for Fast and the explicit Q2
   candidate, using MLX's stream and allocator. Share compiled pipelines across
   batch widths using bounded dispatch parameters, reuse bounded event
@@ -52,9 +42,6 @@ are included in source; this release does not include a Mac app installer.
 
 - Preserve literal JSON brackets in saved conversations and tool results. Table
   output no longer becomes an accidental db.md link, and interrupted saves recover.
-
-- Let the Mac app retrieve relevant conversation history and inspect Home data
-  through its CLI and local MCP integration, with the same Home permissions.
 
 - Add Fast and Smart to the native app's composer and settings. New installs
   start with Fast; existing choices, conversations and review boundaries remain.
