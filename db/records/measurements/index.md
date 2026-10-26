@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T05:09:47.116061Z
+updated: 2026-10-26T06:06:03.477180Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-required-dependencies-and-preparation]] — Q2 required dependencies and native preparation
 - [[records/measurements/q2-mlx-ownership-and-graph]] — Q2 MLX ownership and graph diagnosis
 - [[records/measurements/q2-forecast-requests-and-mask-reuse]] — Q2 forecast requests and immutable draft-mask reuse
 - [[records/measurements/q2-started-forecast-reuse]] — Q2 started forecasts and duplicate demand reads

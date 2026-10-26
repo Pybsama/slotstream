@@ -678,3 +678,6 @@ Preserved the independently declared started-forecast request protocol, wholly e
 ## [2026-10-26 05:09] update | records/measurements/q2-mlx-ownership-and-graph.md
 Archive direct Q2 Metal lifecycle, MLX ownership and graph/wait observations; preserve contamination and sensitivity limits; retain v68 and Fast unchanged.
 
+## [2026-10-26 06:06] update | records/measurements/q2-required-dependencies-and-preparation.md
+Resolve every required Q2 payload and readiness event; clean controls localize residual gaps to host transitions and preparation. Preserve exact outputs, v68 and Fast; no unsupported scheduler port or parity claim.
+

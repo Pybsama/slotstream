@@ -2,11 +2,13 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T05:09:47.046300Z
+updated: 2026-10-26T06:06:03.131274Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-expert-preparation]] — Q2 native expert preparation and route-readback phases
+- [[sources/runs/2026/10/2026-10-26-q2-required-dependencies]] — Q2 required-payload ancestry and matched readiness traces
 - [[sources/runs/2026/10/2026-10-26-q2-mlx-graph]] — Q2 MLX graph and wait phases with sensitivity limit
 - [[sources/runs/2026/10/2026-10-26-q2-mlx-ownership]] — Q2 direct MLX buffer-ownership observation
 - [[sources/runs/2026/10/2026-10-26-q2-metal-lifecycle]] — Q2 Metal lifecycle observation and excluded comparison
@@ -505,10 +507,8 @@ updated: 2026-10-26T05:09:47.046300Z
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-user-directed-guarded-launch]] — User-directed full MTP continuation starts after actual memory and nominal thermal readiness
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-quiet-interval-preparation]] — Separate complete MTP repetition prepared with unchanged protocol, awaiting a quiet machine interval
 - [[sources/runs/2026/09/2026-09-10-optimization-final-mtp-distributed-thermal-stop]] — Distributed-cooling MTP cohort stops during reference startup after six complete pairs
-- [[sources/runs/2026/09/2026-09-10-optimization-final-all37-delivery-and-activation-reconciliation]] — All 37 dispositions retained with completed MTP-off and delivery evidence; full MTP-on and activation remain open
-- [[sources/runs/2026/09/2026-09-10-optimization-final-distributed-launch-and-delivery-reconciliation]] — Actual distributed-cooling launch and completed delivery evidence remain tied to the exact candidate
 
 ## More
 
-This folder has 986 files. The 500 most recent are listed above.
+This folder has 988 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
