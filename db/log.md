@@ -714,3 +714,6 @@ Qualified bounded decision trace: 1953 exact choices and negligible controller C
 ## [2026-10-26 12:05] update | records/measurements/q2-aligned-forecast-normal-requests.md
 Correct mistaken extraFast metadata-isolation prerequisite here and in fixed-prose follow-up. Existing Swift/C++ guards already prevent affine staging allocation; retain original raw caveat and historical timing verdicts.
 
+## [2026-10-26 13:16] update | records/measurements/q2-cold-compilation-and-row-counts.md
+Qualified first-pass compilation probe and exact expert-cache-reset replay. Runtime token counts remove twelve redundant verification pipeline creations, pass expanded independent tests and 72 exact model passes, and improve warmed code/prose in both orders. Preserve all eight clean ordinary arms; forward first-request regression fails retention and full parity. Production and Fast remain unchanged. Next inspect ordinary compilation source/options and preparation plus first-request latency.
+

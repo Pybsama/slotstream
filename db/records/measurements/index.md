@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T12:05:47.368657Z
+updated: 2026-10-26T13:16:22.512027Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-cold-compilation-and-row-counts]] — Q2 runtime row counts remove repeated compilation; first-request qualification stays open
 - [[records/measurements/q2-aligned-forecast-fixed-prose]] — Q2 copy removal helps fixed prose work but normal requests fail retention
 - [[records/measurements/q2-aligned-forecast-normal-requests]] — Q2 aligned forecast reads improve code but regress prose
 - [[records/measurements/q2-adaptive-decisions-and-preparation]] — Q2 warmed requests approach Splash, but first-request behavior blocks retention

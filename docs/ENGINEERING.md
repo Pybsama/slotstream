@@ -53,6 +53,13 @@ Keep host waits, GPU execution, SSD traffic and draft acceptance separate when
 explaining a remaining gap. Neither a CPU wait sample nor a successful kernel
 test proves where request time is lost.
 
+The [first-request compilation study](../db/records/measurements/q2-cold-compilation-and-row-counts.md)
+shows why warmed throughput alone cannot qualify a change. Use runtime dispatch
+metadata for token counts when they do not change a kernel's arithmetic. Check
+first-use compilation separately from recurring execution and cache misses,
+including its effect on adaptive batching. If preparation moves before engine
+readiness, measure preparation plus the first request so the cost stays visible.
+
 ## Candidate quantization research
 
 The [same-model implementation plan](../db/records/plan/same-model-quantization-and-automatic-memory-2026-10-02.md)
