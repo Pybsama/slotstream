@@ -2,7 +2,7 @@
 type: measurement
 id: 01m1hhwk4bb0qm73bxabv9g1yd
 created: 2026-09-02T17:15:25.195655+00:00
-updated: 2026-10-26T18:16:59.505858+00:00
+updated: 2026-10-26T19:14:46.215135+00:00
 summary: Measured facts
 date: 2026-08-28
 doc: measurements
@@ -26,3 +26,8 @@ and scheduling studies below are archived. Their source revision, measurements,
 failures and original conclusions remain intact. Commands in those dated
 records refer to the archived builds, not current product choices or an active
 work queue. See the [archive index](../../../experiments/fast-q2/README.md).
+
+The native Mac app was retired later the same day under
+[[records/decisions/engine-only-maintenance]]. App measurements and workflow
+receipts also remain historical evidence, not an active development queue.
+See the [Mac app archive](../../../experiments/mac-app/README.md).

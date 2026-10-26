@@ -1,3 +1,11 @@
+> **Archived October 26, 2026.** The Mac app and its Home integrations are no
+> longer maintained in this repository. The guide below describes the fixed
+> archive revision `ca4bd6869f394a5d03ddb459e8202ad897d1d03a`; its build commands
+> apply only to that checkout. See the [archive index](../experiments/mac-app/README.md)
+> for source, tests, licenses and reproduction instructions. Existing local
+> Homes and model downloads are not removed. Current engine setup is in
+> [Getting started](GETTING-STARTED.md).
+
 # Slotstream for Mac
 
 The Slotstream Mac app is a native personal AI application in development, built

@@ -5,7 +5,7 @@
 > 105 GB on disk at 4-bit) on Apple Silicon Macs with far less RAM than the
 > model: October 5, 2026 development tests measured 20.91–23.69 tok/s across three
 > workloads on the 48 GB M5 Pro at a 33 GB total budget, using the original
-> 4-bit model and Desktop settings. These are three-run workload medians,
+> 4-bit model and the archived Desktop settings. These are three-run workload medians,
 > not sustained-session or other-Mac guarantees. Earlier measurements on the
 > same Mac were 15.86 tok/s at a
 > 22 GB target with the 0.2.19 corrected forecast (1.10x faster decode than the
@@ -16,7 +16,7 @@
 > Experts stream from SSD through a fixed slot cache; one Swift binary serves
 > Ollama-, OpenAI- and Anthropic-compatible chat APIs on 127.0.0.1:11434.
 
-The installer follows the [latest published release](https://github.com/carloslfu/slotstream/releases/latest), currently v0.2.30. Slotstream maintains one model, Qwen3.8-Flash-Next 4-bit, across the app and independent CLI. The native Mac app is available to build from source; there is no published app installer. Fast, Q2 and Smart DFlash are archived at `experiments/fast-q2/README.md`, not supported choices or ongoing qualification work. The simplification on `main` is unreleased. Historical measurements describe their recorded builds and configurations.
+The installer follows the [latest published release](https://github.com/carloslfu/slotstream/releases/latest), currently v0.2.30. Slotstream maintains Qwen3.8-Flash-Next 4-bit through the native engine, CLI, serving APIs and Swift library. Fast, Q2 and the Mac app are archived. Historical measurements describe their recorded builds and configurations.
 
 The README, user guides, engineering notes, and changelog are combined in
 [llms-full.txt](https://raw.githubusercontent.com/carloslfu/slotstream/main/llms-full.txt).
@@ -33,11 +33,6 @@ The README, user guides, engineering notes, and changelog are combined in
 - Cache-size and live-resize gates check byte-identical greedy output with other generation settings fixed. Changing the total memory target can also change prefill grouping or speculative decoding, outside that equality claim.
 - One model process per user (`/tmp/slotstream-model-<uid>.lock`). The server binds 127.0.0.1 only, accepts browser origins from loopback only, and has no auth.
 - Hardware reports include a 48 GB M5 Pro, a 16 GB M2, a 24 GB M4 Pro, a 32 GB M5 Air, a 36 GB M4 Max, a 64 GB M3 Max, a 64 GB M4 Max measured from its internal SSD and from a 10 Gb/s external drive, and a 128 GB M5 Max. All but the M5 Pro are community reports with different settings. The README gives rough planning ranges; the hardware guide lists the tested configurations with installed RAM, release and process memory target. The upper High/Ultra estimates assume M5 Max-class hardware, a fast internal SSD and larger manual targets. They are extrapolations across machines and releases, not measured limits or confidence intervals. Larger manual targets improved the reported M5 Max speed; installed RAM alone does not define a performance tier. The hardware guide explains each range and keeps simulated allocation plans separate. The 18 GB size still needs reports; 8 GB Macs are refused because the smallest plan doesn't fit. No release date is promised for 8 GB support. Runtime testing on macOS 14/15 is still needed. Ollama CLI and symlinked-weight-directory bugs in 0.2.0 were fixed in 0.2.1.
-
-Slotstream for Mac is under development in `apps/macos`, using SwiftUI/AppKit and a
-Swift-owned runtime with in-process Slotstream. Product behavior is shared as
-text specifications; platform implementations are independent. This is a local
-development app, not a published desktop release.
 
 ## Commands
 
@@ -78,7 +73,6 @@ development app, not a published desktop release.
 - [docs/CODEX.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CODEX.md): Codex through `slotstream launch codex`, the manual catalog and profile setup, a file-editing example, and troubleshooting
 - [README.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/README.md): project overview, requirements, measured speed, quick start, guides, a plain explanation, limitations, FAQs, community, and star history
 - [docs/MODELS.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/MODELS.md): maintained checkpoint, defaults, acceleration and archived experimental settings
-- [docs/SLOTSTREAM-MAC.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/SLOTSTREAM-MAC.md): native philosophy, development build, local workflow, tests, internal CLI and unpassed release gates
 - [docs/CLI.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/CLI.md): everyday commands, common diagnostics, memory-option precedence, environment variables, file locations, the diagnostic checks
 - [docs/API.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/API.md): every endpoint, accepted field, sampling default, streaming and error shapes
 - [docs/LIBRARY.md](https://raw.githubusercontent.com/carloslfu/slotstream/main/docs/LIBRARY.md): using slotstream as a Swift package — the two products, the Metal library requirement, weights, planning, serving
@@ -101,6 +95,7 @@ development app, not a published desktop release.
 - [Sources/slotstream-cli/](https://github.com/carloslfu/slotstream/tree/main/Sources/slotstream-cli): the CLI: subcommands in main.swift and the command files; the download engine and pinned manifest live in the Slotstream library
 - [Tools/verify.sh](https://raw.githubusercontent.com/carloslfu/slotstream/main/Tools/verify.sh): the acceptance battery; [Tools/e2e_release.sh](https://raw.githubusercontent.com/carloslfu/slotstream/main/Tools/e2e_release.sh) re-tests the installed binary; [Tools/llms_full.sh](https://raw.githubusercontent.com/carloslfu/slotstream/main/Tools/llms_full.sh) regenerates llms-full.txt
 
-## Mac Home data integration
+## Archives
 
-The development app’s Data browser, bundled `slotstream-home` CLI, agent skill and local MCP stdio server use the same selected Home. Data reads work with the app open or closed; AI requests use the open app’s model and native review controls. Setup and contracts: [Homes and integrations](docs/SLOTSTREAM-HOMES.md). No SQL or network listener is added.
+- [Fast and Q2](experiments/fast-q2/README.md): fixed source, licenses, measurements and failures from the retired model experiments.
+- [Mac app](experiments/mac-app/README.md): the retired SwiftUI/AppKit app, Home data browser, CLI, MCP integration, tests and licensing. No app or Home tooling is maintained on main.

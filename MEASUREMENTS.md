@@ -16,6 +16,11 @@ failures and original conclusions remain intact. Commands in those dated
 records refer to the archived builds, not current product choices or an active
 work queue. See the [archive index](../../../experiments/fast-q2/README.md).
 
+The native Mac app was retired later the same day under
+[[records/decisions/engine-only-maintenance]]. App measurements and workflow
+receipts also remain historical evidence, not an active development queue.
+See the [Mac app archive](../../../experiments/mac-app/README.md).
+
 ## M0.1 — Metal / memory limits (mlx `device_info`, 2026-08-28)
 
 | Quantity | Value |

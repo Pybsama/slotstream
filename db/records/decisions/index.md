@@ -2,23 +2,24 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-26T18:38:28.003267Z
+updated: 2026-10-26T19:18:31.134204Z
 ---
 
 # records/decisions
 
+- [[records/decisions/engine-only-maintenance]] — Retire the native Mac app and maintain only the Qwen3.8-Flash-Next 4-bit engine, CLI, APIs and Swift library.
+- [[records/decisions/slotstream-app-identity]] — Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
+- [[records/decisions/qualify-complete-native-workflows]] — Qualify useful native jobs across model, tools, evidence, reviewed effects and delivered bundle identity
 - [[records/decisions/one-maintained-model]] — Maintain Qwen3.8-Flash-Next 4-bit only; archive Fast, Q2 and associated runtime work without releasing.
 - [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 - [[records/decisions/q2-precompilation-stays-experimental]] — Keep Q2 precompilation experimental
 - [[records/decisions/native-input-read-ahead]] — Keep measured bounded Q2 input read-ahead, reject its Fast default and buffer reuse, and require actual app recipe and branch evidence
 - [[records/decisions/smart-dflash-and-target-quantization]] — Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 - [[records/decisions/fast-and-smart]] — Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
-- [[records/decisions/slotstream-app-identity]] — Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 - [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
 - [[records/decisions/adaptive-memory-limits]] — Custom process ceilings remain adaptive above the automatic default; hardware headroom, diagnostics and startup agree.
 - [[records/decisions/native-stack-stated-on-every-surface]] — Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
 - [[records/decisions/vq-weights-behind-qualification-gates]] — Support the VQ builds of the same model as a second weight format, behind qualification gates
-- [[records/decisions/qualify-complete-native-workflows]] — Qualify useful native jobs across model, tools, evidence, reviewed effects and delivered bundle identity
 - [[records/decisions/residency-speculation-waits-for-layer-completeness]] — Residency speculation remains unqualified; the earlier completeness ceiling omitted ready prefetch tickets, as corrected on October 13
 - [[records/decisions/remove-gpu-keepalive]] — Remove artificial GPU keepalive and optimize useful work with evidence across the supported scope
 - [[records/decisions/gpu-keepalive-on-ac-power]] — A one-thread spin kernel keeps the GPU awake while a request generates, on AC power outside Low Power Mode by default: 1.22x with direct reads at 22 GB, energy per token +7%

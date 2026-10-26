@@ -2,7 +2,7 @@
 type: decision
 id: 01m4y4fz2rsm4gncsp9qxxzc23
 created: 2026-10-14T21:18:33.048080+00:00
-updated: 2026-10-14T21:37:16.792295+00:00
+updated: 2026-10-26T19:14:46.171042+00:00
 summary: Qualify useful native jobs across model, tools, evidence, reviewed effects and delivered bundle identity
 decided_on: 2026-10-14
 evidence: '[[records/design/sevra-spec/runtime-contract]]'
@@ -10,6 +10,8 @@ reversible_if: Broader representative evidence supports a different reliable bou
 title: Qualify complete native workflows
 status: standing
 ---
+> **Scope update, October 26, 2026.** [[records/decisions/engine-only-maintenance]] retires the Mac app. The complete-job verification principle still applies to the engine and actual clients; the app contracts and delivery gates below remain historical, not active engine prerequisites.
+
 # Qualify complete native workflows
 
 A capable model and a passing protocol suite do not establish a usable product. The October capability audit found correct content behind broken file references, an undeclared tool after a valid staged edit, unusable citation links and fenced machine-readable output. A correct current CLI also coexisted with an obsolete app bundle. Preserve the distinction between model quality, tool delivery, evidence presentation, reviewed effects and the executable actually delivered.

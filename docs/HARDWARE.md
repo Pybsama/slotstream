@@ -39,11 +39,9 @@ process your question. Long conversations take longer to process.
 Your chip, SSD, and other running apps affect speed. A memory size alone
 isn't enough to predict it.
 
-Slotstream Desktop's current development build keeps Original 4-bit in Auto,
-based on the comparisons so far. It selects a memory budget when the model
-loads. Separate runtime management adjusts the cache as available memory
-changes. Quantization, the memory ceiling and runtime adjustment have
-independent controls. Quantization never changes during a response.
+Slotstream maintains Qwen3.8-Flash-Next 4-bit. The engine selects a memory
+budget when the model loads and adjusts the cache as available memory changes.
+The model and its quantization stay fixed during a response.
 The results below are reference measurements; speed for your current settings
 remains unverified unless a matching configuration has been qualified.
 
@@ -88,7 +86,7 @@ model. Open the details below for versions, settings, and credits.
 ### October 5 development tests
 
 On October 5, 2026, the original 4-bit model ran on the same 48 GB M5 Pro
-with a 33 GB total memory ceiling, using the Desktop startup recipe. Source commit
+with a 33 GB total memory ceiling, using the now-archived Desktop startup recipe. Source commit
 `754426d7915d26f007fed2c5ec53d633d0664596` and its exact CI-built executable
 are pinned in the [complete run record](../db/sources/runs/2026/10/2026-10-05-practical-desktop-ceiling.md).
 The recipe retains its full context allowance, prefix cache, two-token

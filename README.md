@@ -15,10 +15,9 @@ The released engine runs [Qwen3.8-Flash-Next](https://huggingface.co/pipenetwork
 a 125-billion-parameter open model, on Macs with 16 to 64 GB of memory.
 Our 48 GB M5 Pro measured **20.91–23.69 tok/s** across three workloads in
 development tests at a 33 GB memory budget, using the original 4-bit model
-([results and test conditions](#speed)). This repository also contains a
-native Mac app you can build from source.
+([results and test conditions](#speed)).
 
-[Get started](#install) · [Mac app](#native-mac-app) · [Model](docs/MODELS.md) · [Speed](#speed) · [Get help](#support)
+[Get started](#install) · [Model](docs/MODELS.md) · [Speed](#speed) · [Get help](#support)
 
 ## Available now
 
@@ -38,39 +37,27 @@ OpenAI- and Anthropic-compatible APIs or its Swift library.
 
 Slotstream focuses on **Qwen3.8-Flash-Next 4-bit**. The work goes into making
 this capable model useful on a Mac that cannot hold all its weights in RAM:
-SSD streaming, memory use, context, tool use and the native app.
+SSD streaming, memory use, context and tool use.
 
 We maintain one model at a time. A future successor needs evidence from
 complete tasks on the hardware we support. The [model guide](docs/MODELS.md)
-records the current checkpoint and defaults; earlier model experiments are
-[archived](experiments/fast-q2/README.md).
+records the current checkpoint and defaults.
 
-## Native Mac app
+<a id="native-mac-app"></a>
 
-The app is available to build from source. The v0.2.30 engine download does
-not include it, and there is no published Mac app installer yet.
+## Earlier experiments
 
-The app runs the engine directly in a SwiftUI and AppKit interface. You can
-work with local documents, ask questions with citations, draft and review
-file changes, analyze CSV tables, and keep conversations, memories and a
-journal on your Mac. A Home holds that work in local files; separate Homes
-keep separate data.
-
-The Data browser lets you inspect saved records and their relationships.
-The bundled `slotstream-home` command, agent skill and local MCP server give
-other tools access to the same Home. Proposed changes still go through the
-app's review controls.
-
-Its [guide](docs/SLOTSTREAM-MAC.md) explains how to build it, what each workflow
-supports today, and what remains before an app installer can ship. See [Homes and integrations](docs/SLOTSTREAM-HOMES.md)
-for data access and agent connections.
+The [Fast and Q2 models](experiments/fast-q2/README.md) and the
+[native Mac app](experiments/mac-app/README.md) are archived. Their source,
+licenses, tests and measured results remain available. Current work focuses
+on the engine, CLI, serving APIs and Swift library.
 
 ## Who it's for
 
 Slotstream focuses on Macs with **16 to 64 GB** of memory, where running the
 larger model depends on managing what stays in RAM and what comes from SSD.
-The CLI and APIs suit people using local chat apps or coding agents; the Mac
-app brings the engine to document work and personal knowledge.
+The CLI and APIs connect the model to local chat apps and coding agents.
+Developers can also embed the engine through its Swift library.
 
 The original model also runs on 96 GB and larger Macs, but those are outside
 the optimization target: engines that keep it fully resident report faster
@@ -98,8 +85,8 @@ of a word. These speeds describe reply generation; loading the model and
 processing the prompt take additional time.
 
 **On October 5, 2026, our 48 GB M5 Pro measured 20.91–23.69 tok/s with the
-original 4-bit model at a 33 GB memory budget.** The development build used the Slotstream
-Desktop startup settings and its existing automatic memory ceiling:
+original 4-bit model at a 33 GB memory budget.** These historical development
+tests used the now-archived Mac app's startup settings and automatic memory ceiling:
 
 | Workload | Median generation speed |
 |---|---:|
@@ -247,9 +234,7 @@ again. Follow the [step-by-step setup](docs/GETTING-STARTED.md) for more help.
 
 | What would you like to do? | Guide |
 |---|---|
-| Build the native Mac app from source | [Slotstream for Mac](docs/SLOTSTREAM-MAC.md) |
 | Understand the maintained model and defaults | [Model](docs/MODELS.md) |
-| Inspect a Home or connect an agent to the app | [Homes and integrations](docs/SLOTSTREAM-HOMES.md) |
 | Chat in Open WebUI or another app | [Connect a chat app](docs/CLIENTS.md) |
 | Ask about a picture | [Use an image](docs/GETTING-STARTED.md#ask-about-a-picture) |
 | Start a coding agent on the model, in one command | [Use coding agents](docs/CODING-AGENTS.md) |
@@ -294,7 +279,7 @@ covers the implementation.
 Slotstream is fully native. Swift owns the command-line tool, HTTP server,
 model, memory planner, expert cache and request lifecycle. Apple's MLX and
 Slotstream's own Metal kernels execute the tensor operations on the GPU.
-No Python runtime or interpreter sits between a request and the GPU. The Mac app uses SwiftUI and AppKit and calls the engine in process.
+No Python runtime or interpreter sits between a request and the GPU.
 
 That is deliberate. Built around Qwen3.8-Flash-Next on Apple Silicon,
 each layer is tuned for the one below it: experts are read from SSD
@@ -313,7 +298,7 @@ Apple Silicon. Windows and Linux are not supported.
   see [Who it's for](#who-its-for).
 - **One generation at a time:** connected apps share the same running model.
 - **One maintained model:** Qwen3.8-Flash-Next 4-bit. The engine supports
-  text, tools and pictures; the Mac app currently reads images through OCR.
+  text, tools and pictures.
 - **Conversation length is limited:** longer histories take more memory and
   time. Auto mode picks a [window for each memory size](#speed-by-memory), and
   the coding agent guides include the larger window agents need.
@@ -366,9 +351,9 @@ See [Who it's for](#who-its-for) and
 
 ### Why is it written in Swift and not Python?
 
-Swift lets the engine own memory, disk reads and the model lifecycle while
-fitting directly into a native Mac app. MLX and Metal provide the GPU work,
-without a Python runtime to install or a separate inference process for the app.
+Swift lets the engine own memory, disk reads and the model lifecycle, and
+lets other native apps use it directly. MLX and Metal provide the GPU work,
+without a Python runtime to install.
 The Python in this repository is development tooling: reference implementations,
 benchmark drivers and release checks. None of it runs on the engine's inference
 path. See [Built native](#built-native).
@@ -430,8 +415,7 @@ Thank you for supporting its development.
 
 I'm [Carlos Galarza](https://www.carlosgalarza.com). I build local AI and
 make it run efficiently on the computers people already own. Slotstream is
-written natively for the Mac and tuned as one system. The
-[Slotstream Mac app](docs/SLOTSTREAM-MAC.md) lives in this repository too.
+written natively for the Mac and tuned as one system.
 I also help teams run open models on their own hardware and debug agent
 workflows. For help or consulting, [email me](mailto:carloslfu@gmail.com).
 

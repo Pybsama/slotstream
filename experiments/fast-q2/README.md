@@ -5,6 +5,9 @@ Archived on October 26, 2026. Slotstream now maintains one model:
 candidate added more runtime, setup and qualification work than we want to carry.
 This is a scope decision, not a claim that every experiment failed.
 
+The native Mac app was also [archived](../mac-app/README.md) later the same day.
+Current maintenance covers the engine, CLI, serving APIs and Swift library.
+
 ## Preserved source
 
 The complete implementation, tests, fixtures, dependencies and license notices

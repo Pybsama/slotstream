@@ -11,7 +11,6 @@ for Slotstream. For installation and a first reply, start with
 | Commands and configuration | [Command reference](CLI.md) |
 | HTTP integration | [API reference](API.md), [Hermes notes](HERMES-NOTES.md), [fx protocol](FX.md#protocol-reference) |
 | Embedding in an app | [Swift library](LIBRARY.md) |
-| Slotstream native application | [Mac development and native philosophy](SLOTSTREAM-MAC.md) |
 | Build, test, and contribute | [Testing](TESTING.md), [Contributing](../CONTRIBUTING.md) |
 | Download internals | [Slotpack format](DOWNLOAD-FORMAT.md) |
 | Expert lookahead | [How it works, experiments and results](EXPERT-LOOKAHEAD.md) |
@@ -28,8 +27,9 @@ Fast, Q2, DFlash and their prepared execution work are
 revision and measurements remain available, including unsuccessful runs.
 The maintained runtime uses Qwen3.8-Flash-Next 4-bit and its existing MTP path.
 
-The [conversation retrieval check](../db/records/measurements/relevant-conversation-excerpts.md)
-separates an app context-selection problem from draft acceleration. Prefer
+The Mac app is also [archived](../experiments/mac-app/README.md). Its
+[conversation retrieval check](../db/records/measurements/relevant-conversation-excerpts.md)
+separated an app context-selection problem from draft acceleration. Prefer
 bounded, relevant evidence with inspectable provenance, and test the original
 question through the real model. Preserving a correct answer matters more than
 requiring one particular tool call, but a failed answer must stay a failure.
@@ -47,8 +47,8 @@ enable a candidate model or change the automatic recommendation.
 
 Maintained-model owners authenticate `WeightStore(modelDirectory:pack:)`, plan
 through the selected `ModelPack`, and load with
-`Engine(modelDir:pack:plan:)`. Desktop and the opt-in CLI share this loading
-boundary, which rejects a mismatched allocation contract or simulated hardware
+`Engine(modelDir:pack:plan:)`. This loading boundary rejects a mismatched
+allocation contract or simulated hardware
 before model allocation. Product owners explicitly apply
 `configureStartupDefaults(for:)` and complete their health check before
 publishing the runtime. The independent Engine initializers retain their
@@ -139,9 +139,8 @@ on Apple Silicon, and each layer is tuned for the layer below it: expert records
 are read from the SSD into the slots the GPU computes from, process memory is
 accounted from real CPU and GPU allocations, and the governor resizes the
 cache under memory pressure. The same design ships as one binary, installs
-with one command and can be called in process from a Mac app; the
-[Swift library](LIBRARY.md) and the [Slotstream Mac notes](SLOTSTREAM-MAC.md) describe
-that use.
+with one command and can be called in process from another app through the
+[Swift library](LIBRARY.md).
 
 What the native stack does not claim: the measured gains on this page come
 from the mechanisms named with them, the decode lookahead, the corrected

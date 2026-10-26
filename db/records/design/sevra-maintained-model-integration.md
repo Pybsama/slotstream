@@ -2,40 +2,36 @@
 type: design
 id: 01m21xw595ac9n303q61m8kvtq
 created: 2026-09-09T01:52:44.837037+00:00
-updated: 2026-10-26T18:09:26.256106+00:00
-summary: One maintained Qwen3.8-Flash-Next 4-bit model across the app and engine, with preserved interfaces and qualified future replacement.
+updated: 2026-10-26T19:14:46.106002+00:00
+summary: Maintain one Qwen3.8-Flash-Next 4-bit native engine, CLI, APIs and Swift library; the Mac app and other model tracks are archived.
 date: 2026-09-08
 doc: plan
 level: '2'
 order: '5'
-title: 'Slotstream integration: one maintained model'
+title: 'Slotstream engine: one maintained model'
 ---
-# One model, one native stack
+# One model, native engine
 
-[[records/decisions/one-maintained-model]] sets the current scope as of October
-26, 2026. Maintain Qwen3.8-Flash-Next 4-bit across the Mac app and independent
-engine. A future successor may replace it after qualification; there is no
-separate Fast tier, compressed candidate or hardware-specific model catalog.
-The earlier September multi-model direction and October Fast/Q2 implementation
-are archived. This replaces their active selection and continuation policy.
+[[records/decisions/engine-only-maintenance]] sets the current scope: native
+Swift/MLX/Metal inference, the CLI, serving APIs and public Swift library for
+Qwen3.8-Flash-Next 4-bit. The Mac app, Fast tier and Q2 model track are archived.
+A future successor may replace the maintained model after qualification.
 
-- Pin the model, quantization, tokenizer, template and native runtime identity.
-  Hardware profiles vary memory and context limits for that same model.
-- Optimize complete useful tasks, prompt processing, latency, memory, storage
-  and sustained behavior. Numerical and resource gates remain exact.
-- Bind derived caches to actual model, arithmetic and execution identities.
-  Preserve durable data, permissions and conversations across changes.
-- Keep model setup explicit, verified and recoverable. Never retarget a running
-  request, silently download a replacement or route work to a remote provider.
-- Preserve documented CLI/API/Swift behavior and the independent engine.
-  Public breaking changes require their own approved migration.
-- Qualify a future successor through the production app, tools, review and
-  supported hardware before changing the maintained model.
+- Pin the checkpoint, quantization, tokenizer, template and runtime identity.
+  Hardware profiles tune memory and context for that same model.
+- Optimize useful completed requests, prompt processing, latency, memory and
+  SSD reads. Numerical, resource and lifecycle gates remain exact.
+- Bind caches to actual model, arithmetic and execution identities. Preserve
+  request ownership, privacy, cancellation and serving boundaries.
+- Keep model setup explicit, verified and recoverable. Never silently retarget
+  a request, download another model or route work to a remote provider.
+- Preserve documented CLI/API/Swift behavior. Public breaking changes require
+  their own approved migration.
+- Qualify changes through the engine and actual client workflows on supported
+  hardware. Archived app delivery gates do not constrain engine releases.
 
-Documentation is part of implementation: update current guides, tests and
-canonical plans together, regenerate projections, preserve old links and keep
-historical evidence clearly dated. No release or public app installer follows
-from this decision.
+Update active docs, tests and canonical plans together. Preserve links and
+historical evidence. No release is authorized by this scope change.
 
 ## Historical scope notes
 

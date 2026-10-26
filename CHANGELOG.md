@@ -8,20 +8,15 @@ determines which version the installer downloads.
 
 ## Unreleased
 
-- Focus the app and engine on Qwen3.8-Flash-Next 4-bit. Archive Fast, Q2,
-  Smart DFlash and their dedicated execution paths, tests and tooling at a
-  [fixed source revision](experiments/fast-q2/README.md). The original model's
-  MTP, expert lookahead, SSD streaming and released CLI/API behavior remain.
-- Remove the app's Fast/Smart picker. Saved experimental preferences return
-  to the maintained model with a notice; memory settings, Home data and
-  downloaded files are preserved. Missing model files still require setup.
-- Preserve literal JSON brackets in saved conversations and tool results.
-  Table output no longer becomes an accidental db.md link, and interrupted
-  saves recover.
-- Retrieve relevant conversation history and expose Home records through the
-  Data browser, bundled CLI and local MCP integration, with the same review
-  and permission boundaries. These app changes are available in source;
-  there is no published Mac app installer.
+- Focus active maintenance on the native Swift/MLX/Metal engine, CLI, serving
+  APIs and Swift library for Qwen3.8-Flash-Next 4-bit.
+- Archive [Fast and Q2](experiments/fast-q2/README.md) and the
+  [native Mac app](experiments/mac-app/README.md), including their source,
+  tests, licenses and results. The app's Home integrations, saving fixes and
+  conversation retrieval remain in its archive.
+- Clarify the model's display name from "Original 4-bit" to
+  "Qwen3.8-Flash-Next 4-bit". The checkpoint, quantization, inference behavior
+  and released CLI/API/Swift interfaces are unchanged from v0.2.30.
 
 ## 0.2.30 - 2026-10-19
 

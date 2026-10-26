@@ -16,58 +16,37 @@ are insufficient; an optional knob does not repair an unreliable optimization.
 Preserve historical evidence, distinguish hypotheses from verified causes, read
 prior replies before posting, and close only issues a verified release resolves.
 
-## Qualify complete native workflows
+## Engine scope (October 26, 2026)
 
-Follow the [native workflow qualification decision](db/records/decisions/qualify-complete-native-workflows.md).
-Test the person's complete job through the production model, tools, renderer,
-review and delivered app. Preserve failing prompts and inputs. Prefer bounded,
-schema-derived recovery and deterministic computation over special spellings or
-model arithmetic. Keep citation ownership, exact output, privacy and review
-boundaries intact. Verify the app's embedded engine and build identity separately
-from the CLI. Missing capabilities and disclosed limitations are not implemented
-features; maintain the task map and remaining gates alongside code.
+Follow [engine-only maintenance](db/records/decisions/engine-only-maintenance.md).
+Maintain the native Swift/MLX/Metal inference engine, CLI, serving APIs and
+public Swift library for Qwen3.8-Flash-Next 4-bit. There is no maintained Mac
+app, Home service, app-specific MCP integration, Fast tier or Q2 candidate.
 
-## One maintained model (October 26, 2026)
+The [Mac app archive](experiments/mac-app/README.md) and
+[Fast/Q2 archive](experiments/fast-q2/README.md) preserve their source, tests,
+licenses and evidence at fixed revisions. Do not restore those implementations,
+workflows or qualification queues without a new owner decision. Never delete
+user Homes, model downloads or local app data as part of repository cleanup.
 
-Follow [the maintenance decision](db/records/decisions/one-maintained-model.md).
-Maintain Qwen3.8-Flash-Next 4-bit across the engine and Mac app. There is no
-Fast tier, Smart branding or active Q2 candidate. The
-[experiment archive](experiments/fast-q2/README.md) preserves their complete
-code, tests, licenses and evidence at a fixed revision. Do not restore those
-runtime paths, model pickers or benchmark work without a new owner decision.
-A successor is possible, but must earn its place through complete native
-workflow, quality, latency and memory evidence on the supported hardware.
+## One maintained model
 
-Preserve the original model's MTP, expert lookahead, SSD streaming, released
-CLI/API/Swift behavior, and the independent engine. Keep Home, memory, review
-and permission ownership intact. Saved experimental preferences migrate with
-a notice; historical activation receipts must never be relabeled as proof of
-the maintained model. Downloads remain explicit. No release is authorized by
-this scope change.
+Follow [the model decision](db/records/decisions/one-maintained-model.md) within
+that engine scope. Preserve its original checkpoint, MTP, expert lookahead,
+SSD streaming and released CLI/API/Swift behavior. Hardware profiles tune
+memory and context, not model tiers. A successor requires a new decision and
+complete-task, quality, latency and memory evidence on supported hardware.
 
-Keep measurements and failures dated and inspectable. Archive status does not
-invalidate measured results. Store structured JSON as literal data at the
-HomeStore/db.md boundary, preserve exact decoded values, and validate prose
-normally. Test the complete job, actual loaded identity and applied budget;
-component parity and a fluent CLI answer do not establish app qualification.
+Test engine changes through the native runtime and actual client workflows.
+Keep arithmetic, request lifecycle, privacy, cancellation and resource gates
+exact; preserve failures and measured limits. Component parity and a fluent
+answer do not by themselves establish complete-task quality. Archived app
+signing, updater, Home and UI gates are not engine release prerequisites.
 
-## App identity (October 16, 2026)
-
-Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).
-The native app is Slotstream. Keep the app and the independent engine interfaces;
-remove separate-product promotion from current repository surfaces. Leave the
-separate website unchanged. Preserve historical evidence and compatibility names
-needed for existing Homes, backups and saved mini-apps.
-
-## Slotstream integration direction
-
-The [canonical integration record](db/records/design/sevra-maintained-model-integration.md)
-and [maintenance decision](db/records/decisions/one-maintained-model.md) specify
-one maintained model at a time, currently Qwen3.8-Flash-Next 4-bit. Optimize
-the whole native stack around it. Hardware profiles tune memory and context;
-they do not select separate model tiers. Preserve exact checkpoints, measured
-gates and independent CLI/API/Swift behavior. Update current docs, tests and
-canonical plans with implementation, and keep historical evidence labeled.
+Update docs, tests and canonical plans with implementation. Keep dated app
+and model experiments labeled as history. Archive status does not invalidate
+their measurements or turn unfinished work into completed features. No release
+is authorized by this scope change.
 
 ## Target range (September 16, 2026)
 
@@ -624,11 +603,9 @@ still quoted in commit history and both are wrong.
 - SwiftPM cannot compile Metal shaders with CLT only: the Makefile colocates
   the prebuilt `mlx.metallib` next to the binary. `swift test` is unavailable
   (no XCTest in CLT) — `Tools/verify.sh` is the acceptance suite.
-- CI is split by product. `ci.yml` builds and checks the engine and skips pushes
-  that change only docs, the brain or `apps/`. `slotstream-mac.yml` runs
-  `Tools/check_slotstream_mac.sh` and the Xcode build (`Tools/build_slotstream_xcode.sh`)
-  when `apps/macos` or the engine it builds on changes. The app's real-model
-  checks need the weights and stay on a development Mac.
+- `ci.yml` builds and checks the independent engine; documentation and context
+  proxies have their own workflows. The Mac app workflow and its real-model
+  checks remain in the fixed archive and do not run on current main.
 - Coverage percentages are advisory review feedback. Build, instrumented-test
   and report-generation failures still block CI; never make the whole coverage
   job optional. Inspect uncovered safety behavior and retain all correctness

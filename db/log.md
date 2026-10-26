@@ -735,3 +735,9 @@ Record preserved Fast/Q2 source and licenses, final single-model app migration, 
 ## [2026-10-26 18:40] update | records/measurements/single-model-maintenance.md
 Final local verification includes 420 memory-override cases, installer and static gates, 287 checked document links, and full brain validation with zero errors or warnings. Preserve the capture-wrapper error separately from the completed static suite. Correct the new run record to the existing sources/runs evidence location.
 
+## [2026-10-26 19:14] update | records/decisions/engine-only-maintenance.md
+Archive the native Mac app at ca4bd6869f394a5d03ddb459e8202ad897d1d03a and remove its active code, workflow and dedicated tools. Retain user data and historical evidence; align docs and plans with the independent engine. Release comparison confirms only a model display label differs from v0.2.30 in engine source. No release.
+
+## [2026-10-26 19:18] update | records/decisions/engine-only-maintenance.md
+Verify fixed archive bytes for all 128 removed app paths; preserve unchanged engine and dependency graph. Focused license and static harness checks pass, as do 300 documentation links and brain/claim/projection gates. Matching engine CI passed. No release or user-data removal.
+

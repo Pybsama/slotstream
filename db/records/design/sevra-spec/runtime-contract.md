@@ -3,9 +3,16 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63aeyxs2cah7a9v4b1nt
 created: 2026-09-14T16:14:44.046090+00:00
-updated: 2026-10-22T03:24:41.565724+00:00
-summary: Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
+updated: 2026-10-26T19:14:45.610029+00:00
+summary: 'Archived: Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits'
+status: archived
 ---
+> **Archived October 26, 2026.** The Mac app is no longer maintained.
+> [[records/decisions/engine-only-maintenance]] supersedes this app plan.
+> The text below preserves the historical design and implementation state;
+> unpassed app gates are retired, not completed. Source, tests and licenses
+> are in the [fixed app archive](../../../../experiments/mac-app/README.md).
+
 # Native runtime contract
 
 S3: One Home owner obtains an OS file lock. The app and internal CLI use the same Mac runtime. A second writer is refused. The internal CLI attaches to the current owner through an authenticated Unix socket with same-user peer checks and an ephemeral Home-held capability. The short socket path is in a user-owned private temporary directory and binds to the canonical Home path. Request and reply frames, client concurrency and time are bounded. No TCP listener is opened; this is not qualification of the optional server or the full CLI grammar. The initial attachment cannot read Incognito. Observer disconnection does not cancel accepted owner work. Native UI submits typed intents; it cannot authorize tool effects by displaying a proposal.

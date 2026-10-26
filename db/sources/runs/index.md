@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T18:38:53.813021Z
+updated: 2026-10-26T19:18:31.055587Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-mac-app-retirement]] — Mac app source archive, unchanged engine release comparison and scoped verification
 - [[sources/runs/2026/10/2026-10-26-single-model-maintenance]] — Single-model archive, app migration and native workflow verification
 - [[sources/runs/2026/10/2026-10-26-q2-compiler-and-workflow-checkpoint]] — Q2 compiler isolation, complete requests and app recall qualification
 - [[sources/runs/2026/10/2026-10-26-q2-cold-compilation-and-row-counts]] — Q2 first-pass compilation and runtime row-count experiment
@@ -506,9 +507,8 @@ updated: 2026-10-26T18:38:53.813021Z
 - [[sources/runs/2026/09/2026-09-10-release-0-2-12-restored-coverage]] — Restored serving and prefix checks pass in instrumented CI
 - [[sources/runs/2026/09/2026-09-10-release-0-2-12-planner-fixture-correction]] — Malformed checkpoint gates independent of CI inference headroom
 - [[sources/runs/2026/09/2026-09-10-release-0-2-12-prepublication-corrections]] — Release build identity and coverage corrections before v0.2.12 publication
-- [[sources/runs/2026/09/2026-09-10-user-server-small-benchmark-paging-repeat-discarded]] — Discarded timing for the completed resumed summary repeat with system paging
 
 ## More
 
-This folder has 1001 files. The 500 most recent are listed above.
+This folder has 1002 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

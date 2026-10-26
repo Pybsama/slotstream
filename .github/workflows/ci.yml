@@ -2,15 +2,14 @@ name: ci
 # Release/runtime, external-consumer, and instrumented-coverage jobs run on
 # separate runners. These builds do not depend on each other's artifacts.
 # A prose-only push skips this workflow and runs docs.yml instead; mixed
-# source/documentation changes keep the full CI suite. A push that changes only
-# the Mac app in apps/ or its workflow runs slotstream-mac.yml instead, which also
-# runs for engine changes because the app builds on the engine.
+# source/documentation changes keep the full CI suite. The native Mac app and
+# its separate workflow are archived; current CI covers the independent engine.
 on:
   pull_request:
-    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE", "apps/**", ".github/workflows/slotstream-mac.yml"]
+    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE"]
   push:
     branches: [main]
-    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE", "apps/**", ".github/workflows/slotstream-mac.yml"]
+    paths-ignore: ["**.md", "docs/**", "db/**", "llms.txt", "llms-full.txt", "LICENSE"]
 permissions:
   contents: read
 jobs:

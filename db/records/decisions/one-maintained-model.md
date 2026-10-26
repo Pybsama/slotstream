@@ -2,13 +2,15 @@
 type: decision
 id: 01m5wpcjbwwafrk10cy4bdnxab
 created: 2026-10-26T18:08:29.052124+00:00
-updated: 2026-10-26T18:38:28.003267+00:00
+updated: 2026-10-26T19:14:46.128987+00:00
 summary: Maintain Qwen3.8-Flash-Next 4-bit only; archive Fast, Q2 and associated runtime work without releasing.
 decided_on: 2026-10-26
 reversible_if: Carlos explicitly reopens model work, with complete native quality, latency and resource evidence for a successor.
 title: One maintained model
 status: standing
 ---
+> **Scope update, October 26, 2026.** The model policy remains standing. The later [[records/decisions/engine-only-maintenance]] retires the Mac app and supersedes this record's app maintenance and migration scope. Those app changes remain in the archive.
+
 # One maintained model
 
 Carlos chose one maintained model at a time on October 26, 2026: currently

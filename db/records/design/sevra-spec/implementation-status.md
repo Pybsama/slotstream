@@ -3,9 +3,16 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-26T18:38:28.025787+00:00
-summary: Mac application implementation progress and unpassed release gates
+updated: 2026-10-26T19:14:45.751550+00:00
+summary: 'Archived: Mac application implementation progress and unpassed release gates'
+status: archived
 ---
+> **Archived October 26, 2026.** The Mac app is no longer maintained.
+> [[records/decisions/engine-only-maintenance]] supersedes this app plan.
+> The text below preserves the historical design and implementation state;
+> unpassed app gates are retired, not completed. Source, tests and licenses
+> are in the [fixed app archive](../../../../experiments/mac-app/README.md).
+
 # Mac implementation status
 
 **Current model scope, October 26, 2026:** [[records/decisions/one-maintained-model]] replaces the Fast/Smart roles and Q2 continuation work. Only Qwen3.8-Flash-Next 4-bit is maintained. The dated Fast and Q2 sections below are historical experiment receipts. Home integration, conversation retrieval and literal storage fixes remain active. The app has no model picker; no public app release is implied.

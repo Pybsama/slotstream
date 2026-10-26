@@ -14,33 +14,29 @@ by a measurement; everything marked **verified** came from the model config or a
 
 **Positioning note (2026-09-16).** "Every Apple Silicon Mac" describes compatibility, not the target. The engine is optimized for Macs that cannot hold the model, 16 to 64 GB; larger Macs run it and are not the optimization target ([[records/decisions/target-range-macs-that-cannot-hold-the-model]]).
 
-## Slotstream integration: one maintained model
-# One model, one native stack
+## Slotstream engine: one maintained model
+# One model, native engine
 
-[[records/decisions/one-maintained-model]] sets the current scope as of October
-26, 2026. Maintain Qwen3.8-Flash-Next 4-bit across the Mac app and independent
-engine. A future successor may replace it after qualification; there is no
-separate Fast tier, compressed candidate or hardware-specific model catalog.
-The earlier September multi-model direction and October Fast/Q2 implementation
-are archived. This replaces their active selection and continuation policy.
+[[records/decisions/engine-only-maintenance]] sets the current scope: native
+Swift/MLX/Metal inference, the CLI, serving APIs and public Swift library for
+Qwen3.8-Flash-Next 4-bit. The Mac app, Fast tier and Q2 model track are archived.
+A future successor may replace the maintained model after qualification.
 
-- Pin the model, quantization, tokenizer, template and native runtime identity.
-  Hardware profiles vary memory and context limits for that same model.
-- Optimize complete useful tasks, prompt processing, latency, memory, storage
-  and sustained behavior. Numerical and resource gates remain exact.
-- Bind derived caches to actual model, arithmetic and execution identities.
-  Preserve durable data, permissions and conversations across changes.
-- Keep model setup explicit, verified and recoverable. Never retarget a running
-  request, silently download a replacement or route work to a remote provider.
-- Preserve documented CLI/API/Swift behavior and the independent engine.
-  Public breaking changes require their own approved migration.
-- Qualify a future successor through the production app, tools, review and
-  supported hardware before changing the maintained model.
+- Pin the checkpoint, quantization, tokenizer, template and runtime identity.
+  Hardware profiles tune memory and context for that same model.
+- Optimize useful completed requests, prompt processing, latency, memory and
+  SSD reads. Numerical, resource and lifecycle gates remain exact.
+- Bind caches to actual model, arithmetic and execution identities. Preserve
+  request ownership, privacy, cancellation and serving boundaries.
+- Keep model setup explicit, verified and recoverable. Never silently retarget
+  a request, download another model or route work to a remote provider.
+- Preserve documented CLI/API/Swift behavior. Public breaking changes require
+  their own approved migration.
+- Qualify changes through the engine and actual client workflows on supported
+  hardware. Archived app delivery gates do not constrain engine releases.
 
-Documentation is part of implementation: update current guides, tests and
-canonical plans together, regenerate projections, preserve old links and keep
-historical evidence clearly dated. No release or public app installer follows
-from this decision.
+Update active docs, tests and canonical plans together. Preserve links and
+historical evidence. No release is authorized by this scope change.
 
 ## Historical scope notes
 
@@ -60,6 +56,12 @@ release date or performance result is established by this wording change.
 [[records/plan/same-model-quantization-and-automatic-memory-2026-10-02]] records the Mac implementation and research effort closed on October 7. Initial Auto selection and independent supported-pack, memory-ceiling and live-memory controls are implemented and tested; the separate governor adapts allocations without changing the chosen pack. Original four-bit remains the only supported pack, and the full same-checkpoint speed target across the intended hardware range remains unmet. The closed plan links the accepted implementation and scoped measurements; it does not qualify an alternative pack or unmeasured hardware. The control decision is [[records/decisions/same-model-automatic-quantization-with-overrides]], and the broader model policy is now superseded by [[records/decisions/one-maintained-model]].
 
 ## Flash Next quantization and automatic memory implementation
+> **Scope update, October 26, 2026.** This research plan remains closed.
+> [[records/decisions/engine-only-maintenance]] also retires its Mac app
+> implementation. The app controls, UI checks and delivery steps below now
+> belong to the [app archive](../../../experiments/mac-app/README.md).
+> Original-model engine behavior and historical results remain intact.
+
 ### Closed October 7, 2026: implementation retained, full speed target unmet
 
 This plan is closed as a completed implementation and research effort with a partially met performance objective. It has no active experiment or delivery queue. The original goal of at least twenty committed generation tokens per second across recommended configurations for 16–64 GB Macs remains unmet. Closing this plan does not certify that promise or prove it impossible.
