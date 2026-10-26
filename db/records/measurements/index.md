@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T18:16:59.505858Z
+updated: 2026-10-26T18:40:02.491065Z
 ---
 
 # records/measurements
 
+- [[records/measurements/single-model-maintenance]] — One maintained model, preserved experiments, passing local engine/app checks and bounded real workflows
 - [[records/measurements/measured-facts]] — Measured facts
 - [[records/measurements/relevant-conversation-excerpts]] — Relevant conversation excerpts repair tested factual recall; citation quality remains open
 - [[records/measurements/q2-compiler-identity-and-precompiled-shaders]] — Q2 compilation spikes isolated; offline treatment does not earn integration

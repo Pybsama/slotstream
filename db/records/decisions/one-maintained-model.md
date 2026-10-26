@@ -2,7 +2,7 @@
 type: decision
 id: 01m5wpcjbwwafrk10cy4bdnxab
 created: 2026-10-26T18:08:29.052124+00:00
-updated: 2026-10-26T18:08:29.052124+00:00
+updated: 2026-10-26T18:38:28.003267+00:00
 summary: Maintain Qwen3.8-Flash-Next 4-bit only; archive Fast, Q2 and associated runtime work without releasing.
 decided_on: 2026-10-26
 reversible_if: Carlos explicitly reopens model work, with complete native quality, latency and resource evidence for a successor.
@@ -59,3 +59,10 @@ This supersedes the multi-model direction in
 [[records/decisions/smart-dflash-and-target-quantization]],
 [[records/decisions/native-input-read-ahead]] and
 [[records/decisions/q2-precompilation-stays-experimental]].
+
+## Verification, October 26, 2026
+
+[[records/measurements/single-model-maintenance]] records the archive audit,
+preference migration, native app and engine checks, rebuilt bundle identity
+and real-model workflows. The repository description is updated; the public
+release remains v0.2.30.

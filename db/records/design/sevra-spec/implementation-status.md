@@ -3,7 +3,7 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63bjf3kzznf6ta8jp920
 created: 2026-09-14T16:14:44.082480+00:00
-updated: 2026-10-26T18:09:26.277569+00:00
+updated: 2026-10-26T18:38:28.025787+00:00
 summary: Mac application implementation progress and unpassed release gates
 ---
 # Mac implementation status
@@ -363,3 +363,13 @@ selection. Performance parity with Splash is still open, with the bounded
 Metal execution sequence and disk/GPU handoffs the next substantial work.
 See [[records/measurements/native-q2-splash-execution-comparison]] for identities, matched/excluded comparisons, quality losses,
 failed experiments, native state checks and physical hardware limits.
+
+## One maintained model, October 26, 2026
+
+Qwen3.8-Flash-Next 4-bit is the sole active app and engine model. Fast, Q2 and
+associated DFlash/native execution work are archived, with source and licenses
+preserved. The picker is removed, experimental saved preferences migrate with
+a notice, and Home integration, relevant history and literal JSON storage
+remain. [[records/measurements/single-model-maintenance]] records passing local
+engine/app checks, the rebuilt bundle and three bounded real-model workflows.
+No release or public app installer is implied.

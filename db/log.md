@@ -729,3 +729,9 @@ Align the README and selected GitHub description with the released engine and cu
 ## [2026-10-26 18:13] update | records/decisions/one-maintained-model.md
 Archive Fast, Q2 and associated DFlash/native execution work at df208489af2ef5378444727172b6dfcf8ee1ed10. Restore the original-model engine, simplify app controls, migrate experimental preferences without relabeling activation receipts, and align active docs and plans. Engine build and 106 T0/T1 checks pass; app and real-workflow verification continues. No release.
 
+## [2026-10-26 18:38] update | records/measurements/single-model-maintenance.md
+Record preserved Fast/Q2 source and licenses, final single-model app migration, 106 engine checks, full native app/static suites, rebuilt bundle identity and three real-model workflows. Keep the first freshness failure and bounded answer-quality limitations. No release; hosted engine/app CI still running at capture.
+
+## [2026-10-26 18:40] update | records/measurements/single-model-maintenance.md
+Final local verification includes 420 memory-override cases, installer and static gates, 287 checked document links, and full brain validation with zero errors or warnings. Preserve the capture-wrapper error separately from the completed static suite. Correct the new run record to the existing sources/runs evidence location.
+
