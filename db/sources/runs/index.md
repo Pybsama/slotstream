@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T09:50:00.011857Z
+updated: 2026-10-26T11:02:38.516967Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-fixed-prose]] — Q2 aligned forecast fixed-prose full-cycle control
+- [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-requests]] — Q2 aligned forecast-only normal requests reject retention
+- [[sources/runs/2026/10/2026-10-26-q2-completion-cleanup]] — Q2 completion cleanup and output-map contention diagnostic
 - [[sources/runs/2026/10/2026-10-26-q2-read-latency]] — Q2 matched read-delay sensitivity experiment
 - [[sources/runs/2026/10/2026-10-26-q2-allocator-waits]] — Q2 allocator probes, failed sensitivity controls and read-latency localization
 - [[sources/runs/2026/10/2026-10-26-q2-packed-routing-metadata]] — Q2 packed routing metadata exact checks and flat clean ABBA
@@ -504,11 +507,8 @@ updated: 2026-10-26T09:50:00.011857Z
 - [[sources/runs/2026/09/2026-09-10-user-server-three-prompts-small-benchmark]] — Small sequential benchmark of three prompts on the existing user server, with repeats and follow-ups
 - [[sources/runs/2026/09/2026-09-10-optimization-final-program-complete]] — Original OPT00–OPT36 program complete with tested sources and installed candidate active
 - [[sources/runs/2026/09/2026-09-10-optimization-final-local-activation-and-all37-outcomes]] — Qualified final source and installed binary activated locally with all thirty-seven outcomes preserved
-- [[sources/runs/2026/09/2026-09-10-optimization-final-preactivation-closure]] — All thirty-seven optimization outcomes and complete exact-candidate gates close before local activation
-- [[sources/runs/2026/09/2026-09-10-optimization-final-empirical-calibration-decision]] — Completed final evidence retains the conservative planner family without new capacity or speed credit
-- [[sources/runs/2026/09/2026-09-10-optimization-final-long-on-complete-pass]] — Complete fixed-MTP sustained cohort qualifies with a measured speed-memory tradeoff
 
 ## More
 
-This folder has 994 files. The 500 most recent are listed above.
+This folder has 997 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.

@@ -2,11 +2,14 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T09:50:00.084446Z
+updated: 2026-10-26T11:04:52.789473Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-aligned-forecast-fixed-prose]] — Q2 copy removal helps fixed prose work but normal requests fail retention
+- [[records/measurements/q2-aligned-forecast-normal-requests]] — Q2 aligned forecast reads improve code but regress prose
+- [[records/measurements/q2-completion-cleanup]] — Q2 completion cleanup is too small to explain the remaining gap
 - [[records/measurements/q2-controlled-read-latency]] — Q2 controlled read latency rejects the forecast-amplification hypothesis
 - [[records/measurements/q2-allocator-and-read-latency]] — Q2 allocator diagnostics and read-latency variance
 - [[records/measurements/q2-event-readiness-and-metadata]] — Q2 event readiness and packed routing metadata

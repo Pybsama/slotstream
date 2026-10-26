@@ -696,3 +696,15 @@ Preserve allocator recorder failure, exact 111-cycle checks and both failed sens
 ## [2026-10-26 09:50] update | records/measurements/q2-controlled-read-latency.md
 Complete clean matched expert-read delay experiment: both engines preserve111full-logit references and2664timing cycles preserve own proposals/selected IDs. Native slows11-14percent versus Splash22percent, rejecting forecast-amplification trigger. Retain all arms and actual147/144microsecond waits; no production change. Next unmeasured scope is completion cleanup and captured-owner destruction.509sources/fivev68artifacts/Fast unchanged; parity still open.
 
+## [2026-10-26 11:02] update | records/measurements/q2-completion-cleanup.md
+Qualify completion-cleanup instrumentation at1.10percent pooled overhead. Exact111full logits and5328jobs per traced round; request cleanup exposes about1ms and mutex waits below0.4ms. Reject cleanup rewrite; preserve stopped offline matcher and corrected indexing. No production or Fast change.
+
+## [2026-10-26 11:02] update | records/measurements/q2-aligned-forecast-normal-requests.md
+First clean ordinary request test of immutable aligned forecast-only candidate: code6.69percent faster, prose3.16percent slower in bothorders; rejectretention. Preserve allABCCBAarms, oldcomponent exclusion and exactcandidate provenance. Next holdcompletecycleworkfixed to separateworkchanges fromcopycost. ProductionFast/v68unchanged.
+
+## [2026-10-26 11:02] update | records/measurements/q2-aligned-forecast-fixed-prose.md
+Clean fixed-proseABSSBA: alignedforecastcopyremoval improves3.50percent with bothorderpairs, within5percentofSplash onthisfixture.136full-logitchecks and2448timingcycles exactownreference; native logicalmisscountsidentical. Preserve wrong-fixtureabort/cleanuprepair andordinaryprose rejection. Next traceactualadaptiveprosedecisions; no production/Fastchange or parityclaim.
+
+## [2026-10-26 11:04] update | records/measurements/q2-aligned-forecast-fixed-prose.md
+Use candidate/request wording rather than imply an established controller defect; conservatively round ordinarySplash maximum upward to13.887GB. Raw receipts unchanged.
+

@@ -13514,3 +13514,76 @@ Return to the native execution cost outside useful expert-read dependencies iden
 The next bounded diagnostic should bracket actual completion cleanup, captured-owner destruction and output-map lock acquisition without changing lifetime or publication order. Correlate them with required-read and GPU intervals before implementing anything. Do not infer cost from a large count of references or port a larger arena. A justified fix must still pass exactness and clean ordinary requests against both v68 and published Splash.
 
 All 509 runtime inputs, five v68 artifacts and the clean MLX checkout remain unchanged. Fast remains stable. The latest qualified ordinary-request gap is still about 9.4 percent for code and 6.1 percent for prose; this intervention does not replace it. Fast recall and Q2 strict-format failures remain separate. No parity, Smart promotion, release or app-readiness claim follows.
+
+## Q2 completion cleanup is too small to explain the remaining gap
+MLX completion cleanup and its output-map mutex do not account for a meaningful part of the remaining Q2 slowdown. Keep this path unchanged. This closes the specific coverage gap from [[records/measurements/q2-controlled-read-latency]]; evidence is [[sources/runs/2026/10/2026-10-26-q2-completion-cleanup]].
+
+The bounded diagnostic preserves container copy/move ownership and destroys the whole original container at the original capture-lifetime boundary, including bucket storage. It brackets callback bodies, temporary arrays, captured data owners, fence/output sets, event vectors and the existing submission/completion mutex. A standalone lifetime and known-contention check passes. Under Metal validation, all 111 full-logit hashes, proposals and selected IDs match the native reference.
+
+At 15 GB, 8,192 context and 4,067 actual expert slots, the original-baseline/new-instrument off/on/on/off control measures 11.4111/11.5309/11.5705/11.4394 seconds. Both directions pass the two-percent sensitivity bound; the pooled instrument cost is 1.10 percent. All environmental gates pass. Each process has one warmup and one measured 111-cycle round. This is frozen complete-cycle diagnosis, not normal adaptive request qualification.
+
+Both instrumented rounds resolve every one of 5,328 required jobs. Request-thread destruction totals 11.26/12.05 milliseconds, with only 0.970/0.981 milliseconds outside the union of recorded GPU work and actual required-read dependencies. Output-map acquisition waiting totals 0.285/0.396 milliseconds; only 0.033/0.031 milliseconds lie outside that union. No request-thread wait overlaps a recorded background holder of the same mutex. Background destruction covers 130.1/128.3 milliseconds, of which 46.2/44.7 lie outside that union. Concurrent background work is not request waiting. Nested intervals are unioned, never added.
+
+The recorder covers cleanup that starts during the measured request; it drains already-active writes afterward. Later-starting cleanup is unmeasured. Recorded GPU intervals are not kernel utilization, and this result does not prove every reference-management operation free. It rejects this concrete cleanup/mutex hypothesis as the large direct cause. No allocator, fence, buffer-pool or ownership rewrite is justified.
+
+The next useful observation is normal adaptive requests with aligned forecast-only reads, preserving the original demand path and cache capacity. That candidate has exact arithmetic evidence but has never completed ordinary request qualification. Its old component protocol remains paging-excluded, and its original conditional follow-up remains unrun. A separately frozen ordinary-request experiment directly tests the missing user-facing question; it must not reinterpret that excluded prerequisite as passed or reuse favorable historical timing arms. The independent Splash extra-copy intervention motivates this scope after the reader, delay and cleanup hypotheses failed to explain enough of the gap.
+
+Fast remains unchanged. Existing Fast recall and Q2 strict-format failures stay separate; no release or Smart-default promotion follows.
+
+## Q2 aligned forecast reads improve code but regress prose
+Aligned forecast-only direct reads fail normal-request retention: code becomes 6.69 percent faster, but prose becomes 3.16 percent slower. Both effects have the same direction in forward and reverse order. Keep v68. Fast's retained production path is unchanged, and the Q2 parity goal remains open.
+
+This directly tests the missing ordinary-request scope identified after [[records/measurements/q2-completion-cleanup]]. The prior [[records/measurements/q2-forecast-only-continuation]] remains paging-excluded, and its own conditional follow-up remains unrun. The new experiment is explicitly frozen separately; it neither reruns that target-only protocol nor counts its favorable arms. Evidence is [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-requests]].
+
+The candidate removes forecast scratch copies with page-aligned read extents, leaving the original demand path, 4,067-slot cache and 128 MiB forecast reserve. Reuse the exact checked binary; seven runtime files differ from v68, plus an unused diagnostic CLI command. No new model rebuild or arithmetic change enters this request study. Both engines use identical prompt IDs, BF16 activations/KV, FP32 recurrence, 8,192 requested context and a 15 GB physical ceiling. Published Splash retains its CPU polling; its GPU spin library is absent.
+
+One ABCCBA has two warmups then 384-token code and prose requests per fresh process. All six arms pass observed memory, paging, thermal and competing-build gates. Peak physical use is at most 12.300 GB native and 13.887 GB Splash; observed remaining headroom stays above 13.009 GB.
+
+| Engine | Code seconds, forward/reverse | Prose seconds, forward/reverse |
+| --- | ---: | ---: |
+| Native v68 | 12.8985 / 13.9233 | 13.7084 / 13.3274 |
+| Aligned forecasts | 12.3411 / 12.6857 | 14.2249 / 13.6648 |
+| Published Splash | 11.5761 / 12.1798 | 12.9650 / 12.7023 |
+
+The candidate remains 5.35 percent slower than Splash on pooled code and 8.66 percent slower on pooled prose; it misses the separate within-five-percent target. The unchanged baseline is 12.91/5.33 percent slower in this protocol. These are current two-request measurements, not model-wide performance estimates or the best historical speeds.
+
+The amount of work changes under normal adaptation. Native code uses 111/106 passes and 475/490 target rows; the candidate uses 111/113 and 456/500. Native prose uses 126/126 passes and 465/479 rows; the candidate uses 133/134 and 468/478. Candidate prose reads 27,367/28,668 demand records versus 26,992/26,782. Timed outputs also diverge between unchanged baseline processes. These facts explain why fixed-component timing cannot simply predict whole requests; they do not prove a controller bug or assign a causal percentage to extra passes.
+
+The next discriminating experiment holds the original 111 target passes and retained prefixes fixed while executing complete cycles, including real drafting, greedy selection and commits. It differs from the older target-only component. A faster fixed cycle would locate an interaction with changing work; a flat cycle would show that the old component copy effect does not transfer to complete work. Neither outcome alone can reverse this normal-request rejection.
+
+The candidate is isolated and never installed. Its common C++ Job metadata allocation would also need a Q2-only boundary before any future retention to preserve Fast's allocation path; this study never runs Fast through the candidate. All 509 production runtime inputs and five default artifacts remain byte-identical to v68. No Smart promotion, release or complete app-readiness claim follows.
+
+## Q2 copy removal helps fixed prose work but normal requests fail retention
+Aligned forecast-only reads reduce complete fixed-prose cycle time by 3.50 percent, with improvement in both orders. The candidate is within five percent of source-built Splash in both orders on this fixture. Normal prose requests still regress, so this does not qualify the change for production or complete the Q2 parity goal. Keep v68 and Fast unchanged.
+
+This separates the fixed-work effect from the changing workload in [[records/measurements/q2-aligned-forecast-normal-requests]]. Evidence is [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-fixed-prose]]. A wrongly selected code timing attempt was stopped without using its timing results; the corrected prose protocol and cleanup repair were frozen before any prose timing. Neither replaces an unfavorable measured prose arm.
+
+## Correctness and matched work
+
+Freeze the failing task's 63-token prompt, 136 verification passes, 467 target rows and 383 retained input tokens. Execute real seven-token drafting, target verification, greedy selection and state commits. Both native arms use the same requested target inputs, widths, accepted prefixes, exact reference arithmetic and logical cache misses. The latter are 46,891/46,798 in measured rounds one/two. Forecast adoption can change with read timing; it is not a different logical cache requirement.
+
+The candidate matches all 136 fresh baseline full-logit hashes, proposals and selected IDs under Metal validation. All 2,448 later timing cycles match their own engine's proposals/selected IDs; timing does not read back full logits. Source-built Splash retains its own repeatable numerical reference, not cross-engine byte identity.
+
+One ABSSBA uses a 15 GB ceiling and 4,067 actual slots, BF16 activations/KV and FP32 recurrence. Each process has one warmup and two measured rounds. Native retains its 8,192-context recipe. The pinned source diagnostic preallocates its smaller bounded arena sufficient for the fixture; do not claim equal reserved context capacity or replace the published-engine ordinary-request comparison. It retains original CPU polling and has no GPU spin library. All arms pass the environmental gates; peak physical usage is at most 11.679 GB native and 12.650 GB Splash, with observed headroom above 13.778 GB.
+
+## Result
+
+Each cell is the mean of the two measured rounds in its process. All rounds, including Splash's 13.1721-second observation, remain included.
+
+| Engine | Forward seconds | Reverse seconds | Pooled seconds |
+| --- | ---: | ---: | ---: |
+| Native v68 | 12.464270 | 12.634355 | 12.549313 |
+| Aligned forecasts | 12.007852 | 12.212069 | 12.109961 |
+| Source-built Splash | 12.663446 | 12.037339 | 12.350392 |
+
+The candidate improves over native by 3.66/3.34 percent, and is 5.18 percent faster / 1.45 percent slower than Splash across orders. Its pooled time is 1.95 percent lower than Splash's. This is one fixed-prose control, not a universal speed claim. The unmodified native baseline is also close on this fixed fixture, further limiting any explanation based on uniformly slower native execution.
+
+## What this proves and the next discriminating step
+
+Removing the aligned forecast scratch copy has a real complete-cycle benefit when native work is held fixed. The normal-request prose regression is therefore not explained by a uniformly slower per-cycle read implementation. Whole-request adaptation, changed outputs/cache work and the remaining request boundaries still matter. This does not isolate a faulty controller equation or prove all remaining delay comes from batch choice.
+
+In the ordinary comparison, the candidate takes 133/134 prose passes versus 126/126. Anchor-only choices rise to 10/9 versus 5/1, while required work and eventual text differ. Both engines retain bounded calibration across requests. A read-only source audit also confirms different cost-timer boundaries: native prices host cycle work, whereas Splash uses backend submission-to-completion time. Native's real host cost should not simply be hidden to imitate a source timer.
+
+The next focused diagnostic should capture native normal-prose cost tables, confidence, chosen widths, acceptance/bonus outcomes and cycle boundaries at the first decision divergence, with a trace-sensitivity control. Check whether the extra narrow passes are supported by observed acceptance and marginal costs before changing the selector. Also account for prefill and callback time rather than equating a fixed-cycle result with a whole request. Do not force a larger minimum batch, reset calibration or port more reader/kernel machinery on this evidence alone. Test one identified pricing/selection correction against both original v68 and the isolated read candidate, then repeat complete requests only for that new causal question.
+
+The seven-file candidate remains isolated because it fails ordinary-request retention. If a future combined fix earns retention, its shared Job metadata allocation must first be bounded to Q2 so Fast's allocation path stays unchanged. All 509 production runtime inputs and five default artifacts are restored. Existing Fast recall and Q2 strict-format failures stay separate. No Smart promotion, release or application-readiness claim follows.
