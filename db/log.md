@@ -723,3 +723,6 @@ Closed bounded compiler investigation: preserve exact source/options evidence, f
 ## [2026-10-26 16:56] update | records/measurements/relevant-conversation-excerpts.md
 Reproduced Fast recall failure with and without drafting. Retained bounded relevant excerpts with Unicode byte-boundary correction, passing context/privacy checks and final real app workflows including model switches. Keep unsupported citation markers and prior quality failures open; no release or Smart promotion.
 
+## [2026-10-26 17:44] update | records/decisions/newcomer-documentation.md
+Align the README and selected GitHub description with the released engine and current native Mac app development. Preserve SSD streaming, native Swift and Python-free inference; distinguish Fast/Smart defaults, original-model measurements and the explicit Q2 candidate. Update native-stack references and generated documentation. Verified all 122 local document links, all 40 prior README anchors, 354 claim checks and 4303 brain links; full validation has zero errors or warnings.
+

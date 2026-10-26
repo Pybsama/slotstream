@@ -151,8 +151,10 @@ overhead that an engine keeping the model resident does not pay; see
 
 ## Native stack
 
-Slotstream is Swift from the command line down to the GPU. No interpreter
-runs on the request path.
+Slotstream is a fully native engine with a Swift-owned model and runtime,
+Apple's MLX and its own Metal kernels. Development builds also use C++
+execution adapters on the existing MLX stream. No Python runtime or
+interpreter runs on the inference path.
 
 | Layer | Implementation |
 |---|---|
@@ -160,6 +162,7 @@ runs on the request path.
 | Memory planner, expert store and slot cache, governor, sampler, speculative decode, prefix cache | Swift: `Sources/Slotstream` |
 | Tensor operations | [mlx-swift](https://github.com/ml-explore/mlx-swift), Apple's MLX, with its prebuilt `mlx.metallib` beside the binary |
 | Gated-delta recurrence, selected attention, partial rotation, block and router selection | Slotstream's own Metal kernels, compiled at run time through `MLXFast.metalKernel` |
+| Prepared Metal execution and cache-replacement adapters in development builds | C++: `Sources/CNativeSchedule`, using MLX's stream, allocator and dependency tracking; [implementation notes](../Sources/CNativeSchedule/README.md) |
 | Tokenizer | [swift-transformers](https://github.com/huggingface/swift-transformers) |
 | Slotpack download decoder | C, `Sources/CSlotpack`, with no external codec |
 | Expert and n-gram reads | `pread` into a fixed slot pool over parallel lanes, with lane counts chosen by measurement |

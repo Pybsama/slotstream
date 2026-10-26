@@ -2,18 +2,18 @@
 type: index
 scope: type-folder
 folder: records/decisions
-updated: 2026-10-26T16:56:52.491139Z
+updated: 2026-10-26T17:43:15.800651Z
 ---
 
 # records/decisions
 
+- [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 - [[records/decisions/q2-precompilation-stays-experimental]] — Keep Q2 precompilation experimental
 - [[records/decisions/native-input-read-ahead]] — Keep measured bounded Q2 input read-ahead, reject its Fast default and buffer reuse, and require actual app recipe and branch evidence
 - [[records/decisions/fast-and-smart]] — Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 - [[records/decisions/smart-dflash-and-target-quantization]] — Prioritize exact native Q2 qualification for its speed/capability tradeoff; separate target quantization from drafting and keep the maintained app until complete workflows pass.
 - [[records/decisions/slotstream-app-identity]] — Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 - [[records/decisions/target-range-macs-that-cannot-hold-the-model]] — Slotstream is built for Macs that cannot hold the model, 16 to 64 GB; 96 GB and larger Macs run it but are not the optimization target
-- [[records/decisions/newcomer-documentation]] — Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 - [[records/decisions/adaptive-memory-limits]] — Custom process ceilings remain adaptive above the automatic default; hardware headroom, diagnostics and startup agree.
 - [[records/decisions/native-stack-stated-on-every-surface]] — Public surfaces state the native Swift/MLX/Metal stack as design; speed stays attributed to measured mechanisms
 - [[records/decisions/vq-weights-behind-qualification-gates]] — Support the VQ builds of the same model as a second weight format, behind qualification gates
