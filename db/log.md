@@ -681,3 +681,6 @@ Archive direct Q2 Metal lifecycle, MLX ownership and graph/wait observations; pr
 ## [2026-10-26 06:06] update | records/measurements/q2-required-dependencies-and-preparation.md
 Resolve every required Q2 payload and readiness event; clean controls localize residual gaps to host transitions and preparation. Preserve exact outputs, v68 and Fast; no unsupported scheduler port or parity claim.
 
+## [2026-10-26 06:51] update | records/measurements/q2-early-expert-preparation.md
+Reject bounded Q2 early-expert scheduling after exact original-byte/lifetime checks,111full-logit matches and a clean ABBA1.94percent slowdown. Controlled GPU attribution finds no large repeatable padded-kernel penalty. Preserve all evidence and timing reversal; all509sources and five artifacts remain v68, Fast unchanged, parity goal open.
+
