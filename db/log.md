@@ -708,3 +708,9 @@ Clean fixed-proseABSSBA: alignedforecastcopyremoval improves3.50percent with bot
 ## [2026-10-26 11:04] update | records/measurements/q2-aligned-forecast-fixed-prose.md
 Use candidate/request wording rather than imply an established controller defect; conservatively round ordinarySplash maximum upward to13.887GB. Raw receipts unchanged.
 
+## [2026-10-26 12:05] update | records/measurements/q2-adaptive-decisions-and-preparation.md
+Qualified bounded decision trace: 1953 exact choices and negligible controller CPU time. Clean four-way comparison puts copy-only warmed requests within2.7percent ofSplash but firstrequests regress; reject prepared-cost omission for laterprose regression. Preserve all16arms, old failures and actualFast staging guards. Runtime509inputs/fivev68artifacts restored; goal remains open.
+
+## [2026-10-26 12:05] update | records/measurements/q2-aligned-forecast-normal-requests.md
+Correct mistaken extraFast metadata-isolation prerequisite here and in fixed-prose follow-up. Existing Swift/C++ guards already prevent affine staging allocation; retain original raw caveat and historical timing verdicts.
+

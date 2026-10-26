@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5vy0t0kkp292atyysm8facf
 created: 2026-10-26T11:02:37.843048+00:00
-updated: 2026-10-26T11:04:52.738482+00:00
+updated: 2026-10-26T12:05:47.344101+00:00
 summary: Q2 aligned forecast reads improve code but regress prose
 date: 2026-10-26
 doc: measurements
@@ -33,4 +33,4 @@ The amount of work changes under normal adaptation. Native code uses 111/106 pas
 
 The next discriminating experiment holds the original 111 target passes and retained prefixes fixed while executing complete cycles, including real drafting, greedy selection and commits. It differs from the older target-only component. A faster fixed cycle would locate an interaction with changing work; a flat cycle would show that the old component copy effect does not transfer to complete work. Neither outcome alone can reverse this normal-request rejection.
 
-The candidate is isolated and never installed. Its common C++ Job metadata allocation would also need a Q2-only boundary before any future retention to preserve Fast's allocation path; this study never runs Fast through the candidate. All 509 production runtime inputs and five default artifacts remain byte-identical to v68. No Smart promotion, release or complete app-readiness claim follows.
+The candidate is isolated and never installed. An earlier version incorrectly required an additional Q2-only metadata boundary. The later source audit in [[records/measurements/q2-adaptive-decisions-and-preparation]] confirms that Swift/C++ already reject staged affine/Fast work and zero count returns before metadata allocation. This study never runs Fast through the candidate. All 509 production runtime inputs and five default artifacts remain byte-identical to v68. No Smart promotion, release or complete app-readiness claim follows.

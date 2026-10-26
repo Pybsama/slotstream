@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: sources/runs
-updated: 2026-10-26T11:02:38.516967Z
+updated: 2026-10-26T12:05:12.649714Z
 ---
 
 # sources/runs
 
+- [[sources/runs/2026/10/2026-10-26-q2-adaptive-decisions-and-preparation]] — Q2 adaptive decision trace and prepared-cost ablation
 - [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-fixed-prose]] — Q2 aligned forecast fixed-prose full-cycle control
 - [[sources/runs/2026/10/2026-10-26-q2-aligned-forecast-requests]] — Q2 aligned forecast-only normal requests reject retention
 - [[sources/runs/2026/10/2026-10-26-q2-completion-cleanup]] — Q2 completion cleanup and output-map contention diagnostic
@@ -506,9 +507,8 @@ updated: 2026-10-26T11:02:38.516967Z
 - [[sources/runs/2026/09/2026-09-10-user-server-small-benchmark-pressure-attempt-discarded]] — Discarded small-benchmark request canceled on memory pressure
 - [[sources/runs/2026/09/2026-09-10-user-server-three-prompts-small-benchmark]] — Small sequential benchmark of three prompts on the existing user server, with repeats and follow-ups
 - [[sources/runs/2026/09/2026-09-10-optimization-final-program-complete]] — Original OPT00–OPT36 program complete with tested sources and installed candidate active
-- [[sources/runs/2026/09/2026-09-10-optimization-final-local-activation-and-all37-outcomes]] — Qualified final source and installed binary activated locally with all thirty-seven outcomes preserved
 
 ## More
 
-This folder has 997 files. The 500 most recent are listed above.
+This folder has 998 files. The 500 most recent are listed above.
 Use `dbmd query --type run --in sources` for the complete catalog.
