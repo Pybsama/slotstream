@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "archive": "q2-fixed-shaders-20261026.tar.xz",
+  "sha256": "7828bb58b3cbc39cf35c80a3b70a65116daad5f3ba9d26f2ce188060b2f90289",
+  "bytes": 181880,
+  "units": 174,
+  "source_bytes": 14013014,
+  "role": "Experimental compiler fixture only. Never load automatically into the app or engine."
+}
