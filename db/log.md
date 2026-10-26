@@ -660,3 +660,6 @@ Preserved five verified archives: graph/small-read attribution, rejected embeddi
 ## [2026-10-26 00:49] update | records/measurements/q2-demand-lifecycle-triage.md
 Preserved ordinary lane-tail/readiness/coalescing analyses and exact-byte128batch malloc/Metal read-copy control. No useful isolated buffer gain; OS read-ahead candidate compiled but abandoned before model timing after source review. No runtime change or new parity claim. All509runtimeinputs and five artifacts restored; Fast unchanged. Zero-warning validation,354claims, projections, local links and whitespace pass. Goal remains active.
 
+## [2026-10-26 01:25] update | records/measurements/q2-forecast-launch-control.md
+Preserved forecast burst attribution and one rejected after-combine launch candidate. Original-weight checks and111frozen passes match exact logits. All six15GB4067slot complete-request arms pass environmental guards; candidate improves forward and regresses reverse, so no runtime change is retained. Baseline medians fall within5percent of Splash here, but variation and prior gaps leave consistent parity unproven. Next control must fix complete proposal/target work without omitting real draft computation. All509sources and five artifacts restored; Fast unchanged. Brain validation,354claims, projections and local links pass.
+

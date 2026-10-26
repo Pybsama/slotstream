@@ -2,11 +2,12 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T00:48:26.946527Z
+updated: 2026-10-26T01:24:56.969093Z
 ---
 
 # records/measurements
 
+- [[records/measurements/q2-forecast-launch-control]] — Q2 forecast dispatch and launch-boundary control
 - [[records/measurements/q2-demand-lifecycle-triage]] — Q2 demand lifecycle and buffer triage
 - [[records/measurements/q2-ordinary-host-attribution]] — Q2 ordinary-request host work and submission gaps
 - [[records/measurements/q2-small-work-and-readiness]] — Q2 small-work controls and dependency localization
