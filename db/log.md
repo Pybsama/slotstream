@@ -690,3 +690,6 @@ Compare actual Q2 routes and forecasts with111own-referenceexactcycles perengine
 ## [2026-10-26 08:30] update | records/measurements/q2-event-readiness-and-metadata.md
 Resolve exact Q2 readiness ancestry but reject native timing attribution after4.78percent probe sensitivity. Test one immutable metadata packing change: original-byte/lifetime checks and111full-logit matches pass; clean ABBA is flat with direction reversal, so discard it. Restore509sources and five v68 artifacts. Fast unchanged, parity still open; investigate actual allocator contention before another ownership change.
 
+## [2026-10-26 09:18] update | records/measurements/q2-allocator-and-read-latency.md
+Preserve allocator recorder failure, exact 111-cycle checks and both failed sensitivity controls. Reject an allocator rewrite without representative evidence. Offline localization finds equal required misses but slower read completions and 1,593 fewer ready forecasts in the slow off arm; retain overlap and causality limits. Restore 509 runtime inputs, five v68 artifacts and clean MLX dependency. Fast unchanged; parity goal remains active.
+
