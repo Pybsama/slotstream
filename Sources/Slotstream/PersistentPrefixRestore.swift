@@ -133,9 +133,7 @@ extension PersistentPrefixCache {
             state.linear[record.layer] = cache
         }
         for record in header.attention {
-            guard record.kvOffset == header.tokenCount,
-                  (record.indexer != nil) == expected.indexerLayers.contains(record.layer),
-                  record.indexer.map({ $0.compactRaw == expected.compactIndexerRaw }) ?? true else {
+            guard record.kvOffset == header.tokenCount, record.indexer.compactRaw == expected.compactIndexerRaw else {
                 throw Failure("attention layer \(record.layer) is not at the committed boundary")
             }
             let kv = KVCache()
@@ -146,11 +144,9 @@ extension PersistentPrefixCache {
                 throw Failure("attention layer \(record.layer) rows are missing")
             }
             state.kv[record.layer] = kv
-            if let recordedIndexer = record.indexer {
-                let index = IndexerCache(compactRaw: recordedIndexer.compactRaw)
-                index.restorePersisted(try indexer(recordedIndexer, "indexer.\(record.layer)", committed: header.tokenCount))
-                state.indexer[record.layer] = index
-            }
+            let index = IndexerCache(compactRaw: record.indexer.compactRaw)
+            index.restorePersisted(try indexer(record.indexer, "indexer.\(record.layer)", committed: header.tokenCount))
+            state.indexer[record.layer] = index
         }
         if includeDraft, let draft = header.draft {
             guard header.tokenCount > 0, draft.kvOffset == header.tokenCount - 1, !draft.indexer.compactRaw else {

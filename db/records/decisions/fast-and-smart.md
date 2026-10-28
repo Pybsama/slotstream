@@ -2,13 +2,15 @@
 type: decision
 id: 01m5fjxv27w5ch7he3qj0qw3jb
 created: 2026-10-21T15:57:53.095657+00:00
-updated: 2026-10-23T18:31:27.859575+00:00
+updated: 2026-10-26T18:09:26.062722+00:00
 summary: Fast and Smart integration, preserved choices, native DFlash, bounded streaming, and practical qualification limits.
 decided_on: 2026-10-21
 reversible_if: Complete native workflow and hardware evidence supports changing the maintained models or defaults.
 title: Fast and Smart
-status: standing
+status: reversed
 ---
+**Archived October 26, 2026.** [[records/decisions/one-maintained-model]] supersedes the active model choices and continuation instructions below. Preserve this dated decision and its evidence as experiment history.
+
 # Fast and Smart
 
 Carlos authorized integrating both roles into the native Slotstream app and

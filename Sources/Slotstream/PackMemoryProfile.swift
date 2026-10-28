@@ -47,47 +47,6 @@ package struct PackMemoryProfile: Equatable, Sendable {
         self.groupedWorkspace = groupedWorkspace
     }
 
-    // Keep Smart's 5.3 GB fixed allowance and context reserves conservatively.
-    // Fast has no PLE/HC/indexer payload; that allowance covers its smaller
-    // resident target, quantized DFlash, bounded draft KV/features and loading
-    // transients. First native 9 GB runs peaked below 4.2 GB (engineering
-    // decision fast-and-smart); no Smart throughput estimate is inherited.
-    /// FP32 router and shared-gate preparation replaces 8-bit originals: an
-    /// additional 61,844,480 bytes at the maintained geometry, rounded to 64 MB.
-    /// Reserved on portable hardware too so cache policy stays conservative.
-    package static let fast = Self(identity: "qwen36-fast-memory-v2",
-        expertRecordBytes: 1_769_472, residentReserveBytes: 64_000_000, maximumPrefill: 512,
-        maximumContext: 32_768, usesBaselineSpeedEvidence: false,
-        supportsStreamedDraft: false, supportsVision: false, automaticOptimizations: false)
-
-    package var layers: Int { self == .fast ? 40 : Geometry.layers }
-    package var expertsPerLayer: Int { self == .fast ? 256 : Geometry.expertsPerLayer }
-    package var totalRecords: Int { layers * expertsPerLayer }
-
-    /// Explicit Smart DFlash comparison. The separate reserve covers the
-    /// published 1.21 GB loading payload, quantization overlap, draft KV and
-    /// the bounded feature window. Preserve the original fixed allowance;
-    /// do not load MTP or inherit its throughput evidence. Physical tests
-    /// determine whether this conservative envelope can become a default.
-    package static let q2 = Self(identity: NativeExpertSchedule.gpuStagingEnabled ? "gsq-q2-native-memory-v3" : "gsq-q2-native-memory-v2",
-        expertRecordBytes: 1_382_400, residentReserveBytes: 1_600_000_000
-            + (NativeExpertSchedule.gpuStagingEnabled ? NativeExpertSchedule.gpuStagingReserveBytes : 0),
-        maximumPrefill: 512, maximumContext: 32_768, usesBaselineSpeedEvidence: false,
-        supportsStreamedDraft: false, supportsVision: false, automaticOptimizations: false, supportsDecodeLookahead: true)
-
-    /// The Q2 candidate's next-input forecast uses its existing router weights
-    /// and bounded host staging. It does not inherit original-model router
-    /// copies, cache floors or speed estimates.
-    package var nativeInputReadAheadReserveBytes: Int {
-        self == .q2 ? DecodeLookahead.stagingReserveBytes : 0
-    }
-
-    package static let smartDFlash = Self(identity: "smart-dflash2-memory-v1",
-        expertRecordBytes: 2_764_800, residentReserveBytes: 1_600_000_000,
-        maximumPrefill: 512, maximumContext: 32_768,
-        usesBaselineSpeedEvidence: false, supportsStreamedDraft: false,
-        supportsVision: true, automaticOptimizations: false)
-
     package static let original = Self(identity: "original-affine4-memory-v1",
         expertRecordBytes: 2_764_800, maximumPrefill: 4096,
         maximumContext: ContextPolicy.modelLimit, usesBaselineSpeedEvidence: true,
@@ -244,9 +203,9 @@ package struct PackMemoryProfile: Equatable, Sendable {
 
     package func slotsForCapacityBudgetGB(_ value: Double) -> Int {
         guard expertWorkspaceBytes > 0 else { return slotsForPoolGB(value) }
-        if value >= capacityBudgetGB(totalRecords) { return totalRecords }
+        if value >= capacityBudgetGB(Geometry.totalRecords) { return Geometry.totalRecords }
         if !value.isFinite || value <= capacityBudgetGB(Geometry.floorSlots) { return Geometry.floorSlots }
-        var low = Geometry.floorSlots, high = totalRecords
+        var low = Geometry.floorSlots, high = Geometry.totalRecords
         while low < high {
             let mid = low + (high - low + 1) / 2
             if capacityBudgetGB(mid) <= value { low = mid } else { high = mid - 1 }
@@ -254,8 +213,8 @@ package struct PackMemoryProfile: Equatable, Sendable {
         return low
     }
     package func slotsForPoolGB(_ value: Double) -> Int {
-        guard value.isFinite else { return value > 0 ? totalRecords : Geometry.floorSlots }
-        if value >= poolGB(totalRecords) { return totalRecords }
+        guard value.isFinite else { return value > 0 ? Geometry.totalRecords : Geometry.floorSlots }
+        if value >= poolGB(Geometry.totalRecords) { return Geometry.totalRecords }
         if value <= poolGB(Geometry.floorSlots) { return Geometry.floorSlots }
         return Int(value * 1e9 / Double(expertRecordBytes))
     }

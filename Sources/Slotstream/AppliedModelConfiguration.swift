@@ -12,8 +12,6 @@ public struct AppliedModelConfiguration: Codable, Equatable, Sendable {
     public let manifestDigest: String
     public let contextTokens: Int
     public let mtp: Bool
-    /// Absent in historical receipts. True identifies the loaded native draft.
-    public var dflash: Bool? = nil
     public let vision: Bool
     public let liveMemory: LiveMemoryManagement
     public let startupTargetGB: Double?
@@ -29,11 +27,8 @@ extension Engine {
     /// Engine initialization. Legacy load and serving entry points are intact.
     public func appliedConfiguration(pack: ModelPack, liveMemory: LiveMemoryManagement) throws -> AppliedModelConfiguration {
         try withExclusive {
-            // An explicit candidate can identify its verified load without
-            // joining normal setup or automatic incumbent selection.
-            guard (ModelPackRegistry.supported + [ModelPackRegistry.q2Candidate]).contains(where: { $0.id == pack.id && $0.manifestDigest == pack.manifestDigest }),
+            guard ModelPackRegistry.supported.contains(where: { $0.id == pack.id && $0.manifestDigest == pack.manifestDigest }),
                   let plan = currentPlan else { throw ModelError("Cannot identify an unsupported or unplanned product configuration") }
-            try pack.validateLoadPlan(plan)
             let arithmetic = try PersistentPrefixIdentity.make(model: model, modelDirectory: modelDir)
             let ledger = try JSONSerialization.data(withJSONObject: plan.json(), options: [.sortedKeys])
             let startup = try startupExecutionIdentity(pack: pack, liveMemory: liveMemory)
@@ -41,11 +36,10 @@ extension Engine {
                 "pack": pack.manifestDigest, "arithmetic": arithmetic.digest,
                 "plan": String(decoding: ledger, as: UTF8.self), "live_memory": liveMemory.rawValue]
             if let startup { components["schema"] = "product-configuration-v2"; components["startup_policy"] = startup.digest }
-            components["dflash"] = model.dflash == nil ? "off" : (pack.id == PinnedQ2Model.name ? SmartDFlashDeployment.revision : DFlashDeployment.revision)
             let identity = PersistentPrefixIdentity(components: components).digest
             return AppliedModelConfiguration(generation: UUID(), identity: identity, packID: pack.id,
                 manifestDigest: pack.manifestDigest, contextTokens: plan.maxContextTokens,
-                mtp: plan.mtpEnabled, dflash: model.dflash != nil, vision: plan.visionEnabled, liveMemory: liveMemory,
+                mtp: plan.mtpEnabled, vision: plan.visionEnabled, liveMemory: liveMemory,
                 startupTargetGB: plan.targetGB, memoryCeilingGB: plan.memoryLimitGB,
                 startupPolicyID: startup?.id, executionPolicyIdentity: startup?.digest)
         }

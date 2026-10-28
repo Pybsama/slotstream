@@ -31,18 +31,6 @@ import Foundation
     }
 
     static func adaptiveBudgets() throws {
-        let nativeStaging = CommandLine.arguments.contains("--proxy-native-staging")
-        // Independent geometry: eight verification rows, ten routed experts,
-        // three 640 x 2560 Q2 pieces, eighteen bytes per 64-value block.
-        let stagingBytes = 8 * 10 * 3 * 640 * 2560 / 64 * 18
-        check("M01", "native staging uses injected platform capability",
-            NativeExpertSchedule.gpuStagingEnabled == nativeStaging)
-        check("M01", "native staging reserves complete bounded expert geometry",
-            NativeExpertSchedule.gpuStagingReserveBytes == stagingBytes)
-        check("M01", "Q2 profile charges staging only when enabled",
-            PackMemoryProfile.q2.residentReserveBytes == 1_600_000_000 + (nativeStaging ? stagingBytes : 0))
-        check("M01", "Q2 profile identifies its staging policy",
-            PackMemoryProfile.q2.identity == (nativeStaging ? "gsq-q2-native-memory-v3" : "gsq-q2-native-memory-v2"))
         let legacyPlanRequest: (Int?, Double?, Double?, Double?, Planner.MTPMode, Planner.VisionMode, Int) -> PlanRequest = PlanRequest.init
         let legacyMemoryPlan: (MemoryPlan.Source, Int, Double?, Double, Double, Double, Double?, Bool, Int, Int, Bool, Bool, Bool, Int, [String], Bool, RuntimeAllocationPolicy?, Double, Bool, Int, Bool) -> MemoryPlan = MemoryPlan.init
         let legacyGovernorPolicyInputs: (Int, Double, Double, Double, Double, Double?, Double?, GovernorPolicy.Pressure?, Bool, Bool, Bool, Int, RuntimeAllocationPolicy?, Int, Bool, Bool, Int) -> GovernorPolicy.Inputs = GovernorPolicy.Inputs.init

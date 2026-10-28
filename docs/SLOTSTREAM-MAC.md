@@ -1,3 +1,11 @@
+> **Archived October 26, 2026.** The Mac app and its Home integrations are no
+> longer maintained in this repository. The guide below describes the fixed
+> archive revision `ca4bd6869f394a5d03ddb459e8202ad897d1d03a`; its build commands
+> apply only to that checkout. See the [archive index](../experiments/mac-app/README.md)
+> for source, tests, licenses and reproduction instructions. Existing local
+> Homes and model downloads are not removed. Current engine setup is in
+> [Getting started](GETTING-STARTED.md).
+
 # Slotstream for Mac
 
 The Slotstream Mac app is a native personal AI application in development, built
@@ -5,16 +13,15 @@ on the Slotstream engine.
 The development app lives under `apps/macos`. This is ongoing implementation,
 not an announced alpha or a supported installer.
 
-## Choose Fast or Smart
+## The local model
 
-Use the **Fast / Smart** selector beside the composer, or choose **Model** in
-Settings. Fast is the default for a new installation. Smart uses the larger
-model for work that needs more reasoning. Existing saved choices are preserved.
-Switching keeps the conversation, attachments, memory and review requirements.
-The app loads one model at a time and asks you to finish setup if the selected
-model is missing. A running task finishes before a saved setting is applied.
+The app uses Qwen3.8-Flash-Next 4-bit through the native Slotstream engine.
+There is no model picker. Settings shows the model, download status and memory
+controls. Memory changes wait until the current task finishes.
 
-See [models](MODELS.md) for the underlying models, engine aliases and limitations.
+Saved Fast and Q2 experimental preferences migrate to the maintained model
+with a notice. Home data and memory preferences stay intact, and any missing
+model files still require explicit setup. See [model and defaults](MODELS.md).
 
 ## What works in the development app
 
@@ -354,14 +361,17 @@ arbitrary edits to owned state are not silently imported.
 ## Long conversations and inspectable context
 
 Slotstream keeps the full saved conversation while selecting a bounded recent window
-of complete exchanges for each request. Older partial excerpts are labeled as
-such. **Context** shows which messages and saved memories were used and what was
+of complete exchanges for each request. Within a bounded scan of older messages,
+it prefers excerpts that share words with the current question, using recency
+to break ties. Excerpts remain labeled as partial quoted history. **Context**
+shows which messages and saved memories were used and what was
 omitted. An oversized current request or pinned Home exchange is refused with
 its text preserved; attach long material as a source instead.
 
 Saved memories are selected by word overlap with the request, thread scope and
 recency, within a bounded budget. This is deterministic retrieval, not a claim
-of semantic recall. Forget excludes the source event from future windows and
+of semantic recall. Older material beyond automatic selection remains available
+through conversation search. Forget excludes the source event from future windows and
 derived excerpts. New Thread only conversations may read shared memories but
 keep newly saved memories within that thread. Older Thread only conversations
 retain their stricter reading scope until you explicitly allow shared memories.
@@ -510,12 +520,12 @@ records the exact observed scope and remaining gates.
 
 ## Memory and readiness
 
-Settings → Model separates **Quantization**, **Memory budget**, and **While running**.
-Each defaults to automatic behavior. Quantization currently selects the original
-supported pack; alternative representations remain in qualification. You can
-pin the original pack independently of the memory controls. An unavailable
-saved pack stays visible and blocks activation until you select an available
-choice. Auto does not confer a speed qualification on the original pack.
+Settings shows **Qwen3.8-Flash-Next 4-bit**, **Memory budget**, and **While
+running**. There is no model or quantization picker. Saved experimental model
+preferences return to this model with a notice; memory settings stay intact.
+An unknown saved model stays unavailable until you choose **Use
+Qwen3.8-Flash-Next 4-bit**. That action still requires verified model files.
+Automatic memory planning does not confer a speed qualification.
 
 Memory budget defaults to **Automatic (Recommended)**. The app uses
 Slotstream’s memory planner and elastic cache governor, keeping the current

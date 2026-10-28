@@ -2,18 +2,18 @@
 type: index
 scope: type-folder
 folder: records/design
-updated: 2026-10-22T19:06:39.267207Z
+updated: 2026-10-26T19:14:46.106002Z
 ---
 
 # records/design
 
-- [[records/design/sevra-spec/implementation-status]] — Mac application implementation progress and unpassed release gates
-- [[records/design/sevra-spec/runtime-contract]] — Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
-- [[records/design/sevra-spec/ui-contract]] — Mac UI geometry, native text, appearance and review requirements
-- [[records/design/sevra-spec/home-template]] — Versioned Slotstream Home configuration template
-- [[records/design/sevra-spec/mac-platform]] — Mac native implementation baseline and dependency qualification
-- [[records/design/sevra-spec/overview]] — Slotstream native product specification entry point
-- [[records/design/sevra-maintained-model-integration]] — Slotstream integration: versioned hardware/model profiles, full-stack qualification, maintained updates and documentation tied to implementation.
+- [[records/design/sevra-maintained-model-integration]] — Maintain one Qwen3.8-Flash-Next 4-bit native engine, CLI, APIs and Swift library; the Mac app and other model tracks are archived.
+- [[records/design/sevra-spec/ui-contract]] — Archived: Mac UI geometry, native text, appearance and review requirements
+- [[records/design/sevra-spec/home-template]] — Archived: Versioned Slotstream Home configuration template
+- [[records/design/sevra-spec/mac-platform]] — Archived: Mac native implementation baseline and dependency qualification
+- [[records/design/sevra-spec/implementation-status]] — Archived: Mac application implementation progress and unpassed release gates
+- [[records/design/sevra-spec/runtime-contract]] — Archived: Native Home, inference, sources and documents, reviewed changes, knowledge bases, skills, mini-apps and exact commits
+- [[records/design/sevra-spec/overview]] — Archived: Slotstream native product specification entry point
 - [[records/design/measured-operating-policies]] — Measured operating policies and revision criteria
 - [[records/design/4-2-slot-pool-mechanics]] — 4.2 Slot pool mechanics
 - [[records/design/presets-v1-est-columns-to-be-replaced-by-m8-measurements]] — Presets v1 (est. columns to be replaced by M8 measurements)

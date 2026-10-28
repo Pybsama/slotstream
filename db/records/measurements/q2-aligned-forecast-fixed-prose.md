@@ -2,7 +2,7 @@
 type: measurement
 id: 01m5vy0tqw3a18rkxttrg2c1me
 created: 2026-10-26T11:02:38.588921+00:00
-updated: 2026-10-26T11:04:52.789473+00:00
+updated: 2026-10-26T12:05:47.368657+00:00
 summary: Q2 copy removal helps fixed prose work but normal requests fail retention
 date: 2026-10-26
 doc: measurements
@@ -45,4 +45,4 @@ In the ordinary comparison, the candidate takes 133/134 prose passes versus 126/
 
 The next focused diagnostic should capture native normal-prose cost tables, confidence, chosen widths, acceptance/bonus outcomes and cycle boundaries at the first decision divergence, with a trace-sensitivity control. Check whether the extra narrow passes are supported by observed acceptance and marginal costs before changing the selector. Also account for prefill and callback time rather than equating a fixed-cycle result with a whole request. Do not force a larger minimum batch, reset calibration or port more reader/kernel machinery on this evidence alone. Test one identified pricing/selection correction against both original v68 and the isolated read candidate, then repeat complete requests only for that new causal question.
 
-The seven-file candidate remains isolated because it fails ordinary-request retention. If a future combined fix earns retention, its shared Job metadata allocation must first be bounded to Q2 so Fast's allocation path stays unchanged. All 509 production runtime inputs and five default artifacts are restored. Existing Fast recall and Q2 strict-format failures stay separate. No Smart promotion, release or application-readiness claim follows.
+The seven-file candidate remains isolated because it fails ordinary-request retention. Correction: the earlier requirement to add a Q2-only Job metadata boundary was mistaken. Existing Swift/C++ affine-staging guards and a zero-count return already enforce it; see [[records/measurements/q2-adaptive-decisions-and-preparation]]. All 509 production runtime inputs and five default artifacts are restored. Existing Fast recall and Q2 strict-format failures stay separate. No Smart promotion, release or application-readiness claim follows.

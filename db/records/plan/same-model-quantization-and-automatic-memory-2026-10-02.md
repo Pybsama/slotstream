@@ -3,7 +3,7 @@ type: plan
 meta-type: operational
 id: 01m3yz0p8fprhjdshs3m6f82gy
 created: 2026-10-02T18:46:22.223253+00:00
-updated: 2026-10-16T06:32:38.418822+00:00
+updated: 2026-10-26T19:16:28.766583+00:00
 summary: 'Closed October 7: automatic controls and research delivered; retain original four-bit, with the full 16–64 GB speed target unmet.'
 closed_on: 2026-10-07
 date: 2026-10-02
@@ -14,6 +14,12 @@ order: '6'
 title: Flash Next quantization and automatic memory implementation
 status: closed
 ---
+> **Scope update, October 26, 2026.** This research plan remains closed.
+> [[records/decisions/engine-only-maintenance]] also retires its Mac app
+> implementation. The app controls, UI checks and delivery steps below now
+> belong to the [app archive](../../../experiments/mac-app/README.md).
+> Original-model engine behavior and historical results remain intact.
+
 ### Closed October 7, 2026: implementation retained, full speed target unmet
 
 This plan is closed as a completed implementation and research effort with a partially met performance objective. It has no active experiment or delivery queue. The original goal of at least twenty committed generation tokens per second across recommended configurations for 16–64 GB Macs remains unmet. Closing this plan does not certify that promise or prove it impossible.

@@ -113,18 +113,7 @@ extension Diagnostics {
         c.equal("optional forecast declaration preserves the historical weight identity", automatic.pack.manifestDigest,
             "8e10fef2cfa5c6d8590494f5dbed440a7617a404fa17ce169cf55fb99b71e082")
         c.equal("registry preserves required download bytes", automatic.pack.requiredBytes, PinnedModel.requiredBytes)
-        c.expect("research packs cannot enter Auto", Set(ModelPackRegistry.supported.map(\.id)) == Set([PinnedModel.name, PinnedFastModel.name]))
-        let q2 = try ModelPackRegistry.resolve(.pack("smart-q2")).pack
-        c.equal("Q2 requires explicit selection", q2.id, PinnedQ2Model.name)
-        c.equal("Smart alias retains its maintained deployment", try ModelPackRegistry.resolve(.pack("smart")).pack.id, PinnedModel.name)
-        c.expect("Q2 has no automatic qualification", q2.qualifiedAutomaticProfiles.isEmpty)
-        c.equal("Q2 authenticates target, metadata and draft stores", q2.installationStores(at: directory).count, 3)
-        c.expect("Q2 pins both target shards", q2.files.count == 2 && q2.files.allSatisfy { $0.sha256?.count == 64 && !$0.optional })
-        let retainedCandidate = ModelPackSelectionContext(machine: .simulated(ramGB: 48),
-            hardware: .init(model: nil, chip: nil, osBuild: nil, nativeARM64: true, storage: .unknown, volumeID: nil),
-            ceilingBytes: 10_000_000_000, contextTokens: 8192, requiredFeatures: [],
-            acceptedInstalledManifests: [q2.id: q2.manifestDigest], candidates: [], incumbentPackID: q2.id)
-        c.equal("Auto cannot retain an unqualified Q2 incumbent", try ModelPackRegistry.resolve(.automatic, context: retainedCandidate).pack.id, PinnedModel.name)
+        c.expect("research packs cannot enter Auto", ModelPackRegistry.supported.count == 1)
         c.expect("supported baseline is not a new speed qualification", automatic.pack.qualifiedAutomaticProfiles.isEmpty)
         c.expect("selection modes have separate reasons", automatic.automatic && !pinned.automatic && automatic.reason != pinned.reason)
         for unknown in ["vq-2.1", "vq-3.2", "../model", "", "auto"] {

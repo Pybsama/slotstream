@@ -86,7 +86,6 @@ public struct SampleParams {
 }
 
 public struct GenStats: Codable {
-    public var speculativeMethod: String?
     package init() {}
     public var requestSeconds = 0.0
     public var queueSeconds = 0.0
@@ -204,34 +203,6 @@ public struct GenStats: Codable {
     public var prefillReadBytes = 0
     public var decodeReadBytes = 0
     public var allocatedSequenceBytes = 0
-    /// Optional so saved statistics from before prepared execution still decode.
-    public struct NativeExecutionObservation: Codable {
-        public var expertPasses: Int
-        public var projectionCalls: Int
-        public var projectionPlans: Int
-        /// Cumulative failures also expose a preparation failure before this
-        /// request, whose cached fallback would otherwise appear successful.
-        public var projectionFailures: Int
-        public var adaptiveCacheClaims: Int?
-        public var adaptiveCacheGhostHits: UInt64?
-        public var projectionPipelines: Int?
-        public var gpuRepackedRecords: Int?
-        public var gpuForecastRecords: Int?
-        public var hyperConnections: Int?
-        public var sharedExperts: Int?
-        public var gdnInputPairs: Int?
-        public var groupedMixtures: Int?
-        public var routerRetirementPasses: Int?
-        public var pendingRecurrenceFolds: Int?
-        public var hyperCombinations: Int?
-    }
-    public var nativeExecution: NativeExecutionObservation?
-    public var dflashCalibrationCyclesBefore: Int?
-    public var dflashCalibrationCyclesAfter: Int?
-    public var dflashBonusObservations: Int?
-    /// Cycles that prepared new immutable GPU pipelines. Their one-time cost
-    /// is not an estimate of subsequent executions of the same batch shape.
-    public var dflashPreparationCycles: Int?
     public var sharedExpertPrelaunches = 0
     public var fusedRoPERotationsScheduled = 0
     public var fusedGDNProjectionsScheduled = 0
@@ -418,10 +389,6 @@ public struct Sampler {
 
 public final class Generator {
     public let model: Qwen4ExpModel
-    /// Only bounded scalar confidence/cost observations, never tokens, prompt
-    /// text or model state. Owned by this model instance and cleared together
-    /// with retained request state at the embedding owner's privacy boundary.
-    package var dflashVerifyCalibration: DFlashVerifyBudget?
     /// Tokens per prefill pass. Bigger is faster on long prompts: a chunk
     /// activates nearly every expert of every layer, so the expert stream is
     /// re-read roughly once per chunk and halving the chunk count halves the
@@ -570,19 +537,6 @@ public final class Generator {
             model.alignSmallReferenceDispatch = originalReferenceDispatch
         }
         let sharedPrelaunchStart = model.sharedExpertPrelaunches
-        let nativeExpertStart = model.nativeExpertScheduledPasses
-        let nativeRouterRetirementStart = model.nativeRouterRetirementPasses
-        let pendingRecurrenceStart = Q2GatedDelta.pendingFoldCount
-        let hyperCombinationStart = NativeProjectionSchedule.combinationCallCount
-        let groupedMixtureStart = NativeExpertSchedule.groupedSubmissionCount
-        let nativeProjectionStart = NativeProjectionSchedule.callCount
-        let nativeHyperStart = NativeProjectionSchedule.hyperCallCount
-        let nativeSharedStart = NativeProjectionSchedule.sharedCallCount + NativeExpertSchedule.mixedSubmissionCount
-        let nativeGDNPairStart = NativeProjectionSchedule.stagedPairCallCount
-        let nativeGPURepackedStart = model.nativeGPURepackedRecords
-        let nativeGPUForecastStart = model.nativeGPUForecastRecords
-        let adaptiveClaimsStart = model.pool.adaptiveReplacementClaims
-        let adaptiveGhostsStart = model.pool.adaptiveReplacementGhostHits
         let rotationStart = model.fusedRoPERotationsScheduled
         let gdnProjectionStart = model.fusedGDNProjectionsScheduled
         let ropeHitStart = model.ropeTableHits
@@ -607,25 +561,6 @@ public final class Generator {
         let embeddingHitsStart = model.resident.embeddingRowHits
         let embeddingMissesStart = model.resident.embeddingRowMisses
         func finish(_ output: [Int]) -> ([Int], GenStats) {
-            if NativeExpertSchedule.enabled || NativeProjectionSchedule.enabled || AdaptiveSlotReplacement.enabled {
-                stats.nativeExecution = .init(
-                    expertPasses: model.nativeExpertScheduledPasses - nativeExpertStart,
-                    projectionCalls: NativeProjectionSchedule.callCount - nativeProjectionStart,
-                    projectionPlans: NativeProjectionSchedule.planCount,
-                    projectionFailures: NativeProjectionSchedule.failureCount,
-                    adaptiveCacheClaims: model.pool.adaptiveReplacementClaims - adaptiveClaimsStart,
-                    adaptiveCacheGhostHits: model.pool.adaptiveReplacementGhostHits - adaptiveGhostsStart,
-                    projectionPipelines: NativeProjectionSchedule.pipelineCount,
-                    gpuRepackedRecords: model.nativeGPURepackedRecords - nativeGPURepackedStart,
-                    gpuForecastRecords: model.nativeGPUForecastRecords - nativeGPUForecastStart,
-                    hyperConnections: NativeProjectionSchedule.hyperCallCount - nativeHyperStart,
-                    sharedExperts: NativeProjectionSchedule.sharedCallCount + NativeExpertSchedule.mixedSubmissionCount - nativeSharedStart,
-                    gdnInputPairs: NativeProjectionSchedule.stagedPairCallCount - nativeGDNPairStart,
-                    groupedMixtures: NativeExpertSchedule.groupedSubmissionCount - groupedMixtureStart,
-                    routerRetirementPasses: model.nativeRouterRetirementPasses - nativeRouterRetirementStart,
-                    pendingRecurrenceFolds: Q2GatedDelta.pendingFoldCount - pendingRecurrenceStart,
-                    hyperCombinations: NativeProjectionSchedule.combinationCallCount - hyperCombinationStart)
-            }
             // No speculative ticket survives the request; every owned reader
             // is joined before the next request can start.
             if let session = model.lookahead {
@@ -708,8 +643,6 @@ public final class Generator {
             return finish([])
         }
         model.prepareOptimizationKernels()
-        model.beginDraftCapture()
-        defer { model.endDraftCapture() }
         // Vision prompts are cacheable, but not on ids alone: every image
         // expands to a run of the same placeholder id, so a second picture of
         // the same shape produces identical ids. The image segments carry a
@@ -1347,16 +1280,7 @@ public final class Generator {
         let draftStream = mtpHead?.expertStream
         let draftStreamStart = draftStream.map { ($0.hits, $0.misses, $0.readSeconds) }
         do {
-        if let draft = model.dflash, speculationEnabled {
-            stats.speculativeMethod = "dflash2"
-            try dflashDecode(draft: draft, state: state, logits: logits, params: params, eosIds: eosIds,
-                shouldContinue: canContinue, contextLimit: admittedContext,
-                checkAllocation: { end, bytes, phase in
-                    try checkAllocation(end: end, workspaceBytes: bytes, phase: phase)
-                }, onToken: observedToken, out: &out, generated: &generated,
-                reason: &reason, consumed: &consumed, stats: &stats)
-        } else if let head = mtpHead, speculationEnabled, let mtpState = state.mtp {
-            stats.speculativeMethod = "mtp"
+        if let head = mtpHead, speculationEnabled, let mtpState = state.mtp {
             try speculativeDecode(
                 head: head, mtpState: mtpState, state: state, logits: logits,
                 params: params, eosIds: eosIds, shouldContinue: canContinue,

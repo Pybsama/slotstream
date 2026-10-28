@@ -108,7 +108,7 @@ extension Diagnostics {
             _ = try AffineStandalonePack.readMetadata(directory: directory, manifestSHA256: sha)
             c.expect("metadata byte bound applies before parsing", false)
         } catch { c.expect("metadata byte bound applies before parsing", true) }
-        c.expect("research manifest admission cannot register a supported model", Set(ModelPackRegistry.supported.map(\.id)) == Set([PinnedModel.name, PinnedFastModel.name]))
+        c.expect("research manifest admission cannot register a supported model", ModelPackRegistry.supported.count == 1)
         return c.report()
     }
 }

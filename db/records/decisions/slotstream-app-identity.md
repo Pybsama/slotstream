@@ -2,14 +2,16 @@
 type: decision
 id: 01m51pk98b58s3z3eg7h5qp10a
 created: 2026-10-16T06:32:39.435597+00:00
-updated: 2026-10-16T21:28:28.545818+00:00
+updated: 2026-10-26T19:14:46.192148+00:00
 summary: Name the retained native Mac app Slotstream and remove separate-product promotion without changing the website
 decided_on: 2026-10-16
 evidence: '[[records/design/sevra-spec/overview]]'
 reversible_if: Carlos explicitly chooses another product identity
 title: Slotstream app identity
-status: standing
+status: reversed
 ---
+> **Scope update, October 26, 2026.** [[records/decisions/engine-only-maintenance]] retires the Mac app. This identity decision is historical; source and names remain in the archive.
+
 # Slotstream app identity
 
 On October 16, 2026 Carlos requested removal of the separate-product promotion from the Slotstream README and repository. Keep the native Mac app and name it Slotstream throughout its current UI, build products, development tools and documentation. The separate website remains unchanged and is reserved for another business; no replacement business scope is specified.

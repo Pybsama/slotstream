@@ -16,171 +16,37 @@ are insufficient; an optional knob does not repair an unreliable optimization.
 Preserve historical evidence, distinguish hypotheses from verified causes, read
 prior replies before posting, and close only issues a verified release resolves.
 
-## Qualify complete native workflows
+## Engine scope (October 26, 2026)
 
-Follow the [native workflow qualification decision](db/records/decisions/qualify-complete-native-workflows.md).
-Test the person's complete job through the production model, tools, renderer,
-review and delivered app. Preserve failing prompts and inputs. Prefer bounded,
-schema-derived recovery and deterministic computation over special spellings or
-model arithmetic. Keep citation ownership, exact output, privacy and review
-boundaries intact. Verify the app's embedded engine and build identity separately
-from the CLI. Missing capabilities and disclosed limitations are not implemented
-features; maintain the task map and remaining gates alongside code.
+Follow [engine-only maintenance](db/records/decisions/engine-only-maintenance.md).
+Maintain the native Swift/MLX/Metal inference engine, CLI, serving APIs and
+public Swift library for Qwen3.8-Flash-Next 4-bit. There is no maintained Mac
+app, Home service, app-specific MCP integration, Fast tier or Q2 candidate.
 
-## Fast and Smart (October 21, 2026)
+The [Mac app archive](experiments/mac-app/README.md) and
+[Fast/Q2 archive](experiments/fast-q2/README.md) preserve their source, tests,
+licenses and evidence at fixed revisions. Do not restore those implementations,
+workflows or qualification queues without a new owner decision. Never delete
+user Homes, model downloads or local app data as part of repository cleanup.
 
-Follow [the Fast and Smart decision](db/records/decisions/fast-and-smart.md).
-Fast is the default for new app installs; preserve existing saved choices and
-legacy CLI defaults. Keep model switching explicit, one model loaded, and
-conversation/tool/review ownership unchanged. Test complete installations,
-actual model geometry, both cache layouts and native workflows. An upstream
-speed claim or a successful CLI answer is not complete app qualification.
-Retain target verification, bounded draft state and ordinary decoding when
-speculation costs more. Never port GPU spin or power-state tricks.
-Store structured JSON as literal data at the HomeStore/db.md boundary; do not
-weaken prose link validation to accept tool results. Match workflow assertions
-to the requested contract and retain genuine model-quality failures alongside
-passing integration checks. The linked decision records the concrete examples.
+## One maintained model
 
-Separate draft acceleration from target quantization. The
-[Smart draft review](db/records/decisions/smart-dflash-and-target-quantization.md)
-requires independent quality and complete-request evidence for each. Keep
-published BF16 comparisons distinct from local deployed-model comparisons;
-small smoke suites and draft acceptance do not establish negligible quality loss.
-Use normal production settings and matched requested context as the primary
-product baseline; forced draft modes and disabled read-ahead answer narrower
-questions. Report actual memory alongside configured budgets, and count
-read-ahead traffic separately from demand reads. A capability loss is a tradeoff
-to measure against useful work, not an automatic veto or a negligible cost.
-The [exact Q2 follow-up](db/records/measurements/exact-q2-performance-and-quality-followup.md)
-supersedes the earlier DFlash-first priority while preserving its frozen evidence.
+Follow [the model decision](db/records/decisions/one-maintained-model.md) within
+that engine scope. Preserve its original checkpoint, MTP, expert lookahead,
+SSD streaming and released CLI/API/Swift behavior. Hardware profiles tune
+memory and context, not model tiers. A successor requires a new decision and
+complete-task, quality, latency and memory evidence on supported hardware.
 
-The [native Q2 qualification](db/records/measurements/native-exact-q2-qualification.md)
-keeps the exact compressed target as an explicit engineering candidate. Smaller
-weights do not prove faster completed work. Check independent format arithmetic,
-actual memory, full app jobs and missing capabilities before changing Smart.
-Keep candidates outside normal setup and automatic incumbent retention; do not
-weaken selection regressions to admit them. Profile routed expert computation
-and dispatch as well as SSD waits before attributing a performance gap.
-Pass the same selected preferences to both app and inference owners, and assert
-the actual loaded pack and memory ceiling in every real-model workflow receipt.
+Test engine changes through the native runtime and actual client workflows.
+Keep arithmetic, request lifecycle, privacy, cancellation and resource gates
+exact; preserve failures and measured limits. Component parity and a fluent
+answer do not by themselves establish complete-task quality. Archived app
+signing, updater, Home and UI gates are not engine release prerequisites.
 
-The [native execution comparison](db/records/measurements/native-q2-splash-execution-comparison.md)
-requires matching the whole deployment recipe, including weight preparation,
-precision boundaries, actual expert cache and verification controller. Avoid
-competing adaptive controllers. Separate cached compute, I/O and host/GPU waits;
-neither small kernels nor SSD bytes alone establish the bottleneck. Compact
-speculative state once it is committed, and preserve every rollback boundary.
-Keep unsuccessful experiments and memory-limit failures. Diagnostic timing
-instrumentation must not enter production builds or stand in for passing runs.
-
-The [Fast comparison](db/records/measurements/fast-splash-execution-comparison.md)
-also requires symmetric warmup and exact prompt IDs. Audit model-specific
-branches for skipped shared optimizations. Keep one adaptive controller per
-decision, with recovery after expensive early passes. Compare old, new and
-upstream quality on the same frozen tasks; reproduce failures without drafting
-before blaming speculation. A smaller-cache result cannot establish parity at
-a larger cache, and clean individual requests do not rescue a failed aggregate
-timing protocol.
-
-The [native kernel port](db/records/measurements/native-fast-q2-execution-kernels.md)
-requires independent references from the original quantized bytes, including
-each algorithm's intermediate precision. Match actual cache slots after plane
-alignment, staging and metadata charges, before running comparison requests.
-Gate hardware-specific kernels by GPU capability as well as OS version. Charge
-resident preparation, preserve public-call extents and invalidate incompatible
-prefix state. Porting kernels does not make execution schedules identical;
-native language choice alone does not establish a speed advantage. Keep full
-workflow failures and instrumentation limits separate from passing kernel checks.
-CPU samples locate waits, not GPU idle time. Do not add parallel worker samples
-into request-wall-time percentages or treat an instrumented run as a speed test.
-
-The [native scheduling study](db/records/measurements/native-fast-q2-scheduling.md)
-qualifies bounded input read-ahead for the explicit Q2 candidate and rejects
-its Fast default and an additional buffer pool. Follow the
-[read-ahead decision](db/records/decisions/native-input-read-ahead.md): predictions
-may arrange reads but must not evict useful cache entries. Charge staging before
-sizing the cache, verify the actual app startup recipe, and prove each tested
-forward branch issued work. A faster target can have less time to hide reads;
-reuse the mechanism only where complete requests justify it. Preserve rejected
-experiments and excluded timing aggregates instead of claiming Splash parity.
-
-The [prepared execution study](db/records/measurements/native-prepared-execution.md)
-requires bounded plan, pipeline, event and staging ownership on the existing MLX
-stream. Reuse immutable execution descriptions, and release mutable storage only
-after its actual readers finish. A forecast cannot choose cache victims. Verify
-both original compressed-byte arithmetic and the adapter's real cache trace;
-correct policy code can still be wired in the wrong order. Match complete requests
-and actual cache capacity, preserve the whole timing protocol's exclusions, and
-retain app-quality failures independently of passing integration checks. Splash
-encodes fresh commands each cycle; do not call its plans pre-encoded GPU replay.
-Compiler, host-wait and device-path differences are hypotheses until tested.
-Keep request-varying extents in bounded dispatch parameters when they do not
-change arithmetic geometry. A cached plan can still trigger repeated pipeline
-compilation. Measure preparation and steady execution separately, keep all
-request time, and confirm final defaults after a favorable experiment.
-Borrowed C context pointers do not keep Swift tensor wrappers alive. Hold every
-input owner through the native call, then let MLX own asynchronous work. Test
-fresh temporary inputs and early plan release, not only long-lived model weights.
-Reject larger prepared blocks when complete requests do not earn their added
-complexity, even if component timing and exact arithmetic checks pass.
-When allocation policy gains a native dependency, run the isolated context
-contracts too. Extract production declarations, inject platform observations
-and test both capability states; do not duplicate the memory constants in a
-test stub. A passing full build does not prove the isolated proxy still compiles.
-
-The [focused Q2 diagnosis](db/records/measurements/q2-focused-bottleneck.md)
-keeps Fast's qualified performance path stable. Use cached weights with
-read-ahead off to isolate execution; a warm demanded cache can still issue
-unused forecasts. Account for overlapping reads, copies and GPU command
-intervals. Match actual verification widths and miss distributions before
-generalizing from a forced all-miss probe. A faster repacking kernel was
-reverted because complete requests did not earn it. The shared-reader
-scheduler remains a hypothesis, and native language choice does not promise
-parity. Preserve known Fast recall failures separately from performance gates.
-
-The [typical Q2 verification study](db/records/measurements/q2-typical-verification.md)
-matches captured small passes and missing logical expert keys. Use symmetric,
-low-allocation instrumentation and a trace-disabled control before attributing
-concurrent overhead: per-read tracing inflated the apparent gap. Read-ahead
-still helps native execution; its interaction with GPU handoff remains
-unresolved. Direct forecast reads preserved tested arithmetic but slowed clean
-complete requests, so the candidate was reverted. Isolate readiness boundaries
-and concurrent I/O before rewriting the reader scheduler. Keep throughput
-completion distinct from task quality and application readiness.
-
-The [Q2 handoff study](db/records/measurements/q2-handoff-and-overlap-diagnosis.md)
-rejects command-count reduction alone as an explanation: fewer submissions
-preserved exact output but barely changed useful-work time. Confirm that a
-priority intervention actually applies; do not boost shared executor threads
-or add polling without attributable benefit and responsiveness qualification.
-Distinguish Splash's CPU polling from its separate GPU spin library. The fixed
-component reference disables CPU polling; published complete requests retain
-it. Reserve the model across the whole protocol and record competing builds.
-Nominal thermal state does not guarantee stable timings. Preserve every arm
-when a favorable first pair reverses later. Reconstruct actual verification
-widths, routes and cache work before another scheduler rewrite; do not replace
-an unresolved cause with a parity promise or repeated benchmark selection.
-
-## App identity (October 16, 2026)
-
-Follow [the app identity decision](db/records/decisions/slotstream-app-identity.md).
-The native app is Slotstream. Keep the app and the independent engine interfaces;
-remove separate-product promotion from current repository surfaces. Leave the
-separate website unchanged. Preserve historical evidence and compatibility names
-needed for existing Homes, backups and saved mini-apps.
-
-## Slotstream integration direction (September 8, 2026)
-
-Read [the canonical engineering integration record](db/records/design/sevra-maintained-model-integration.md),
-also projected into PLAN.md. Slotstream selects and maintains a few qualified models
-for actual hardware profiles and optimizes the whole stack around them. The
-product is not permanently tied to one flagship; the current engine's exact
-checkpoint, measured gates and independent CLI/API/Swift behavior remain intact.
-New choices require target-specific engineering and full-stack qualification.
-Update README/docs, canonical plan/support records and generated projections
-alongside verified implementation. Do not present this direction as shipped
-model selection or new hardware support.
+Update docs, tests and canonical plans with implementation. Keep dated app
+and model experiments labeled as history. Archive status does not invalidate
+their measurements or turn unfinished work into completed features. No release
+is authorized by this scope change.
 
 ## Target range (September 16, 2026)
 
@@ -737,11 +603,9 @@ still quoted in commit history and both are wrong.
 - SwiftPM cannot compile Metal shaders with CLT only: the Makefile colocates
   the prebuilt `mlx.metallib` next to the binary. `swift test` is unavailable
   (no XCTest in CLT) — `Tools/verify.sh` is the acceptance suite.
-- CI is split by product. `ci.yml` builds and checks the engine and skips pushes
-  that change only docs, the brain or `apps/`. `slotstream-mac.yml` runs
-  `Tools/check_slotstream_mac.sh` and the Xcode build (`Tools/build_slotstream_xcode.sh`)
-  when `apps/macos` or the engine it builds on changes. The app's real-model
-  checks need the weights and stay on a development Mac.
+- `ci.yml` builds and checks the independent engine; documentation and context
+  proxies have their own workflows. The Mac app workflow and its real-model
+  checks remain in the fixed archive and do not run on current main.
 - Coverage percentages are advisory review feedback. Build, instrumented-test
   and report-generation failures still block CI; never make the whole coverage
   job optional. Inspect uncovered safety behavior and retain all correctness

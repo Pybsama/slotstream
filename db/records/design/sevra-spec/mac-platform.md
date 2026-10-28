@@ -3,9 +3,16 @@ type: native-spec
 meta-type: operational
 id: 01m2gb639kg290sh168ce1fd53
 created: 2026-09-14T16:14:44.019337+00:00
-updated: 2026-10-16T06:32:38.265375+00:00
-summary: Mac native implementation baseline and dependency qualification
+updated: 2026-10-26T19:14:45.883284+00:00
+summary: 'Archived: Mac native implementation baseline and dependency qualification'
+status: archived
 ---
+> **Archived October 26, 2026.** The Mac app is no longer maintained.
+> [[records/decisions/engine-only-maintenance]] supersedes this app plan.
+> The text below preserves the historical design and implementation state;
+> unpassed app gates are retired, not completed. Source, tests and licenses
+> are in the [fixed app archive](../../../../experiments/mac-app/README.md).
+
 # Mac implementation baseline
 
 Recorded September 14, 2026: Apple Silicon development host, macOS 26.6.2 build 25G83, Swift 6.3.3 (swiftlang-6.3.3.1.3), Command Line Tools selected. Full Xcode is not installed. The standalone package retains macOS 14 as its API deployment floor. The development app bundle requires macOS 26 because it carries the matching macOS 26 Metal resource. This prevents an unqualified older system from attempting that bundle. Only the recorded development host is tested; broader installed coverage requires its own Metal/dependency qualification.

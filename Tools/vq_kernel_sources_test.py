@@ -35,7 +35,6 @@ def ignored():
         license_bytes = (root / 'Licenses/VQLab-Apache-2.0.txt').read_bytes()
         self.assertEqual(hashlib.sha256(license_bytes).hexdigest(),
                          'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30')
-        self.assertEqual(license_bytes, (root / 'apps/macos/Resources/Licenses/VQLab-Apache-2.0.txt').read_bytes())
 
     def test_fused_reference_refuses_shape_and_dtype_before_metal(self):
         f = {'columns': 640, 'dimensions': 2, 'entries': 256, 'group_size': 64, 'packing': 'unpacked8'}

@@ -37,8 +37,9 @@ struct Pull: ParsableCommand {
         let dest = dir.map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
             ?? (pack.id == ModelPackRegistry.baseline.id ? ModelLocator.resolve(model)
                 : ModelLocator.userModelsDir.appendingPathComponent(pack.directoryName))
+        let store = WeightStore(modelDirectory: dest, pack: pack)
         if verifyOnly {
-            for component in pack.installationStores(at: dest) { try component.verify(log: { print($0) }) }
+            try store.verify(log: { print($0) })
             for file in pack.decodeForecastFiles {
                 switch TapCorrectionSidecar.status(modelDir: dest, file: file) {
                 case .present: print("\(file.path): present, digest verified (optional sidecar)")
@@ -49,10 +50,8 @@ struct Pull: ParsableCommand {
             return
         }
         try withInterruptiblePull { cancellation in
-            for component in pack.installationStores(at: dest) {
-                try component.download(.init(connections: connections, transport: selectedTransport, cancellation: cancellation),
-                    log: { print($0); fflush(stdout) })
-            }
+            try store.download(.init(connections: connections, transport: selectedTransport, cancellation: cancellation),
+                log: { print($0); fflush(stdout) })
             for file in pack.decodeForecastFiles {
                 TapCorrectionSidecar.ensure(modelDir: dest, file: file, cancellation: cancellation, log: { print($0); fflush(stdout) })
             }

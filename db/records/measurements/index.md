@@ -2,13 +2,19 @@
 type: index
 scope: type-folder
 folder: records/measurements
-updated: 2026-10-26T11:04:52.789473Z
+updated: 2026-10-26T19:14:46.215135Z
 ---
 
 # records/measurements
 
+- [[records/measurements/measured-facts]] — Measured facts
+- [[records/measurements/single-model-maintenance]] — One maintained model, preserved experiments, passing local engine/app checks and bounded real workflows
+- [[records/measurements/relevant-conversation-excerpts]] — Relevant conversation excerpts repair tested factual recall; citation quality remains open
+- [[records/measurements/q2-compiler-identity-and-precompiled-shaders]] — Q2 compilation spikes isolated; offline treatment does not earn integration
+- [[records/measurements/q2-cold-compilation-and-row-counts]] — Q2 runtime row counts remove repeated compilation; first-request qualification stays open
 - [[records/measurements/q2-aligned-forecast-fixed-prose]] — Q2 copy removal helps fixed prose work but normal requests fail retention
 - [[records/measurements/q2-aligned-forecast-normal-requests]] — Q2 aligned forecast reads improve code but regress prose
+- [[records/measurements/q2-adaptive-decisions-and-preparation]] — Q2 warmed requests approach Splash, but first-request behavior blocks retention
 - [[records/measurements/q2-completion-cleanup]] — Q2 completion cleanup is too small to explain the remaining gap
 - [[records/measurements/q2-controlled-read-latency]] — Q2 controlled read latency rejects the forecast-amplification hypothesis
 - [[records/measurements/q2-allocator-and-read-latency]] — Q2 allocator diagnostics and read-latency variance
@@ -240,4 +246,3 @@ updated: 2026-10-26T11:04:52.789473Z
 - [[records/measurements/n-gram-store-plan-was-structurally-wrong]] — N-gram store — plan was structurally wrong
 - [[records/measurements/m0-2-model-ground-truth-byte-exact-from-safetensors-headers]] — M0.2 — Model ground truth (byte-exact, from safetensors headers)
 - [[records/measurements/m0-1-metal-memory-limits-mlx-device-info-2026-08-28]] — M0.1 — Metal / memory limits (mlx device_info, 2026-08-28)
-- [[records/measurements/measured-facts]] — Measured facts

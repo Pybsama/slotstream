@@ -6,29 +6,23 @@
 import Foundation
 import MLX
 
-/// A linear layer read from the checkpoint. Affine weights expose separate
-/// scales/biases; GGUF weights retain their opaque block representation.
+/// A linear layer read from the checkpoint: quantized (weight+scales+biases)
+/// or plain bf16, decided by whether `<name>.scales` exists.
 public struct QLinear {
     public let w: MLXArray
     public let scales: MLXArray?
     public let biases: MLXArray?
     public let groupSize: Int
     public let bits: Int
-    package var gguf: Q2GGUFLinear? = nil
-    package var ggufDenseOutput: DType? = nil
 
     package init(w: MLXArray, scales: MLXArray?, biases: MLXArray?, groupSize: Int, bits: Int) {
         self.w = w; self.scales = scales; self.biases = biases
         self.groupSize = groupSize; self.bits = bits
     }
 
-    public var isQuantized: Bool { scales != nil || gguf != nil }
+    public var isQuantized: Bool { scales != nil }
 
     public func callAsFunction(_ x: MLXArray) -> MLXArray {
-        if let gguf { return gguf(x) }
-        if let type = ggufDenseOutput {
-            return Q2FloatProjection.apply(x, weight: w, outputType: type)
-        }
         if let s = scales {
             if RowInvariantMatmul.enabled {
                 let rows = x.size / x.dim(-1)
@@ -88,24 +82,14 @@ extension TensorSource {
     }
 
     public func linear(_ base: String, groupSize: Int? = nil, bits: Int? = nil) -> QLinear {
-        if let packed = (self as? ResidentWeights)?.ggufLinears[base] {
-            var value = QLinear(w: packed.bytes, scales: nil, biases: nil,
-                groupSize: packed.format.block, bits: packed.format.nominalBits)
-            value.gguf = packed; return value
-        }
         let w = tensor(base + ".weight")
         let s = optionalTensor(base + ".scales")
         let b = optionalTensor(base + ".biases")
         let descriptor = config.quantizationOverrides[base]
-        var value = QLinear(
+        return QLinear(
             w: w, scales: s, biases: b,
             groupSize: groupSize ?? descriptor?.groupSize ?? config.qGroup,
             bits: bits ?? descriptor?.bits ?? config.qBits)
-        if ((self as? ResidentWeights)?.usesQ2 == true || (config.isFast && Q2PackedExperts.enabled)), s == nil {
-            value.ggufDenseOutput = base.contains(".indexer.") || base.hasSuffix(".gate")
-                || base.hasSuffix(".shared_expert_gate") ? .float32 : .bfloat16
-        }
-        return value
     }
 }
 
@@ -119,10 +103,7 @@ public final class ResidentWeights: TensorSource {
         packedGDNProjections.values.reduce(0) { $0 + $1.payloadBytes }
     }
     private let embeddingRows: EmbeddingRows?
-    private let q2: Q2Checkpoint?
-    package var usesQ2: Bool { q2 != nil }
-    package let ggufLinears: [String: Q2GGUFLinear]
-    public var usesEmbeddingRows: Bool { embeddingRows != nil || q2 != nil }
+    public var usesEmbeddingRows: Bool { embeddingRows != nil }
     package var embeddingReadFault: ReadFault? {
         get { embeddingRows?.readFault }
         set { embeddingRows?.readFault = newValue }
@@ -144,14 +125,6 @@ public final class ResidentWeights: TensorSource {
         // run/serve or they can silently stack underneath another model.
         try ModelProcessGuard.acquire()
         self.config = index.config
-        self.q2 = index.q2
-        if let q2 = index.q2 {
-            self.embeddingRows = nil; self.packedGDNProjections = [:]
-            let loaded = try q2.residents()
-            self.arrays = loaded.arrays; self.ggufLinears = loaded.linears
-            return
-        }
-        self.ggufLinears = [:]
         let setting = ProcessInfo.processInfo.environment["SLOTSTREAM_EMBEDDING_ROWS"] ?? "1"
         guard setting == "0" || setting == "1" else { throw ModelError("SLOTSTREAM_EMBEDDING_ROWS must be 0 or 1") }
         let useRows = embeddingRowCache ?? (setting == "1")
@@ -177,26 +150,6 @@ public final class ResidentWeights: TensorSource {
                     var key = rawKey
                     if key.hasPrefix("language_model.") { key.removeFirst("language_model.".count) }
                     if wanted(key) { kept[key] = arr }
-                }
-            }
-        }
-        if config.isFast && Q2PackedExperts.enabled {
-            // Splash prepares these small affine projections as FP32. Decode
-            // the original codes once, without an intermediate BF16 rounding.
-            // Replace the compressed tensors instead of retaining both copies;
-            // PackMemoryProfile.fast reserves the bounded increase separately.
-            for layer in 0..<config.numLayers {
-                for suffix in ["gate", "shared_expert_gate"] {
-                    let base = "model.layers.\(layer).mlp.\(suffix)"
-                    guard let w = kept[base + ".weight"], let scales = kept[base + ".scales"],
-                          let biases = kept[base + ".biases"] else { continue }
-                    let q = config.quantizationOverrides[base]
-                    let value = dequantized(w, scales: scales.asType(.float32), biases: biases.asType(.float32),
-                        groupSize: q?.groupSize ?? config.qGroup, bits: q?.bits ?? config.qBits)
-                    eval(value)
-                    kept[base + ".weight"] = value
-                    kept.removeValue(forKey: base + ".scales")
-                    kept.removeValue(forKey: base + ".biases")
                 }
             }
         }
@@ -241,7 +194,6 @@ public final class ResidentWeights: TensorSource {
     /// callers are split only for independent row lookup/dequantization; no
     /// model arithmetic or chronological prefill boundary is changed.
     public func embedChecked(_ ids: MLXArray) throws -> MLXArray {
-        if let q2 { return try q2.embedding(ids.asType(.int64).asArray(Int64.self).map(Int.init), shape: ids.shape) }
         if let embeddingRows {
             guard [.uint8, .uint16, .uint32, .uint64, .int8, .int16, .int32, .int64].contains(ids.dtype) else {
                 throw ModelError("embedding row IDs must be integers")
@@ -269,7 +221,6 @@ public final class ResidentWeights: TensorSource {
     /// Main and draft callers already own CPU token IDs. Avoid uploading them
     /// merely to synchronize a cast/readback in the row-cache path.
     package func embedChecked(_ ids: [Int], shape: [Int]) throws -> MLXArray {
-        if let q2 { return try q2.embedding(ids, shape: shape) }
         guard ids.allSatisfy({ $0 >= 0 && $0 < config.vocabSize }) else {
             throw ModelError("embedding row ID outside vocabulary")
         }

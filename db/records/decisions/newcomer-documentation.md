@@ -2,7 +2,7 @@
 type: decision
 id: 01m21jj97w5hteckpk2khdy25h
 created: 2026-09-08T22:35:06.876703+00:00
-updated: 2026-10-16T06:32:39.353364+00:00
+updated: 2026-10-26T18:09:26.297117+00:00
 summary: Keep the README approachable and complete, with evidence and community sections; reserve detailed setup and engineering references for linked guides.
 decided_on: 2026-09-08
 reversible_if: The public setup changes or users demonstrate that a different entry point makes installation and first use clearer.
@@ -97,3 +97,19 @@ Hermes and troubleshooting guides (`context-default-wait-policy` dropped the
 README from its surfaces); the RAM FAQ opens in one sentence. Every link and
 anchor was checked, 50 links and none broken. The README went from 334 to 325
 lines.
+
+## Released engine and development app, October 26, 2026
+Carlos requested an update to the README and GitHub description to reflect current Slotstream work, keep SSD streaming prominent, preserve the fully native Swift, MLX/Metal and no-Python message, and distinguish released features from development work.
+
+The README keeps the original large-model headline, documented measurements, setup, community and support sections. It identifies the published engine and its original-model default separately from Fast/Smart aliases and the native Mac app on main. New app installations use Fast; existing saved choices and the independent CLI default are preserved. Q2 stays an explicit engineering candidate. Requirements and performance tables remain scoped to the original model, with their dates and methods intact.
+
+The app introduction explains local documents, citations, reviewed changes, exact tables, conversations, memory, journal and Home integrations, while retaining development status and the absence of a public app installer. The native-stack description keeps Swift ownership and Python-free inference explicit and acknowledges the C++ Metal-execution adapters. The engineering guide and agent-facing documentation carry the same distinctions.
+
+Selected GitHub description:
+
+> Run a 105 GB AI model on an Apple Silicon Mac with 16–64 GB of RAM by streaming experts from SSD. Fully native Swift on MLX and Metal. Offline, no Python. Released engine works with Claude Code, Codex, and Ollama/OpenAI/Anthropic clients. Native Mac app and Fast/Smart model choices in development.
+
+This is documentation maintenance, not a new model default, performance result or product release. Current engineering authority remains [[records/decisions/fast-and-smart]] and [[records/decisions/slotstream-app-identity]].
+
+## One maintained model, October 26, 2026
+The later owner decision [[records/decisions/one-maintained-model]] supersedes the Fast/Smart development positioning in the earlier section. Current surfaces name Qwen3.8-Flash-Next 4-bit only, keep SSD streaming and fully native Swift/MLX/Metal with no Python runtime prominent, and link retired experiments separately. Preserve the released engine versus source-built app distinction. v0.2.30 remains the latest release.

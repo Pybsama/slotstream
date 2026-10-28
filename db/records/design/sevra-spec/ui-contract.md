@@ -3,9 +3,16 @@ type: native-spec
 meta-type: operational
 id: 01m2gb63b06sdk41zzcbfevt7c
 created: 2026-09-14T16:14:44.064879+00:00
-updated: 2026-10-16T06:32:38.355396+00:00
-summary: Mac UI geometry, native text, appearance and review requirements
+updated: 2026-10-26T19:14:46.029293+00:00
+summary: 'Archived: Mac UI geometry, native text, appearance and review requirements'
+status: archived
 ---
+> **Archived October 26, 2026.** The Mac app is no longer maintained.
+> [[records/decisions/engine-only-maintenance]] supersedes this app plan.
+> The text below preserves the historical design and implementation state;
+> unpassed app gates are retired, not completed. Source, tests and licenses
+> are in the [fixed app archive](../../../../experiments/mac-app/README.md).
+
 # Mac native UI contract
 
 S2c/S2h: Compose with SwiftUI and native AppKit controls. The conversation is one logical selectable TextKit document, not one selectable island per message. Preserve IME composition, cross-message selection, standard Copy/Undo/Find and logical scroll state while streaming. Token arrival must not move focus. Native controls use system fonts; content retains Inter, Poppins and the approved Observer identity when packaged.

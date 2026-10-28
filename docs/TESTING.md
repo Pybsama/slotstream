@@ -238,10 +238,9 @@ network code is no longer represented only by weights-free catalogue coverage.
 ## What runs where
 
 Each push and pull request runs the workflows for what it changes. `ci.yml`
-builds and checks the engine. `slotstream-mac.yml` checks the Mac app in
-`apps/macos`, and also runs for engine changes because the app builds on the
-engine. `context-proxies.yml` covers the context proxies, and `docs.yml` the
-documentation and the brain.
+builds and checks the engine. `context-proxies.yml` covers the context proxies,
+and `docs.yml` the documentation and the brain. The Mac app workflow and its
+dedicated checks are preserved in the [app archive](../experiments/mac-app/README.md).
 
 | Suite | What it covers | Weights | Where |
 |---|---|---|---|
@@ -249,15 +248,11 @@ documentation and the brain.
 | `Tools/static_gates.sh` | shell and python syntax, doc parity, fixture digests, manifest digests, planner gates, installer gates | no | CI |
 | `Tools/sampler_gates.sh` | the sampler against a numpy reference, and the governor's branches | no | CI |
 | `Tools/consumer_smoke.sh` | a package outside the repository can import and use the library | no | CI |
-| `Tools/check_home_integration.py --bin-dir apps/macos/.build/release` | Home selection, real dbmd queries, pagination, isolation, byte-preserving offline reads, live owner attachment, CLI ask and MCP transport/review boundaries | no | CI + local |
-| `Tools/check_slotstream_mac.sh` | the Mac app over scripted inference in disposable Homes: runtime, sources and the sandboxed document helper, reviewed changes, knowledge bases, skills, mini-apps, and offscreen checks of the production views | no | CI + local |
-| `Tools/build_slotstream_xcode.sh` | the Xcode project builds for Apple silicon, ad hoc signed, with the package versions the checks use and the helper, dbmd and Metal library in the bundle | no | CI |
 | `Tools/verify.sh` | the acceptance battery: provenance, goldens, byte-equality across cache sizes and live resizes, MTP, the memory promise, long context | **yes** | dev Mac |
 | `Tools/api_robustness.sh` | Serving regressions against a live server | **yes** | dev Mac |
 | `Tools/issue21_gate.py` | Chat Completions caps with and without tools, incremental truncated scalar/nullable-string arguments, compatible branch selection and later-turn reuse when reasoning is omitted, terminal usage and process survival | **yes** | dev Mac, already-running server |
 | `Tools/issue21_e2e.py` | issue-21 and OpenAI compatibility gates plus exact conversation replay after restart; saves requests, SSE, commands and cleanup receipts | **yes** | `Tools/verify.sh`, owns one bounded server at a time |
 | `Tools/issue21_long_context.py` | long tool-enabled conversations, advancing disk reuse when reasoning is omitted, and identical prompt/output after a real restart; captures raw SSE and progress logs | **yes** | dev Mac, owns one bounded server at a time |
-| `slotstream-mac-checks --real-basics` | the Mac app's basic jobs with the real model: a PDF answer, a reviewed edit, a mini-app and an attached file | **yes** | dev Mac |
 | `optimization-state-check --variant persistent-prefix[-mtp]` | a persisted state restores with the saved representation; a disk hit continues exactly like a memory hit; that continuation, written as reused plus new rows, restores exactly; a regenerated reply resumes the kept parent; a request that keeps its state off disk writes nothing; draft cache included | **yes** | dev Mac |
 | `optimization-state-check --variant shared-prefix[-mtp]` | a prompt's system message is kept during its own prefill at the last 256-token pass end at or before its boundary, forked into memory and written to disk as a shared prefix; a second conversation reuses it from memory and a fresh cache restores it from disk, both continuing exactly like the cold prompt; a prompt sharing only a head with a kept state writes that head; a `sharedPrefixTokens` hint replaces the system boundary; a request kept off disk writes nothing; the shared prefix outlives later turns and is classed after conversations; draft cache included | **yes** | dev Mac |
 | `Tools/shared_prefix_e2e.py` | shared prefixes through `serve`: the first conversation writes its system prompt during prefill; a second one in the same process reuses it from memory; a restarted server restores it from disk; a conversation whose system prompt shares only a head writes that head and its own system prompt; another restarted server reuses those; later turns leave the shared prefixes in place and `prefix-cache` lists them; reused conversations' output ids equal a server without a prefix cache exactly | **yes** | dev Mac |
@@ -594,14 +589,10 @@ identical output, unchanged compute shapes, read bytes and physical memory.
 The separate `scope-larger-family --tokens 8192` numerical gate uses
 `SLOTSTREAM_OPT_WORKSPACE_TILE=1024 SLOTSTREAM_OPT_SCOPE_FRONTIER=1`.
 
-After `Tools/check_slotstream_mac.sh`, place the pinned Metal library beside
-`apps/macos/.build/release/slotstream-mac-checks`. Its `--real-cache --home <new-dir>`
-check uses synthetic inventory text to test save, unload, reload, incognito
-isolation and thinking-state exclusion. The existing `--real-thinking` and
-`--real-metrics` checks exercise the app's phase transition and recorded
-statistics. Each requires its own new disposable Home; none is a clean
-throughput benchmark.
-
+The retired app's cache, thinking and response-metric checks are preserved in
+the [Mac app archive](../experiments/mac-app/README.md). They exercised Home
+save/reload and privacy boundaries through that app, not the independent CLI.
+Use the current engine diagnostics above for maintained cache behavior.
 
 The fused prefill integration adds a scalar Double reference over the actual
 BF16 inputs to the MLX check tier. It exercises causal and sparse masks,
@@ -671,37 +662,13 @@ different arithmetic schedules are not a cache-corruption oracle.
 `prefix-exact-check` remains a required, separate gate for bit-identical raw
 logits and tokens under the actual cache schedule.
 
-## Fast and Smart development checks
+<a id="fast-and-smart-development-checks"></a>
+<a id="native-app-workflow-checks"></a>
 
-Fast and Smart need separate model and application checks. Build the engine,
-install and verify the selected weights, and run one real-model process at a
-time. Use new disposable output/Home directories for each replay.
+## Archived app checks
 
-```bash
-python3 Tools/fast_smart_acceptance.py --out .build/fast-smart-acceptance
-Tools/check_slotstream_mac.sh
-apps/macos/.build/release/slotstream-mac-checks --real-capabilities \
-  --home "$PWD/.build/fast-smart-workflows" --memory-gb 9 --switch-models
-apps/macos/.build/release/slotstream-mac-checks --real-cache \
-  --home "$PWD/.build/fast-cache-check"
-Tools/build_slotstream_mac.sh
-```
-
-The native acceptance script exercises both aliases, Fast with and without
-DFlash, a smaller memory budget and a longer prompt. The app fixtures check
-actual selected-model receipts, explicit budgets, tools and reviewed effects.
-The cache fixture uses its default 10 GB budget. All real checks require spare
-memory before loading. These observations are not clean speed benchmarks.
-
-For a focused workflow replay, add `--case code_edit`, `--case ocr_receipt` or
-`--case history_recall` to `--real-capabilities`, using another new Home.
-`--smart` selects Smart for that fixture; `SLOTSTREAM_DFLASH=0` provides a Fast
-plain-decoding control. Preserve unsuccessful outputs. A nonzero capability
-result can identify a model-quality miss or an incorrect test assertion as well
-as a runtime defect; investigate the specific result before changing a gate.
-
-The initial Fast qualification retained word-limit misses and an old-history
-retrieval miss in repetitive context. The [engineering decision](../db/records/decisions/fast-and-smart.md)
-separates these from verified installation, storage, review, cache and model
-switching. Planning checks across the target memory range and smaller budgets
-on the development Mac do not replace physical tests on other Macs.
+The Mac app's native UI, Home, tool and real-model workflow checks are preserved
+with its source in the [app archive](../experiments/mac-app/README.md). Follow
+the archived guide from that fixed checkout to reproduce them. They are no
+longer part of current engine CI. Fast and Q2 have their own
+[experiment archive](../experiments/fast-q2/README.md).

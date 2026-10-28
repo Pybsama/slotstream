@@ -708,3 +708,36 @@ Clean fixed-proseABSSBA: alignedforecastcopyremoval improves3.50percent with bot
 ## [2026-10-26 11:04] update | records/measurements/q2-aligned-forecast-fixed-prose.md
 Use candidate/request wording rather than imply an established controller defect; conservatively round ordinarySplash maximum upward to13.887GB. Raw receipts unchanged.
 
+## [2026-10-26 12:05] update | records/measurements/q2-adaptive-decisions-and-preparation.md
+Qualified bounded decision trace: 1953 exact choices and negligible controller CPU time. Clean four-way comparison puts copy-only warmed requests within2.7percent ofSplash but firstrequests regress; reject prepared-cost omission for laterprose regression. Preserve all16arms, old failures and actualFast staging guards. Runtime509inputs/fivev68artifacts restored; goal remains open.
+
+## [2026-10-26 12:05] update | records/measurements/q2-aligned-forecast-normal-requests.md
+Correct mistaken extraFast metadata-isolation prerequisite here and in fixed-prose follow-up. Existing Swift/C++ guards already prevent affine staging allocation; retain original raw caveat and historical timing verdicts.
+
+## [2026-10-26 13:16] update | records/measurements/q2-cold-compilation-and-row-counts.md
+Qualified first-pass compilation probe and exact expert-cache-reset replay. Runtime token counts remove twelve redundant verification pipeline creations, pass expanded independent tests and 72 exact model passes, and improve warmed code/prose in both orders. Preserve all eight clean ordinary arms; forward first-request regression fails retention and full parity. Production and Fast remain unchanged. Next inspect ordinary compilation source/options and preparation plus first-request latency.
+
+## [2026-10-26 16:56] update | records/measurements/q2-compiler-identity-and-precompiled-shaders.md
+Closed bounded compiler investigation: preserve exact source/options evidence, failed shared-library arithmetic and all request arms. Q2-only offline treatment passes frozen logits but fails repeatable retention and Splash parity; no engine change. Profile startup phases next.
+
+## [2026-10-26 16:56] update | records/measurements/relevant-conversation-excerpts.md
+Reproduced Fast recall failure with and without drafting. Retained bounded relevant excerpts with Unicode byte-boundary correction, passing context/privacy checks and final real app workflows including model switches. Keep unsupported citation markers and prior quality failures open; no release or Smart promotion.
+
+## [2026-10-26 17:44] update | records/decisions/newcomer-documentation.md
+Align the README and selected GitHub description with the released engine and current native Mac app development. Preserve SSD streaming, native Swift and Python-free inference; distinguish Fast/Smart defaults, original-model measurements and the explicit Q2 candidate. Update native-stack references and generated documentation. Verified all 122 local document links, all 40 prior README anchors, 354 claim checks and 4303 brain links; full validation has zero errors or warnings.
+
+## [2026-10-26 18:13] update | records/decisions/one-maintained-model.md
+Archive Fast, Q2 and associated DFlash/native execution work at df208489af2ef5378444727172b6dfcf8ee1ed10. Restore the original-model engine, simplify app controls, migrate experimental preferences without relabeling activation receipts, and align active docs and plans. Engine build and 106 T0/T1 checks pass; app and real-workflow verification continues. No release.
+
+## [2026-10-26 18:38] update | records/measurements/single-model-maintenance.md
+Record preserved Fast/Q2 source and licenses, final single-model app migration, 106 engine checks, full native app/static suites, rebuilt bundle identity and three real-model workflows. Keep the first freshness failure and bounded answer-quality limitations. No release; hosted engine/app CI still running at capture.
+
+## [2026-10-26 18:40] update | records/measurements/single-model-maintenance.md
+Final local verification includes 420 memory-override cases, installer and static gates, 287 checked document links, and full brain validation with zero errors or warnings. Preserve the capture-wrapper error separately from the completed static suite. Correct the new run record to the existing sources/runs evidence location.
+
+## [2026-10-26 19:14] update | records/decisions/engine-only-maintenance.md
+Archive the native Mac app at ca4bd6869f394a5d03ddb459e8202ad897d1d03a and remove its active code, workflow and dedicated tools. Retain user data and historical evidence; align docs and plans with the independent engine. Release comparison confirms only a model display label differs from v0.2.30 in engine source. No release.
+
+## [2026-10-26 19:18] update | records/decisions/engine-only-maintenance.md
+Verify fixed archive bytes for all 128 removed app paths; preserve unchanged engine and dependency graph. Focused license and static harness checks pass, as do 300 documentation links and brain/claim/projection gates. Matching engine CI passed. No release or user-data removal.
+

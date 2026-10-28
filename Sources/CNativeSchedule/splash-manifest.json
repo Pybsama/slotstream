@@ -1,9 +1,0 @@
-{
-  "repository": "https://github.com/incoai/splash",
-  "revision": "1482f6bbc2abf12375332725302019594150b6cb",
-  "license": "Apache-2.0",
-  "files": {
-    "model/SlotRecycler.cpp": "f6025cfb4c84d004eccf43ce1ae84aef30380296b74f3b7c9a8b8a26ba6e4c5c",
-    "model/SlotRecycler.hpp": "a0ad908af6d406f4af0e03fa4fc5816e611bcf2292b45efda7b5ec1ac32a4d31"
-  }
-}

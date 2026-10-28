@@ -282,12 +282,12 @@ saved files. Detach before encoding a private conversation, because chat
 encoding can consult saved conversation ids. Clear the in-memory prefix
 cache as well when changing ownership or privacy scope.
 
-The native Mac app enables the tier for ordinary, non-thinking conversations
-inside that Home's disposable `.sevra/prefix-cache` directory. Home backups
-exclude this directory. Incognito and conversations with a recorded thinking
-phase do not use the disk tier; Home and privacy transitions clear held
-in-memory state before encoding. An unavailable disk cache falls back to
-ordinary inference.
+The [archived Mac app](../experiments/mac-app/README.md) enabled the tier for ordinary, non-thinking conversations
+inside its Home's disposable `.sevra/prefix-cache` directory, excluded from
+backups. Its Incognito and recorded-thinking conversations did not use the
+disk tier; Home and privacy transitions cleared held in-memory state before
+encoding. An unavailable disk cache fell back to ordinary inference. These
+were app-owned choices, not automatic behavior imposed by the Swift library.
 
 ## Diagnostics
 
